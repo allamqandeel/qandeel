@@ -165,6 +165,21 @@ describe('COSMOS E-2 DEFECT-3 — Personal topic names never print over each oth
     expect(placed.map((p) => p.id)).toEqual(expect.arrayContaining(['alexandria', 'karim']));
   });
 
+  it('PO 2026-11-21: an unselected topic name is drawn smaller than the selected title and larger than an ordinary label', () => {
+    const placed = placedAt('mother');
+    const selected = placed.find((p) => p.id === 'mother')!;
+    const others = placed.filter((p) => p.id !== 'mother');
+    expect(others.length).toBeGreaterThan(0);
+    for (const p of others) {
+      expect(p.size).toBeLessThan(selected.size);
+      expect(p.size).toBeGreaterThanOrEqual(13);
+      expect(p.size).toBeLessThanOrEqual(20);
+    }
+    // Nothing selected: every name is drawn at the same middle size.
+    expect(new Set(placedAt(null).map((p) => p.size)).size).toBe(1);
+    expect(placedAt(null)[0]!.size).toBeLessThan(selected.size);
+  });
+
   it('Personal only: in the Shared and Public stages every major label is the selected subject, so the amended gate changes nothing there', () => {
     const place = (id: string, x: number) => ({ id, kind: 'PLACE' as const, x, y: 0, dye: 1 as const, label: id, fromRung: 0 });
     for (const world of ['SHARED', 'PUBLIC'] as const) {

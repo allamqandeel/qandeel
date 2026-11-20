@@ -211,7 +211,11 @@ export function placeLabels(labels: readonly StageLabel[], rung: number, scale: 
     let px = (label.x - camera.cx) * scale + width / 2;
     const py = (label.y - camera.cy) * scale + focusY;
     if (px < -1.5 * width || px > 2.5 * width || py < -1.5 * height || py > 2.5 * height) continue;
-    const size = label.major ? clamp(23 * Math.pow(k, 0.6), 15, 30) : clamp(12.5 * Math.pow(k, 0.6), 10.5, 17);
+    // AMENDED (PO, HONOR re-check 2026-11-21, DEFECT-3): a major title that is not selected — only a Personal Thread's
+    // name — is drawn at a middle size, between an ordinary label and the selected subject's title, so the names stay
+    // readable without crowding the world. The selected title and every other world keep their sizes.
+    const size = !label.major ? clamp(12.5 * Math.pow(k, 0.6), 10.5, 17)
+      : label.emphasis ? clamp(23 * Math.pow(k, 0.6), 15, 30) : clamp(16 * Math.pow(k, 0.6), 13, 20);
     const text = label.text.length > LABEL_MAX_CHARS ? `${label.text.slice(0, LABEL_MAX_CHARS - 1)}…` : label.text;
     // No text measurement off the UI: an estimate of the drawn width, generous enough to keep neighbours apart.
     const w = Math.min(LABEL_WIDTH, text.length * size * fontScale * 0.58 + 8);
