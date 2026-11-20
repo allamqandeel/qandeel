@@ -56,7 +56,9 @@ describe('the Public owner (createPublicFieldController over PublicFieldApiClien
     await settle();
     let s = o.getSnapshot();
     expect(s.camera.cx).toBeCloseTo(5000, 1);
-    expect(s.entityCount).toBe(0); // the viewport read served nothing
+    // COSMOS E-2 corrections, Slice D-2 (PO D-1 = Option K): the empty viewport read is authoritative inside the glass only;
+    // the 29 Experiences the whole-World entry read served stay on the field OUTSIDE the glass, none of them in view.
+    expect(s.entityCount).toBe(29);
     expect(s.worldIndex).toHaveLength(29); // and the whole-world evidence is untouched by it
     const absence = absenceOf({ status: s.status, shown: s.shown, worldIndex: s.worldIndex }, s.camera, view(o));
     expect(absence.kind).toBe('REGION_EMPTY');

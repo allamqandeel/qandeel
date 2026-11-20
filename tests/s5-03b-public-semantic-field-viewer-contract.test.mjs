@@ -326,6 +326,13 @@ test('10 — R1/R2: the field is painted in the frozen Living Analysis World, an
   }
   const controller = code(`${MOBILE}/public-world/field/public-field-controller.ts`);
   assert.equal(controller.includes('mergeServed'), false, 'a read replaces the field; nothing older is kept to be shown again');
+  // CONTROLLED AMENDMENT — COSMOS E-2 corrections, Slice D-2 (PO decision D-1 = Option K, 2026-11-20; record §29): a read is
+  // authoritative INSIDE its rectangle (there the field is exactly what it served); OUTSIDE it, what this visit's earlier
+  // reads served stays, bounded and nearest first, until a read covering it answers. Entry and a failed read still hold nothing.
+  assert.ok(controller.includes('entries: [...served, ...retainedOutside(rectangle, state.entries, ids)]'), 'K: served inside, retained outside');
+  assert.ok(controller.includes("const outside = entries.filter((entry) => !servedIds.has(entry.id) && !within(rectangle, entry.address));"), 'K: only what lies outside the rectangle is retained');
+  assert.ok(controller.includes('export const PUBLIC_FIELD_RETAINED_MAX = 2 * PUBLIC_FIELD_READ_BOUND;'), 'K: retention is bounded');
+  assert.ok(controller.includes("publish({ status: 'UNAVAILABLE', entries: [], focus: null, search: NO_SEARCH });"), 'K: a failed read holds nothing');
   assert.equal(controller.includes("state.camera.depth === 'FAR'"), false, 'FAR navigation is not exempt from reading again');
   // R2 (Product Owner decision D3): the ○ control and its act are removed. The World as a whole is where every ENTRY
   // starts, read fresh, with nothing held — no field place, no focus, no search result — on display while it is read.
