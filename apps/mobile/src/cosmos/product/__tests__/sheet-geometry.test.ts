@@ -4,7 +4,7 @@
  * never changes the phase, a slow deliberate drag does, velocity only assists, and a long drag continues.
  */
 import {
-  SHEET_ASSIST_MAX_SHARE, SHEET_DELIBERATE_MIN, SHEET_HANDLE_HEIGHT, SHEET_PEEK_MAX, clampOffset, dragOffset, keyboardOverlap, rubberband, sheetGeometry, sheetOffset, sheetStops, snapPhase,
+  SHEET_ASSIST_MAX_SHARE, SHEET_DELIBERATE_MIN, SHEET_HANDLE_HEIGHT, SHEET_PEEK_MAX, clampOffset, dragOffset, keyboardLift, keyboardOverlap, rubberband, sheetGeometry, sheetOffset, sheetStops, snapPhase,
   type SheetGeometry, type SheetPhase,
 } from '../sheet/sheet-geometry';
 
@@ -119,6 +119,21 @@ describe('the snap decision — the edges', () => {
     expect(keyboardOverlap(800, 500)).toBe(300);
     expect(keyboardOverlap(400, 500)).toBe(0);
     expect(keyboardOverlap(800, null)).toBe(0);
+  });
+
+  // COSMOS E-2 HONOR acceptance (PO decision 2026-11-20, DEFECT-4): the keyboard lifts a PEEK, and only a PEEK.
+  it('the keyboard lifts a PEEK by its overlap less the bottom inset, never above the top band', () => {
+    const peek = sheetGeometry(ROOM, 120, INSET);
+    expect(keyboardLift('PEEK', 300, INSET, peek)).toBe(300 - INSET);
+    expect(keyboardLift('PEEK', 20, INSET, peek)).toBe(0);
+    expect(keyboardLift('PEEK', 0, INSET, peek)).toBe(0);
+    // A keyboard taller than the room beneath the PEEK stops the PEEK at the band.
+    expect(keyboardLift('PEEK', ROOM * 2, INSET, peek)).toBe(sheetOffset('PEEK', peek));
+  });
+
+  it('an EXPANDED or CLOSED sheet is not lifted (EXPANDED keeps its keyboard spacer)', () => {
+    expect(keyboardLift('EXPANDED', 300, INSET, LONG)).toBe(0);
+    expect(keyboardLift('CLOSED', 300, INSET, LONG)).toBe(0);
   });
 });
 

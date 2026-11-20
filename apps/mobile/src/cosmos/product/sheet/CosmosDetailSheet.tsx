@@ -40,7 +40,7 @@ import type { ViewportEnvelope } from '../../../map/camera';
 import type { ChromeLanguage } from '../../../orientation-chrome';
 import { cosmosProductCopy } from '../copy';
 import type { CosmosWorldOwner } from '../owner-core';
-import { SHEET_HANDLE_HEIGHT, dragOffset, keyboardOverlap, sheetGeometry, sheetOffset, sheetStops, snapPhase, type SheetGeometry, type SheetPhase } from './sheet-geometry';
+import { SHEET_HANDLE_HEIGHT, dragOffset, keyboardLift, keyboardOverlap, sheetGeometry, sheetOffset, sheetStops, snapPhase, type SheetGeometry, type SheetPhase } from './sheet-geometry';
 
 export const COSMOS_SHEET_TEST_ID = 'cosmos-detail-sheet';
 export const COSMOS_SHEET_HANDLE_TEST_ID = 'cosmos-detail-sheet-handle';
@@ -202,7 +202,9 @@ export function CosmosDetailSheet({
   // Gestures are memoised: rebuilding one per render can reattach the recogniser and drop a drag mid-flight.
   const handlePan = useMemo(() => drag(COSMOS_SHEET_HANDLE_GESTURE_TEST_ID, shown !== 'CLOSED'), [drag, shown]);
   const bodyPan = useMemo(() => drag(COSMOS_SHEET_BODY_GESTURE_TEST_ID, shown === 'PEEK' && bodyDrags), [drag, shown, bodyDrags]);
-  const moving = useAnimatedStyle(() => ({ opacity: surface.get(), transform: [{ translateY: offset.get() }] }));
+  // The keyboard's lift of a PEEK (keyboardLift): a second value beside the offset, so drags and snaps are unchanged.
+  const lift = useSharedValue(0);
+  const moving = useAnimatedStyle(() => ({ opacity: surface.get(), transform: [{ translateY: offset.get() - lift.get() }] }));
   const revealing = useAnimatedStyle(() => ({ opacity: reveal.get() }));
 
   // The PEEK is the content's top: collapsing returns the scroller to it.
@@ -222,6 +224,11 @@ export function CosmosDetailSheet({
     const hiddenSub = Keyboard.addListener('keyboardDidHide', () => setOverlap(0));
     return () => { shownSub.remove(); hiddenSub.remove(); };
   }, []);
+  const lifted = keyboardLift(shown, overlap, glass.insetBottom, geometry);
+  useEffect(() => {
+    cancelAnimation(lift);
+    lift.set(reduced ? lifted : withTiming(lifted, { duration: SHEET_SETTLE.duration, easing: EASE_OUT }));
+  }, [lift, lifted, reduced]);
 
   const can: Readonly<Record<SheetAction, boolean>> = {
     expand: shown === 'PEEK' && expandable,

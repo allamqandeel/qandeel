@@ -124,6 +124,18 @@ export function keyboardOverlap(sheetBottom: number, keyboardTop: number | null)
 }
 
 /**
+ * COSMOS E-2 HONOR acceptance (PO decision 2026-11-20, DEFECT-4): how far the open keyboard lifts a PEEK. A PEEK shows
+ * only the sheet's top strip, at the bottom of the glass, so the content's keyboard spacer (EXPANDED's answer) never
+ * reaches it: on the HONOR the whole strip — a topic-name field and its Save — sat under the keyboard. The PEEK rises by
+ * the overlap, less the bottom inset the keyboard also covers, and never above the top band. EXPANDED and CLOSED: 0.
+ */
+export function keyboardLift(phase: SheetPhase, overlap: number, bottomInset: number, geometry: SheetGeometry): number {
+  if (phase !== 'PEEK' || !Number.isFinite(overlap) || overlap <= 0) return 0;
+  const want = overlap - Math.max(0, Number.isFinite(bottomInset) ? bottomInset : 0);
+  return Math.max(0, Math.min(Math.round(want), sheetOffset('PEEK', geometry)));
+}
+
+/**
  * Resistance past an edge (the expo-animation skill's rubber band): the further the finger goes beyond the highest stop,
  * the less the sheet follows, so a boundary gives instead of stopping dead. `overshoot` ≥ 0 in points.
  */

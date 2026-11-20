@@ -33,7 +33,7 @@ export { COSMOS_ACTS_NOTE_TEST_ID, COSMOS_ACTS_TEST_ID, COSMOS_ACT_TEST_ID_PREFI
 export type { SheetGeometry, SheetPhase, SnapInput } from './sheet/sheet-geometry';
 export {
   SHEET_ADJACENT_SHARE, SHEET_ASSIST_MAX_SHARE, SHEET_ASSIST_SECONDS, SHEET_ASSIST_VELOCITY, SHEET_CLOSE_SHARE, SHEET_DELIBERATE_MIN, SHEET_HANDLE_HEIGHT, SHEET_PEEK_MAX,
-  clampOffset, dragOffset, keyboardOverlap, rubberband, sheetGeometry, sheetOffset, sheetStops, snapPhase,
+  clampOffset, dragOffset, keyboardLift, keyboardOverlap, rubberband, sheetGeometry, sheetOffset, sheetStops, snapPhase,
 } from './sheet/sheet-geometry';
 export type { DetailSheet, SheetContent } from './sheet/useDetailSheet';
 export { useDetailSheet } from './sheet/useDetailSheet';
