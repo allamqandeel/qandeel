@@ -168,7 +168,9 @@ const FROZEN = [
   // offers Name this topic / Open where it began; no Replay surface reads this composition. Previous pin: 58c1adbf.
   // RE-ANCHORED by COSMOS E-2 Slice C (PO D-5, Option U, 2026-11-20): the Personal map gained its two mode chips and the
   // CURRENT-world stage / PEEK; the Replay entry, player and history composition it hosts are untouched (same hashes).
-  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', 'b32e6877225fb7d17edbf1ee57d1289f733a3b0c09630d6826d745eeaf31d922'],
+  // RE-ANCHORED by the COSMOS E-2 HONOR acceptance fix (2026-11-20): after a rename the Personal PEEK also re-reads its
+  // inspected viewpoint, so it shows the new name; no Replay surface reads this composition. Previous pin: b32e6877.
+  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', 'd6b64a3278070038a88bf790b517665a481d2a20a75b9c675813ceb9be38e221'],
 ];
 
 const shipped = () => {

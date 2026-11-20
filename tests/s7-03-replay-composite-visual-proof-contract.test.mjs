@@ -135,7 +135,9 @@ const FROZEN = [
   // Previous pins: LivingAnalysisMap 58c1adbf, historical-projection-wire 7bc8f628, historical-projection.d.ts 17b9e915.
   // RE-ANCHORED by COSMOS E-2 Slice C (PO D-5, Option U, 2026-11-20): the Personal map gained its two mode chips and the
   // CURRENT-world stage / PEEK; the Replay entry, player and history composition it hosts are untouched (same hashes).
-  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', 'b32e6877225fb7d17edbf1ee57d1289f733a3b0c09630d6826d745eeaf31d922'],
+  // RE-ANCHORED by the COSMOS E-2 HONOR acceptance fix (2026-11-20): after a rename the Personal PEEK also re-reads its
+  // inspected viewpoint, so it shows the new name; no Replay surface reads this composition. Previous pin: b32e6877.
+  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', 'd6b64a3278070038a88bf790b517665a481d2a20a75b9c675813ceb9be38e221'],
   ['apps/mobile/src/projection/historical-projection-wire.ts', '4c3fd718f6eb19092cf6b63ef5e95335b92ed4409fe9ecec32c65258bac050ee'],
   ['apps/mobile/src/state/store.ts', '3177b9b6a322dc506a5095018b4dd9b14dddacc21bcfd77297decd5dbe62fff3'],
   ['packages/runtime/src/historical-projection.d.ts', '8a7dd96eec4175cad34556f51aa614220d6e0a601e1425a7382dd58711dd2cdf'],

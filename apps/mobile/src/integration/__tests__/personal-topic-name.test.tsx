@@ -35,18 +35,23 @@ const THREADS = [
   { id: 'thread-c', x: String(STEP), y: '0', establishedSp: 5, name: null },
 ];
 
+/** What the fixture SERVER has learned from the alias seam (the re-read test below); empty for every other test. */
+const learned = new Map<string, string>();
+const served = () => THREADS.map((thread) => (learned.has(thread.id) ? { ...thread, name: learned.get(thread.id)!, nameSource: 'USER_ALIAS' as const } : thread));
+
 const projection: Responder = (request) => {
   const params = new URL(request.url).searchParams;
   const depth = (params.get('depth') ?? 'WORLD') as HistoricalSemanticDepth;
   const inspection = inspectionFromQuery((name) => params.get(name));
   return {
     status: 200,
-    body: disclosureFixture({ depth, sessionId: SESSION_A, tc: Number(params.get('tc') ?? LIVE_HEAD), liveHead: LIVE_HEAD, threads: THREADS, inspection }),
+    body: disclosureFixture({ depth, sessionId: SESSION_A, tc: Number(params.get('tc') ?? LIVE_HEAD), liveHead: LIVE_HEAD, threads: served(), inspection }),
   };
 };
 
 const harnesses: IntegrationHarness[] = [];
 afterEach(async () => {
+  learned.clear();
   cleanup();
   for (const h of harnesses.splice(0)) h.dispose();
   await settle();
@@ -147,6 +152,24 @@ describe('Slice A (D-3 / D-4) — the Personal PEEK names the Thread from the wi
     await inspectThread(h, 'thread-b');
     await act(async () => { fireEvent.press(view.getByTestId(`${PERSONAL_PEEK_TEST_ID}:name-edit`, hidden)); });
     expect(view.getByTestId(`${PERSONAL_PEEK_TEST_ID}:name-field`, hidden).props.value).toBe('My plan');
+  });
+
+  it('HONOR acceptance: once the server holds the alias, the PEEK itself shows it (the inspected viewpoint is re-read too)', async () => {
+    const copy = analysisCopy('en');
+    const { h, view, onAlias } = await mount('en');
+    onAlias.mockImplementation(async (threadId, alias) => { learned.set(threadId, alias.trim()); return true; });
+    await inspectThread(h, 'thread-a');
+    expect(words(view.getByTestId(`${PERSONAL_PEEK_TEST_ID}:name`, hidden))).toBe('مديري');
+
+    await act(async () => { fireEvent.press(view.getByTestId(`${PERSONAL_PEEK_TEST_ID}:name-edit`, hidden)); });
+    await act(async () => { fireEvent.changeText(view.getByTestId(`${PERSONAL_PEEK_TEST_ID}:name-field`, hidden), 'Mama health checks'); });
+    await act(async () => { fireEvent.press(view.getByTestId(`${PERSONAL_PEEK_TEST_ID}:name-save`, hidden)); });
+    await flush();
+
+    expect(words(view.getByTestId(`${PERSONAL_PEEK_TEST_ID}:name`, hidden))).toBe('Mama health checks');
+    expect(words(view.getByTestId(`${PERSONAL_PEEK_TEST_ID}:name-hint`, hidden))).toBe(copy.topicNameYours);
+    // The inspected request (the one carrying the inspection) was asked again, not only the plain rungs.
+    expect(h.http.calls.filter((call) => call.url.includes('/historical-projection') && call.url.includes('inspect')).length).toBeGreaterThan(1);
   });
 
   it('a refused alias keeps the editor open and marks it; a blank draft cannot be saved; Cancel restores the served name', async () => {

@@ -608,11 +608,17 @@ function PersonalPeek({ store, chrome, context, language, bottomInset, cover, ch
       : { text: thread.name.text, hint: thread.name.source === 'USER_ALIAS' ? copy.topicNameYours : copy.topicNameFromWords };
   const refresh = useCallback(() => {
     if (context === null) return;
+    const sessionId = context.disclosure.sessionId;
+    const tc = sessionPosition(context.disclosure.tc);
     // The names live in every rung's disclosure of this (Session, TC): each held rung is re-read from the server.
     for (const depth of ['WORLD', 'THREAD', 'SESSION', 'ANALYTICAL_OBJECT', 'SOURCE_PROVENANCE'] as const) {
-      void projection.refresh({ sessionId: context.disclosure.sessionId, tc: sessionPosition(context.disclosure.tc), depth });
+      void projection.refresh({ sessionId, tc, depth });
     }
-  }, [context, projection]);
+    // HONOR acceptance (2026-11-20): the PEEK reads the INSPECTED viewpoint (the same key plus the held inspection, its own
+    // cache entry). Without re-reading it too, the map showed the new name while the PEEK kept the old name and source.
+    const asked = inspectionRequestOf(state.inspection);
+    if (asked !== null) void projection.refresh({ sessionId, tc, depth: context.disclosure.depth, inspection: asked });
+  }, [context, projection, state.inspection]);
   const origin = thread === null ? null : thread.origin;
   const openSource = origin === null || context === null ? null : () => {
     if (origin.sessionId === context.disclosure.sessionId) {
