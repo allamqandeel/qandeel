@@ -765,6 +765,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
             envelope={envelope}
             onComposed={current ? beginFade : undefined}
             registerSheetBack={registerSheetBack}
+            onAlias={(threadId, alias) => runtime.catalog.renameThread(threadId, alias)}
+            onOpenSource={onSwitchConversation === undefined ? undefined : (sessionId, sp) => onSwitchConversation({ kind: 'OPEN', sessionId, sp })}
             top={{
               content: (
                 <AnalysisReturnBar

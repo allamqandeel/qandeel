@@ -24,7 +24,8 @@ const TITLE_MAX = 80;
 
 export type ConversationSwitchTarget =
   | { readonly kind: 'NEW'; readonly clientRequestId: string }
-  | { readonly kind: 'OPEN'; readonly sessionId: string };
+  /** `sp` (COSMOS E-2 Slice A): once the conversation is READY, stand on this Session Position (the topic's source moment). */
+  | { readonly kind: 'OPEN'; readonly sessionId: string; readonly sp?: number };
 
 export type ConversationSwitchOutcome = 'SWITCHED' | 'BUSY' | 'NOT_READY' | 'FAILED';
 

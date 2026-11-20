@@ -36,7 +36,7 @@ export type { DetailSheet, SheetContent } from './sheet/useDetailSheet';
 export { useDetailSheet } from './sheet/useDetailSheet';
 export type { CosmosDetailSheetProps } from './sheet/CosmosDetailSheet';
 export type { CosmosPeekWordsProps } from './sheet/CosmosPeekWords';
-export { CosmosPeekWords } from './sheet/CosmosPeekWords';
+export { COSMOS_PEEK_PLACEHOLDER_INK, CosmosPeekWords, cosmosPeekChipStyles } from './sheet/CosmosPeekWords';
 export {
   COSMOS_SHEET_BODY_GESTURE_TEST_ID, COSMOS_SHEET_HANDLE_GESTURE_TEST_ID, COSMOS_SHEET_HANDLE_TEST_ID, COSMOS_SHEET_SCROLL_TEST_ID, COSMOS_SHEET_STAGE_TEST_ID, COSMOS_SHEET_TEST_ID,
   COSMOS_SHEET_ACCENT_TEST_ID, SHEET_ACTIVE_OFFSET_Y, SHEET_FAIL_OFFSET_X, SHEET_REDUCED_FADE_MS, SHEET_RELEASE, SHEET_REVEAL_MS, SHEET_SETTLE, CosmosDetailSheet, CosmosSheetStage, reopeningOwner,

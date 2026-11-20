@@ -20,6 +20,10 @@ export interface CosmosPeekWordsProps {
   readonly language: ChromeLanguage;
   /** The approved family word, or none (an identity this moment does not know is never named). */
   readonly family: string | null;
+  /** COSMOS E-2 Slice A: the inspected Thread's name (the person's alias or grounding wording) and where it came from; `quiet` for "unnamed". */
+  readonly name?: { readonly text: string; readonly hint: string | null; readonly quiet?: boolean } | null;
+  /** COSMOS E-2 Slice A: more, below the acts (the alias editor, the source chip). */
+  readonly extra?: ReactNode;
   readonly statement: string;
   readonly lineage: string | null;
   /** The context choice, drawn by its owner (or none). */
@@ -33,13 +37,19 @@ export interface CosmosPeekWordsProps {
   readonly testID: string;
 }
 
-export function CosmosPeekWords({ language, family, statement, lineage, choice = null, go, minHeight, bottomInset, testID }: CosmosPeekWordsProps) {
+export function CosmosPeekWords({ language, family, name = null, statement, lineage, choice = null, go, minHeight, bottomInset, testID, extra = null }: CosmosPeekWordsProps) {
   const rtl = language === 'ar';
   const words = { writingDirection: rtl ? 'rtl' : 'ltr', textAlign: rtl ? 'right' : 'left' } as const;
   return (
     <View testID={testID} accessibilityLanguage={language} style={[styles.peek, { minHeight, paddingBottom: bottomInset + 8 }]}>
       {family === null ? null : (
         <Text testID={`${testID}:family`} accessibilityRole="header" style={[typeStyle('supporting'), styles.family, words]}>{family}</Text>
+      )}
+      {name === null ? null : (
+        <Text testID={`${testID}:name`} style={[typeStyle(name.quiet === true ? 'metadata' : 'supporting'), name.quiet === true ? styles.lineage : styles.name, words]}>{name.text}</Text>
+      )}
+      {name === null || name.hint === null ? null : (
+        <Text testID={`${testID}:name-hint`} style={[typeStyle('metadata'), styles.lineage, words]}>{name.hint}</Text>
       )}
       <Text testID={`${testID}:statement`} style={[typeStyle('supporting'), styles.statement, words]}>{statement}</Text>
       {lineage === null ? null : (
@@ -56,6 +66,7 @@ export function CosmosPeekWords({ language, family, statement, lineage, choice =
           )}
         </View>
       )}
+      {extra}
     </View>
   );
 }
@@ -66,6 +77,7 @@ const C = { ink: '#E9EAF4', quiet: '#9A9DB4', gold: '#ECCC8A', glass: 'rgba(11, 
 const styles = StyleSheet.create({
   peek: { paddingHorizontal: 20, rowGap: 2 },
   family: { color: C.gold },
+  name: { color: C.ink, fontWeight: '600' },
   statement: { color: C.ink },
   lineage: { color: C.quiet },
   acts: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, paddingTop: 2 },
@@ -74,3 +86,18 @@ const styles = StyleSheet.create({
   chip: { minHeight: 32, paddingHorizontal: 12, borderRadius: 16, backgroundColor: C.glass, borderWidth: StyleSheet.hairlineWidth, borderColor: C.hair, alignItems: 'center', justifyContent: 'center' },
   chipText: { fontSize: 12, lineHeight: 18, color: C.ink, textAlign: 'center' },
 });
+
+// D-4 (COSMOS E-2 corrections, 2026-11-20): the topic-name acts of the Personal PEEK (name field, Save, Cancel, Name this
+// topic, Open where it began) live in the integration layer, which may define no colour (T-12 §28.22). They read the
+// sheet's accepted tokens from here, so the one palette stays this module's.
+export const cosmosPeekChipStyles = StyleSheet.create({
+  acts: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, paddingTop: 2 },
+  editor: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, width: '100%' },
+  field: { flexGrow: 1, minWidth: 160, minHeight: 44, paddingHorizontal: 12, borderRadius: 12, color: C.ink, backgroundColor: C.glass, borderWidth: StyleSheet.hairlineWidth, borderColor: C.hair },
+  fieldFailed: { borderColor: C.gold },
+  press: { minHeight: 44, minWidth: 44, maxWidth: '100%', justifyContent: 'center' },
+  chip: { minHeight: 32, paddingHorizontal: 12, borderRadius: 16, backgroundColor: C.glass, borderWidth: StyleSheet.hairlineWidth, borderColor: C.hair, alignItems: 'center', justifyContent: 'center' },
+  chipText: { fontSize: 12, lineHeight: 18, color: C.ink, textAlign: 'center' },
+});
+/** The placeholder ink of the name field (a prop, not a style). */
+export const COSMOS_PEEK_PLACEHOLDER_INK = C.quiet;

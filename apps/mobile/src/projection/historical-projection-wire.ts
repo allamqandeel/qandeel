@@ -39,6 +39,8 @@ import type {
   DisclosedSourceProvenanceRung,
   DisclosedSubjectGrounding,
   DisclosedThread,
+  DisclosedThreadName,
+  DisclosedThreadOrigin,
   DisclosedThreadReadingAppearance,
   DisclosedThreadRung,
   DisclosedWorldRung,
@@ -68,7 +70,12 @@ export type HistoricalWireDecode<T> =
 const DISCLOSURE_KEYS = ['sessionId', 'liveHead', 'tc', 'sealed', 'depth', 'revision', 'world', 'thread', 'session', 'analyticalObject', 'sourceProvenance', 'inspection'] as const;
 const REVISION_KEYS = ['liveHead', 'worldVersion', 'pendingExpiries'] as const;
 const WORLD_KEYS = ['threads', 'liveFocus'] as const;
-const THREAD_KEYS = ['id', 'establishmentPath', 'establishedInSession', 'establishedSp', 'groundingEmergingFocusId', 'home', 'state'] as const;
+// COSMOS E-2 corrections, Slice A (Product Owner decisions D-3 / D-4, 2026-11-20; a controlled ADDITIVE amendment of D-13): a
+// Thread also crosses with its `name {text, source}` and `origin {sessionId, sp}` (Controlled Personal Projection V2, 0198).
+const THREAD_KEYS = ['id', 'establishmentPath', 'establishedInSession', 'establishedSp', 'groundingEmergingFocusId', 'home', 'state', 'name', 'origin'] as const;
+const THREAD_NAME_KEYS = ['text', 'source'] as const;
+const THREAD_ORIGIN_KEYS = ['sessionId', 'sp'] as const;
+const THREAD_NAME_SOURCES = ['USER_ALIAS', 'GROUNDING_WORDING', 'NONE'] as const;
 const LIVE_FOCUS_KEYS = ['value', 'atSp'] as const;
 const THREAD_RUNG_KEYS = ['threadReadingAppearances'] as const;
 const THREAD_APPEARANCE_KEYS = ['bindingId', 'threadId', 'readingId', 'boundSp', 'current'] as const;
@@ -164,6 +171,23 @@ function liveFocusValue(raw: unknown, path: string): LiveFocusWireValue {
   }
 }
 
+/** A name carries text exactly when it has a source; the sources are closed (never an AI title, never a count). */
+function threadName(raw: unknown, path: string): DisclosedThreadName {
+  const name = shape(raw, path, THREAD_NAME_KEYS);
+  const source = vocabulary(name.source, `${path}.source`, THREAD_NAME_SOURCES);
+  const value = name.text === null ? null : text(name.text, `${path}.text`);
+  if ((source === 'NONE') !== (value === null)) return reject('INCOHERENT_FAMILY', `${path}: a name carries text exactly when it has a source`);
+  return { text: value, source };
+}
+/** The origin is the person's own Session and a Session Position; a Thread established here originates at its establishing SP. */
+function threadOrigin(raw: unknown, path: string, establishedInSession: boolean, establishedSp: number | null): DisclosedThreadOrigin {
+  const origin = shape(raw, path, THREAD_ORIGIN_KEYS);
+  const at = integer(origin.sp, `${path}.sp`);
+  if (at < 1) return reject('MALFORMED_SHAPE', `${path}.sp: must be a Session Position`);
+  if (establishedInSession && at !== establishedSp) return reject('INCOHERENT_FAMILY', `${path}: a Thread established here originates at its establishing Session Position`);
+  return { sessionId: identity(origin.sessionId, `${path}.sessionId`), sp: at };
+}
+
 function decodeWorld(raw: unknown, tc: number): DisclosedWorldRung {
   const world = shape(raw, 'world', WORLD_KEYS);
   const threads = list(world.threads, 'world.threads', (entry, path): DisclosedThread => {
@@ -180,6 +204,8 @@ function decodeWorld(raw: unknown, tc: number): DisclosedWorldRung {
       groundingEmergingFocusId: identityOrNull(thread.groundingEmergingFocusId, `${path}.groundingEmergingFocusId`),
       home: { x: integerText(home.x, `${path}.home.x`), y: integerText(home.y, `${path}.home.y`) },
       state: vocabulary(thread.state, `${path}.state`, THREAD_STATES),
+      name: threadName(thread.name, `${path}.name`),
+      origin: threadOrigin(thread.origin, `${path}.origin`, establishedInSession, establishedSp),
     };
   });
   const liveFocusRaw = shape(world.liveFocus, 'world.liveFocus', LIVE_FOCUS_KEYS);

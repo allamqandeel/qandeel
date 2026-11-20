@@ -306,6 +306,10 @@ function decodeWorld(raw: unknown, tc: number): DisclosedWorldRung {
       groundingEmergingFocusId: identityOrNull(thread.groundingEmergingFocusId, `${path}.groundingEmergingFocusId`),
       home: Object.freeze({ x: integerText(home.x, `${path}.home.x`), y: integerText(home.y, `${path}.home.y`) }),
       state: vocabulary(thread.state, `${path}.state`, THREAD_STATES),
+      // COSMOS E-2 Slice A: the frozen Replay wire (0102 render contracts) predates D-4 — it names no Thread and carries no
+      // origin, and this decoder says so rather than inventing either.
+      name: Object.freeze({ text: null, source: 'NONE' as const }),
+      origin: null,
     });
   });
   if (new Set(threads.map((thread) => thread.id)).size !== threads.length) return refuse('world.threads: a Thread twice');

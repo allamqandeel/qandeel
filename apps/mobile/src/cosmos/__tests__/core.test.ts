@@ -221,7 +221,9 @@ describe('adapters', () => {
     expect(publicScene({ entries: [base], focusId: null, section: 'RELATIONSHIPS' as never, rtl: true }, ORIGIN).entities[0].dye).toBe(alone);
   });
 
-  it('never produce a label for a Personal entity (the Personal map draws no names), at any depth', () => {
+  // RE-ANCHORED by COSMOS E-2 corrections, Slice A (Product Owner D-3 / D-4, 2026-11-20): the renderer still invents no
+  // name; a Thread is labelled only with the name the SERVER disclosed for it, and a Reading never is.
+  it('never invent a label for a Personal entity: a Thread carries only the server-disclosed name, a Reading none, at any depth', () => {
     const threads = [[0, 0, 1], [1, 0, 2], [-1, 1, 3]].map(([x, y, sp], i) => ({ id: `p-thread-${i}`, x: String(x * 1_000_000), y: String(y * 1_000_000), establishedSp: sp }));
     const appearances = [0, 0, 1, 2].map((t, i) => ({ bindingId: `p-binding-${t}-${i}`, threadId: `p-thread-${t}`, readingId: `p-reading-${t}-${i}`, boundSp: 4, current: i !== 1 }));
     const inputs = PERSONAL_DEPTHS.map((depth) => {
@@ -235,6 +237,14 @@ describe('adapters', () => {
     const { list, held } = personalDrawList(inputs);
     expect(held).toEqual([true, true, true, true, true]);
     for (const layer of list.layers) expect(layer.labels).toHaveLength(0);
+    // With server-disclosed names: exactly the named Threads are labelled, with the served text; Readings never.
+    const named = PERSONAL_DEPTHS.map((depth) => {
+      const disclosure = disclosureFixture({ depth, sessionId: 'fixture-session', tc: 12, liveHead: 12, threads, appearances, readings: appearances.map((a) => ({ id: a.readingId })), focuses: [] });
+      const derived = deriveMapSceneFromDisclosure(disclosure, { sessionId: 'fixture-session', tc: 12, depth } as never);
+      if (derived.status !== 'SCENE') throw new Error('expected a scene');
+      return personalScene(derived.scene, null, false, ORIGIN, new Map([['p-thread-1', 'مديري']]));
+    });
+    for (const input of named) for (const entity of input.entities) expect(entity.label).toBe(entity.id === 'THREAD:p-thread-1' ? 'مديري' : null);
     // Threads sit exactly at their served Homes.
     const home = inputs[0].entities.find((e) => e.id === 'THREAD:p-thread-1');
     expect(home && fromFar(ORIGIN, home.x, home.y)).toEqual({ x: 1_000_000n, y: 0n });

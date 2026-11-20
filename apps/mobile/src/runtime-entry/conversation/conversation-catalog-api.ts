@@ -41,6 +41,14 @@ export type ConversationCatalogRenameOutcome =
   | { readonly kind: 'NOT_FOUND' }
   | { readonly kind: 'UNAVAILABLE'; readonly detail: string };
 
+/** COSMOS E-2 Slice A: the person's own name for one of their Personal topics (0198 alias ledger). */
+export type ThreadAliasOutcome =
+  | { readonly kind: 'ALIASED'; readonly threadId: string; readonly alias: string }
+  | { readonly kind: 'UNAUTHENTICATED' }
+  | { readonly kind: 'REFUSED'; readonly status: number }
+  | { readonly kind: 'NOT_FOUND' }
+  | { readonly kind: 'UNAVAILABLE'; readonly detail: string };
+
 export interface ConversationCatalogApiConfig {
   readonly baseUrl: string;
   readonly fetch: RuntimeHttpFetch;
@@ -130,5 +138,34 @@ export class ConversationCatalogApiClient {
     const renamedSession = row === null ? null : text(row.session_id);
     if (renamedTitle === null || renamedSession !== sessionId) return { kind: 'UNAVAILABLE', detail: 'the renamed row is malformed' };
     return { kind: 'RENAMED', sessionId, title: renamedTitle };
+  }
+
+  /** PATCH /conversation/threads/:threadId/alias — the words only; the server normalises, bounds and owns the ledger. */
+  async setThreadAlias(threadId: string, alias: string): Promise<ThreadAliasOutcome> {
+    let response: Awaited<ReturnType<RuntimeHttpFetch>>;
+    try {
+      response = await this.config.fetch(`${this.config.baseUrl}/conversation/threads/${encodeURIComponent(threadId)}/alias`, {
+        method: 'PATCH',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alias }),
+      });
+    } catch (cause) {
+      return { kind: 'UNAVAILABLE', detail: detailOf(cause, 'the request did not complete') };
+    }
+    if (response.status === 401 || response.status === 403) return { kind: 'UNAUTHENTICATED' };
+    if (response.status === 404) return { kind: 'NOT_FOUND' };
+    if (response.status === 400) return { kind: 'REFUSED', status: 400 };
+    if (!response.ok) return { kind: 'UNAVAILABLE', detail: `server responded ${response.status}` };
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      return { kind: 'UNAVAILABLE', detail: 'the response body could not be read' };
+    }
+    const row = body !== null && typeof body === 'object' && !Array.isArray(body) ? (body as Record<string, unknown>) : null;
+    const aliased = row === null ? null : text(row.alias);
+    const thread = row === null ? null : text(row.thread_id);
+    if (aliased === null || thread !== threadId) return { kind: 'UNAVAILABLE', detail: 'the aliased row is malformed' };
+    return { kind: 'ALIASED', threadId, alias: aliased };
   }
 }

@@ -77,6 +77,7 @@ export type {
   ConversationCatalogEntry,
   ConversationCatalogListOutcome,
   ConversationCatalogRenameOutcome,
+  ThreadAliasOutcome,
 } from './conversation/conversation-catalog-api';
 export { ConversationCatalogApiClient } from './conversation/conversation-catalog-api';
 export type {

@@ -64,10 +64,13 @@ export type PersonalDepth = (typeof PERSONAL_DEPTHS)[number];
 /**
  * One Personal scene, as the production derivation disclosed it at ONE depth and ONE time. Threads sit at their Homes;
  * a Reading is drawn once per contextual appearance, tied to the Thread that hosts it (the one relation the Personal
- * map may draw). Objects with no place are counted for the fringe and never given one. No label is produced: the
- * Personal map draws no names.
+ * map may draw). Objects with no place are counted for the fringe and never given one.
+ *
+ * COSMOS E-2 corrections, Slice A (Product Owner D-3 / D-4, 2026-11-20): a Thread is labelled with the name the SERVER
+ * disclosed for it — the person's own alias, else the person's own grounding wording — and nothing else. The renderer
+ * invents no name: a Thread the server left unnamed, and every Reading, carries no label.
  */
-export function personalScene(scene: MapScene, inspectedKey: string | null, rtl: boolean, origin: SceneOrigin): SceneInput {
+export function personalScene(scene: MapScene, inspectedKey: string | null, rtl: boolean, origin: SceneOrigin, names?: ReadonlyMap<string, string>): SceneInput {
   const entities: Entity[] = [];
   let fringe = 0;
   for (const object of scene.objects) {
@@ -75,7 +78,7 @@ export function personalScene(scene: MapScene, inspectedKey: string | null, rtl:
     if (object.loci.length === 0) { fringe += 1; continue; }
     for (const locus of object.loci) {
       if (locus.kind === 'THREAD_HOME') {
-        entities.push({ id: object.key, kind: 'THREAD', x: toFarX(origin, locus.address), y: toFarY(origin, locus.address), dye: dyeOfId(object.id), label: null, fromRung });
+        entities.push({ id: object.key, kind: 'THREAD', x: toFarX(origin, locus.address), y: toFarY(origin, locus.address), dye: dyeOfId(object.id), label: names?.get(object.id) ?? null, fromRung });
       } else {
         entities.push({
           id: `${object.key}@${locus.bindingId}`, kind: 'READING', x: toFarX(origin, locus.hostAddress), y: toFarY(origin, locus.hostAddress), dye: dyeOfId(locus.threadId), label: null,

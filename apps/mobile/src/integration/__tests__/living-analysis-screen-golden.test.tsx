@@ -64,6 +64,16 @@
  *     - 13 OVERVIEW: the Overview chip's style gains `flexShrink: 0`;
  *   - every bead's touch follows whether it acts (65 beads, 0 inconsistent).
  * Handlers, testIDs, roles, labels, states, the artwork and every other value are unchanged.
+ *
+ * COSMOS E-2 corrections, Slice A — CONTROLLED RE-ANCHOR (Product Owner decisions D-3 / D-4 of 2026-11-20; Contract §31):
+ * the Personal PEEK names the inspected Thread (the user's alias over the grounding wording, else "No name yet") beneath the
+ * family word, and offers Open where it began (and Name this topic where the composition can rename; this recording cannot,
+ * so that chip is absent). The golden was regenerated ONCE for that intended change (old sha256 ddf12cfa…, new 136bc101…).
+ * Before it was rewritten, a per-case comparison of the two recordings proved: 12 of the 13 cases are byte-identical; in
+ * `inspection` the PEEK sits at the same path, everything outside the PEEK is byte-identical, and the PEEK gains exactly the
+ * name line (`qandeel-personal-peek:name`) and the acts row (`:name-acts` holding `:source`): 7 → 12 host elements, the
+ * three previous texts and testIDs unchanged and in the same order. The structural-diff script (which forbids added
+ * elements by design) is therefore not the proof here; the added elements ARE the change.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

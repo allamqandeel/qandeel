@@ -165,6 +165,7 @@ OPEN slot for the pregeographic Emerging Focus. Shape is never the sole carrier:
    `readingRelations` at the ANALYTICAL_OBJECT rung, but the Map derivation does not expose them, they have no Map
    geometry or accessible representation, and drawing them would need new Product semantics for the Map. Not drawn.
 4. **Labels / names of any kind** — `MapScene` carries no object, Thread or session name; the world draws no words.
+   *Controlled amendment (COSMOS E-2 corrections, Slice A; PO decisions D-3 / D-4 of 2026-11-20; COSMOS contract §31):* the Personal COSMOS stage (not `MapScene`, which is unchanged) draws each Thread's SERVED name from the D-13-amended wire — the person's own alias, else the grounding wording of their own words, else nothing. No name is invented, grouped or inferred on the client; typography stays the stage's.
 5. **The focus singleton ("الآن", the one light in the room, focus clearing, focus-facing limbs, working-set hierarchy)**
    — the fact *is* present in the disclosure (`world.liveFocus` at TC), but expressing it would make paint the sole
    carrier of "this is QANDEEL's current focus": no accessible equivalent or Product-approved wording exists for the Map.

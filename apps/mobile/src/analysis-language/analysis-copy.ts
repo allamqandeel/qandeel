@@ -79,7 +79,29 @@ export interface AnalysisCopy {
   readonly exploreLeft: string;
   /** How a map object's Product type and its placement are joined into one spoken description. */
   readonly describe: (family: string, placement: string) => string;
+
+  // ------------------------------------------------------------------- COSMOS E-2 Slice A: Personal topic names (D-3 / D-4)
+  /** The hint under a name that is the person's own grounding wording. */
+  readonly topicNameFromWords: string;
+  /** The hint under a name the person gave the topic themselves. */
+  readonly topicNameYours: string;
+  /** Shown in the name's place when the server has no truthful name: honest, never invented. */
+  readonly topicUnnamed: string;
+  /** The act that opens the alias field, and the field's accessible name. */
+  readonly nameTopic: string;
+  readonly topicNameField: string;
+  readonly saveName: string;
+  readonly cancelName: string;
+  /** The act that opens the conversation at the moment the topic began (the same conversation, or another one). */
+  readonly openSource: string;
 }
+
+/** COSMOS E-2 Slice A Product Copy Gate — the eight rows above, in both languages, PROPOSED to the Product Owner. */
+export const PERSONAL_TOPIC_NAME_COPY_GATE = Object.freeze({
+  status: 'COSMOS E-2 PRODUCT COPY GATE (Slice A) — OPEN — 8 rows PROPOSED, awaiting the Product Owner',
+  approved: [] as readonly string[],
+  proposed: ['topicNameFromWords', 'topicNameYours', 'topicUnnamed', 'nameTopic', 'topicNameField', 'saveName', 'cancelName', 'openSource'] as readonly string[],
+});
 
 const digits = (value: number): string => String(value);
 
@@ -126,6 +148,15 @@ const AR: AnalysisCopy = Object.freeze<AnalysisCopy>({
   exploreRight: 'استكشاف يمين الخريطة',
   exploreLeft: 'استكشاف يسار الخريطة',
   describe: (family, placement) => `${family}، ${placement}`,
+  // PROPOSED — COSMOS E-2 Product Copy Gate (Slice A)
+  topicNameFromWords: 'من كلامك',
+  topicNameYours: 'اسم من اختيارك',
+  topicUnnamed: 'موضوع بلا اسم بعد',
+  nameTopic: 'تسمية الموضوع',
+  topicNameField: 'اسم الموضوع',
+  saveName: 'حفظ',
+  cancelName: 'إلغاء',
+  openSource: 'افتح حيث بدأ',
 });
 
 const EN: AnalysisCopy = Object.freeze<AnalysisCopy>({
@@ -169,6 +200,15 @@ const EN: AnalysisCopy = Object.freeze<AnalysisCopy>({
   exploreRight: 'Explore right on the map',
   exploreLeft: 'Explore left on the map',
   describe: (family, placement) => `${family}. ${placement}`,
+  // PROPOSED — COSMOS E-2 Product Copy Gate (Slice A)
+  topicNameFromWords: 'From your words',
+  topicNameYours: 'Your name for it',
+  topicUnnamed: 'No name yet',
+  nameTopic: 'Name this topic',
+  topicNameField: 'Topic name',
+  saveName: 'Save',
+  cancelName: 'Cancel',
+  openSource: 'Open where it began',
 });
 
 /** The Analysis words for one Product language. */

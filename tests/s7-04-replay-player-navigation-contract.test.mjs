@@ -114,8 +114,12 @@ const FROZEN = [
   // S8B-07 CP1-B RE-ANCHOR (2026-11-08, step 6, F-1 `1f82e769`): the moments decoder mirrors the API: the viewing answer
   // covers the text moments, an original-audio moment carries no text, or the answer is refused whole. The scope decoder
   // and the wire are unchanged.
-  ['apps/mobile/src/runtime-entry/replay-history-api.ts', 'f899611757e902f04da555d8113ef86aef8079f4ff47ff74a1e5ab470a2ceed8'],
-  ['apps/mobile/src/projection/historical-projection-wire.ts', '7bc8f628268b503d6c5f8a80b204138cc3dfe7db9d1b07ec81eae14d0069f451'],
+  // COSMOS E-2 corrections, Slice A CONTROLLED RE-ANCHOR (Product Owner decisions D-3 / D-4 of 2026-11-20; contract §31): the
+  // shared wire grows ADDITIVELY (a Thread's `name` and `origin`); the Replay history decoder states them honestly as
+  // NONE / null, because the frozen Replay wire carries no name and Replay re-derives none. The moments and scope decoders,
+  // every frozen field and the depth law are unchanged. Previous pins: replay-history-api f8996117, wire 7bc8f628.
+  ['apps/mobile/src/runtime-entry/replay-history-api.ts', '06c0ae493d30ae7861a272779aa17850ed7ea4aa1ef84396c08a8f0cbf1738f9'],
+  ['apps/mobile/src/projection/historical-projection-wire.ts', '4c3fd718f6eb19092cf6b63ef5e95335b92ed4409fe9ecec32c65258bac050ee'],
   // COSMOS-INT-01 D-1 CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15: controlled authority port of MAP-CLOSE-01 CA-Z1 / CA-O1 /
   // CA-O2, approved 2026-11-14): a pinch's step carries where the fingers were (CA-Z1: MapSurface passes them with its envelope to
   // the same ZOOM_SEMANTIC; the world view's step type gains the optional point); once the reader has acted, MapSurface holds its
@@ -160,7 +164,9 @@ const FROZEN = [
   // player have their own frozen reads, unchanged), so Replay's chrome, acts, words, routes and refusals are unchanged; the
   // frozen map authority files (map-scene, map-actions, entitlement), the wire and the store are untouched.
   // Previous pin: LivingAnalysisMap 70651062.
-  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '58c1adbfdac3e20929309183679b0d07749e61be906576ee297cf6e4594d3d91'],
+  // COSMOS E-2 corrections, Slice A CONTROLLED RE-ANCHOR (2026-11-20, D-3 / D-4): the Personal PEEK names the Thread and
+  // offers Name this topic / Open where it began; no Replay surface reads this composition. Previous pin: 58c1adbf.
+  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', 'b1f7d55a94dd1a9f9b36a610519fa176185cd4558249ca9cdb8a9c9c1bb15666'],
 ];
 
 const shipped = () => {

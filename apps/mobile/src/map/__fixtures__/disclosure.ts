@@ -32,6 +32,11 @@ export interface ThreadFixture {
   readonly y: string;
   readonly state?: ThreadStateAtTc;
   readonly establishedSp?: number | null;
+  /** COSMOS E-2 Slice A: the served name (absent or null = NONE) and its source (default GROUNDING_WORDING). */
+  readonly name?: string | null;
+  readonly nameSource?: 'USER_ALIAS' | 'GROUNDING_WORDING';
+  /** Where the Thread was established; defaults to this Session at the establishing SP (else SP 1). */
+  readonly origin?: { readonly sessionId: string; readonly sp: number };
 }
 
 export interface AppearanceFixture {
@@ -185,6 +190,8 @@ export function disclosureFixture(fixture: DisclosureFixture): HistoricalDisclos
     groundingEmergingFocusId: null,
     home: { x: thread.x, y: thread.y },
     state: thread.state ?? 'ESTABLISHED_ACTIVE',
+    name: thread.name === undefined || thread.name === null ? { text: null, source: 'NONE' } : { text: thread.name, source: thread.nameSource ?? 'GROUNDING_WORDING' },
+    origin: thread.origin ?? { sessionId, sp: thread.establishedSp ?? 1 },
   }));
 
   const appearances: readonly DisclosedThreadReadingAppearance[] = (fixture.appearances ?? []).map((appearance) => ({

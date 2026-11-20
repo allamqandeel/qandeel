@@ -126,10 +126,17 @@ const FROZEN = [
   // player have their own frozen reads, unchanged), so Replay's chrome, acts, words, routes and refusals are unchanged; the
   // frozen map authority files (map-scene, map-actions, entitlement), the wire and the store are untouched.
   // Previous pin: LivingAnalysisMap 70651062.
-  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '58c1adbfdac3e20929309183679b0d07749e61be906576ee297cf6e4594d3d91'],
-  ['apps/mobile/src/projection/historical-projection-wire.ts', '7bc8f628268b503d6c5f8a80b204138cc3dfe7db9d1b07ec81eae14d0069f451'],
+  // COSMOS E-2 corrections, Slice A CONTROLLED RE-ANCHOR (Product Owner decisions D-3 / D-4 of 2026-11-20; contract §31): the
+  // frozen wire grows ADDITIVELY — every disclosed Thread now carries its name (`name: { text, source }`, a user alias over the
+  // grounding wording, else NONE) and where it was established (`origin: { sessionId, sp }`, null only on the frozen Replay
+  // wire, whose decoder states NONE / null honestly: Replay re-derives no name). The Personal PEEK shows the name beneath the
+  // family word and offers Name this topic / Open where it began; no Replay surface mounts or reads this composition, so
+  // Replay's chrome, acts, words, routes and refusals are unchanged. Every frozen field keeps its meaning.
+  // Previous pins: LivingAnalysisMap 58c1adbf, historical-projection-wire 7bc8f628, historical-projection.d.ts 17b9e915.
+  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', 'b1f7d55a94dd1a9f9b36a610519fa176185cd4558249ca9cdb8a9c9c1bb15666'],
+  ['apps/mobile/src/projection/historical-projection-wire.ts', '4c3fd718f6eb19092cf6b63ef5e95335b92ed4409fe9ecec32c65258bac050ee'],
   ['apps/mobile/src/state/store.ts', '3177b9b6a322dc506a5095018b4dd9b14dddacc21bcfd77297decd5dbe62fff3'],
-  ['packages/runtime/src/historical-projection.d.ts', '17b9e91511d2cb47938e36dccd94e57dce6ca83d600509584792c33dc3d9b9b1'],
+  ['packages/runtime/src/historical-projection.d.ts', '8a7dd96eec4175cad34556f51aa614220d6e0a601e1425a7382dd58711dd2cdf'],
   ['apps/api/src/replay/replay.controller.ts', 'f7fb49fdfbcc2d936b3c4a9dea89bfe24a0466acd861600959312d53452c4a0a'],
   ['apps/api/src/replay/replay.module.ts', '76d7012b0a76cfea0bad39d264e1d011a3b4c0089231538b31f50381a6e0e985'],
   ['apps/api/src/replay/replay.repository.ts', '5921784cd2e14323304ea5b5d37b5f5c201b1f6915950d467f527dcb3f6df874'],

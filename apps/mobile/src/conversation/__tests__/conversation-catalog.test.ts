@@ -65,6 +65,18 @@ describe('Slice B — the catalog wire client', () => {
       .toEqual({ kind: 'UNAVAILABLE', detail: 'the renamed row is malformed' });
   });
 
+  it('Slice A — aliases a Thread through PATCH /conversation/threads/:id/alias with the words only, and reads the server’s own answer', async () => {
+    const h = http(() => ({ status: 200, body: { thread_id: 'thread-1', alias: 'My manager', created_at: 'now' } }));
+    const client = new ConversationCatalogApiClient({ baseUrl: 'https://api.test', fetch: h.fetch });
+    expect(await client.setThreadAlias('thread-1', ' My  manager ')).toEqual({ kind: 'ALIASED', threadId: 'thread-1', alias: 'My manager' });
+    expect(h.calls[0].url).toBe('https://api.test/conversation/threads/thread-1/alias');
+    expect(h.calls[0].method).toBe('PATCH');
+    expect(JSON.parse(h.calls[0].body as string)).toEqual({ alias: ' My  manager ' });
+    expect(await new ConversationCatalogApiClient({ baseUrl: 'https://api.test', fetch: http(() => ({ status: 404, body: {} })).fetch }).setThreadAlias('thread-1', 'x')).toEqual({ kind: 'NOT_FOUND' });
+    expect(await new ConversationCatalogApiClient({ baseUrl: 'https://api.test', fetch: http(() => ({ status: 200, body: { thread_id: 'other', alias: 'x', created_at: 'n' } })).fetch }).setThreadAlias('thread-1', 'x'))
+      .toEqual({ kind: 'UNAVAILABLE', detail: 'the aliased row is malformed' });
+  });
+
   it('the Session client sends the client request identity only when one is given, and the 0030 shape otherwise', async () => {
     const h = http(() => ({ status: 201, body: row(SESSION_1) }));
     const client = new ConversationSessionApiClient({ baseUrl: 'https://api.test', fetch: h.fetch });
@@ -81,6 +93,7 @@ describe('Slice B — the catalog controller', () => {
   const transport = (list: ConversationCatalogApiClient['listSessions'], rename?: ConversationCatalogApiClient['renameSession']) => ({
     listSessions: list,
     renameSession: rename ?? (async () => ({ kind: 'UNAVAILABLE' as const, detail: 'none' })),
+    setThreadAlias: async (threadId: string, alias: string) => (alias === 'bad' ? { kind: 'REFUSED' as const, status: 400 } : { kind: 'ALIASED' as const, threadId, alias }),
   });
   const entry = (sessionId: string, title: string | null = null) => ({ sessionId, status: 'ACTIVE' as const, createdAt: 'n', title, opening: null, lastTurnAt: null, turnCount: 0 });
 
@@ -127,6 +140,14 @@ describe('Slice B — the catalog controller', () => {
     expect(await controller.rename(SESSION_1, 'New')).toBe(true);
     expect(controller.getState()).toEqual(expect.objectContaining({ renaming: null, renameFailed: false }));
     expect(controller.getState().entries[0].title).toBe('New');
+  });
+
+  it('Slice A — a Thread alias is appended through the transport and answers true only on the server’s own ALIASED', async () => {
+    const controller = createConversationCatalogController({ transport: transport(async () => ({ kind: 'LISTED', entries: [] })), currentSessionId: SESSION_1, isCurrent: () => true });
+    await expect(controller.renameThread('thread-1', 'My manager')).resolves.toBe(true);
+    await expect(controller.renameThread('thread-1', 'bad')).resolves.toBe(false);
+    controller.retire();
+    await expect(controller.renameThread('thread-1', 'late')).resolves.toBe(false);
   });
 
   it('a retired controller applies nothing late', async () => {

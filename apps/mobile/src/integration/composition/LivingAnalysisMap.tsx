@@ -75,11 +75,11 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, type LayoutChangeEvent } from 'react-native';
 
 import { analysisCopy } from '../../analysis-language';
 import {
-  COSMOS_OVERVIEW_ACT_TEST_ID, CosmosContextualActs, CosmosDetailSheet, CosmosPeekWords, CosmosSheetStage, CosmosTimelineRail, CosmosWorldView, RAIL_ACTS, SHEET_HANDLE_HEIGHT, SHEET_PEEK_MAX, createPersonalCosmosOwner,
+  COSMOS_OVERVIEW_ACT_TEST_ID, COSMOS_PEEK_PLACEHOLDER_INK, CosmosContextualActs, CosmosDetailSheet, CosmosPeekWords, CosmosSheetStage, CosmosTimelineRail, CosmosWorldView, RAIL_ACTS, SHEET_HANDLE_HEIGHT, SHEET_PEEK_MAX, createPersonalCosmosOwner, cosmosPeekChipStyles,
   reopeningOwner, useDetailSheet, type CosmosWorldOwner, type SheetContent,
 } from '../../cosmos/product';
 import { LivingAnalysisSurface, type LivingAnalysisTopBand } from '../../living-analysis';
@@ -90,7 +90,9 @@ import {
 import { chromeProjection, contextPathSentence, inspectionSentence, orientationModel, type ChromeProjection } from '../../orientation-chrome';
 import { returnMapContext, returnWorld } from '../../return-navigation';
 import type { ResponsiveInsets } from '../../responsive';
-import type { CanonicalStore } from '../../state';
+import { sessionPosition, type CanonicalStore } from '../../state';
+import type { ConversationSwitchOutcome } from '../../conversation';
+import type { ProjectionCoordinator } from '../projection/projection-coordinator';
 import { heldContextEntry, inspectionRequestOf } from '../projection/projection-coordinator';
 import type { IntegrationSessionRuntime } from '../runtime/integration-runtime';
 import type { ProductLocale } from '../locale/product-locale';
@@ -111,6 +113,10 @@ export interface LivingAnalysisMapProps {
    * fade into an unrendered surface is exactly the cut it exists to prevent.
    */
   readonly onComposed?: () => void;
+  /** COSMOS E-2 Slice A: append the person's own name for a Personal topic (true when the server kept it). */
+  readonly onAlias?: (threadId: string, alias: string) => Promise<boolean>;
+  /** COSMOS E-2 Slice A: open another conversation of the person's at the moment a topic began. */
+  readonly onOpenSource?: (sessionId: string, sp: number) => Promise<ConversationSwitchOutcome>;
   /** S5-03B R1 — the Analysis top band (the way back to the Conversation), drawn by the surface above the world. */
   readonly top?: LivingAnalysisTopBand | null;
   /** COSMOS-INT-01: the stage's slow drift at rest is paused while a live call shares this surface (the call path is protected). */
@@ -143,7 +149,7 @@ function ComposedMark({ onComposed }: { readonly onComposed: () => void }) {
   return null;
 }
 
-export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope: surfaceEnvelope, onComposed, top = null, driftPaused = false, registerSheetBack }: LivingAnalysisMapProps) {
+export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope: surfaceEnvelope, onComposed, top = null, driftPaused = false, registerSheetBack, onAlias, onOpenSource }: LivingAnalysisMapProps) {
   const { store, projection, journey, spatialCause, witness, preview, presentation, returnSurface, bundle } = runtime;
 
   // The two subscriptions this composition reads from, and there are only two: the canonical store,
@@ -323,6 +329,9 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
           owner={owner.it}
           glass={glass}
           store={store}
+          projection={projection}
+          onAlias={onAlias}
+          onOpenSource={onOpenSource}
           // The accessible Map is offered only from T-04's own context; none is invented when it refuses.
           context={mapContext !== null && mapContext.ok ? mapContext.context : null}
           language={locale.language}
@@ -407,13 +416,16 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
  * PEEK only. The world view and its canvas are never re-keyed by the sheet, and the glass is NOT lifted by the PEEK
  * (no SD-10 lift here): the camera, the semantic zoom and #396's usable centre answer exactly as before.
  */
-function PersonalStage({ owner: seam, glass, store, context, language, driftPaused, onOutcome, composed, home, rail, overviewAct, choice, chrome, registerSheetBack }: {
+function PersonalStage({ owner: seam, glass, store, context, language, driftPaused, onOutcome, composed, home, rail, overviewAct, choice, chrome, registerSheetBack, projection, onAlias, onOpenSource }: {
   readonly owner: CosmosWorldOwner; readonly glass: ViewportEnvelope; readonly store: CanonicalStore;
   readonly context: MapInspectionContext | null; readonly language: ProductLocale['language']; readonly driftPaused: boolean;
   readonly onOutcome: (outcome: MapActionOutcome | { readonly outcome: string }) => void; readonly composed: ReactNode;
   readonly home: () => void; readonly rail: ReactNode; readonly overviewAct: ReactNode;
   readonly choice: ReactNode; readonly chrome: ChromeProjection | null;
   readonly registerSheetBack?: (back: (() => boolean) | null) => void;
+  readonly projection: ProjectionCoordinator;
+  readonly onAlias?: (threadId: string, alias: string) => Promise<boolean>;
+  readonly onOpenSource?: (sessionId: string, sp: number) => Promise<ConversationSwitchOutcome>;
 }) {
   const state = useSyncExternalStore(store.subscribe, store.getState);
   const decoded = useMemo(() => decodeCameraIntent(state.camera), [state.camera]);
@@ -466,7 +478,8 @@ function PersonalStage({ owner: seam, glass, store, context, language, driftPaus
         bodyDrags={!overflows} subject={content?.group ?? null} accent>
         {content === null || chrome === null ? null : (
           <PersonalPeek store={store} chrome={chrome} context={context} language={language} bottomInset={glass.insetBottom}
-            cover={railHeight === 0 ? 0 : railHeight + RAIL_BOTTOM_GAP} choice={choice} onOutcome={onOutcome} onOverflow={setOverflows} />
+            cover={railHeight === 0 ? 0 : railHeight + RAIL_BOTTOM_GAP} choice={choice} onOutcome={onOutcome} onOverflow={setOverflows}
+            projection={projection} onAlias={onAlias} onOpenSource={onOpenSource} />
         )}
       </CosmosDetailSheet>
     </>
@@ -497,11 +510,14 @@ function personalSheetContent(inspection: ReturnType<CanonicalStore['getState']>
  * It fits the PEEK at the accepted size; where larger text would not, it scrolls inside the PEEK (the handle still drags),
  * so nothing is cut off and no act becomes unreachable.
  */
-function PersonalPeek({ store, chrome, context, language, bottomInset, cover, choice, onOutcome, onOverflow }: {
+function PersonalPeek({ store, chrome, context, language, bottomInset, cover, choice, onOutcome, onOverflow, projection, onAlias, onOpenSource }: {
   readonly store: CanonicalStore; readonly chrome: ChromeProjection; readonly context: MapInspectionContext | null;
   readonly language: ProductLocale['language']; readonly bottomInset: number; readonly cover: number; readonly choice: ReactNode;
   readonly onOutcome: (outcome: MapActionOutcome | { readonly outcome: string }) => void;
   readonly onOverflow: (overflows: boolean) => void;
+  readonly projection: ProjectionCoordinator;
+  readonly onAlias?: (threadId: string, alias: string) => Promise<boolean>;
+  readonly onOpenSource?: (sessionId: string, sp: number) => Promise<ConversationSwitchOutcome>;
 }) {
   // The most the PEEK shows under its handle (sheet-geometry's cap); a taller content scrolls inside it.
   const room = SHEET_PEEK_MAX - SHEET_HANDLE_HEIGHT + bottomInset;
@@ -531,14 +547,96 @@ function PersonalPeek({ store, chrome, context, language, bottomInset, cover, ch
     : null;
   // The PEEK reaches at least the rail's top (the handle's row is above the content).
   const minHeight = cover === 0 ? 0 : Math.max(0, cover - SHEET_HANDLE_HEIGHT) + bottomInset;
+  // COSMOS E-2 Slice A (D-3 / D-4): the inspected Thread as THIS context discloses it — its server-given name (the person's
+  // alias, else their grounding wording, else honestly none) and where it began. Nothing here is invented by the client.
+  const thread = inspected !== null && inspected.family === 'THREAD' && context !== null && fresh
+    ? context.disclosure.world.threads.find((candidate) => candidate.id === inspected.id) ?? null
+    : null;
+  const name = thread === null ? null
+    : thread.name.text === null ? { text: copy.topicUnnamed, hint: null, quiet: true }
+      : { text: thread.name.text, hint: thread.name.source === 'USER_ALIAS' ? copy.topicNameYours : copy.topicNameFromWords };
+  const refresh = useCallback(() => {
+    if (context === null) return;
+    // The names live in every rung's disclosure of this (Session, TC): each held rung is re-read from the server.
+    for (const depth of ['WORLD', 'THREAD', 'SESSION', 'ANALYTICAL_OBJECT', 'SOURCE_PROVENANCE'] as const) {
+      void projection.refresh({ sessionId: context.disclosure.sessionId, tc: sessionPosition(context.disclosure.tc), depth });
+    }
+  }, [context, projection]);
+  const origin = thread === null ? null : thread.origin;
+  const openSource = origin === null || context === null ? null : () => {
+    if (origin.sessionId === context.disclosure.sessionId) {
+      onOutcome({ outcome: store.dispatch({ type: 'COMMIT_MOMENT', moment: sessionPosition(origin.sp) }).outcome });
+      return;
+    }
+    if (onOpenSource !== undefined) void onOpenSource(origin.sessionId, origin.sp).then((outcome) => onOutcome({ outcome }));
+  };
   return (
     <ScrollView style={{ maxHeight: room }} scrollEnabled={overflows} nestedScrollEnabled showsVerticalScrollIndicator={overflows} indicatorStyle="white"
       alwaysBounceVertical={false} onContentSizeChange={(_width: number, height: number) => setContentHeight(Math.round(height))}>
-      <CosmosPeekWords testID={PERSONAL_PEEK_TEST_ID} language={language} family={family} statement={inspectionSentence(language, render)}
-        lineage={lineage} choice={choice} go={go === null ? null : { label: copy.goToPlace, onPress: go }} minHeight={minHeight} bottomInset={bottomInset} />
+      <CosmosPeekWords testID={PERSONAL_PEEK_TEST_ID} language={language} family={family} name={name} statement={inspectionSentence(language, render)}
+        lineage={lineage} choice={choice} go={go === null ? null : { label: copy.goToPlace, onPress: go }} minHeight={minHeight} bottomInset={bottomInset}
+        extra={thread === null ? null : (
+          <TopicNameActs key={thread.id} current={thread.name.source === 'USER_ALIAS' ? thread.name.text : null} language={language}
+            onAlias={onAlias === undefined ? null : async (alias: string) => { const kept = await onAlias(thread.id, alias); if (kept) refresh(); return kept; }}
+            onOpenSource={openSource} />
+        )} />
     </ScrollView>
   );
 }
+
+/** The name's acts (COSMOS E-2 Slice A): name / rename the topic in the person's own words, and open where it began. */
+function TopicNameActs({ current, language, onAlias, onOpenSource }: {
+  readonly current: string | null; readonly language: ProductLocale['language'];
+  readonly onAlias: ((alias: string) => Promise<boolean>) | null; readonly onOpenSource: (() => void) | null;
+}) {
+  const copy = analysisCopy(language);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(current ?? '');
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const rtl = language === 'ar';
+  const words = { writingDirection: rtl ? 'rtl' : 'ltr', textAlign: rtl ? 'right' : 'left' } as const;
+  const save = async () => {
+    if (onAlias === null || busy || draft.trim() === '') return;
+    setBusy(true);
+    const kept = await onAlias(draft);
+    setBusy(false);
+    setFailed(!kept);
+    if (kept) setEditing(false);
+  };
+  return (
+    <View testID={`${PERSONAL_PEEK_TEST_ID}:name-acts`} style={peekStyles.acts} pointerEvents="box-none">
+      {editing ? (
+        <View style={peekStyles.editor}>
+          <TextInput testID={`${PERSONAL_PEEK_TEST_ID}:name-field`} accessibilityLabel={copy.topicNameField} value={draft} onChangeText={setDraft} maxLength={60}
+            editable={!busy} autoFocus style={[peekStyles.field, words, failed ? peekStyles.fieldFailed : null]} placeholder={copy.topicNameField} placeholderTextColor={COSMOS_PEEK_PLACEHOLDER_INK} />
+          <Pressable testID={`${PERSONAL_PEEK_TEST_ID}:name-save`} accessibilityRole="button" accessibilityLabel={copy.saveName} disabled={busy || draft.trim() === ''} onPress={() => { void save(); }} style={peekStyles.press}>
+            <View style={peekStyles.chip}><Text style={peekStyles.chipText}>{copy.saveName}</Text></View>
+          </Pressable>
+          <Pressable testID={`${PERSONAL_PEEK_TEST_ID}:name-cancel`} accessibilityRole="button" accessibilityLabel={copy.cancelName} disabled={busy} onPress={() => { setEditing(false); setFailed(false); setDraft(current ?? ''); }} style={peekStyles.press}>
+            <View style={peekStyles.chip}><Text style={peekStyles.chipText}>{copy.cancelName}</Text></View>
+          </Pressable>
+        </View>
+      ) : (
+        <>
+          {onAlias === null ? null : (
+            <Pressable testID={`${PERSONAL_PEEK_TEST_ID}:name-edit`} accessibilityRole="button" accessibilityLabel={copy.nameTopic} onPress={() => { setDraft(current ?? ''); setEditing(true); }} style={peekStyles.press}>
+              <View style={peekStyles.chip}><Text style={peekStyles.chipText}>{copy.nameTopic}</Text></View>
+            </Pressable>
+          )}
+          {onOpenSource === null ? null : (
+            <Pressable testID={`${PERSONAL_PEEK_TEST_ID}:source`} accessibilityRole="button" accessibilityLabel={copy.openSource} onPress={onOpenSource} style={peekStyles.press}>
+              <View style={peekStyles.chip}><Text style={peekStyles.chipText}>{copy.openSource}</Text></View>
+            </Pressable>
+          )}
+        </>
+      )}
+    </View>
+  );
+}
+
+// The sheet's own tokens (cosmos/product): the integration layer defines no colour (T-12 §28.22).
+const peekStyles = cosmosPeekChipStyles;
 
 const styles = StyleSheet.create({
   inert: { opacity: 0 },

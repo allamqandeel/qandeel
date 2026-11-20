@@ -12,7 +12,7 @@ export function disclosure(overrides: Record<string, unknown> = {}): Record<stri
     sessionId: SESSION, liveHead: 3, tc: 2, sealed: true, depth: 'SOURCE_PROVENANCE',
     revision: { liveHead: 3, worldVersion: 12, pendingExpiries: 1 },
     world: {
-      threads: [{ id: THREAD, establishmentPath: 'TE-01', establishedInSession: true, establishedSp: 1, groundingEmergingFocusId: 'focus-manager', home: { x: '0', y: '-3' }, state: 'ESTABLISHED_ACTIVE' }],
+      threads: [{ id: THREAD, establishmentPath: 'TE-01', establishedInSession: true, establishedSp: 1, groundingEmergingFocusId: 'focus-manager', home: { x: '0', y: '-3' }, state: 'ESTABLISHED_ACTIVE', name: { text: 'المدير', source: 'GROUNDING_WORDING' }, origin: { sessionId: SESSION, sp: 1 } }],
       liveFocus: { value: { kind: 'THREAD', threadId: THREAD }, atSp: 1 },
     },
     thread: { status: 'DISCLOSED', value: { threadReadingAppearances: [{ bindingId: 'binding-1', threadId: THREAD, readingId: READING, boundSp: 2, current: true }] } },
@@ -74,6 +74,14 @@ describe('historical disclosure wire validation', () => {
     expect(decodeHistoricalDisclosure({ ...disclosure(), label: 'x' })).toMatchObject({ ok: false, reason: 'MALFORMED_SHAPE' });
     const world = disclosure().world as { threads: Record<string, unknown>[]; liveFocus: unknown };
     expect(decodeHistoricalDisclosure(disclosure({ world: { ...world, threads: [{ ...world.threads[0], label: 'manager' }] } }))).toMatchObject({ ok: false, reason: 'MALFORMED_SHAPE' });
+    // COSMOS E-2 Slice A — a Thread name is a closed pair (text exactly when sourced), an origin a Session Position of the person's own Session.
+    expect(decodeHistoricalDisclosure(disclosure({ world: { ...world, threads: [{ ...world.threads[0], name: { text: 'My manager', source: 'USER_ALIAS' } }] } }))).toMatchObject({ ok: true });
+    expect(decodeHistoricalDisclosure(disclosure({ world: { ...world, threads: [{ ...world.threads[0], name: { text: null, source: 'NONE' } }] } }))).toMatchObject({ ok: true });
+    expect(decodeHistoricalDisclosure(disclosure({ world: { ...world, threads: [{ ...world.threads[0], name: { text: null, source: 'USER_ALIAS' } }] } }))).toMatchObject({ ok: false, reason: 'INCOHERENT_FAMILY' });
+    expect(decodeHistoricalDisclosure(disclosure({ world: { ...world, threads: [{ ...world.threads[0], name: { text: 'x', source: 'NONE' } }] } }))).toMatchObject({ ok: false, reason: 'INCOHERENT_FAMILY' });
+    expect(decodeHistoricalDisclosure(disclosure({ world: { ...world, threads: [{ ...world.threads[0], name: { text: 'x', source: 'AI_TITLE' } }] } }))).toMatchObject({ ok: false, reason: 'INVALID_VOCABULARY' });
+    expect(decodeHistoricalDisclosure(disclosure({ world: { ...world, threads: [{ ...world.threads[0], origin: { sessionId: SESSION, sp: 2 } }] } }))).toMatchObject({ ok: false, reason: 'INCOHERENT_FAMILY' });
+    expect(decodeHistoricalDisclosure(disclosure({ world: { ...world, threads: [{ ...world.threads[0], origin: { sessionId: SESSION } }] } }))).toMatchObject({ ok: false, reason: 'MALFORMED_SHAPE' });
     expect(decodeHistoricalDisclosure(disclosure({ revision: { liveHead: 3, worldVersion: 12, pendingExpiries: 1, sameSpEventSequence: 4 } }))).toMatchObject({ ok: false, reason: 'MALFORMED_SHAPE' });
   });
 

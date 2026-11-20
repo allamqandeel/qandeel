@@ -5,6 +5,7 @@
  * never create a second Session for an already-open one.
  */
 import { createProductRecoveryStore } from '../../recovery';
+import { effectiveTC } from '../../state';
 import { harness, settle, SESSION_A, SESSION_B, snapshot, worldDisclosure, type IntegrationHarness } from '../__fixtures__/integration';
 
 const sessionOf = (url: string): string => url.match(/\/conversation\/sessions\/([^/?]+)/u)?.[1] ?? SESSION_A;
@@ -97,6 +98,24 @@ describe('Slice B — reopening a listed conversation', () => {
     await settle();
     expect(h.ready().bundle.sessionId).toBe(SESSION_A);
     expect(h.http.creates()).toHaveLength(1);
+    h.dispose();
+  });
+
+  // COSMOS E-2 Slice A (D-3): "Open where it began" opens the other conversation AT the Thread's establishing position.
+  it('opened at a position (Slice A, Open where it began), the new runtime stands at that Session Position, not the live edge', async () => {
+    const h = await harness();
+    serveTwoSessions(h);
+    h.http.on('/temporal', (request) => ({ status: 200, body: snapshot({ sessionId: sessionOf(request.url), liveHead: 3 }) }));
+    h.http.on('/historical-projection', (request) => ({ status: 200, body: worldDisclosure(sessionOf(request.url), Number(new URL(request.url).searchParams.get('tc') ?? 3), 3) }));
+    await expect(h.runtime.switchConversation({ kind: 'OPEN', sessionId: SESSION_B, sp: 2 })).resolves.toBe('SWITCHED');
+    await settle();
+    const opened = h.ready();
+    expect(opened.bundle.sessionId).toBe(SESSION_B);
+    expect(effectiveTC(opened.store.getState())).toBe(2);
+    // Without a position the opened conversation stands at its live edge, as before.
+    await expect(h.runtime.switchConversation({ kind: 'OPEN', sessionId: SESSION_A })).resolves.toBe('SWITCHED');
+    await settle();
+    expect(effectiveTC(h.ready().store.getState())).toBe(3);
     h.dispose();
   });
 

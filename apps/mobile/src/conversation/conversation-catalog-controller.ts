@@ -35,11 +35,13 @@ export interface ConversationCatalogController {
   cancelRename(): void;
   /** Append the title on the server; on success the row is updated from the server's own answer. */
   rename(sessionId: string, title: string): Promise<boolean>;
+  /** COSMOS E-2 Slice A: append the person's alias for one of their Personal topics; the projection is re-read by the caller. */
+  renameThread(threadId: string, alias: string): Promise<boolean>;
   retire(): void;
 }
 
 export interface ConversationCatalogControllerOptions {
-  readonly transport: Pick<ConversationCatalogApiClient, 'listSessions' | 'renameSession'>;
+  readonly transport: Pick<ConversationCatalogApiClient, 'listSessions' | 'renameSession' | 'setThreadAlias'>;
   readonly currentSessionId: string;
   readonly isCurrent: () => boolean;
 }
@@ -98,6 +100,11 @@ export function createConversationCatalogController(options: ConversationCatalog
         entries: state.entries.map((entry) => (entry.sessionId === sessionId ? { ...entry, title: outcome.title } : entry)),
       });
       return true;
+    },
+    async renameThread(threadId, alias) {
+      if (!live()) return false;
+      const outcome = await options.transport.setThreadAlias(threadId, alias);
+      return live() && outcome.kind === 'ALIASED';
     },
     retire() {
       retired = true;

@@ -64,7 +64,7 @@ import { MAP_ACTION_AUTHORITY } from '../../map';
 import { TEMPORAL_ACTION_AUTHORITY } from '../../temporal-navigation';
 import { RETURN_ACTION_AUTHORITY, type ReturnSurface } from '../../return-navigation';
 import { HistoricalProjectionApiClient } from '../../projection';
-import type { CanonicalStore, StoreDependencies } from '../../state';
+import { sessionPosition, type CanonicalStore, type StoreDependencies } from '../../state';
 import {
   createMobileRuntimeEntry,
   type BootstrapFailure,
@@ -883,6 +883,11 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       entry.rebind();
       retireSession();
       const ok = await activate(state.authGeneration, target, startSequence);
+      // Source navigation (COSMOS E-2 Slice A): the opened conversation stands on the named moment through the frozen
+      // kernel act — the same act the reader's own timeline tap performs — never by rewriting the viewpoint.
+      if (ok && target.kind === 'OPEN' && target.sp !== undefined && session !== null) {
+        session.store.dispatch({ type: 'COMMIT_MOMENT', moment: sessionPosition(target.sp) });
+      }
       return ok ? 'SWITCHED' : 'FAILED';
     } finally {
       switching = false;

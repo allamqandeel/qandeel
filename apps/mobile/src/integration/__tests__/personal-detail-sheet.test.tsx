@@ -223,7 +223,10 @@ describe('CP3 (2) — the PEEK holds only the existing words and acts', () => {
     expect(view.queryByTestId('qandeel-depth-to-conversation', hidden)).toBeNull();
     expect(view.queryByTestId('qandeel-replay-analysis-entry', hidden)).toBeNull();
     const peekTexts = view.getByTestId(PERSONAL_PEEK_TEST_ID).queryAll((node) => node.type === 'Text').map((node) => words(node));
-    expect(peekTexts).toEqual([copy.family.THREAD, inspectionSentence(language, render_), copy.goToPlace]);
+    // RE-ANCHORED by COSMOS E-2 corrections, Slice A (PO decisions D-3 / D-4, 2026-11-20): the PEEK also names the Thread
+    // (here unnamed: the fixture discloses no wording) and offers Open where it began; Name this topic appears only when the
+    // composition can rename (no `onAlias` here).
+    expect(peekTexts).toEqual([copy.family.THREAD, copy.topicUnnamed, inspectionSentence(language, render_), copy.goToPlace, copy.openSource]);
   });
 
   it.each(['en', 'ar'] as const)('%s, with a held resolution: a Thread — T-08\'s RENDERABLE statement, no lineage, Go to this place', async (language) => {
@@ -233,7 +236,8 @@ describe('CP3 (2) — the PEEK holds only the existing words and acts', () => {
     const render_ = model(h).inspection.render;
     expect(render_.kind).toBe('RENDERABLE');
     const peekTexts = view.getByTestId(PERSONAL_PEEK_TEST_ID).queryAll((node) => node.type === 'Text').map((node) => words(node));
-    expect(peekTexts).toEqual([copy.family.THREAD, inspectionSentence(language, render_), copy.goToPlace]);
+    // RE-ANCHORED by COSMOS E-2 corrections, Slice A (D-3 / D-4, 2026-11-20): see the previous case.
+    expect(peekTexts).toEqual([copy.family.THREAD, copy.topicUnnamed, inspectionSentence(language, render_), copy.goToPlace, copy.openSource]);
   });
 
   it.each(['en', 'ar'] as const)('%s, with a held resolution: a Reading in two contexts — its lineage, and T-04\'s context choice in the PEEK (its ONE home), never in the rail', async (language) => {

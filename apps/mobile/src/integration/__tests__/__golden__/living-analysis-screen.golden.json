@@ -42126,6 +42126,30 @@
                      "style": [
                       {
                        "fontFamily": "Estedad-Regular",
+                       "fontSize": 12,
+                       "includeFontPadding": false,
+                       "lineHeight": 18
+                      },
+                      {
+                       "color": "#9A9DB4"
+                      },
+                      {
+                       "textAlign": "left",
+                       "writingDirection": "ltr"
+                      }
+                     ],
+                     "testID": "qandeel-personal-peek:name"
+                    },
+                    "children": [
+                     "No name yet"
+                    ]
+                   },
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": [
+                      {
+                       "fontFamily": "Estedad-Regular",
                        "fontSize": 14,
                        "includeFontPadding": false,
                        "lineHeight": 22
@@ -42213,6 +42237,83 @@
                           },
                           "children": [
                            "Go to this place"
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "pointerEvents": "box-none",
+                     "style": {
+                      "alignItems": "center",
+                      "flexDirection": "row",
+                      "flexWrap": "wrap",
+                      "gap": 6,
+                      "paddingTop": 2
+                     },
+                     "testID": "qandeel-personal-peek:name-acts"
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "accessibilityLabel": "Open where it began",
+                       "accessibilityRole": "button",
+                       "accessibilityState": {},
+                       "accessibilityValue": {},
+                       "accessible": true,
+                       "collapsable": false,
+                       "focusable": true,
+                       "onBlur": "[fn]",
+                       "onClick": "[fn]",
+                       "onFocus": "[fn]",
+                       "onResponderGrant": "[fn]",
+                       "onResponderMove": "[fn]",
+                       "onResponderRelease": "[fn]",
+                       "onResponderTerminate": "[fn]",
+                       "onResponderTerminationRequest": "[fn]",
+                       "onStartShouldSetResponder": "[fn]",
+                       "style": {
+                        "justifyContent": "center",
+                        "maxWidth": "100%",
+                        "minHeight": 44,
+                        "minWidth": 44
+                       },
+                       "testID": "qandeel-personal-peek:source"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "style": {
+                          "alignItems": "center",
+                          "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                          "borderColor": "rgba(233, 234, 244, 0.16)",
+                          "borderRadius": 16,
+                          "borderWidth": 0.5,
+                          "justifyContent": "center",
+                          "minHeight": 32,
+                          "paddingHorizontal": 12
+                         }
+                        },
+                        "children": [
+                         {
+                          "type": "Text",
+                          "props": {
+                           "style": {
+                            "color": "#E9EAF4",
+                            "fontSize": 12,
+                            "lineHeight": 18,
+                            "textAlign": "center"
+                           }
+                          },
+                          "children": [
+                           "Open where it began"
                           ]
                          }
                         ]
