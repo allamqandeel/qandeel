@@ -5,7 +5,7 @@ import { decodeHistoricalDisclosure } from '../../projection/historical-projecti
 import { otherSpeakerTone, speakerInitials } from '../../attribution';
 import { UnderstandingApiClient } from '../../runtime-entry';
 import { E2_UNDERSTANDING_COUNTS, E2_UNDERSTANDING_MARK } from '../__validation__/e2-acceptance-understanding';
-import { E2_NAMES, E2_STAND_IN, createE2AcceptanceWorld } from '../__validation__/e2-acceptance-world';
+import { E2_NAMES, E2_PERSONAL_COUNTS, E2_SESSION_IDS, E2_STAND_IN, createE2AcceptanceWorld } from '../__validation__/e2-acceptance-world';
 
 const DEPTHS = ['WORLD', 'THREAD', 'SESSION', 'ANALYTICAL_OBJECT', 'SOURCE_PROVENANCE'] as const;
 
@@ -16,19 +16,86 @@ describe.each(['en', 'ar'] as const)('the E-2 acceptance world (%s)', (language)
   test('Personal: every timeline position and depth decodes; 13 topics at the live head, three before the session', async () => {
     for (let tc = 1; tc <= 52; tc += 1) {
       for (const depth of DEPTHS) {
-        const decoded = decodeHistoricalDisclosure(await get(`/conversation/sessions/s/historical-projection?tc=${tc}&depth=${depth}`));
+        const decoded = decodeHistoricalDisclosure(await get(`/conversation/sessions/${E2_SESSION_IDS.current}/historical-projection?tc=${tc}&depth=${depth}`));
         expect([tc, depth, decoded.ok]).toEqual([tc, depth, true]);
       }
     }
-    expect((await get('/conversation/sessions/s/historical-projection?tc=52&depth=WORLD')).world.threads).toHaveLength(13);
-    expect((await get('/conversation/sessions/s/historical-projection?tc=1&depth=WORLD')).world.threads).toHaveLength(3);
-    expect((await get('/conversation/sessions/s/turns')).exchanges).toHaveLength(26);
+    expect((await get(`/conversation/sessions/${E2_SESSION_IDS.current}/historical-projection?tc=52&depth=WORLD`)).world.threads).toHaveLength(13);
+    expect((await get(`/conversation/sessions/${E2_SESSION_IDS.current}/historical-projection?tc=1&depth=WORLD`)).world.threads).toHaveLength(3);
+    expect((await get(`/conversation/sessions/${E2_SESSION_IDS.current}/turns`)).exchanges).toHaveLength(26);
   });
 
   test('Personal: a sent message is kept for the session with the labelled stand-in line, never a model reply', async () => {
-    const sent = await get('/conversation/sessions/s/turns', { method: 'POST', body: JSON.stringify({ content: 'hello', idempotencyKey: 'k-1' }) });
+    const sent = await get(`/conversation/sessions/${E2_SESSION_IDS.current}/turns`, { method: 'POST', body: JSON.stringify({ content: 'hello', idempotencyKey: 'k-1' }) });
     expect(sent.assistantTurn.content).toBe(E2_STAND_IN.personal[language]);
-    expect((await get('/conversation/sessions/s/turns')).exchanges).toHaveLength(27);
+    expect((await get(`/conversation/sessions/${E2_SESSION_IDS.current}/turns`)).exchanges).toHaveLength(27);
+  });
+
+  test('Personal (E-2 corrections): two seeded conversations in the catalog, newest first; an unknown conversation is 404; the earlier one holds the first three topics where they began', async () => {
+    const list = await get('/conversation/sessions');
+    expect(list.map((row: { id: string }) => row.id)).toEqual([E2_SESSION_IDS.current, E2_SESSION_IDS.earlier]);
+    // (One shared world per language: the send test above may already have added an exchange here.)
+    expect(list[0]).toMatchObject({ status: 'ACTIVE', title: null });
+    expect(list[0].turn_count).toBeGreaterThanOrEqual(52);
+    expect(list[1]).toMatchObject({ status: 'ACTIVE', title: null, turn_count: E2_PERSONAL_COUNTS.earlierExchanges * 2 });
+    expect(typeof list[0].opening).toBe('string');
+    expect((await world.fetch(`${world.config.apiBaseUrl}/conversation/sessions/not-a-conversation/turns`)).status).toBe(404);
+    const earlier = await get(`/conversation/sessions/${E2_SESSION_IDS.earlier}/temporal`);
+    expect(earlier).toMatchObject({ sessionId: E2_SESSION_IDS.earlier, liveHead: 6 });
+    const world6 = await get(`/conversation/sessions/${E2_SESSION_IDS.earlier}/historical-projection?tc=6&depth=WORLD`);
+    expect(decodeHistoricalDisclosure(world6).ok).toBe(true);
+    expect(world6.world.threads.map((t: { id: string }) => t.id)).toEqual(['e2-topic-01', 'e2-topic-02', 'e2-topic-03']);
+    expect(world6.world.threads.map((t: { origin: { sp: number } }) => t.origin.sp)).toEqual([1, 3, 5]);
+    expect((await get(`/conversation/sessions/${E2_SESSION_IDS.earlier}/historical-projection?tc=2&depth=WORLD`)).world.threads).toHaveLength(1);
+    // In the current conversation those three carry their EARLIER origin; the others began here.
+    const here = await get(`/conversation/sessions/${E2_SESSION_IDS.current}/historical-projection?tc=52&depth=WORLD`);
+    expect(here.world.threads[0].origin).toEqual({ sessionId: E2_SESSION_IDS.earlier, sp: 1 });
+    expect(here.world.threads[3].origin).toEqual({ sessionId: E2_SESSION_IDS.current, sp: 13 });
+  });
+
+  test('Personal (E-2 corrections): every topic is named by its first words (grounding wording) until the reader names it; the alias is served by every projection and the current world; the current world lists all topics wherever they began', async () => {
+    const before = await get(`/conversation/sessions/${E2_SESSION_IDS.current}/historical-projection?tc=52&depth=WORLD`);
+    for (const thread of before.world.threads) {
+      expect(thread.name.source).toBe('GROUNDING_WORDING');
+      expect(typeof thread.name.text).toBe('string');
+      expect(thread.name.text.length).toBeGreaterThan(0);
+      expect(thread.name.text.length).toBeLessThanOrEqual(80);
+    }
+    const current = await get('/conversation/personal-world');
+    expect(Number.isNaN(Date.parse(current.asOf))).toBe(false);
+    expect(current.threads).toHaveLength(13);
+    expect(current.threads.map((t: { id: string }) => t.id)).toEqual([...current.threads.map((t: { id: string }) => t.id)].sort());
+    expect(current.threads.filter((t: { origin: { sessionId: string } }) => t.origin.sessionId === E2_SESSION_IDS.earlier)).toHaveLength(3);
+    expect(Object.keys(current.threads[0]).sort()).toEqual(['home', 'id', 'name', 'origin']);
+
+    expect((await world.fetch(`${world.config.apiBaseUrl}/conversation/threads/e2-topic-01/alias`, { method: 'PATCH', body: JSON.stringify({ alias: '   ' }) })).status).toBe(400);
+    expect((await world.fetch(`${world.config.apiBaseUrl}/conversation/threads/e2-topic-99/alias`, { method: 'PATCH', body: JSON.stringify({ alias: 'x' }) })).status).toBe(404);
+    const renamed = await get('/conversation/threads/e2-topic-01/alias', { method: 'PATCH', body: JSON.stringify({ alias: '  My   sleep  ' }) });
+    expect(renamed).toEqual({ thread_id: 'e2-topic-01', alias: 'My sleep' });
+    const after = await get(`/conversation/sessions/${E2_SESSION_IDS.current}/historical-projection?tc=52&depth=WORLD`);
+    expect(after.world.threads[0].name).toEqual({ text: 'My sleep', source: 'USER_ALIAS' });
+    expect(after.world.threads[1].name.source).toBe('GROUNDING_WORDING');
+    expect((await get('/conversation/personal-world')).threads[0].name).toEqual({ text: 'My sleep', source: 'USER_ALIAS' });
+    expect((await get(`/conversation/sessions/${E2_SESSION_IDS.earlier}/historical-projection?tc=6&depth=WORLD`)).world.threads[0].name.text).toBe('My sleep');
+  });
+
+  test('Personal (E-2 corrections): New Chat mints ONE conversation per client request id; it starts empty, is listed newest, sees the whole world once it has a Moment; rename is bounded', async () => {
+    const first = await get('/conversation/sessions', { method: 'POST', body: JSON.stringify({ clientRequestId: 'req-1' }) });
+    const again = await get('/conversation/sessions', { method: 'POST', body: JSON.stringify({ clientRequestId: 'req-1' }) });
+    expect(again.id).toBe(first.id);
+    expect(first.id).not.toBe(E2_SESSION_IDS.current);
+    expect((await get('/conversation/sessions')).map((row: { id: string }) => row.id)[0]).toBe(first.id);
+    expect(await get(`/conversation/sessions/${first.id}/temporal`)).toMatchObject({ sessionId: first.id, liveHead: null });
+    expect((await world.fetch(`${world.config.apiBaseUrl}/conversation/sessions/${first.id}/historical-projection?tc=1&depth=WORLD`)).status).toBe(404);
+    await get(`/conversation/sessions/${first.id}/turns`, { method: 'POST', body: JSON.stringify({ content: 'a new start', idempotencyKey: 'n-1' }) });
+    expect(await get(`/conversation/sessions/${first.id}/temporal`)).toMatchObject({ liveHead: 2 });
+    const seen = await get(`/conversation/sessions/${first.id}/historical-projection?tc=2&depth=WORLD`);
+    expect(decodeHistoricalDisclosure(seen).ok).toBe(true);
+    expect(seen.world.threads).toHaveLength(13);
+    expect(seen.world.threads.every((t: { establishedSp: number | null }) => t.establishedSp === null)).toBe(true);
+    expect((await world.fetch(`${world.config.apiBaseUrl}/conversation/sessions/${first.id}/title`, { method: 'PATCH', body: JSON.stringify({ title: 'x'.repeat(81) }) })).status).toBe(400);
+    expect(await get(`/conversation/sessions/${first.id}/title`, { method: 'PATCH', body: JSON.stringify({ title: ' Fresh  start ' }) })).toEqual({ session_id: first.id, title: 'Fresh start' });
+    expect((await get('/conversation/sessions'))[0]).toMatchObject({ id: first.id, title: 'Fresh start', turn_count: 2 });
   });
 
   test('Shared: two Worlds; four people with the same-initials pairs in distinct tones; the field is served', async () => {

@@ -14,6 +14,12 @@
  *              corrections 2026-11-20 section 6: the first E-2 build answered none of these routes, which is why the
  *              surface read UNAVAILABLE). Its commands answer 503 (FAILED), never a pretended success.
  *
+ * COSMOS E-2 corrections (PO decisions D-2 / D-3 / D-4 / D-5, 2026-11-20): the Personal side now has TWO seeded
+ * conversations (the 26-exchange one above, and an EARLIER three-exchange one where the first three topics began), the
+ * server-side conversation catalog (list, New Chat with an idempotent request id, rename), per-conversation turns, temporal
+ * state and projections, every topic's served NAME (its first words in the conversation — the grounding wording — or the
+ * alias the reader gives it) with WHERE it began, and the user-level CURRENT Personal World of all topics now.
+ *
  * Nothing here is a backend: every write answers in memory for the current session only and the seed returns on relaunch.
  * QANDEEL's own replies are labelled stand-in lines, never a model's words. Every Name and Public ID is fictional; every
  * text is SYNTHETIC validation text, never Product copy.
@@ -31,6 +37,11 @@ type Bilingual = { readonly ar: string; readonly en: string };
 const t = (en: string, ar: string): Bilingual => ({ ar, en });
 
 const SESSION = 'e2e20000-0000-4000-8000-000000000001';
+/** The earlier conversation, where the first three topics began (D-5: one World across conversations). */
+const EARLIER_SESSION = 'e2e20000-0000-4000-8000-000000000002';
+export const E2_SESSION_IDS = Object.freeze({ current: SESSION, earlier: EARLIER_SESSION });
+/** New conversations minted by "New Chat" (idempotent on the client request id), in order. */
+const NEW_SESSION_PREFIX = 'e2e20000-0000-4000-8000-0000000001';
 
 /** The fictional people. Salma Hany and Sara Hany share initials; Mariam Ali shares the reader's (Mona Adel). */
 export const E2_NAMES = Object.freeze({
@@ -125,7 +136,18 @@ const THREADS: readonly ThreadFixture[] = HOMES.map(([x, y], i) => ({
   y: String(y * STEP),
   establishedSp: i < 3 ? null : firstSp(i),
   state: 'ESTABLISHED_ACTIVE',
+  // Where each topic began: the first three in the EARLIER conversation (its exchanges 1 – 3), the rest here.
+  origin: i < 3 ? { sessionId: EARLIER_SESSION, sp: i * 2 + 1 } : { sessionId: SESSION, sp: firstSp(i) },
 }));
+/** A topic's grounding wording: the reader's first words about it, whitespace-normalised, at most 80 characters (0198). */
+const groundingWording = (topic: number, language: ChromeLanguage) => TOPICS[topic].exchanges[0][0][language].replace(/\s+/gu, ' ').trim().slice(0, 80);
+/** The served name of every topic under the 0198 law: the reader's alias, else their grounding wording. */
+function namedThreads(language: ChromeLanguage, aliases: ReadonlyMap<string, string>): ThreadFixture[] {
+  return THREADS.map((thread, i) => {
+    const alias = aliases.get(thread.id);
+    return alias === undefined ? { ...thread, name: groundingWording(i, language), nameSource: 'GROUNDING_WORDING' } : { ...thread, name: alias, nameSource: 'USER_ALIAS' };
+  });
+}
 
 /** Readings per topic (each bound inside its topic's exchanges), and the Readings two topics share (their connection). */
 const HOSTED = [4, 2, 3, 2, 3, 3, 2, 3, 2, 2, 2, 2, 1];
@@ -161,8 +183,8 @@ const READINGS: readonly ReadingFixture[] = [
 const FOCUSES: readonly FocusFixture[] = [{ id: 'e2-focus-1', startedSp: 18 }, { id: 'e2-focus-2', startedSp: 34 }, { id: 'e2-focus-3', startedSp: 49 }];
 
 /** The world as known at `tc`: nothing is disclosed before the Moment it began at. */
-function worldAt(tc: number) {
-  const threads = THREADS.filter((thread) => thread.establishedSp === null || thread.establishedSp === undefined || thread.establishedSp <= tc);
+function worldAt(tc: number, named: readonly ThreadFixture[] = THREADS) {
+  const threads = named.filter((thread) => thread.establishedSp === null || thread.establishedSp === undefined || thread.establishedSp <= tc);
   const kept = new Set(threads.map((thread) => thread.id));
   const appearances = APPEARANCES.filter((a) => a.boundSp <= tc && kept.has(a.threadId));
   const bound = new Set(appearances.map((a) => a.readingId));
@@ -171,11 +193,20 @@ function worldAt(tc: number) {
 }
 
 /** Exported for the E-2 decoding test: the disclosure every (tc, depth) answers. */
-export function e2Disclosure(tc: number, depth: HistoricalSemanticDepth, inspection?: Parameters<typeof disclosureFixture>[0]['inspection']) {
-  return disclosureFixture({ depth, sessionId: SESSION, tc, liveHead: LIVE_HEAD, ...worldAt(tc), inspection });
+export function e2Disclosure(tc: number, depth: HistoricalSemanticDepth, inspection?: Parameters<typeof disclosureFixture>[0]['inspection'], named: readonly ThreadFixture[] = THREADS) {
+  return disclosureFixture({ depth, sessionId: SESSION, tc, liveHead: LIVE_HEAD, ...worldAt(tc, named), inspection });
+}
+/** The EARLIER conversation's disclosure: its three topics, established there at SP 1, 3 and 5; no Reading is drawn there. */
+function earlierDisclosure(tc: number, liveHead: number, depth: HistoricalSemanticDepth, inspection: Parameters<typeof disclosureFixture>[0]['inspection'], named: readonly ThreadFixture[]) {
+  const threads = named.slice(0, 3).map((thread, i) => ({ ...thread, establishedSp: i * 2 + 1 })).filter((thread) => (thread.establishedSp ?? 1) <= tc);
+  return disclosureFixture({ depth, sessionId: EARLIER_SESSION, tc, liveHead, threads, appearances: [], readings: [], focuses: [], inspection });
+}
+/** A NEW conversation's disclosure (D-5): the whole accumulated world is known from its first Moment, nothing established here. */
+function newConversationDisclosure(sessionId: string, tc: number, liveHead: number, depth: HistoricalSemanticDepth, inspection: Parameters<typeof disclosureFixture>[0]['inspection'], named: readonly ThreadFixture[]) {
+  return disclosureFixture({ depth, sessionId, tc, liveHead, threads: named.map((thread) => ({ ...thread, establishedSp: null })), appearances: [], readings: [], focuses: [], inspection });
 }
 
-export const E2_PERSONAL_COUNTS = Object.freeze({ topics: THREADS.length, exchanges: EXCHANGES.length, moments: LIVE_HEAD, readings: READINGS.length });
+export const E2_PERSONAL_COUNTS = Object.freeze({ topics: THREADS.length, exchanges: EXCHANGES.length, moments: LIVE_HEAD, readings: READINGS.length, conversations: 2, earlierExchanges: 3 });
 
 // ── Shared ────────────────────────────────────────────────────────────────────────────────────────────────────────────
 const REGION_UNIT = 45_000;
@@ -299,9 +330,31 @@ export interface E2AcceptanceWorld extends Pick<S401ProofWorld, 'config' | 'auth
 
 export function createE2AcceptanceWorld(language: ChromeLanguage): E2AcceptanceWorld {
   const proof = createS401ProofWorld(language, { names: E2_NAMES, publicHeld: false, sharedReply: E2_STAND_IN.shared });
-  // Personal: the conversation, plus what the reader sends in this session (answered by the labelled stand-in line).
-  const history: ConversationExchangeView[] = EXCHANGES.map(([mine, reply], index) => exchange(mine[language], { reply: reply[language], order: index + 1 }));
-  let order = history.length;
+  // Personal: TWO seeded conversations (the reader's current one, and the earlier one where the first three topics began),
+  // plus what the reader sends in any of them (answered by the labelled stand-in line) and any New Chat they open.
+  interface E2Conversation { readonly id: string; readonly createdAt: string; lastTurnAt: string | null; title: string | null; readonly history: ConversationExchangeView[]; order: number }
+  const seeded = (id: string, createdAt: string, lastTurnAt: string, exchanges: readonly (readonly [Bilingual, Bilingual])[]): E2Conversation => ({
+    id, createdAt, lastTurnAt, title: null, order: exchanges.length,
+    history: exchanges.map(([mine, reply], index) => exchange(mine[language], { reply: reply[language], order: index + 1 })),
+  });
+  const conversations = new Map<string, E2Conversation>([
+    [SESSION, seeded(SESSION, '2026-11-19T18:00:00.000Z', '2026-11-19T21:40:00.000Z', EXCHANGES)],
+    [EARLIER_SESSION, seeded(EARLIER_SESSION, '2026-11-18T19:00:00.000Z', '2026-11-18T19:30:00.000Z', TOPICS.slice(0, 3).map((topic) => topic.exchanges[0]))],
+  ]);
+  const minted = new Map<string, string>();
+  const aliases = new Map<string, string>();
+  const now = () => new Date().toISOString();
+  const liveHeadOf = (c: E2Conversation) => (c.history.length === 0 ? null : c.history.length * 2);
+  const catalogRow = (c: E2Conversation) => ({
+    id: c.id, status: 'ACTIVE', created_at: c.createdAt, title: c.title, opening: c.history[0]?.userTurn.content ?? null, last_turn_at: c.lastTurnAt, turn_count: c.history.length * 2,
+  });
+  const catalog = () => Array.from(conversations.values()).sort((a, b) => (b.lastTurnAt ?? b.createdAt).localeCompare(a.lastTurnAt ?? a.createdAt)).map(catalogRow);
+  const currentWorld = () => ({
+    asOf: now(),
+    threads: namedThreads(language, aliases).map((thread) => ({
+      id: thread.id, home: { x: thread.x, y: thread.y }, name: { text: thread.name ?? null, source: thread.nameSource ?? 'NONE' }, origin: thread.origin,
+    })).sort((a, b) => a.id.localeCompare(b.id)),
+  });
   // Shared and Public, seeded once at launch through the proof world's own state.
   proof.seedSharedWorld(seedWorld(E2_SHARED_FAMILY, language));
   proof.seedSharedWorld(seedWorld(E2_SHARED_BOOKS, language));
@@ -314,27 +367,69 @@ export function createE2AcceptanceWorld(language: ChromeLanguage): E2AcceptanceW
   const fetch: RuntimeHttpFetch = async (input, init) => {
     const method = init?.method ?? 'GET';
     const [path, query = ''] = input.replace(/^https?:\/\/[^/]+/u, '').split('?');
-    if (path.endsWith('/turns')) {
-      if (method === 'GET') return respond(200, historyBody(history));
-      const body = JSON.parse(init?.body ?? '{}') as { content?: string; idempotencyKey?: string };
-      const already = history.find((each) => each.userTurn.idempotencyKey === body.idempotencyKey);
-      if (already !== undefined) return respond(201, submitBody(already, SESSION));
-      order += 1;
-      const answered = exchange(body.content ?? '', { key: body.idempotencyKey ?? null, reply: E2_STAND_IN.personal[language], order });
-      history.push(answered);
-      return respond(201, submitBody(answered, SESSION));
+    const params = Object.fromEntries(query.split('&').filter(Boolean).map((pair) => pair.split('=').map(decodeURIComponent) as [string, string]));
+    // The conversation catalog (Slice B): the list, New Chat (idempotent on the client request id), rename.
+    if (path === '/conversation/sessions' && method === 'GET') return respond(200, catalog());
+    if (path === '/conversation/sessions' && method === 'POST') {
+      const body = JSON.parse(init?.body ?? '{}') as { clientRequestId?: string };
+      const key = body.clientRequestId ?? `anonymous-${minted.size + 1}`;
+      let id = minted.get(key);
+      if (id === undefined) {
+        id = `${NEW_SESSION_PREFIX}${String(minted.size + 1).padStart(2, '0')}`;
+        minted.set(key, id);
+        conversations.set(id, { id, createdAt: now(), lastTurnAt: null, title: null, history: [], order: 0 });
+      }
+      const c = conversations.get(id)!;
+      return respond(201, { id, status: 'ACTIVE', channel: 'TEXT', created_at: c.createdAt, updated_at: c.createdAt, last_activity_at: c.lastTurnAt ?? c.createdAt, closed_at: null });
     }
-    if (path.endsWith('/historical-projection')) {
-      const params = Object.fromEntries(query.split('&').filter(Boolean).map((pair) => pair.split('=').map(decodeURIComponent) as [string, string]));
-      const tc = Math.min(LIVE_HEAD, Math.max(1, Number(params.tc ?? LIVE_HEAD)));
-      const depth = (params.depth ?? 'WORLD') as HistoricalSemanticDepth;
-      return respond(200, e2Disclosure(tc, depth, inspectionFromQuery((name) => params[name] ?? null)));
+    const session = /^\/conversation\/sessions\/([^/]+)(\/.*)?$/u.exec(path);
+    if (session !== null) {
+      const [, sessionId, rest = ''] = session;
+      const c = conversations.get(decodeURIComponent(sessionId));
+      if (c === undefined) return respond(404, { code: 'SESSION_NOT_VISIBLE' });
+      const liveHead = liveHeadOf(c);
+      if (rest === '/title' && method === 'PATCH') {
+        const title = ((JSON.parse(init?.body ?? '{}') as { title?: string }).title ?? '').replace(/\s+/gu, ' ').trim();
+        if (title.length < 1 || title.length > 80) return respond(400, { code: 'INVALID_TITLE' });
+        c.title = title;
+        return respond(200, { session_id: c.id, title });
+      }
+      if (rest === '/turns') {
+        if (method === 'GET') return respond(200, historyBody(c.history));
+        const body = JSON.parse(init?.body ?? '{}') as { content?: string; idempotencyKey?: string };
+        const already = c.history.find((each) => each.userTurn.idempotencyKey === body.idempotencyKey);
+        if (already !== undefined) return respond(201, submitBody(already, c.id));
+        c.order += 1;
+        const answered = exchange(body.content ?? '', { key: body.idempotencyKey ?? null, reply: E2_STAND_IN.personal[language], order: c.order });
+        c.history.push(answered);
+        c.lastTurnAt = now();
+        return respond(201, submitBody(answered, c.id));
+      }
+      if (rest === '/historical-projection') {
+        if (liveHead === null) return respond(404, { code: 'SESSION_NOT_VISIBLE' });
+        const tc = Math.min(liveHead, Math.max(1, Number(params.tc ?? liveHead)));
+        const depth = (params.depth ?? 'WORLD') as HistoricalSemanticDepth;
+        const inspection = inspectionFromQuery((name) => params[name] ?? null);
+        const named = namedThreads(language, aliases);
+        if (c.id === SESSION) return respond(200, e2Disclosure(tc, depth, inspection, named));
+        if (c.id === EARLIER_SESSION) return respond(200, earlierDisclosure(tc, liveHead, depth, inspection, named));
+        return respond(200, newConversationDisclosure(c.id, tc, liveHead, depth, inspection, named));
+      }
+      if (rest === '/temporal/events' || rest === '/temporal/live-focus-events') return respond(200, { sessionId: c.id, events: [] });
+      if (rest === '/temporal') return respond(200, { sessionId: c.id, liveHead, liveFocus: { kind: 'NONE' }, liveFocusAtSp: null });
     }
-    if (path.endsWith('/temporal/events') || path.endsWith('/temporal/live-focus-events')) return respond(200, { sessionId: SESSION, events: [] });
-    if (path.endsWith('/temporal')) return respond(200, { sessionId: SESSION, liveHead: LIVE_HEAD, liveFocus: { kind: 'NONE' }, liveFocusAtSp: null });
-    if (method === 'POST' && path.endsWith('/conversation/sessions')) {
-      return respond(201, { id: SESSION, status: 'ACTIVE', channel: 'TEXT', created_at: 'now', updated_at: 'now', last_activity_at: 'now', closed_at: null });
+    // Topic names (Slice A): the reader's alias, kept for this launch and served by every projection from then on.
+    const alias = /^\/conversation\/threads\/([^/]+)\/alias$/u.exec(path);
+    if (alias !== null && method === 'PATCH') {
+      const threadId = decodeURIComponent(alias[1]);
+      if (!THREADS.some((thread) => thread.id === threadId)) return respond(404, { code: 'THREAD_NOT_VISIBLE' });
+      const words = ((JSON.parse(init?.body ?? '{}') as { alias?: string }).alias ?? '').replace(/\s+/gu, ' ').trim();
+      if (words.length < 1 || words.length > 60) return respond(400, { code: 'INVALID_ALIAS' });
+      aliases.set(threadId, words);
+      return respond(200, { thread_id: threadId, alias: words });
     }
+    // The CURRENT Personal World (Slice C, D-5 Option U): every topic the reader has now, wherever it began.
+    if (path === '/conversation/personal-world' && method === 'GET') return respond(200, currentWorld());
     if (path.endsWith('/account/first-use')) {
       return respond(200, { displayName: E2_NAMES.SELF[language], welcomePending: false, firstConversationOpening: false });
     }
