@@ -140,7 +140,10 @@ test('the Stage 6.6 v3 matrix reconciles to 31 FULL AFTER BUILD / 4 NOT EXPOSED 
 });
 
 test('Layer A is ONE owner-scoped read and Layer B is a pure server function: no write, no Product action, no RH, no kernel write, no ranking', () => {
-  assert.match(repository, /'rpc\/get_session_historical_projection_v1'/u);
+  // RE-ANCHORED by COSMOS E-2 corrections, Slice A (Product Owner decisions D-3 / D-4, 2026-11-20): the ONE read is the
+  // ADDITIVE Controlled Personal Projection V2 (migration 0198), which wraps the byte-identical V1 and adds each Thread's
+  // name {text, source} and origin {sessionId, sp}. Still exactly ONE RPC; V1 still decides visibility, coverage and TC.
+  assert.match(repository, /'rpc\/get_session_historical_projection_v2'/u);
   assert.equal((repository.match(/'rpc\//gu) ?? []).length, 1, 'exactly ONE RPC');
   assert.match(repository, /body: JSON\.stringify\(\{ p_session_id: sessionId, p_tc: tc \}\)/u, 'the caller supplies a Session and a TC, never a user id, an SP anchor or a version');
   assert.match(repository, /import \{ DataApiError, readDataApiUpstreamIdentity, type SupabaseDataApiService \} from '\.\.\/conversation\/supabase-data-api\.service';/u, 'the AUTHENTICATED channel with the caller\'s own token');

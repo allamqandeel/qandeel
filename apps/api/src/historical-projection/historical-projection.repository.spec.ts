@@ -12,7 +12,8 @@ describe('the owner-scoped Layer-A read seam (cases 17-22)', () => {
     const knowledge = await new HistoricalProjectionRepository(api(request)).project(TOKEN, SESSION, 2);
     expect(request).toHaveBeenCalledTimes(1);
     expect(request.mock.calls[0][0]).toBe(TOKEN);
-    expect(request.mock.calls[0][1]).toBe('rpc/get_session_historical_projection_v1');
+    // COSMOS E-2 Slice A (D-4): the ONE read is the additive V2 (V1 decides; V2 adds each Thread's name and origin).
+    expect(request.mock.calls[0][1]).toBe('rpc/get_session_historical_projection_v2');
     expect(JSON.parse(request.mock.calls[0][2].body)).toEqual({ p_session_id: SESSION, p_tc: 2 });
     expect(knowledge.tc).toBe(2);
     expect(knowledge.readings).toHaveLength(1);

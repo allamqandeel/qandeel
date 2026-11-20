@@ -451,7 +451,10 @@ test('no Thread id allocation, no Home durable allocation, no lifecycle / LF, no
   // conversation_thread_homes as exact integer text, defines no engine, computes
   // and moves no Home; pinned by tests/historical-projection-contract.test.mjs.)
   const C_MIGRATION = '0072_historical_coverage_projection_disclosure_v1.sql';
-  assert.deepEqual(migrations.filter((name) => SUBSTRATE_MIGRATION_NAME.test(name)), [B2B2_MIGRATION, B2B3_MIGRATION, B3_MIGRATION],
+  // (COSMOS E-2 corrections, Slice A, 2026-11-20 — PO D-4: 0198, the SEPARATE append-only Thread alias ledger and the
+  // additive V2 projection, allocates no Home and no Thread and is pinned by its own contract; excluded from this census.)
+  const THREAD_NAMES_MIGRATION = '0198_cosmos_e2_thread_names_v1.sql';
+  assert.deepEqual(migrations.filter((name) => name !== THREAD_NAMES_MIGRATION && SUBSTRATE_MIGRATION_NAME.test(name)), [B2B2_MIGRATION, B2B3_MIGRATION, B3_MIGRATION],
     'exactly one Home / Thread SUBSTRATE migration exists (T-03B2b2), plus the T-03B2b3 READ / AUDIT migration and the T-03B3 lifecycle migration');
   for (const name of [B3_MIGRATION, B3D_MIGRATION, C_MIGRATION]) {
     assert.doesNotMatch(read(`database/migrations/${name}`), /CREATE FUNCTION public\.(?:osdap_|compute_canonical_home_placement)|UPDATE public\.conversation_thread_homes|placement_x\s*=|placement_y\s*=/u,
@@ -493,7 +496,15 @@ test('no Thread id allocation, no Home durable allocation, no lifecycle / LF, no
   assert.doesNotMatch(recreated.reduce((text, [name]) => text.replace(statementOf(text, name), ''), retry)
     .replaceAll('get_conversation_thread_identity_dossier_page_v1', '').replaceAll('STALE_THREAD_IDENTITY_CONTEXT', ''), /home_anchor|canonical_spatial|osdap|thread_home|home_placement|conversation_threads/iu,
     `outside its two verbatim re-creations ${RETRY_MIGRATION} carries no Home substrate`);
-  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION && candidate !== ERASURE_MIGRATION && candidate !== RETRY_MIGRATION)) {
+  // RE-ANCHORED by COSMOS E-2 corrections, Slice A (PO decision D-4, 2026-11-20): migration 0198 (the SEPARATE append-only
+  // Thread alias ledger and the additive V2 projection) names the canonical Thread table ONLY to reference it (the ledger's
+  // foreign key) and to read ownership (`WHERE t.id = … AND t.user_id = caller`); it creates, alters or writes no Thread /
+  // Home row and defines no placement. It is exempt on exactly those terms and pinned by its own contract
+  // (database/tests/cosmos-e2-thread-names-v1.test.mjs); outside them it carries no Home substrate.
+  const threadNames = read(`database/migrations/${THREAD_NAMES_MIGRATION}`);
+  assert.doesNotMatch(threadNames, /(?:CREATE|ALTER|DROP)\s+TABLE\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?public\.conversation_threads\b|INSERT\s+INTO\s+public\.conversation_threads\b|UPDATE\s+public\.conversation_threads\b|conversation_thread_homes|osdap|home_placement|home_anchor|canonical_spatial/iu,
+    `${THREAD_NAMES_MIGRATION} creates, writes or restructures no Thread / Home table and computes no placement`);
+  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION && candidate !== ERASURE_MIGRATION && candidate !== RETRY_MIGRATION && candidate !== THREAD_NAMES_MIGRATION)) {
     const text = name === VOICE_MIGRATION ? withoutVoiceRecreations(read(`database/migrations/${name}`))
       : name === MIGRATION_0191 ? withoutLiveCallRecreations(read(`database/migrations/${name}`)) : read(`database/migrations/${name}`);
     assert.doesNotMatch(text, /home_anchor|canonical_spatial|osdap|thread_home|home_placement|conversation_threads/iu, `${name} carries no Home substrate`);

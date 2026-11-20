@@ -18,7 +18,9 @@ describe('the Layer-A row becomes typed knowledge (cases 1-9)', () => {
     expect(JSON.stringify(knowledge)).not.toContain('sameSpEventSequence');
     expect(JSON.stringify(knowledge)).not.toContain('reasonCode');
     expect(knowledge.liveFocus).toEqual({ value: { kind: 'THREAD', threadId: THREAD }, atSp: 1 });
-    expect(knowledge.threads[0]).toEqual({ id: THREAD, establishmentPath: 'TE-01', establishedInSession: true, establishedSp: 1, groundingEmergingFocusId: FOCUS, home: { x: '0', y: '-3' }, state: 'ESTABLISHED_ACTIVE' });
+    expect(knowledge.threads[0]).toEqual({ id: THREAD, establishmentPath: 'TE-01', establishedInSession: true, establishedSp: 1, groundingEmergingFocusId: FOCUS, home: { x: '0', y: '-3' }, state: 'ESTABLISHED_ACTIVE',
+      // COSMOS E-2 Slice A (D-3 / D-4): the additive V2 fields, mapped as a closed pair and the caller's own origin.
+      name: { text: 'مديري', source: 'GROUNDING_WORDING' }, origin: { sessionId: SESSION, sp: 1 } });
     expect(knowledge.threadReadingAppearances).toEqual([{ bindingId: 'binding-1', threadId: THREAD, readingId: READING, boundSp: 2, current: true }]);
     expect(knowledge.evidenceParticipations).toEqual([{ readingId: READING, materialId: MATERIAL, evidenceId: `memory:${MATERIAL}`, role: 'SUPPORTING' }]);
     expect(knowledge.materials[0].supersedesMaterialId).toBeNull();
@@ -30,11 +32,22 @@ describe('the Layer-A row becomes typed knowledge (cases 1-9)', () => {
 
   it('2. a Thread known only through the world baseline has no Session-local state here', () => {
     const knowledge = mapHistoricalProjectionRow(projectionRow({
-      threads: [{ id: THREAD, establishmentPath: 'TE-02', establishedInSession: false, establishedSp: null, groundingEmergingFocusId: null, home: { x: '4', y: '4' }, sessionLifecycle: null }],
+      threads: [{ id: THREAD, establishmentPath: 'TE-02', establishedInSession: false, establishedSp: null, groundingEmergingFocusId: null, home: { x: '4', y: '4' }, sessionLifecycle: null, name: { text: null, source: 'NONE' }, origin: { sessionId: 'session-earlier', sp: 3 } }],
       emerging_focuses: [{ id: FOCUS, startedSp: 1, lastAttentionSp: null, promotedThreadId: null }],
     }));
     expect(knowledge.threads[0].state).toBe('ESTABLISHED_UNBOUND_IN_SESSION');
     expect(knowledge.threads[0].establishedSp).toBeNull();
+  });
+
+  it('2b. (Slice A) a name carries text exactly when it has a source; an origin is a positive Session Position, the establishing one here', () => {
+    const base = (projectionRow().threads as Record<string, unknown>[])[0];
+    expect(mapHistoricalProjectionRow(projectionRow({ threads: [{ ...base, name: { text: 'My manager', source: 'USER_ALIAS' } }] })).threads[0].name).toEqual({ text: 'My manager', source: 'USER_ALIAS' });
+    expect(mapHistoricalProjectionRow(projectionRow({ threads: [{ ...base, name: { text: null, source: 'NONE' } }] })).threads[0].name).toEqual({ text: null, source: 'NONE' });
+    rejects(projectionRow({ threads: [{ ...base, name: { text: null, source: 'USER_ALIAS' } }] }), 'HISTORICAL_PROJECTION_INCOHERENT', /text exactly when it has a source/u);
+    rejects(projectionRow({ threads: [{ ...base, name: { text: 'x', source: 'NONE' } }] }), 'HISTORICAL_PROJECTION_INCOHERENT', /text exactly when it has a source/u);
+    rejects(projectionRow({ threads: [{ ...base, name: { text: 'x', source: 'AI_TITLE' } }] }), 'HISTORICAL_PROJECTION_ROW_MALFORMED', /name.source/u);
+    rejects(projectionRow({ threads: [{ ...base, origin: { sessionId: SESSION, sp: 2 } }] }), 'HISTORICAL_PROJECTION_INCOHERENT', /establishing Session Position/u);
+    rejects(projectionRow({ threads: [{ ...base, origin: { sessionId: SESSION, sp: 0, extra: 1 } }] }), 'HISTORICAL_PROJECTION_ROW_MALFORMED', /unknown key extra/u);
   });
 
   it('3. an unknown key, a missing family and a non-object are malformed transport, never knowledge', () => {

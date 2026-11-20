@@ -374,7 +374,11 @@ test('T-03B2a itself shipped no migration, no Thread row, no service_role grant 
   // and creates only the LF substrate; it is pinned by
   // tests/effective-live-focus-final-semantic-chain-cutover-contract.test.mjs.)
   const B3D_MIGRATION = '0071_effective_live_focus_final_semantic_chain_cutover_v1.sql';
-  assert.deepEqual(migrations.filter((name) => /thread|home|te0|establishment/iu.test(name)), [B2B2_MIGRATION, B2B3_MIGRATION, B3_MIGRATION],
+  // (COSMOS E-2 corrections, Slice A, 2026-11-20 — PO D-4: 0198 adds a SEPARATE append-only alias ledger and the additive
+  // V2 projection; it allocates no Thread, no Home and no lifecycle, replaces nothing and touches no Thread table — it is
+  // pinned by database/tests/cosmos-e2-thread-names-v1.test.mjs and is therefore excluded from the substrate census here.)
+  const THREAD_NAMES_MIGRATION = '0198_cosmos_e2_thread_names_v1.sql';
+  assert.deepEqual(migrations.filter((name) => name !== THREAD_NAMES_MIGRATION && /thread|home|te0|establishment/iu.test(name)), [B2B2_MIGRATION, B2B3_MIGRATION, B3_MIGRATION],
     'exactly one Thread / Home SUBSTRATE migration exists (T-03B2b2), plus the T-03B2b3 READ / AUDIT migration and the T-03B3 lifecycle / continuity migration, each pinned by its own contract');
   assert.deepEqual([...read(`database/migrations/${B2B3_MIGRATION}`).matchAll(/CREATE TABLE/gu)], [],
     'the T-03B2b3 migration creates no Thread, Home or capture table of its own');
@@ -432,7 +436,15 @@ test('T-03B2a itself shipped no migration, no Thread row, no service_role grant 
     `${RELATION_MIGRATION} re-creates conversation_thread_cu_relation_v1 verbatim apart from its attention_on predicate`);
   assert.doesNotMatch(relationFix.replace(relationStatement, '').replace(/position\('[^']*' IN body\)/gu, ''), /thread_id|thread_establish|home_anchor|canonical_spatial|ThreadEstablished|conversation_threads|thread_home/iu,
     `outside its one verbatim re-creation ${RELATION_MIGRATION} carries no Thread / Home substrate`);
-  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION && candidate !== ERASURE_MIGRATION && candidate !== RETRY_MIGRATION && candidate !== RELATION_MIGRATION)) {
+  // RE-ANCHORED by COSMOS E-2 corrections, Slice A (PO decision D-4, 2026-11-20): migration 0198 (the SEPARATE append-only
+  // Thread alias ledger and the additive V2 projection) names the canonical Thread table ONLY to reference it (the ledger's
+  // foreign key) and to read ownership (`WHERE t.id = … AND t.user_id = caller`); it creates, alters or writes no Thread /
+  // Home row and defines no placement. It is exempt on exactly those terms and pinned by its own contract
+  // (database/tests/cosmos-e2-thread-names-v1.test.mjs); outside them it carries no Thread / Home substrate.
+  const threadNames = read(`database/migrations/${THREAD_NAMES_MIGRATION}`);
+  assert.doesNotMatch(threadNames, /(?:CREATE|ALTER|DROP)\s+TABLE\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?public\.conversation_threads\b|INSERT\s+INTO\s+public\.conversation_threads\b|UPDATE\s+public\.conversation_threads\b|conversation_thread_homes|osdap|home_placement|home_anchor|canonical_spatial/iu,
+    `${THREAD_NAMES_MIGRATION} creates, writes or restructures no Thread / Home table and computes no placement`);
+  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION && candidate !== ERASURE_MIGRATION && candidate !== RETRY_MIGRATION && candidate !== RELATION_MIGRATION && candidate !== THREAD_NAMES_MIGRATION)) {
     const text = name === VOICE_MIGRATION ? withoutVoiceRecreations(read(`database/migrations/${name}`))
       // (0191's half coordinator checks and reads the World Thread-identity clock exactly as the FINAL 0071 coordinator
       // does - its stale-token contract - and touches no Thread or Home row; that clock's name is all it carries.)

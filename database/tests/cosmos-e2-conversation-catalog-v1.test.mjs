@@ -29,8 +29,10 @@ const setTitle = section('CREATE FUNCTION public.set_conversation_session_title_
 
 test('0197 is the last migration, forward-only, one transaction, and touches no earlier command', () => {
   const migrations = readdirSync(new URL('../migrations/', import.meta.url)).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), MIGRATION, 'exactly 0197 follows 0196');
-  assert.equal(migrations.at(-2), '0196_s8b_07_transient_media_v1.sql');
+  // RE-ANCHORED by COSMOS E-2 corrections, Slice A (0198 follows; the last-migration pin lives in its own contract).
+  const at = migrations.indexOf(MIGRATION);
+  assert.ok(at >= 0, '0197 exists');
+  assert.equal(migrations[at - 1], '0196_s8b_07_transient_media_v1.sql', 'exactly 0197 follows 0196');
   assert.equal(migrations.filter((name) => name.startsWith('0197_')).length, 1);
   assert.equal((code.match(/^BEGIN;$/gmu) ?? []).length, 1);
   assert.equal((code.match(/^COMMIT;$/gmu) ?? []).length, 1);

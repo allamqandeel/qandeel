@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type {
-  ConversationExchange, ConversationSession, ConversationSessionCatalogEntry, ConversationSessionTitle, ConversationTurn,
+  ConversationExchange, ConversationSession, ConversationSessionCatalogEntry, ConversationSessionTitle,
+  ConversationThreadAlias, ConversationTurn,
 } from './conversation.types';
 import { SupabaseDataApiService } from './supabase-data-api.service';
 import { SupabaseServiceRoleApiService } from './supabase-service-role-api.service';
@@ -61,6 +62,15 @@ export class ConversationRepository {
     const rows = await this.dataApi.request<ConversationSessionTitle[]>(accessToken, 'rpc/set_conversation_session_title_v1', {
       method: 'POST',
       body: JSON.stringify({ p_session_id: sessionId, p_title: title }),
+    });
+    return rows[0];
+  }
+
+  /** Slice A: append the caller's alias for one owned Thread (0198 definer; 42501 for a Thread the caller does not own). */
+  async setThreadAlias(accessToken: string, threadId: string, alias: string): Promise<ConversationThreadAlias> {
+    const rows = await this.dataApi.request<ConversationThreadAlias[]>(accessToken, 'rpc/set_conversation_thread_alias_v1', {
+      method: 'POST',
+      body: JSON.stringify({ p_thread_id: threadId, p_alias: alias }),
     });
     return rows[0];
   }

@@ -489,8 +489,11 @@ test('the continuity provider is lazy and strict, and no Thread, Home, binding o
   // Live Focus; the frozen T-03A2 fields are unchanged and pinned by the T-03D contract.)
   // (T-03C re-exported its historical disclosure types from the index ADDITIVELY;
   // the T-03A2 / T-03D exports are unchanged and the index is re-pinned at its T-03C shape.)
+  // (COSMOS E-2 corrections, Slice A, 2026-11-20 — D-3 / D-4: the index re-exports the ADDITIVE Thread name and origin
+  // types (DisclosedThreadName, DisclosedThreadOrigin, ThreadNameSource); every earlier export is unchanged and the index
+  // is re-pinned at that shape. Previous blob b6bd6c3b.)
   for (const [file, blob] of [
-    ['packages/runtime/src/index.d.ts', 'b6bd6c3b0b7df94445db64a6af501ae8213324ef'],
+    ['packages/runtime/src/index.d.ts', '535efa528bb877b1a656df2fbb8727ce91a68358'],
     ['packages/runtime/src/temporal.d.ts', '9d945e6f2d65bdefbc334b0bc5ac884789f21a89'],
     ['packages/runtime/package.json', '932b837629f23b5cb765eda196fb659418d07916'],
   ]) {

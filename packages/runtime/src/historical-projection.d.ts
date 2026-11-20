@@ -56,6 +56,27 @@ export interface DisclosedHome {
   readonly y: string;
 }
 
+/**
+ * COSMOS E-2 corrections, Slice A (Product Owner decisions D-3 / D-4, 2026-11-20; a controlled, ADDITIVE amendment of
+ * D-13): how a Thread may be shown by name. `USER_ALIAS` is the person's own current name for the topic (not a fact at
+ * TC); `GROUNDING_WORDING` is the person's own words with which the subject was resolved when the Thread was established
+ * (bounded by the establishing Session Position); `NONE` carries no text, and the client says so honestly. Never an
+ * AI-crafted title, never a count, never a fabricated group.
+ */
+export type ThreadNameSource = 'USER_ALIAS' | 'GROUNDING_WORDING' | 'NONE';
+
+export interface DisclosedThreadName {
+  /** Present exactly when `source` is not `NONE`. */
+  readonly text: string | null;
+  readonly source: ThreadNameSource;
+}
+
+/** Where the Thread was established: the caller's own Session and the Session Position, so the source can be opened. */
+export interface DisclosedThreadOrigin {
+  readonly sessionId: string;
+  readonly sp: number;
+}
+
 export interface DisclosedThread {
   readonly id: string;
   readonly establishmentPath: string;
@@ -65,6 +86,9 @@ export interface DisclosedThread {
   readonly groundingEmergingFocusId: string | null;
   readonly home: DisclosedHome;
   readonly state: ThreadStateAtTc;
+  readonly name: DisclosedThreadName;
+  /** Null only on a frozen wire that predates D-4 (the Replay render contracts); the live projection always discloses it. */
+  readonly origin: DisclosedThreadOrigin | null;
 }
 
 export interface DisclosedLiveFocusAtTc {

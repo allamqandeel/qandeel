@@ -10,6 +10,7 @@ import type {
   ConversationSession,
   ConversationSessionCatalogEntry,
   ConversationSessionTitle,
+  ConversationThreadAlias,
   ConversationTurn,
   OrchestratedTurnResult,
 } from './conversation.types';
@@ -58,6 +59,8 @@ const CLIENT_REQUEST_ID_MAX = 128;
 const SESSION_TITLE_MAX = 80;
 const CATALOG_DEFAULT_LIMIT = 50;
 const CATALOG_MAX_LIMIT = 100;
+// COSMOS E-2 Slice A (D-3 / D-4): the person's own name for a Personal topic (0198 alias ledger).
+const THREAD_ALIAS_MAX = 60;
 
 /**
  * PROD-SEC-02: the one machine-readable refusal of a NEW turn admission (HTTP 429). It names the condition and
@@ -110,6 +113,31 @@ export class ConversationService {
       }
       throw error;
     }
+  }
+
+  /** Slice A: append the caller's alias for one owned Thread. A Thread the caller does not own is not found. */
+  async renameThread(_userId: string, accessToken: string, threadId: string, body: unknown): Promise<ConversationThreadAlias> {
+    if (!UUID_PATTERN.test(threadId)) throw new NotFoundException('Thread was not found.');
+    const alias = this.validateThreadAlias(body);
+    try {
+      return await this.repository.setThreadAlias(accessToken, threadId, alias);
+    } catch (error) {
+      if (error instanceof DataApiError && (error.status === 403 || error.status === 401)) {
+        throw new NotFoundException('Thread was not found.');
+      }
+      throw error;
+    }
+  }
+
+  private validateThreadAlias(body: unknown): string {
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) throw new BadRequestException('Request body must be an object.');
+    const value = (body as { alias?: unknown }).alias;
+    if (typeof value !== 'string') throw new BadRequestException('alias must be a string.');
+    const normalized = value.replace(/\s+/gu, ' ').trim();
+    if (normalized.length < 1 || normalized.length > THREAD_ALIAS_MAX) {
+      throw new BadRequestException(`alias must be 1-${THREAD_ALIAS_MAX} characters.`);
+    }
+    return normalized;
   }
 
   private validateClientRequestId(body: unknown): string | null {

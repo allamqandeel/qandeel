@@ -97,6 +97,17 @@ describe('ConversationRepository write authority', () => {
     expect(JSON.parse((init as RequestInit).body as string)).toEqual({ p_limit: 25 });
   });
 
+  it('appends a Thread alias through the 0198 command with the thread id and the alias only (Slice A)', async () => {
+    const row = { thread_id: 'thread-1', alias: 'My manager', created_at: 'now' };
+    const dataApi = { request: jest.fn().mockResolvedValue([row]) } as unknown as jest.Mocked<SupabaseDataApiService>;
+    const repository = new ConversationRepository(dataApi, serviceApiMock(), new CorrelationService());
+    await expect(repository.setThreadAlias('user-token', 'thread-1', 'My manager')).resolves.toEqual(row);
+    const [token, path, init] = dataApi.request.mock.calls[0];
+    expect(token).toBe('user-token');
+    expect(path).toBe('rpc/set_conversation_thread_alias_v1');
+    expect(JSON.parse((init as RequestInit).body as string)).toEqual({ p_thread_id: 'thread-1', p_alias: 'My manager' });
+  });
+
   it('appends a manual title through the 0197 command with the session id and the title only', async () => {
     const row = { session_id: 'session-1', title: 'Renamed', created_at: 'now' };
     const dataApi = { request: jest.fn().mockResolvedValue([row]) } as unknown as jest.Mocked<SupabaseDataApiService>;

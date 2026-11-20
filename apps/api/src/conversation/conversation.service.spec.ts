@@ -28,6 +28,7 @@ describe('ConversationService', () => {
     repository = {
       createSession: jest.fn(), findSession: jest.fn(), createTurn: jest.fn(),
       createSessionForRequest: jest.fn(), listSessions: jest.fn(), setSessionTitle: jest.fn(),
+      setThreadAlias: jest.fn(),
       findTurnByIdempotencyKey: jest.fn(), cancelTurn: jest.fn(),
       // T-03A2 / T-03D: present so a post-finalization semantic failure can be
       // PROVEN never to reach the generation-failure lifecycle command.
@@ -61,6 +62,24 @@ describe('ConversationService', () => {
   });
 
   // COSMOS E-2 corrections, Slice B (the Product Owner's D-2, 2026-11-20): the conversation catalog.
+  describe('Personal topic alias (Slice A, migration 0198)', () => {
+    const thread = '3e7a2b1c-5d4e-4f6a-9b8c-1d2e3f4a5b6c';
+    it('appends a normalised alias for an owned Thread, and answers not found for one it may not name', async () => {
+      repository.setThreadAlias.mockResolvedValue({ thread_id: thread, alias: 'My manager', created_at: 'now' });
+      await expect(service.renameThread('user-a', 'token-a', thread, { alias: '  My   manager ' })).resolves.toEqual({ thread_id: thread, alias: 'My manager', created_at: 'now' });
+      expect(repository.setThreadAlias).toHaveBeenCalledWith('token-a', thread, 'My manager');
+      repository.setThreadAlias.mockRejectedValueOnce(new DataApiError(403));
+      await expect(service.renameThread('user-a', 'token-a', thread, { alias: 'x' })).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.renameThread('user-a', 'token-a', 'not-a-uuid', { alias: 'x' })).rejects.toBeInstanceOf(NotFoundException);
+    });
+    it('refuses a malformed alias before any database call', async () => {
+      for (const body of [{ alias: '' }, { alias: '   ' }, { alias: 'x'.repeat(61) }, { alias: 7 }, {}, 'x', ['x']]) {
+        await expect(service.renameThread('user-a', 'token-a', thread, body)).rejects.toBeInstanceOf(BadRequestException);
+      }
+      expect(repository.setThreadAlias).not.toHaveBeenCalled();
+    });
+  });
+
   describe('conversation catalog (Slice B, migration 0197)', () => {
     it('creates through the idempotent command when the body names a client request identity, else exactly as before', async () => {
       repository.createSessionForRequest.mockResolvedValue(session);

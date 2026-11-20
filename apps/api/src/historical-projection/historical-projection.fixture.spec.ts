@@ -19,7 +19,7 @@ export function projectionRow(overrides: Record<string, unknown> = {}): Record<s
     ],
     emerging_focuses: [{ id: FOCUS, startedSp: 1, lastAttentionSp: 2, promotedThreadId: THREAD }],
     live_focus: { kind: 'THREAD', ref: THREAD, atSp: 1, reasonCode: 'NEW_INDEPENDENT_FOCUS' },
-    threads: [{ id: THREAD, establishmentPath: 'TE-01', establishedInSession: true, establishedSp: 1, groundingEmergingFocusId: FOCUS, home: { x: '0', y: '-3' }, sessionLifecycle: 'ACTIVE' }],
+    threads: [{ id: THREAD, establishmentPath: 'TE-01', establishedInSession: true, establishedSp: 1, groundingEmergingFocusId: FOCUS, home: { x: '0', y: '-3' }, sessionLifecycle: 'ACTIVE', name: { text: 'مديري', source: 'GROUNDING_WORDING' }, origin: { sessionId: SESSION, sp: 1 } }],
     thread_reading_appearances: [{ bindingId: 'binding-1', threadId: THREAD, hypothesisId: READING, boundSp: 2, current: true }],
     readings: [{ id: READING, statement: 'the manager avoids direct feedback', type: 'CAUSAL', domain: 'GENERAL', scope: `CONVERSATION_SESSION:${SESSION}`, origin: 'SYSTEM_GENERATED',
       assumptions: [], disconfirmingConditions: ['direct feedback observed'], statusAtTc: 'ACTIVE', versionAtTc: 3,

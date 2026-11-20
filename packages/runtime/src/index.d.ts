@@ -43,6 +43,8 @@ export type {
   DisclosedSourceProvenanceRung,
   DisclosedSubjectGrounding,
   DisclosedThread,
+  DisclosedThreadName,
+  DisclosedThreadOrigin,
   DisclosedThreadReadingAppearance,
   DisclosedThreadRung,
   DisclosedWorldRung,
@@ -58,5 +60,6 @@ export type {
   HistoricalRung,
   HistoricalSemanticDepth,
   ReadingLineageStepKind,
+  ThreadNameSource,
   ThreadStateAtTc,
 } from './historical-projection';

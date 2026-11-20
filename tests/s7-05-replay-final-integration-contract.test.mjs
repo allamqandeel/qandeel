@@ -58,8 +58,11 @@ const CONSUMERS = ['apps/mobile/src/replay-composite', 'apps/mobile/src/replay-p
 /** Byte-identical to the base `f9bc3947` (LF-normalised): the narrowing changes neither the migration nor the frozen wire. */
 const UNCHANGED = [
   ['database/migrations/0169_replay_personal_secure_integration_erasure_v1.sql', '319435d8514b8d4621667d75dbd62efb645ed4beb38e769fcc479066eb52fa2d'],
-  ['packages/runtime/src/historical-projection.d.ts', '17b9e91511d2cb47938e36dccd94e57dce6ca83d600509584792c33dc3d9b9b1'],
-  ['apps/mobile/src/projection/historical-projection-wire.ts', '7bc8f628268b503d6c5f8a80b204138cc3dfe7db9d1b07ec81eae14d0069f451'],
+  // COSMOS E-2 corrections, Slice A CONTROLLED RE-ANCHOR (PO decisions D-3 / D-4, 2026-11-20): the shared wire grows
+  // ADDITIVELY (a Thread's `name` and `origin`, Controlled Personal Projection V2, 0198); the Reading scope narrowing and
+  // every S7-05 field are unchanged. Previous pins: 17b9e915, 7bc8f628.
+  ['packages/runtime/src/historical-projection.d.ts', '8a7dd96eec4175cad34556f51aa614220d6e0a601e1425a7382dd58711dd2cdf'],
+  ['apps/mobile/src/projection/historical-projection-wire.ts', '4c3fd718f6eb19092cf6b63ef5e95335b92ed4409fe9ecec32c65258bac050ee'],
 ];
 
 const CANONICAL = "const CANONICAL_READING_SCOPE = /^CONVERSATION_SESSION:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;";

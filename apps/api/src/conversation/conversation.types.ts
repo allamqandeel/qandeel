@@ -36,6 +36,13 @@ export interface ConversationSessionTitle {
   created_at: string;
 }
 
+/** COSMOS E-2 Slice A (D-3 / D-4): one appended alias of an owned Thread (migration 0198). */
+export interface ConversationThreadAlias {
+  thread_id: string;
+  alias: string;
+  created_at: string;
+}
+
 export interface ConversationTurn {
   id: string;
   session_id: string;

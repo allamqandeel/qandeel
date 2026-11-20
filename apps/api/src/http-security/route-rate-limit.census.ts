@@ -57,6 +57,8 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   // COSMOS E-2 corrections, Slice B (PO D-2, 2026-11-20): the Personal conversation catalog and the durable manual rename.
   'GET /conversation/sessions': 'CONVERSATION',
   'PATCH /conversation/sessions/:sessionId/title': 'CONVERSATION',
+  // COSMOS E-2 corrections, Slice A (PO D-3 / D-4, 2026-11-20): the person's own name for a Personal topic.
+  'PATCH /conversation/threads/:threadId/alias': 'CONVERSATION',
   'GET /conversation/sessions/:sessionId': 'CONVERSATION',
   'GET /conversation/sessions/:sessionId/turns': 'CONVERSATION',
   'POST /conversation/sessions/:sessionId/turns': 'CONVERSATION',

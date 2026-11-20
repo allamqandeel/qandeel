@@ -30,6 +30,13 @@ export class ConversationController {
     return this.conversations.renameSession(userId, accessToken, sessionId, body);
   }
 
+  // Slice A: the person's own name for one owned Personal topic (an append to the 0198 alias ledger).
+  @Patch('threads/:threadId/alias')
+  renameThread(@Req() request: AuthenticatedRequest, @Param('threadId') threadId: string, @Body() body: unknown) {
+    const { userId, accessToken } = request.authenticatedUser;
+    return this.conversations.renameThread(userId, accessToken, threadId, body);
+  }
+
   @Get('sessions/:sessionId')
   resumeSession(@Req() request: AuthenticatedRequest, @Param('sessionId') sessionId: string) {
     const { userId, accessToken } = request.authenticatedUser;

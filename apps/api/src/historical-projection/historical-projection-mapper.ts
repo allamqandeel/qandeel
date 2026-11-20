@@ -24,6 +24,8 @@ import type {
   DisclosedReadingRelation,
   DisclosedSubjectGrounding,
   DisclosedThread,
+  DisclosedThreadName,
+  DisclosedThreadOrigin,
   DisclosedThreadReadingAppearance,
   HistoricalExpiryMapping,
   LiveFocusWireValue,
@@ -101,7 +103,11 @@ function integerText(value: unknown, path: string): string {
 const MOMENT_KEYS = ['id', 'sp', 'sourceRole', 'sourceTurnId', 'ordinalWithinTurn', 'committedText', 'spanStart', 'spanEnd'] as const;
 const FOCUS_KEYS = ['id', 'startedSp', 'lastAttentionSp', 'promotedThreadId'] as const;
 const LIVE_FOCUS_KEYS = ['kind', 'ref', 'atSp', 'reasonCode'] as const;
-const THREAD_KEYS = ['id', 'establishmentPath', 'establishedInSession', 'establishedSp', 'groundingEmergingFocusId', 'home', 'sessionLifecycle'] as const;
+// COSMOS E-2 Slice A (D-3 / D-4): V2 adds `name` and `origin` per Thread; everything else is V1's.
+const THREAD_KEYS = ['id', 'establishmentPath', 'establishedInSession', 'establishedSp', 'groundingEmergingFocusId', 'home', 'sessionLifecycle', 'name', 'origin'] as const;
+const THREAD_NAME_KEYS = ['text', 'source'] as const;
+const THREAD_ORIGIN_KEYS = ['sessionId', 'sp'] as const;
+const THREAD_NAME_SOURCES = ['USER_ALIAS', 'GROUNDING_WORDING', 'NONE'] as const;
 const THREAD_APPEARANCE_KEYS = ['bindingId', 'threadId', 'hypothesisId', 'boundSp', 'current'] as const;
 const READING_KEYS = ['id', 'statement', 'type', 'domain', 'scope', 'origin', 'assumptions', 'disconfirmingConditions', 'statusAtTc', 'versionAtTc', 'lineage', 'subjectGroundings'] as const;
 const LINEAGE_KEYS = ['kind', 'fromStatus', 'toStatus', 'fromVersion', 'toVersion'] as const;
@@ -161,7 +167,27 @@ function mapThread(raw: unknown, index: number, tc: number): DisclosedThread {
     groundingEmergingFocusId: textOrNull(row.groundingEmergingFocusId, `${path}.groundingEmergingFocusId`),
     home: { x: integerText(home.x, `${path}.home.x`), y: integerText(home.y, `${path}.home.y`) },
     state: mapThreadState(row.sessionLifecycle),
+    name: mapThreadName(row.name, `${path}.name`),
+    origin: mapThreadOrigin(row.origin, `${path}.origin`, establishedInSession, establishedSp),
   };
+}
+
+/** The name is a closed pair: text exactly when the source is not NONE. */
+function mapThreadName(raw: unknown, path: string): DisclosedThreadName {
+  const row = record(raw, path, THREAD_NAME_KEYS);
+  const source = oneOf(row.source, `${path}.source`, THREAD_NAME_SOURCES);
+  const text = textOrNull(row.text, `${path}.text`);
+  if ((source === 'NONE') !== (text === null)) return incoherent(`${path}: a name carries text exactly when it has a source`);
+  return { text, source };
+}
+
+/** The origin names the caller's own Session; for a Thread established here it is THIS Session at the establishing SP. */
+function mapThreadOrigin(raw: unknown, path: string, establishedInSession: boolean, establishedSp: number | null): DisclosedThreadOrigin {
+  const row = record(raw, path, THREAD_ORIGIN_KEYS);
+  const sp = integer(row.sp, `${path}.sp`);
+  if (sp < 1) return incoherent(`${path}.sp: a Session Position is at least 1`);
+  if (establishedInSession && sp !== establishedSp) return incoherent(`${path}: a Thread established here originates at its establishing Session Position`);
+  return { sessionId: text(row.sessionId, `${path}.sessionId`), sp };
 }
 
 function mapReading(raw: unknown, index: number, tc: number, emergingFocusIds: ReadonlySet<string>): DisclosedReading {
