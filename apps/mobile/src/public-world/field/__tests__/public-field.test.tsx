@@ -928,13 +928,14 @@ describe('S5-03B — isolation and the Product Copy Gate', () => {
     expect(code('PublicLivingAnalysis.tsx')).toContain('timeline={null}');
     for (const file of files) {
       // S5-04 (controlled re-anchor, validation only): a TextInput's `multiline` prop is not a drawn line, and the S5-04
-      // discussion copy module is, like field-copy.ts, the one place its own Arabic words live.
+      // discussion copy module is, like field-copy.ts, the one place its own Arabic words live. COSMOS E-2 Slice E: the
+      // sheet-tabs copy module («المعلومات» | «المناقشة») is a copy module of the same kind.
       const text = code(file).replace('timeline={null}', '').replace(/\bmultiline\b/gu, '');
       expect(text).not.toMatch(/from '\.\.\/\.\.\/state'|CanonicalStore|SemanticDepth|Session|Thread|EMERGING_FOCUS|READING|temporal|shared-world\/(?!copy)|useMapPanGesture|useMapSemanticZoomGesture/u);
       expect(text).not.toMatch(/edge|Line\b|<Path|Svg|viewCount|rank|popular|trending|similar|proxim/iu);
       if (!EXPLICIT_RELATION_FILES.includes(file)) expect(text).not.toMatch(/relation/iu);
       expect(text).not.toMatch(/withTiming|withSpring|Animated\./u);
-      if (file !== 'field-copy.ts' && file !== 'discussion-copy.ts') expect(text).not.toMatch(/['"`][^'"`\n]*[؀-ۿ][^'"`\n]*['"`]/u);
+      if (file !== 'field-copy.ts' && file !== 'discussion-copy.ts' && file !== 'sheet-tabs-copy.ts') expect(text).not.toMatch(/['"`][^'"`\n]*[؀-ۿ][^'"`\n]*['"`]/u);
       expect(text).not.toMatch(/publish_|'PUBLISHED'|s5-03a\.private|S5-03A_PRIVATE/u);
     }
   });
