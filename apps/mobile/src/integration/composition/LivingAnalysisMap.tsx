@@ -628,8 +628,10 @@ function PersonalPeek({ store, chrome, context, language, bottomInset, cover, ch
     if (onOpenSource !== undefined) void onOpenSource(origin.sessionId, origin.sp).then((outcome) => onOutcome({ outcome }));
   };
   return (
+    // keyboardShouldPersistTaps (COSMOS E-2 HONOR acceptance DEFECT-4): with the topic-name keyboard open, a tap on Save
+    // reaches Save; without it the first tap only dismissed the keyboard.
     <ScrollView style={{ maxHeight: room }} scrollEnabled={overflows} nestedScrollEnabled showsVerticalScrollIndicator={overflows} indicatorStyle="white"
-      alwaysBounceVertical={false} onContentSizeChange={(_width: number, height: number) => setContentHeight(Math.round(height))}>
+      alwaysBounceVertical={false} keyboardShouldPersistTaps="handled" onContentSizeChange={(_width: number, height: number) => setContentHeight(Math.round(height))}>
       <CosmosPeekWords testID={PERSONAL_PEEK_TEST_ID} language={language} family={family} name={name} statement={inspectionSentence(language, render)}
         lineage={lineage} choice={choice} go={go === null ? null : { label: copy.goToPlace, onPress: go }} minHeight={minHeight} bottomInset={bottomInset}
         extra={thread === null ? null : (

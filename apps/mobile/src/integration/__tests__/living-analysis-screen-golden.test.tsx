@@ -83,6 +83,12 @@
  * (`qandeel-personal-world-mode`, 7 host elements: two buttons, the Session one selected) is taken out; keys, order, texts,
  * testIDs, handlers and accessibility of everything else are byte-identical. The CURRENT mode is not recorded here (it is
  * proven by personal-current-world.test.tsx), so the Session-bound screen stays the one this golden protects.
+ *
+ * COSMOS E-2 HONOR acceptance DEFECT-4 — CONTROLLED RE-ANCHOR (Product Owner decision of 2026-11-20): the Personal PEEK's
+ * scroller keeps handled taps, so Save in the topic-name editor works while the keyboard is open. The golden was
+ * regenerated ONCE for that intended change (old sha256 733a298f…, new 626e6bce…). Before it was committed, the diff of the
+ * two recordings was exactly ONE added line, `"keyboardShouldPersistTaps": "handled"` on the PEEK's scroller in the
+ * `inspection` case; every other case and value is byte-identical.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

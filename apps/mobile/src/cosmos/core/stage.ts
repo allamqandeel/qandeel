@@ -149,11 +149,7 @@ function buildLayer(input: SceneInput, rung: number): StageLayer {
       node(e.x, e.y, rung === 0 ? 13 : 15, e.dye);
       if (selected) instrument(e.x, e.y, 24, undefined);
       hits.push({ id: e.id, x: e.x, y: e.y, r: 26 });
-      // AMENDED (PO decision 2026-11-20, COSMOS E-2 HONOR acceptance DEFECT-3; Personal only — THREAD marks exist only
-      // in the Personal worlds): the SELECTED Thread keeps the hub's large title; every other Thread's name is an
-      // ordinary label in its body's hue, so the canvas's overlap gate keeps neighbours from printing over each other.
-      // Before, every Thread name was a major title, which skips that gate.
-      if (e.label !== null) labels.push({ id: e.id, text: e.label, x: e.x, y: e.y + 20 * k, emphasis: selected, major: selected, tint: selected ? -1 : e.dye });
+      if (e.label !== null) labels.push({ id: e.id, text: e.label, x: e.x, y: e.y + 20 * k, emphasis: selected, major: true, tint: -1 });
       continue;
     }
     const receded = input.receded?.has(e.id) === true;

@@ -137,7 +137,9 @@ const FROZEN = [
   // CURRENT-world stage / PEEK; the Replay entry, player and history composition it hosts are untouched (same hashes).
   // RE-ANCHORED by the COSMOS E-2 HONOR acceptance fix (2026-11-20): after a rename the Personal PEEK also re-reads its
   // inspected viewpoint, so it shows the new name; no Replay surface reads this composition. Previous pin: b32e6877.
-  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', 'd6b64a3278070038a88bf790b517665a481d2a20a75b9c675813ceb9be38e221'],
+  // RE-ANCHORED again by the COSMOS E-2 HONOR acceptance DEFECT-4 fix (PO decision 2026-11-20): the Personal PEEK's
+  // scroller keeps handled taps, so Save works while the keyboard is open; no Replay surface reads it. Previous: d6b64a32.
+  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '3f0a063356b27985986214e6b303659f7493d3f285f95169ca35d1d59e291841'],
   ['apps/mobile/src/projection/historical-projection-wire.ts', '4c3fd718f6eb19092cf6b63ef5e95335b92ed4409fe9ecec32c65258bac050ee'],
   ['apps/mobile/src/state/store.ts', '3177b9b6a322dc506a5095018b4dd9b14dddacc21bcfd77297decd5dbe62fff3'],
   ['packages/runtime/src/historical-projection.d.ts', '8a7dd96eec4175cad34556f51aa614220d6e0a601e1425a7382dd58711dd2cdf'],

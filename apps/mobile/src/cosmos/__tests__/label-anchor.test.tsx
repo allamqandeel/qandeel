@@ -126,36 +126,50 @@ describe('Slice D-1 — the layout anchor is the camera a settle is aimed at', (
   });
 });
 
-// COSMOS E-2 HONOR acceptance (PO decision 2026-11-20, DEFECT-3): at THE WHOLE WORLD every Personal topic name was a
-// major title, which skips the overlap gate, so neighbouring names printed over each other. The amended stage keeps the
-// SELECTED topic's large title and makes every other name an ordinary label in its body's hue.
-describe('COSMOS E-2 DEFECT-3 — Personal topic names never print over each other', () => {
+// COSMOS E-2 HONOR acceptance (PO decision 2026-11-20, DEFECT-3): at THE WHOLE WORLD every Personal topic name is a major
+// title, and major titles skipped the canvas's overlap gate, so neighbouring names printed over each other. The amended
+// gate lets only the SELECTED subject skip it. (A first amendment in the stage made names ordinary labels; on the HONOR
+// that dropped names near the edge that overlapped nothing — 2 of 7 drawn — so it was replaced by this one.)
+describe('COSMOS E-2 DEFECT-3 — Personal topic names never print over each other, and stay discoverable', () => {
   const thread = (id: string, x: number, y: number, name: string) => ({ id, kind: 'THREAD' as const, x, y, dye: 2 as const, label: name, fromRung: 0 });
   const TOPICS = [
     thread('wedding', 0, 0, "My brother's wedding is in March"),
     thread('mother', 30, 0, "My mother's tests came back"),
     thread('alexandria', 0, 220, 'There is a job in Alexandria'),
+    // Near the left edge, overlapping nothing: an ordinary label would be left out here; a topic's title is moved inward.
+    thread('karim', 60 - W / 2, -220, 'Karim asked if we should move in'),
   ];
   const placedAt = (focusId: string | null) => {
     const stage = compileStage({ world: 'PERSONAL', rungs: 5, focusId, rtl: false, entities: TOPICS });
     const layer = stage.layers.find((l) => l.rung === 0)!;
-    return { layer, placed: placeLabels(layer.labels, 0, rungScale(0), HOME, W, H, FOCUS_Y, 1, false) };
+    return placeLabels(layer.labels, 0, rungScale(0), HOME, W, H, FOCUS_Y, 1, false);
   };
-  const boxesOverlap = (placed: ReturnType<typeof placeLabels>) => placed.some((a, i) => placed.some((b, j) => j > i
-    && Math.abs(a.left - b.left) < (a.text.length + b.text.length) * 0.58 * Math.max(a.size, b.size) / 2 && Math.abs(a.top - b.top) < Math.max(a.size, b.size) + 4));
+  const box = (p: ReturnType<typeof placeLabels>[number]) => [p.left, p.top, p.left + LABEL_WIDTH, p.top + p.size + 5] as const;
+  const overlapping = (placed: ReturnType<typeof placeLabels>) => placed.some((a, i) => placed.some((b, j) => {
+    if (j <= i) return false;
+    const [a0, a1, a2, a3] = box(a); const [b0, b1, b2, b3] = box(b);
+    return a0 < b2 && a2 > b0 && a1 < b3 && a3 > b1;
+  }));
 
-  it('with nothing selected: no topic name is a major title, the two neighbours do not overprint, the distant one stays', () => {
-    const { layer, placed } = placedAt(null);
-    expect(layer.labels.every((l) => !l.major && l.tint === 2)).toBe(true);
-    expect(placed.map((p) => p.id).sort()).toEqual(['alexandria', 'wedding']);
-    expect(boxesOverlap(placed)).toBe(false);
+  it('with nothing selected: the two neighbours do not overprint; the distant name and the name near the edge stay, as titles', () => {
+    const placed = placedAt(null);
+    expect(placed.map((p) => p.id).sort()).toEqual(['alexandria', 'karim', 'wedding']);
+    expect(placed.every((p) => p.major)).toBe(true);
+    expect(overlapping(placed)).toBe(false);
   });
 
-  it("the selected topic keeps its large title, drawn first; a neighbour under it is left out, not printed over it", () => {
-    const { layer, placed } = placedAt('mother');
-    expect(layer.labels.find((l) => l.id === 'mother')).toMatchObject({ major: true, emphasis: true, tint: -1 });
+  it("the selected topic's title is drawn first and whole; a neighbour under it is left out, not printed over it", () => {
+    const placed = placedAt('mother');
     expect(placed[0]).toMatchObject({ id: 'mother', major: true });
     expect(placed.map((p) => p.id)).not.toContain('wedding');
-    expect(placed.map((p) => p.id)).toContain('alexandria');
+    expect(placed.map((p) => p.id)).toEqual(expect.arrayContaining(['alexandria', 'karim']));
+  });
+
+  it('Personal only: in the Shared and Public stages every major label is the selected subject, so the amended gate changes nothing there', () => {
+    const place = (id: string, x: number) => ({ id, kind: 'PLACE' as const, x, y: 0, dye: 1 as const, label: id, fromRung: 0 });
+    for (const world of ['SHARED', 'PUBLIC'] as const) {
+      const stage = compileStage({ world, rungs: 3, focusId: 'b', rtl: false, entities: [place('a', 0), place('b', 30), { ...place('c', 60), kind: 'EXPERIENCE' as const }] });
+      for (const layer of stage.layers) for (const l of layer.labels) if (l.major) expect(l.emphasis).toBe(true);
+    }
   });
 });

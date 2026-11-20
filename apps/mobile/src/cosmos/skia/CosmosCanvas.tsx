@@ -224,7 +224,10 @@ export function placeLabels(labels: readonly StageLabel[], rung: number, scale: 
     }
     const box: [number, number, number, number] = [px - w / 2 - 5, py - 2, px + w / 2 + 5, py + size * fontScale + 5];
     if (!inView && box[0] < width && box[2] > 0 && box[1] < height && box[3] > 0) continue;
-    if (!label.emphasis && !label.major && taken.some((q) => box[0] < q[2] && box[2] > q[0] && box[1] < q[3] && box[3] > q[1])) continue;
+    // AMENDED (PO decision 2026-11-20, COSMOS E-2 HONOR acceptance DEFECT-3): only the SELECTED subject's label (emphasis)
+    // skips the overlap gate. A major title that is not selected — in the stage that is only a Personal Thread's name, so
+    // no other world is touched — keeps its size and its full inward move but no longer prints over a neighbour.
+    if (!label.emphasis && taken.some((q) => box[0] < q[2] && box[2] > q[0] && box[1] < q[3] && box[3] > q[1])) continue;
     taken.push(box);
     out.push({ id: label.id, text, left: px - LABEL_WIDTH / 2, top: py, size, major: label.major, color: label.tint < 0 ? '#FFFFFF' : lightRgbOf(label.tint) });
   }

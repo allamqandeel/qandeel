@@ -154,6 +154,18 @@ describe('Slice A (D-3 / D-4) — the Personal PEEK names the Thread from the wi
     expect(view.getByTestId(`${PERSONAL_PEEK_TEST_ID}:name-field`, hidden).props.value).toBe('My plan');
   });
 
+  it('HONOR acceptance (DEFECT-4): with the keyboard open, a tap on Save reaches Save — every scroller around the editor keeps handled taps', async () => {
+    const { h, view } = await mount('en');
+    await inspectThread(h, 'thread-a');
+    await act(async () => { fireEvent.press(view.getByTestId(`${PERSONAL_PEEK_TEST_ID}:name-edit`, hidden)); });
+    const scrollers: unknown[] = [];
+    for (let node = view.getByTestId(`${PERSONAL_PEEK_TEST_ID}:name-save`, hidden).parent; node !== null; node = node.parent) {
+      if (node.props.onContentSizeChange !== undefined) scrollers.push(node.props.keyboardShouldPersistTaps);
+    }
+    expect(scrollers.length).toBeGreaterThan(0);
+    expect(scrollers.every((value) => value === 'handled' || value === 'always')).toBe(true);
+  });
+
   it('HONOR acceptance: once the server holds the alias, the PEEK itself shows it (the inspected viewpoint is re-read too)', async () => {
     const copy = analysisCopy('en');
     const { h, view, onAlias } = await mount('en');

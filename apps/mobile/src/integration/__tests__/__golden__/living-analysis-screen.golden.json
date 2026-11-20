@@ -43715,6 +43715,7 @@
               "props": {
                "alwaysBounceVertical": false,
                "indicatorStyle": "white",
+               "keyboardShouldPersistTaps": "handled",
                "nestedScrollEnabled": true,
                "onContentSizeChange": "[fn]",
                "scrollEnabled": false,
