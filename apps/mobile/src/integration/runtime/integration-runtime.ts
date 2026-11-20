@@ -88,7 +88,10 @@ import {
   type RecoveryRefusal,
   type RecoveryWriter,
 } from '../../recovery';
-import { createConversationController, type ConversationController } from '../../conversation';
+import {
+  createConversationCatalogController, createConversationController,
+  type ConversationCatalogController, type ConversationController, type ConversationSwitchOutcome, type ConversationSwitchTarget,
+} from '../../conversation';
 import { createAccountController, type AccountController } from '../../account';
 import {
   createAccountIdentityController,
@@ -186,7 +189,19 @@ export const T12_STORE_DEPENDENCIES: StoreDependencies = Object.freeze({
  * never synthesised here; a FRESH decision passes none and the bootstrap acquires a Session as before.
  * The recovered viewpoint travels beside it so the bootstrap can judge it against the fresh snapshot.
  */
-function bootstrapWithAuthorities(entry: MobileRuntimeEntry, decision: Extract<RecoveryDecision, { kind: 'FRESH' | 'RESUME' }>) {
+/**
+ * COSMOS E-2 corrections, Slice B (the Product Owner's D-2, 2026-11-20, the controlled T-13 / T-12P amendment): the two
+ * launch decisions of T-13, and the two SWITCH decisions of the conversation catalog. NEW carries the request identity
+ * minted for one New-chat tap (the create is idempotent on the server); OPEN carries a Session id the SERVER listed for
+ * this identity, never a literal, never a fixture, never synthesised here. A switch runs the same one function and the
+ * same server validation as a launch: the snapshot GET is what admits an opened Session.
+ */
+type SwitchDecision =
+  | { readonly kind: 'NEW'; readonly clientRequestId: string }
+  | { readonly kind: 'OPEN'; readonly sessionId: string };
+type SessionDecision = Extract<RecoveryDecision, { kind: 'FRESH' | 'RESUME' }> | SwitchDecision;
+
+function bootstrapWithAuthorities(entry: MobileRuntimeEntry, decision: SessionDecision) {
   if (decision.kind === 'RESUME') {
     return entry.bootstrap({
       storeDependencies: T12_STORE_DEPENDENCIES,
@@ -194,11 +209,20 @@ function bootstrapWithAuthorities(entry: MobileRuntimeEntry, decision: Extract<R
       initialViewpoint: decision.record.viewpoint,
     });
   }
+  if (decision.kind === 'OPEN') {
+    return entry.bootstrap({ storeDependencies: T12_STORE_DEPENDENCIES, existingSessionId: decision.sessionId });
+  }
+  if (decision.kind === 'NEW') {
+    return entry.bootstrap({ storeDependencies: T12_STORE_DEPENDENCIES, clientRequestId: decision.clientRequestId });
+  }
   return entry.bootstrap({ storeDependencies: T12_STORE_DEPENDENCIES });
 }
 
-/** How this generation's Session came to be: acquired afresh, or resumed from the identity's record. */
-export type SessionOrigin = 'FRESH' | 'RESUMED';
+/**
+ * How this generation's Session came to be: acquired afresh, resumed from the identity's record, or (Slice B) opened or
+ * newly made through the conversation catalog.
+ */
+export type SessionOrigin = 'FRESH' | 'RESUMED' | 'OPENED' | 'NEW';
 
 /** Everything bound to one runtime generation. Replaced as a whole, never field by field. */
 export interface IntegrationSessionRuntime {
@@ -224,6 +248,12 @@ export interface IntegrationSessionRuntime {
    * driver's existing immediate catch-up. Retired with the generation like everything else here.
    */
   readonly conversation: ConversationController;
+  /**
+   * COSMOS E-2 corrections, Slice B (the Product Owner's D-2): the person's own conversation catalog for THIS identity,
+   * on the transport bound to it, naming THIS Session as the open one. Retired with the generation; the list is the
+   * server's and is never held across generations.
+   */
+  readonly catalog: ConversationCatalogController;
   /**
    * W1B-01: the account's first use for THIS identity — the Name QANDEEL addresses the reader by, the
    * one-time Welcome and which Conversation opening is owed — on the T-12P account transport bound to
@@ -412,6 +442,16 @@ export interface IntegrationRuntime {
   subscribe(listener: () => void): () => void;
   /** Restore any persisted AUTH session and begin observing. Idempotent. */
   start(): Promise<void>;
+  /**
+   * COSMOS E-2 corrections, Slice B (the Product Owner's D-2, 2026-11-20): open another of the person's conversations, or
+   * a new one, inside the SAME authentication generation. The current session runtime is retired as a whole and a new
+   * one is built through the one bootstrap path, so nothing of one conversation (store, cache, driver, controllers,
+   * pending writes) can reach the other. Declined as BUSY while a message is still being sent or a call is up; a new
+   * conversation never erases or replaces an existing one; the T-13 locator moves to the opened Session only when it is
+   * READY. On a failed switch the phase is the ordinary BOOTSTRAP_FAILED, and the identity's recorded locator (the
+   * conversation that was open) is what the next launch recovers.
+   */
+  switchConversation(target: ConversationSwitchTarget): Promise<ConversationSwitchOutcome>;
   dispose(): void;
 }
 
@@ -513,6 +553,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
   function retireSession(): void {
     if (session === null) return;
     session.recovery.writer.retire();
+    session.catalog.retire();
     session.callListening.retire();
     session.playbackOwner.retire();
     session.call.retire();
@@ -555,7 +596,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     session = null;
   }
 
-  function buildSession(bundle: CanonicalRuntimeBundle, decision: Extract<RecoveryDecision, { kind: 'FRESH' | 'RESUME' }>): IntegrationSessionRuntime {
+  function buildSession(bundle: CanonicalRuntimeBundle, decision: SessionDecision, startSequence: number): IntegrationSessionRuntime {
     const generation = bundle.runtimeGeneration;
     const isCurrent = () => !disposed && entry.currentRuntimeGeneration() === generation;
     const preview = createTemporalPreviewController();
@@ -585,14 +626,18 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
 
     // T-13: the durable snapshot advances from the ONE store, for THIS identity and THIS Session, and
     // continues strictly above the sequence the resumed record carried. Retired with the generation.
+    // Slice B: after a switch it continues above the sequence the outgoing writer reached, so the opened
+    // Session becomes the identity's ONE active locator at attach and an older write can never supersede it.
     const writer = attachRecoveryWriter({
       store: bundle.store,
       recovery,
       ownerUserId: bundle.userId,
       sessionId: bundle.sessionId,
       isCurrent,
-      startSequence: decision.kind === 'RESUME' ? decision.record.sequence : 0,
+      startSequence: decision.kind === 'RESUME' ? decision.record.sequence : startSequence,
     });
+    // Slice B: the catalog of THIS identity, naming THIS Session as the open one.
+    const catalog = createConversationCatalogController({ transport: entry.conversationCatalogFor(bundle), currentSessionId: bundle.sessionId, isCurrent });
 
     const activity = entry.activityFor(bundle);
     const shared = entry.sharedWorldsFor(bundle);
@@ -681,7 +726,8 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       presentation,
       returnSurface: { store: bundle.store, preview },
       liveDriver: entry.liveDriverFor(bundle),
-      recovery: { origin: decision.kind === 'RESUME' ? 'RESUMED' : 'FRESH', writer },
+      recovery: { origin: decision.kind === 'RESUME' ? 'RESUMED' : decision.kind === 'OPEN' ? 'OPENED' : decision.kind === 'NEW' ? 'NEW' : 'FRESH', writer },
+      catalog,
       conversation,
       // S7-02: the Replay entry reads THIS Session's conversation, by the same bundle Session id.
       replayEntry: createReplayEntryController({ sessionId: bundle.sessionId, transport: entry.replayFor(bundle), conversation, isCurrent }),
@@ -788,26 +834,59 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       return;
     }
 
+    await activate(authGeneration, decision, 0);
+  }
+
+  /**
+   * The ONE place a Session runtime is built and READY is published, for a launch (a T-13 decision) and for a switch
+   * (Slice B). `startSequence` is the outgoing writer's last sequence on a switch, 0 on a launch (a RESUME takes the
+   * record's own). A result that arrived after its identity was replaced creates nothing and publishes nothing.
+   */
+  async function activate(authGeneration: number, decision: SessionDecision, startSequence: number): Promise<boolean> {
     publish({ kind: 'BOOTSTRAPPING' });
     const result = await bootstrapWithAuthorities(entry, decision);
-    if (disposed) return;
+    if (disposed) return false;
     // A result that arrived after its identity was replaced creates nothing and publishes nothing:
     // the newer identity's own attempt owns the phase.
-    if (entry.auth.getState().kind === 'AUTHENTICATED' && attemptedAuthGeneration !== authGeneration) return;
+    if (entry.auth.getState().kind === 'AUTHENTICATED' && attemptedAuthGeneration !== authGeneration) return false;
     if (result.kind !== 'READY') {
-      if (attemptedAuthGeneration !== authGeneration) return;
+      if (attemptedAuthGeneration !== authGeneration) return false;
       // A resumed Session the server refused, or a recovered viewpoint the snapshot made impossible,
       // is a recovery failure: the record was not usable, and no fresh Session is minted in its place.
       if (decision.kind === 'RESUME') publish({ kind: 'RECOVERY_FAILED', failure: { kind: 'SESSION_INVALID', failure: result.failure } });
       else publish({ kind: 'BOOTSTRAP_FAILED', failure: result.failure });
-      return;
+      return false;
     }
     retireSession();
-    session = buildSession(result.bundle, decision);
+    session = buildSession(result.bundle, decision, startSequence);
     session.liveDriver.start();
     session.account.start();
     session.push.start();
     publish({ kind: 'READY', runtime: session });
+    return true;
+  }
+
+  // Slice B: one switch at a time; a second request while one runs is BUSY.
+  let switching = false;
+  async function switchConversation(target: ConversationSwitchTarget): Promise<ConversationSwitchOutcome> {
+    if (disposed || session === null || phase.kind !== 'READY') return 'NOT_READY';
+    const state = entry.auth.getState();
+    if (state.kind !== 'AUTHENTICATED' || attemptedAuthGeneration !== state.authGeneration) return 'NOT_READY';
+    if (target.kind === 'OPEN' && target.sessionId === session.bundle.sessionId) return 'SWITCHED';
+    // Pending-operation safety: a message still being sent, or a call that is up, is finished first.
+    if (switching || session.conversation.getState().submission !== null || session.call.getState().stage !== 'IDLE') return 'BUSY';
+    switching = true;
+    try {
+      const startSequence = session.recovery.writer.status().lastSequence;
+      // The outgoing generation is retired by the entry (everything of it is stale by construction) and then torn down
+      // here, so the two conversations never run at once; the new one is built through the one path above.
+      entry.rebind();
+      retireSession();
+      const ok = await activate(state.authGeneration, target, startSequence);
+      return ok ? 'SWITCHED' : 'FAILED';
+    } finally {
+      switching = false;
+    }
   }
 
   const unsubscribeAuth = entry.auth.subscribe((state: MobileAuthState) => {
@@ -848,6 +927,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
           listeners.delete(listener);
         };
       },
+      switchConversation,
       async start() {
         // A disposed runtime stays disposed. Without this a remount — React Strict Mode's
         // mount/unmount/mount in development, or any host that re-runs an effect — would call

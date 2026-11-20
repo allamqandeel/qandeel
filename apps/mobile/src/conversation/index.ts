@@ -30,6 +30,12 @@ export {
 
 export type { ConversationCopy } from './copy';
 export { conversationCopy } from './copy';
+// COSMOS E-2 corrections, Slice B: the Personal conversation catalog (the Product Owner's D-2).
+export type { ConversationCatalogController, ConversationCatalogControllerOptions, ConversationCatalogState, ConversationCatalogStatus } from './conversation-catalog-controller';
+export { conversationDisplayName, createConversationCatalogController } from './conversation-catalog-controller';
+export { CONVERSATION_CATALOG_COPY_GATE, conversationCatalogCopy, type ConversationCatalogCopy } from './catalog/copy';
+export { CONVERSATIONS_ENTRY_TEST_ID, ConversationsEntry } from './ConversationsEntry';
+export { CONVERSATION_CATALOG_TEST_ID, ConversationCatalogSurface, type ConversationSwitchOutcome, type ConversationSwitchTarget } from './ConversationCatalogSurface';
 
 export type { DirectedParagraph, ParagraphDirection, PhysicalSide } from './bidi';
 export { directedParagraphs, oppositeSide, paragraphDirection, readerDirection, readerSide, withDirectionMark } from './bidi';

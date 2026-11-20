@@ -73,6 +73,13 @@ export type {
 } from './conversation/conversation-session-api';
 export { ConversationSessionApiClient } from './conversation/conversation-session-api';
 export type {
+  ConversationCatalogApiConfig,
+  ConversationCatalogEntry,
+  ConversationCatalogListOutcome,
+  ConversationCatalogRenameOutcome,
+} from './conversation/conversation-catalog-api';
+export { ConversationCatalogApiClient } from './conversation/conversation-catalog-api';
+export type {
   ConversationExchangeView,
   ConversationVoiceNoteView,
   ConversationCallDeliveryState,

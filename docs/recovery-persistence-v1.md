@@ -139,6 +139,36 @@ nothing.
 inventing a hidden fallback is forbidden. A refused recovery is therefore terminal for that identity's
 launch — a controlled, named technical state — exactly as a failed bootstrap already is (T-12 §14).
 
+> **Controlled amendment — COSMOS E-2 corrections, Slice B (Product Owner decision D-2, 2026-11-20).**
+> The Product Owner approved an explicit conversation catalog, so the paragraph above is amended, not
+> contradicted:
+>
+> - T-13 still owns exactly ONE active Session locator per identity, and recovery still decides
+>   `FRESH` / `RESUME` / `REFUSED` exactly as the table says. A refused recovery is still terminal for
+>   that launch; nothing here turns into a hidden fallback.
+> - The **catalog is server-authoritative**: `GET /conversation/sessions` (migration 0197,
+>   `list_conversation_sessions_v1`) lists the person's own Sessions newest-activity first, with the
+>   person's latest manual title (append-only ledger `conversation_session_titles`), their opening words,
+>   the last turn time and the turn count. T-13 persists none of it.
+> - **New Chat is the approved fresh-start action**, taken by the person on a READY runtime: it mints
+>   ONE Session through `POST /conversation/sessions` with a `clientRequestId` (idempotent per identity
+>   and request identity; a retry answers the earlier Session), and **never erases or replaces an
+>   existing conversation**. Reopening a listed conversation goes through the same one bootstrap
+>   function's `existingSessionId` seam (an `OPEN` decision), validated by the server snapshot like a
+>   `RESUME`.
+> - A switch runs inside the same authentication generation as a **separate session-runtime
+>   lifecycle**: the outgoing session runtime (store, projection cache, live driver, coordinators,
+>   voice, call, recovery writer) is retired as a whole before the next one is activated; the locator
+>   moves only when the opened Session reaches READY, written above the retired writer's last sequence;
+>   a failed switch leaves the ordinary `BOOTSTRAP_FAILED` phase and the previous locator. A switch is
+>   declined (`BUSY`) while a message submission is pending or a call is not idle.
+> - Each conversation's history, timeline and Replay references stay Session-scoped and untouched.
+>
+> Proof: `apps/mobile/src/integration/__tests__/conversation-switch.test.ts`,
+> `apps/mobile/src/conversation/__tests__/conversation-catalog.test.ts`,
+> `database/verify-migration-0197.mjs` (real PostgreSQL, CI), and the re-anchored pins in
+> `tests/t12-integration-contract.test.mjs` §28.6 and `tests/t13-recovery-persistence-contract.test.mjs` §15.
+
 ---
 
 ## 6. Readiness
@@ -285,6 +315,10 @@ device remains validation tooling, unreachable from the Product route, and is no
   stronger: the seam is passed from exactly ONE place, only inside a `RESUME` decision, only as the
   validated record's own locator, never a literal, a fixture or a synthesised id. The one-bootstrap-
   function rule is kept and both branches are proven to carry the three authorities by name.
+  **Re-anchored again by COSMOS E-2 corrections, Slice B (D-2, 2026-11-20):** the one function takes a
+  `SessionDecision` (recovery decision or switch decision) with four branches, all carrying the
+  authorities; the seam is passed from exactly two places inside it (`RESUME`, `OPEN`), never a literal;
+  §15's `startSequence` continues above the retired writer on a switch and starts at 0 on a launch.
 - **`tests/t12-integration-contract.test.mjs` §28.19–20** forbade the words `restore`, `rehydrate`,
   `recover`, `resume(` in the integration layer ("restart and recovery are T-13's"). The permanent claim
   now asserted is about mechanisms: the layer holds no codec, schema, storage adapter, namespace key or

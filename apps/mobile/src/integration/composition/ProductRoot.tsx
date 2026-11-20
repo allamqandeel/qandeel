@@ -190,7 +190,7 @@ function phaseSurface(runtime: IntegrationRuntime, phase: IntegrationPhase) {
   if (phase.kind === 'READY') {
     return (
       <SafeAreaProvider initialMetrics={initialWindowMetrics} style={styles.root}>
-        <ComposedWorld runtime={phase.runtime} auth={runtime.auth} />
+        <ComposedWorld runtime={phase.runtime} auth={runtime.auth} switchConversation={runtime.switchConversation} />
       </SafeAreaProvider>
     );
   }
@@ -265,9 +265,11 @@ function SessionUnverifiedEntry({ auth }: { readonly auth: MobileAuthAuthority }
  * over the SAME runtime generation. Which depth shows is the composition's local choice, never a
  * phase, a route or canonical state; this root still composes exactly one world, only at READY.
  */
-function ComposedWorld({ runtime, auth }: {
+function ComposedWorld({ runtime, auth, switchConversation }: {
   readonly runtime: Extract<IntegrationPhase, { kind: 'READY' }>['runtime'];
   readonly auth: MobileAuthAuthority;
+  /** COSMOS E-2 Slice B: the integration owner's conversation switch (the Product Owner's D-2). */
+  readonly switchConversation: IntegrationRuntime['switchConversation'];
 }) {
   const { insets, fontScale, envelope } = usePresentationFacts();
   // Resolved once per mount: it is a presentation configuration, and re-reading it every render
@@ -280,7 +282,7 @@ function ComposedWorld({ runtime, auth }: {
     await runtime.push.detach();
     return auth.signOut();
   }, [auth, runtime.push]);
-  return <DepthComposition runtime={runtime} locale={locale} insets={insets} fontScale={fontScale} envelope={envelope} onSignOut={signOut} />;
+  return <DepthComposition runtime={runtime} locale={locale} insets={insets} fontScale={fontScale} envelope={envelope} onSignOut={signOut} onSwitchConversation={switchConversation} />;
 }
 
 const styles = StyleSheet.create({
