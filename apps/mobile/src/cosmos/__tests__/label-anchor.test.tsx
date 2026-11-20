@@ -125,3 +125,37 @@ describe('Slice D-1 — the layout anchor is the camera a settle is aimed at', (
     expect(source.match(/host\.aim\(to, focusY, (?:true|false)\);\s*\n\s*anchorTo\(to, focusY\);/gu)).toHaveLength(2);
   });
 });
+
+// COSMOS E-2 HONOR acceptance (PO decision 2026-11-20, DEFECT-3): at THE WHOLE WORLD every Personal topic name was a
+// major title, which skips the overlap gate, so neighbouring names printed over each other. The amended stage keeps the
+// SELECTED topic's large title and makes every other name an ordinary label in its body's hue.
+describe('COSMOS E-2 DEFECT-3 — Personal topic names never print over each other', () => {
+  const thread = (id: string, x: number, y: number, name: string) => ({ id, kind: 'THREAD' as const, x, y, dye: 2 as const, label: name, fromRung: 0 });
+  const TOPICS = [
+    thread('wedding', 0, 0, "My brother's wedding is in March"),
+    thread('mother', 30, 0, "My mother's tests came back"),
+    thread('alexandria', 0, 220, 'There is a job in Alexandria'),
+  ];
+  const placedAt = (focusId: string | null) => {
+    const stage = compileStage({ world: 'PERSONAL', rungs: 5, focusId, rtl: false, entities: TOPICS });
+    const layer = stage.layers.find((l) => l.rung === 0)!;
+    return { layer, placed: placeLabels(layer.labels, 0, rungScale(0), HOME, W, H, FOCUS_Y, 1, false) };
+  };
+  const boxesOverlap = (placed: ReturnType<typeof placeLabels>) => placed.some((a, i) => placed.some((b, j) => j > i
+    && Math.abs(a.left - b.left) < (a.text.length + b.text.length) * 0.58 * Math.max(a.size, b.size) / 2 && Math.abs(a.top - b.top) < Math.max(a.size, b.size) + 4));
+
+  it('with nothing selected: no topic name is a major title, the two neighbours do not overprint, the distant one stays', () => {
+    const { layer, placed } = placedAt(null);
+    expect(layer.labels.every((l) => !l.major && l.tint === 2)).toBe(true);
+    expect(placed.map((p) => p.id).sort()).toEqual(['alexandria', 'wedding']);
+    expect(boxesOverlap(placed)).toBe(false);
+  });
+
+  it("the selected topic keeps its large title, drawn first; a neighbour under it is left out, not printed over it", () => {
+    const { layer, placed } = placedAt('mother');
+    expect(layer.labels.find((l) => l.id === 'mother')).toMatchObject({ major: true, emphasis: true, tint: -1 });
+    expect(placed[0]).toMatchObject({ id: 'mother', major: true });
+    expect(placed.map((p) => p.id)).not.toContain('wedding');
+    expect(placed.map((p) => p.id)).toContain('alexandria');
+  });
+});
