@@ -3,6 +3,8 @@
  */
 import { decodeHistoricalDisclosure } from '../../projection/historical-projection-wire';
 import { otherSpeakerTone, speakerInitials } from '../../attribution';
+import { decodeUnderstandingDetail, decodeUnderstandingList } from '../../runtime-entry/understanding-api';
+import { E2_UNDERSTANDING_COUNTS, E2_UNDERSTANDING_MARK } from '../__validation__/e2-acceptance-understanding';
 import { E2_NAMES, E2_STAND_IN, createE2AcceptanceWorld } from '../__validation__/e2-acceptance-world';
 
 const DEPTHS = ['WORLD', 'THREAD', 'SESSION', 'ANALYTICAL_OBJECT', 'SOURCE_PROVENANCE'] as const;
@@ -50,5 +52,38 @@ describe.each(['en', 'ar'] as const)('the E-2 acceptance world (%s)', (language)
     expect(discussion.posts).toHaveLength(5);
     expect(new Set(discussion.posts.filter((p: { own: boolean }) => !p.own).map((p: { author: { label: string } }) => p.author.label))).toEqual(new Set(['noor.sky.21', 'calm.river.08', 'olive.tree.15']));
     expect(discussion.posts.filter((p: { replyToPostId: string | null }) => p.replyToPostId !== null)).toHaveLength(3);
+  });
+
+  // COSMOS E-2 corrections (2026-11-20 §6): the first E-2 build answered no /understanding route, so the surface read
+  // UNAVAILABLE — a fixture gap. Now the reads decode strictly and every statement is marked synthetic.
+  test('Understanding: the list and every detail decode strictly; each statement carries the synthetic mark', async () => {
+    const items = decodeUnderstandingList(await get('/understanding/items'));
+    expect(items).not.toBeNull();
+    expect(items).toHaveLength(E2_UNDERSTANDING_COUNTS.items);
+    expect(E2_UNDERSTANDING_COUNTS.items).toBeGreaterThanOrEqual(8);
+    for (const item of items!) {
+      if (item.evidenceChange === 'NONE') expect(item.summary!.startsWith(E2_UNDERSTANDING_MARK[language])).toBe(true);
+      else expect(item.summary).toBeNull();
+      const detail = decodeUnderstandingDetail(await get(`/understanding/items/${item.ref}`));
+      expect([item.ref, detail?.ref]).toEqual([item.ref, item.ref]);
+      expect(detail!.revision).toBe(item.revision);
+    }
+    expect(items!.filter((item) => item.evidenceChange !== 'NONE')).toHaveLength(E2_UNDERSTANDING_COUNTS.withheld);
+    expect(items!.filter((item) => item.underReview)).toHaveLength(E2_UNDERSTANDING_COUNTS.underReview);
+    expect(E2_UNDERSTANDING_COUNTS.withheld).toBe(1);
+    expect(E2_UNDERSTANDING_COUNTS.underReview).toBe(1);
+    expect(new Set(items!.map((item) => item.theme)).size).toBe(6);
+    expect(new Set(items!.map((item) => item.confidence)).size).toBe(4);
+  });
+
+  test('Understanding: an unknown ref is 404; no command is pretended — each answers 503, never a success', async () => {
+    const unknown = await world.fetch(`${world.config.apiBaseUrl}/understanding/items/E2SYN-00-not-an-item__`);
+    expect(unknown.status).toBe(404);
+    const [first] = decodeUnderstandingList(await get('/understanding/items'))!;
+    const command = { commandId: '11111111-1111-4111-8111-111111111111', revision: first.revision };
+    for (const [method, suffix] of [['POST', '/discussion'], ['DELETE', '/discussion'], ['POST', '/disagreement'], ['POST', '/disagreement/resolve']] as const) {
+      const answer = await world.fetch(`${world.config.apiBaseUrl}/understanding/items/${first.ref}${suffix}`, { method, body: JSON.stringify(command) });
+      expect([method, suffix, answer.status, answer.ok]).toEqual([method, suffix, 503, false]);
+    }
   });
 });

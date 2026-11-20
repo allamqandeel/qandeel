@@ -9,7 +9,10 @@
  *   Shared   — two Worlds; the first has four people (the reader, two with the same initials, one sharing the reader's
  *              initials), QANDEEL lines, short and long messages, and field places read from those lines;
  *   Public   — the 29-Experience SYNTHETIC field of `s503b-visual-field.ts`, four titled topics, and discussions with posts,
- *              comments and replies by several fictional Public IDs.
+ *              comments and replies by several fictional Public IDs;
+ *   Understanding — eleven labelled SYNTHETIC items over the same 13 topics (`e2-acceptance-understanding.ts`; COSMOS E-2
+ *              corrections 2026-11-20 section 6: the first E-2 build answered none of these routes, which is why the
+ *              surface read UNAVAILABLE). Its commands answer 503 (FAILED), never a pretended success.
  *
  * Nothing here is a backend: every write answers in memory for the current session only and the seed returns on relaunch.
  * QANDEEL's own replies are labelled stand-in lines, never a model's words. Every Name and Public ID is fictional; every
@@ -21,6 +24,7 @@ import { exchange, historyBody, submitBody } from '../../conversation/__fixtures
 import { disclosureFixture, inspectionFromQuery, type AppearanceFixture, type FocusFixture, type ReadingFixture, type ThreadFixture } from '../../map/__fixtures__/disclosure';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import type { ConversationExchangeView, RuntimeHttpFetch } from '../../runtime-entry';
+import { answerE2Understanding } from './e2-acceptance-understanding';
 import { createS401ProofWorld, type S401ProofWorld, type S401SeedPost, type S401SeedWorld } from './s401-proof-world';
 
 type Bilingual = { readonly ar: string; readonly en: string };
@@ -330,6 +334,8 @@ export function createE2AcceptanceWorld(language: ChromeLanguage): E2AcceptanceW
     if (path.endsWith('/account/first-use')) {
       return respond(200, { displayName: E2_NAMES.SELF[language], welcomePending: false, firstConversationOpening: false });
     }
+    const understanding = answerE2Understanding(method, path, language);
+    if (understanding !== null) return respond(understanding.status, understanding.body);
     return proof.fetch(input, init);
   };
 
