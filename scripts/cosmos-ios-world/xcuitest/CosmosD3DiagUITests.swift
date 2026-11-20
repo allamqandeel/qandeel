@@ -58,8 +58,18 @@ final class CosmosD3DiagUITests: XCTestCase {
     return b.exists ? b.label : "NO-BOARD"
   }
   private var tag: String { ProcessInfo.processInfo.environment["D3_TAG"] ?? "untagged" }
-  private var screenW: CGFloat { UIScreen.main.bounds.width }
-  private var screenH: CGFloat { UIScreen.main.bounds.height }
+  /// The device's screen in points. The UI-test runner is a compatibility-scaled app (`UIScreen.main.bounds` is 320 pt
+  /// wide on every simulator, COSMOS-FINAL-01 §29.7), so the springboard's frame is read once, before any timing loop.
+  private static var deviceScreen: CGRect?
+  private var devicePoints: CGRect {
+    if let s = Self.deviceScreen { return s }
+    let f = XCUIApplication(bundleIdentifier: "com.apple.springboard").frame
+    let s = f.width > 0 ? f : UIScreen.main.bounds
+    Self.deviceScreen = s
+    return s
+  }
+  private var screenW: CGFloat { devicePoints.width }
+  private var screenH: CGFloat { devicePoints.height }
 
   /// A rectangle recorded on the board as `lay.<key>=x,y,w,h`.
   private func lay(_ b: String, _ key: String) -> CGRect? {
@@ -200,6 +210,7 @@ final class CosmosD3DiagUITests: XCTestCase {
     let door = doorFrame
     let centre = CGPoint(x: door.midX, y: door.midY)
     let threadBox = CGRect(x: 0, y: door.maxY + 50, width: screenW, height: 200)
+    lines.append("screen=\(Int(screenW))x\(Int(screenH)) runnerScreen=\(Int(UIScreen.main.bounds.width))")
     let tLaunch0 = now()
     app.launch()
     let tLaunch1 = now()

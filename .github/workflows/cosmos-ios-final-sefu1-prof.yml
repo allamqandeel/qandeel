@@ -1,0 +1,134 @@
+name: iOS COSMOS-FINAL-01 SE-FU-1 native Time Profiler (fresh-install first launch)
+# COSMOS-FINAL-01 SE-FU-1 (PO decision after the §29 review, 2026-11-20): ONE focused native Time Profiler investigation of
+# the first-launch delay, with the established fresh-install protocol: a fresh install on a freshly booted iPhone 17 (en,
+# default size), ONE first launch whose door is tapped at its first visible frame (CosmosD3DiagUITests test1A, the board
+# of the SE-FU-1-LT build: f6d9c9cd + instrumentation only), recorded by `xctrace record --template 'Time Profiler'`.
+# The board's window (typefaceReady → door.layout) is mapped onto the trace by independent anchors
+# (scripts/cosmos-ios-world/xctrace-analyse.mjs). The SE-FU-1-LT finding reproduced the long interval on 2 of 3 launches,
+# so the same bounded count of 3 profiled launches is taken, each a fresh install; nothing is retried, nothing asserted.
+# The diagnostic test reads the device's screen in points from the springboard (the runner's UIScreen is 320 pt, §29.7).
+# VALIDATION BRANCH ONLY (cosmos/validate/final-sefu1-prof); never merged.
+on:
+  push:
+    branches: ['cosmos/validate/final-sefu1-prof']
+concurrency:
+  group: cosmos-ios-final-sefu1-prof-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+  IOS_RUNTIME_SUFFIX: iOS-26-5
+  HEAD_COMMIT: f6d9c9cd
+jobs:
+  profile:
+    name: SE-FU-1 — Time Profiler on fresh-install first launches
+    runs-on: macos-26
+    timeout-minutes: 150
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4, with: {fetch-depth: 0}}
+      - name: Record the application diff to the COSMOS-FINAL-01 head (instrumentation only)
+        run: |
+          mkdir -p "$RUNNER_TEMP/evidence"
+          git diff --stat "$HEAD_COMMIT" HEAD -- apps/ | tee "$RUNNER_TEMP/evidence/app-diff-stat.txt"
+          git diff "$HEAD_COMMIT" HEAD -- apps/ > "$RUNNER_TEMP/evidence/app-diff.patch"
+          test -z "$(git diff --name-only "$HEAD_COMMIT" HEAD -- package.json package-lock.json apps/mobile/package.json)"
+      - name: Select Xcode 26.6 explicitly
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+          ruby -rxcodeproj -e 1 2>/dev/null || gem install --user-install --no-document xcodeproj
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - name: Build the instrumented proof app and its UI tests (one build)
+        env: {S401_SHARED_PROOF: '1'}
+        run: |
+          set -o pipefail
+          npm ci
+          node apps/mobile/scripts/select-s401-proof-entry.mjs --apply
+          npm run prebuild:ios --workspace @qandeel/mobile
+          (cd apps/mobile/ios && pod install)
+          ruby scripts/cosmos-ios-world/xcuitest/add-uitest-target.rb apps/mobile/ios scripts/cosmos-ios-world/xcuitest/CosmosD3DiagUITests.swift
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          xcodebuild -quiet -workspace "$workspace" -scheme QandeelWorldUITests -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build-for-testing
+          app="$(find "$PWD/apps/mobile/ios/build/Build/Products/Release-iphonesimulator" -maxdepth 1 -name '*.app' ! -name '*-Runner.app' | head -n 1)"
+          xctestrun="$(find "$PWD/apps/mobile/ios/build/Build/Products" -maxdepth 1 -name '*.xctestrun' | head -n 1)"
+          test -n "$app"; test -n "$xctestrun"; echo "APP=$app" >> "$GITHUB_ENV"; echo "XCTESTRUN=$xctestrun" >> "$GITHUB_ENV"
+          exe="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Info.plist")"; echo "APP_EXE=$exe" >> "$GITHUB_ENV"
+          { echo "branch head=$(git rev-parse HEAD)"; echo "COSMOS-FINAL-01 head=$HEAD_COMMIT"; echo "app=$(basename "$app") exe=$exe"; xcodebuild -version
+            echo "symbols: $(nm "$app/$exe" 2>/dev/null | wc -l) nm entries"; ls -d "$PWD"/apps/mobile/ios/build/Build/Products/Release-iphonesimulator/*.dSYM 2>/dev/null; } > "$RUNNER_TEMP/evidence/identity.txt"
+          cat "$RUNNER_TEMP/evidence/identity.txt"
+      - name: iPhone 17 — boot
+        run: bash scripts/cosmos-ios-world/sim.sh 'iPhone 17' "$RUNNER_TEMP/evidence/iphone17"
+      - name: Time Profiler preflight — which recording target works (bounded, 3 s each)
+        run: |
+          U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/preflight"; mkdir -p "$E"
+          xcrun xctrace version | tee "$E/version.txt"
+          xcrun xctrace list devices > "$E/devices.txt" 2>&1 || true
+          mode=none
+          if node scripts/validation/bounded-run.mjs --seconds 120 --label xctrace-preflight-device -- xcrun xctrace record --template 'Time Profiler' --device "$U" --all-processes --time-limit 3s --output "$E/device.trace" > "$E/device.log" 2>&1 && [ -d "$E/device.trace" ]; then mode=device
+          elif node scripts/validation/bounded-run.mjs --seconds 120 --label xctrace-preflight-host -- sudo -E xcrun xctrace record --template 'Time Profiler' --all-processes --time-limit 3s --output "$E/host.trace" > "$E/host.log" 2>&1 && [ -d "$E/host.trace" ]; then mode=host
+          fi
+          echo "XT_MODE=$mode" >> "$GITHUB_ENV"; echo "mode=$mode" | tee "$E/mode.txt"
+          rm -rf "$E"/*.trace
+          tail -n 5 "$E"/*.log || true
+          test "$mode" != none
+      - name: SE-FU-1 — three profiled fresh-install first launches, the door tapped at its first visible frame
+        timeout-minutes: 75
+        run: |
+          U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/prof"; mkdir -p "$E"
+          source scripts/cosmos-ios-world/d3-diag-lib.sh
+          set_lang "$U" en-US en_US
+          ms() { perl -MTime::HiRes=time -e 'printf "%d\n", time*1000'; }
+          for i in 1 2 3; do
+            xcrun simctl uninstall "$U" com.qandeel.mobile 2>/dev/null || true
+            xcrun simctl install "$U" "$APP"
+            reboot_sim "$U"
+            xcrun simctl ui "$U" content_size large
+            T="$E/P$i.trace"; LOG="$E/P$i-xctrace.log"
+            if [ "$XT_MODE" = device ]; then
+              xcrun xctrace record --template 'Time Profiler' --device "$U" --all-processes --time-limit 150s --output "$T" > "$LOG" 2>&1 &
+            else
+              sudo -E xcrun xctrace record --template 'Time Profiler' --all-processes --time-limit 150s --output "$T" > "$LOG" 2>&1 &
+            fi
+            XP=$!
+            started=""
+            for _ in $(seq 1 120); do
+              if grep -qiE 'Starting recording|Ctrl-C to stop|Recording started' "$LOG" 2>/dev/null; then started=$(ms); break; fi
+              sleep 0.5
+            done
+            echo "P$i recording started=${started:-unknown} (epoch ms) pid=$XP" | tee -a "$E/run.log"
+            run_test "$U" "$E" first-launch-P$i test1A_tapAtFirstVisible first-launch-P$i
+            if [ "$XT_MODE" = device ]; then kill -INT "$XP" 2>/dev/null || true; else sudo pkill -INT -f "xctrace record" || true; fi
+            for _ in $(seq 1 240); do kill -0 "$XP" 2>/dev/null || break; sleep 0.5; done
+            kill -0 "$XP" 2>/dev/null && { echo "P$i: xctrace did not finish; stopped" | tee -a "$E/run.log"; sudo kill -9 "$XP" || true; }
+            tail -n 3 "$LOG" | tee -a "$E/run.log"
+            [ "$XT_MODE" = host ] && sudo chown -R "$(id -un)" "$T" 2>/dev/null || true
+            echo "${started:-}" > "$E/P$i-started.txt"
+            grep -h "screen=\|tapKind\|mode=" "$E"/first-launch-P$i/*.txt 2>/dev/null | tee -a "$GITHUB_STEP_SUMMARY" || true
+          done
+      - name: Symbolicate, export and analyse each trace
+        if: ${{ !cancelled() }}
+        run: |
+          E="$RUNNER_TEMP/evidence/prof"
+          DSYM_DIR="$PWD/apps/mobile/ios/build/Build/Products/Release-iphonesimulator"
+          for i in 1 2 3; do
+            T="$E/P$i.trace"; [ -d "$T" ] || { echo "P$i: no trace" | tee -a "$E/run.log"; continue; }
+            node scripts/validation/bounded-run.mjs --seconds 600 --label xctrace-symbolicate -- xcrun xctrace symbolicate --input "$T" --dsym "$DSYM_DIR" > "$E/P$i-symbolicate.log" 2>&1 || true
+            xcrun xctrace export --input "$T" --toc --output "$E/P$i-toc.xml" || true
+            node scripts/validation/bounded-run.mjs --seconds 900 --label xctrace-export -- xcrun xctrace export --input "$T" --xpath '/trace-toc/run[@number="1"]/data/table[@schema="time-profile"]' --output "$E/P$i-tp.xml" || true
+            ls -la "$E/P$i-tp.xml" 2>/dev/null | tee -a "$E/run.log" || true
+            board="$(grep -l "^mode=A" "$E"/first-launch-P$i/*.txt 2>/dev/null | head -n 1)"
+            NODE_OPTIONS=--max-old-space-size=6144 node scripts/cosmos-ios-world/xctrace-analyse.mjs --tp "$E/P$i-tp.xml" --toc "$E/P$i-toc.xml" \
+              --process "$APP_EXE" --board "${board:-none}" --started "$(cat "$E/P$i-started.txt")" --out "$E/P$i" || echo "P$i: analysis failed" | tee -a "$E/run.log"
+            { echo "### P$i"; echo '```'; head -n 60 "$E/P$i-summary.txt" 2>/dev/null; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+            gzip -f "$E/P$i-tp.xml" 2>/dev/null || true
+            (cd "$E" && zip -qry "P$i.trace.zip" "P$i.trace" && rm -rf "P$i.trace") || true
+          done
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with: {name: final-sefu1-prof, path: '${{ runner.temp }}/evidence', if-no-files-found: warn}
