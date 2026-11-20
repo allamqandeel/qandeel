@@ -405,24 +405,28 @@ describe('S5-04 — the panel entry and the discussion surface', () => {
 });
 
 describe('COSMOS E-2 Slice E — the sheet tabs Product Copy Gate', () => {
-  it('ONE bounded gate, OPEN: three rows PROPOSED in both languages (the Owner\'s suggested Arabic), nothing APPROVED yet; no rank, feed or badge', () => {
-    expect(PUBLIC_SHEET_TABS_COPY_GATE.approved).toEqual([]);
-    expect(PUBLIC_SHEET_TABS_COPY_GATE.proposed).toEqual(['information', 'discussion', 'discussionWithCount']);
+  it('ONE bounded gate, CLOSED: three rows APPROVED by the Product Owner (2026-11-20) in both languages; «النقاش» kept on the S5-04 surfaces; no rank, feed or badge', () => {
+    expect(PUBLIC_SHEET_TABS_COPY_GATE.approved).toEqual(['information', 'discussion', 'discussionWithCount']);
+    expect(PUBLIC_SHEET_TABS_COPY_GATE.proposed).toEqual([]);
+    expect(PUBLIC_SHEET_TABS_COPY_GATE.status).toMatch(/CLOSED/u);
     for (const language of ['ar', 'en'] as const) {
       const copy = publicSheetTabsCopy(language) as unknown as Record<string, unknown>;
-      for (const key of PUBLIC_SHEET_TABS_COPY_GATE.proposed) expect(typeof copy[key]).toBe('string');
+      for (const key of PUBLIC_SHEET_TABS_COPY_GATE.approved) expect(typeof copy[key]).toBe('string');
       expect(publicSheetTabsCopy(language).discussionWithCount).toContain('{0}');
     }
-    expect(publicSheetTabsCopy('ar').information).toBe('المعلومات');
-    expect(publicSheetTabsCopy('ar').discussion).toBe('المناقشة');
+    expect(publicSheetTabsCopy('ar')).toEqual({ information: 'المعلومات', discussion: 'المناقشة', discussionWithCount: 'المناقشة · {0}' });
+    expect(publicSheetTabsCopy('en')).toEqual({ information: 'Information', discussion: 'Discussion', discussionWithCount: 'Discussion · {0}' });
     const source = readFileSync(join(__dirname, '..', 'sheet-tabs-copy.ts'), 'utf8');
-    expect(source.match(/\/\/ PROPOSED — COSMOS E-2 Product Copy Gate/gu)).toHaveLength(6);
-    expect(source).not.toMatch(/\/\/ APPROVED — COSMOS E-2/u);
+    expect(source.match(/\/\/ APPROVED — COSMOS E-2 Product Copy Gate/gu)).toHaveLength(6);
+    expect(source).not.toMatch(/PROPOSED/u);
+    // The approval is for the tab presentation only: the S5-04 discussion surface keeps its approved «النقاش» byte-exact.
+    expect(publicDiscussionCopy('ar').discussion).toBe('النقاش');
     for (const language of ['ar', 'en'] as const) {
       for (const word of Object.values(publicSheetTabsCopy(language))) expect(word).not.toMatch(/rank|feed|badge|popular|notification|like|follow/iu);
     }
   });
 });
+
 
 const flat = (style: unknown): Record<string, unknown> => StyleSheet.flatten(style as StyleProp<ViewStyle>) as Record<string, unknown>;
 
