@@ -80,7 +80,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, type LayoutCh
 import { analysisCopy } from '../../analysis-language';
 import {
   COSMOS_OVERVIEW_ACT_TEST_ID, COSMOS_PEEK_PLACEHOLDER_INK, CosmosContextualActs, CosmosDetailSheet, CosmosPeekWords, CosmosSheetStage, CosmosTimelineRail, CosmosWorldView, RAIL_ACTS, SHEET_HANDLE_HEIGHT, SHEET_PEEK_MAX, createPersonalCosmosOwner, cosmosPeekChipStyles,
-  reopeningOwner, useDetailSheet, type CosmosWorldOwner, type SheetContent,
+  createCurrentPersonalCosmosOwner, reopeningOwner, useDetailSheet, type CosmosWorldOwner, type SheetContent,
 } from '../../cosmos/product';
 import { LivingAnalysisSurface, type LivingAnalysisTopBand } from '../../living-analysis';
 import {
@@ -91,7 +91,7 @@ import { chromeProjection, contextPathSentence, inspectionSentence, orientationM
 import { returnMapContext, returnWorld } from '../../return-navigation';
 import type { ResponsiveInsets } from '../../responsive';
 import { sessionPosition, type CanonicalStore } from '../../state';
-import type { ConversationSwitchOutcome } from '../../conversation';
+import type { ConversationSwitchOutcome, CurrentPersonalWorldController } from '../../conversation';
 import type { ProjectionCoordinator } from '../projection/projection-coordinator';
 import { heldContextEntry, inspectionRequestOf } from '../projection/projection-coordinator';
 import type { IntegrationSessionRuntime } from '../runtime/integration-runtime';
@@ -136,6 +136,13 @@ export const PERSONAL_PEEK_STATEMENT_TEST_ID = `${PERSONAL_PEEK_TEST_ID}:stateme
 export const PERSONAL_PEEK_LINEAGE_TEST_ID = `${PERSONAL_PEEK_TEST_ID}:lineage`;
 export const PERSONAL_PEEK_CHOICE_TEST_ID = `${PERSONAL_PEEK_TEST_ID}:choice`;
 export const PERSONAL_PEEK_GO_TEST_ID = `${PERSONAL_PEEK_TEST_ID}:go`;
+/** COSMOS E-2 Slice C (D-5, Option U): the Personal map's mode chips and the CURRENT world's PEEK. */
+export const PERSONAL_WORLD_MODE_TEST_ID = 'qandeel-personal-world-mode';
+export const PERSONAL_WORLD_MODE_SESSION_TEST_ID = `${PERSONAL_WORLD_MODE_TEST_ID}:session`;
+export const PERSONAL_WORLD_MODE_CURRENT_TEST_ID = `${PERSONAL_WORLD_MODE_TEST_ID}:current`;
+export const PERSONAL_WORLD_MODE_NOTE_TEST_ID = `${PERSONAL_WORLD_MODE_TEST_ID}:note`;
+export const PERSONAL_CURRENT_PEEK_TEST_ID = 'qandeel-personal-current-peek';
+export type PersonalWorldMode = 'SESSION' | 'CURRENT';
 /** The rail's holder: the rail stays mounted in it, and is inert and hidden beneath an open PEEK. */
 export const PERSONAL_RAIL_HOLDER_TEST_ID = 'qandeel-personal-rail-holder';
 /** Where the host lays the rail: `bottom = inset + 12` (CosmosWorldView's `railWrap`). The PEEK reaches at least its top. */
@@ -150,7 +157,7 @@ function ComposedMark({ onComposed }: { readonly onComposed: () => void }) {
 }
 
 export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope: surfaceEnvelope, onComposed, top = null, driftPaused = false, registerSheetBack, onAlias, onOpenSource }: LivingAnalysisMapProps) {
-  const { store, projection, journey, spatialCause, witness, preview, presentation, returnSurface, bundle } = runtime;
+  const { store, projection, journey, spatialCause, witness, preview, presentation, returnSurface, bundle, currentWorld } = runtime;
 
   // The two subscriptions this composition reads from, and there are only two: the canonical store,
   // and the moments the one projection cache's contents changed. Everything else below is derived.
@@ -298,6 +305,33 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
   useEffect(() => () => owner.it.dispose(), [owner]);
 
   /**
+   * COSMOS E-2 Slice C (the Product Owner's D-5, Option U): the Personal map's two modes. SESSION is everything above —
+   * this conversation's Session-bound world under the frozen temporal authority. CURRENT is the person's world of all
+   * their topics NOW (migration 0199), a separate owner over a separate read: it moves no Session camera, commits no
+   * moment and carries no timeline. The map opens in SESSION; the mode is this composition's alone (never persisted).
+   */
+  const [mode, setMode] = useState<PersonalWorldMode>('SESSION');
+  const [focusedCurrent, setFocusedCurrent] = useState<string | null>(null);
+  const [currentOwner, setCurrentOwner] = useState(() => ({
+    runtime, language: locale.language,
+    it: createCurrentPersonalCosmosOwner({ world: currentWorld, language: locale.language, onFocus: setFocusedCurrent }),
+  }));
+  if (currentOwner.runtime !== runtime || currentOwner.language !== locale.language) {
+    setCurrentOwner({ runtime, language: locale.language, it: createCurrentPersonalCosmosOwner({ world: currentWorld, language: locale.language, onFocus: setFocusedCurrent }) });
+  }
+  useEffect(() => () => currentOwner.it.dispose(), [currentOwner]);
+  // The current world is read when the person asks for it (and again each time they come back to it), never at launch.
+  useEffect(() => { if (mode === 'CURRENT') currentWorld.refresh(); }, [currentWorld, mode]);
+  const modeChips = <WorldModeChips mode={mode} language={locale.language} onMode={setMode} />;
+  const toSession = useCallback(() => setMode('SESSION'), []);
+  /** "Open where it began" from the CURRENT world: this conversation's moment is committed and the Session mode shows it. */
+  const commitHere = useCallback((sp: number) => {
+    const outcome = store.dispatch({ type: 'COMMIT_MOMENT', moment: sessionPosition(sp) });
+    observeMapOutcome({ outcome: outcome.outcome });
+    if (outcome.outcome === 'APPLIED') setMode('SESSION');
+  }, [observeMapOutcome, store]);
+
+  /**
    * The projection is SETTLED and still cannot be drawn: there is no viewpoint, it was refused, or it
    * holds no scene. The measured composition — whose chrome states exactly that — is then this
    * surface's real first state. A projection still being fetched is not settled; one whose fetch ended without an
@@ -324,7 +358,23 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
       fontScale={fontScale}
       envelope={surfaceEnvelope}
       top={top}
-      stage={(glass) => (
+      stage={(glass) => mode === 'CURRENT' ? (
+        <CurrentStage
+          owner={currentOwner.it}
+          world={currentWorld}
+          glass={glass}
+          language={locale.language}
+          driftPaused={driftPaused}
+          chips={modeChips}
+          home={toSession}
+          focused={focusedCurrent}
+          currentSessionId={bundle.sessionId}
+          registerSheetBack={registerSheetBack}
+          onAlias={onAlias}
+          onOpenSource={onOpenSource}
+          onCommitHere={commitHere}
+        />
+      ) : (
         <PersonalStage
           owner={owner.it}
           glass={glass}
@@ -338,7 +388,8 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
           driftPaused={driftPaused}
           onOutcome={observeMapOutcome}
           home={home}
-          rail={
+          rail={<>
+            {modeChips}
             <CosmosTimelineRail
               store={store}
               preview={preview}
@@ -364,7 +415,7 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
                 )
               }
             />
-          }
+          </>}
           // Slice D CP3: T-04's context choice, in the PEEK — the same component and executor, with no act and no note.
           choice={
             chrome === null ? null : (
@@ -581,6 +632,87 @@ function PersonalPeek({ store, chrome, context, language, bottomInset, cover, ch
             onOpenSource={openSource} />
         )} />
     </ScrollView>
+  );
+}
+
+/**
+ * COSMOS E-2 Slice C: the Personal map's mode chips — this conversation's Session-bound world, or all the person's topics
+ * now. Two acts in the rail's words, the chosen one marked (the sheet's own accent border; the integration layer defines
+ * no colour).
+ */
+function WorldModeChips({ mode, language, onMode }: { readonly mode: PersonalWorldMode; readonly language: ProductLocale['language']; readonly onMode: (mode: PersonalWorldMode) => void }) {
+  const copy = analysisCopy(language);
+  const chip = (which: PersonalWorldMode, testID: string, label: string) => (
+    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: mode === which }}
+      onPress={() => onMode(which)} style={peekStyles.press}>
+      <View style={[peekStyles.chip, mode === which ? peekStyles.fieldFailed : null]}><Text style={peekStyles.chipText}>{label}</Text></View>
+    </Pressable>
+  );
+  return (
+    <View testID={PERSONAL_WORLD_MODE_TEST_ID} style={peekStyles.acts} pointerEvents="box-none">
+      {chip('SESSION', PERSONAL_WORLD_MODE_SESSION_TEST_ID, copy.worldModeThisConversation)}
+      {chip('CURRENT', PERSONAL_WORLD_MODE_CURRENT_TEST_ID, copy.worldModeAllTopics)}
+    </View>
+  );
+}
+
+/**
+ * COSMOS E-2 Slice C: the CURRENT Personal World's stage — the same world view and the same sheet, over the current
+ * owner. Its rail is the mode chips and one honest note (the present, with no timeline; served empty; or unreadable now).
+ * The Back chip at the first rung returns to this conversation's world. The PEEK is about the focused Thread: its served
+ * name and hint, Slice A's acts (name it; open where it began), and nothing about a Session Position it does not have.
+ */
+function CurrentStage({ owner: seam, world, glass, language, driftPaused, chips, home, focused, currentSessionId, registerSheetBack, onAlias, onOpenSource, onCommitHere }: {
+  readonly owner: CosmosWorldOwner; readonly world: CurrentPersonalWorldController; readonly glass: ViewportEnvelope;
+  readonly language: ProductLocale['language']; readonly driftPaused: boolean; readonly chips: ReactNode; readonly home: () => void;
+  readonly focused: string | null; readonly currentSessionId: string;
+  readonly registerSheetBack?: (back: (() => boolean) | null) => void;
+  readonly onAlias?: (threadId: string, alias: string) => Promise<boolean>;
+  readonly onOpenSource?: (sessionId: string, sp: number) => Promise<ConversationSwitchOutcome>;
+  readonly onCommitHere: (sp: number) => void;
+}) {
+  const copy = analysisCopy(language);
+  const state = useSyncExternalStore(world.subscribe, world.getState);
+  const thread = focused === null ? null : state.threads.find((candidate) => candidate.id === focused) ?? null;
+  // One focused Thread is one group; a new served name is new content of the same subject.
+  const content: SheetContent | null = thread === null ? null : { key: `${thread.id}:${thread.name.source}:${thread.name.text ?? ''}`, group: thread.id };
+  const sheet = useDetailSheet(content);
+  const sheetBack = sheet.back;
+  useEffect(() => {
+    registerSheetBack?.(sheetBack);
+    return () => registerSheetBack?.(null);
+  }, [registerSheetBack, sheetBack]);
+  const reopen = sheet.open;
+  const owner = useMemo(() => reopeningOwner(seam, reopen), [seam, reopen]);
+  const note = state.status === 'UNAVAILABLE' ? copy.currentWorldUnavailable
+    : state.status === 'READY' && state.threads.length === 0 ? copy.currentWorldEmpty : copy.currentWorldNote;
+  const name = thread === null ? null
+    : thread.name.text === null ? { text: copy.topicUnnamed, hint: null, quiet: true }
+      : { text: thread.name.text, hint: thread.name.source === 'USER_ALIAS' ? copy.topicNameYours : copy.topicNameFromWords };
+  const openSource = thread === null ? null : () => {
+    if (thread.origin.sessionId === currentSessionId) { onCommitHere(thread.origin.sp); return; }
+    if (onOpenSource !== undefined) void onOpenSource(thread.origin.sessionId, thread.origin.sp);
+  };
+  return (
+    <>
+      <CosmosSheetStage expanded={false}>
+        <CosmosWorldView owner={owner} world="PERSONAL" language={language} glass={glass} drift={!driftPaused}
+          worldLabel={copy.worldModeAllTopics} zoomInLabel={copy.moreDetail} zoomOutLabel={copy.lessDetail} accessibleMarks={false}
+          home={home} rail={<View pointerEvents="box-none">{chips}<Text testID={PERSONAL_WORLD_MODE_NOTE_TEST_ID} style={peekStyles.chipText}>{note}</Text></View>} />
+      </CosmosSheetStage>
+      <CosmosDetailSheet phase={sheet.phase} onSettle={sheet.settle} glass={glass} language={language} allowExpanded={false}
+        bodyDrags subject={content?.group ?? null} accent>
+        {thread === null ? null : (
+          <CosmosPeekWords testID={PERSONAL_CURRENT_PEEK_TEST_ID} language={language} family={copy.family.THREAD} name={name}
+            statement={copy.currentWorldNote} lineage={null} go={null} minHeight={0} bottomInset={glass.insetBottom}
+            extra={(
+              <TopicNameActs key={thread.id} current={thread.name.source === 'USER_ALIAS' ? thread.name.text : null} language={language}
+                onAlias={onAlias === undefined ? null : async (alias: string) => { const kept = await onAlias(thread.id, alias); if (kept) world.refresh(); return kept; }}
+                onOpenSource={openSource} />
+            )} />
+        )}
+      </CosmosDetailSheet>
+    </>
   );
 }
 

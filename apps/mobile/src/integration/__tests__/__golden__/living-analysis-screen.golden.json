@@ -2854,6 +2854,156 @@
              {
               "type": "View",
               "props": {
+               "pointerEvents": "box-none",
+               "style": {
+                "alignItems": "center",
+                "flexDirection": "row",
+                "flexWrap": "wrap",
+                "gap": 6,
+                "paddingTop": 2
+               },
+               "testID": "qandeel-personal-world-mode"
+              },
+              "children": [
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "This conversation",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": true
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:session"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    {
+                     "borderColor": "#ECCC8A"
+                    }
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "This conversation"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "All my topics now",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": false
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:current"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    null
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "All my topics now"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "type": "View",
+              "props": {
                "collapsable": false,
                "pointerEvents": "box-none",
                "style": {
@@ -6620,6 +6770,156 @@
              {
               "type": "View",
               "props": {
+               "pointerEvents": "box-none",
+               "style": {
+                "alignItems": "center",
+                "flexDirection": "row",
+                "flexWrap": "wrap",
+                "gap": 6,
+                "paddingTop": 2
+               },
+               "testID": "qandeel-personal-world-mode"
+              },
+              "children": [
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "هذه المحادثة",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": true
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:session"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    {
+                     "borderColor": "#ECCC8A"
+                    }
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "هذه المحادثة"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "كل موضوعاتي الآن",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": false
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:current"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    null
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "كل موضوعاتي الآن"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "type": "View",
+              "props": {
                "collapsable": false,
                "pointerEvents": "box-none",
                "style": {
@@ -10379,6 +10679,156 @@
              "testID": "qandeel-personal-rail-holder"
             },
             "children": [
+             {
+              "type": "View",
+              "props": {
+               "pointerEvents": "box-none",
+               "style": {
+                "alignItems": "center",
+                "flexDirection": "row",
+                "flexWrap": "wrap",
+                "gap": 6,
+                "paddingTop": 2
+               },
+               "testID": "qandeel-personal-world-mode"
+              },
+              "children": [
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "This conversation",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": true
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:session"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    {
+                     "borderColor": "#ECCC8A"
+                    }
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "This conversation"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "All my topics now",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": false
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:current"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    null
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "All my topics now"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             },
              {
               "type": "View",
               "props": {
@@ -14148,6 +14598,156 @@
              {
               "type": "View",
               "props": {
+               "pointerEvents": "box-none",
+               "style": {
+                "alignItems": "center",
+                "flexDirection": "row",
+                "flexWrap": "wrap",
+                "gap": 6,
+                "paddingTop": 2
+               },
+               "testID": "qandeel-personal-world-mode"
+              },
+              "children": [
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "هذه المحادثة",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": true
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:session"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    {
+                     "borderColor": "#ECCC8A"
+                    }
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "هذه المحادثة"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "كل موضوعاتي الآن",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": false
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:current"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    null
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "كل موضوعاتي الآن"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "type": "View",
+              "props": {
                "collapsable": false,
                "pointerEvents": "box-none",
                "style": {
@@ -17910,6 +18510,156 @@
              {
               "type": "View",
               "props": {
+               "pointerEvents": "box-none",
+               "style": {
+                "alignItems": "center",
+                "flexDirection": "row",
+                "flexWrap": "wrap",
+                "gap": 6,
+                "paddingTop": 2
+               },
+               "testID": "qandeel-personal-world-mode"
+              },
+              "children": [
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "This conversation",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": true
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:session"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    {
+                     "borderColor": "#ECCC8A"
+                    }
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "This conversation"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "All my topics now",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": false
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:current"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    null
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "All my topics now"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "type": "View",
+              "props": {
                "collapsable": false,
                "pointerEvents": "box-none",
                "style": {
@@ -21669,6 +22419,156 @@
              "testID": "qandeel-personal-rail-holder"
             },
             "children": [
+             {
+              "type": "View",
+              "props": {
+               "pointerEvents": "box-none",
+               "style": {
+                "alignItems": "center",
+                "flexDirection": "row",
+                "flexWrap": "wrap",
+                "gap": 6,
+                "paddingTop": 2
+               },
+               "testID": "qandeel-personal-world-mode"
+              },
+              "children": [
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "This conversation",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": true
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:session"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    {
+                     "borderColor": "#ECCC8A"
+                    }
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "This conversation"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "All my topics now",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": false
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:current"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    null
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "All my topics now"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             },
              {
               "type": "View",
               "props": {
@@ -25438,6 +26338,156 @@
              {
               "type": "View",
               "props": {
+               "pointerEvents": "box-none",
+               "style": {
+                "alignItems": "center",
+                "flexDirection": "row",
+                "flexWrap": "wrap",
+                "gap": 6,
+                "paddingTop": 2
+               },
+               "testID": "qandeel-personal-world-mode"
+              },
+              "children": [
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "هذه المحادثة",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": true
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:session"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    {
+                     "borderColor": "#ECCC8A"
+                    }
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "هذه المحادثة"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "كل موضوعاتي الآن",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": false
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:current"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    null
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "كل موضوعاتي الآن"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "type": "View",
+              "props": {
                "collapsable": false,
                "pointerEvents": "box-none",
                "style": {
@@ -29195,6 +30245,156 @@
              "testID": "qandeel-personal-rail-holder"
             },
             "children": [
+             {
+              "type": "View",
+              "props": {
+               "pointerEvents": "box-none",
+               "style": {
+                "alignItems": "center",
+                "flexDirection": "row",
+                "flexWrap": "wrap",
+                "gap": 6,
+                "paddingTop": 2
+               },
+               "testID": "qandeel-personal-world-mode"
+              },
+              "children": [
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "This conversation",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": true
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:session"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    {
+                     "borderColor": "#ECCC8A"
+                    }
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "This conversation"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "All my topics now",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": false
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:current"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    null
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "All my topics now"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             },
              {
               "type": "View",
               "props": {
@@ -33049,6 +34249,156 @@
              "testID": "qandeel-personal-rail-holder"
             },
             "children": [
+             {
+              "type": "View",
+              "props": {
+               "pointerEvents": "box-none",
+               "style": {
+                "alignItems": "center",
+                "flexDirection": "row",
+                "flexWrap": "wrap",
+                "gap": 6,
+                "paddingTop": 2
+               },
+               "testID": "qandeel-personal-world-mode"
+              },
+              "children": [
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "This conversation",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": true
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:session"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    {
+                     "borderColor": "#ECCC8A"
+                    }
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "This conversation"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "All my topics now",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": false
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:current"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    null
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "All my topics now"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             },
              {
               "type": "View",
               "props": {
@@ -36943,6 +38293,156 @@
              "testID": "qandeel-personal-rail-holder"
             },
             "children": [
+             {
+              "type": "View",
+              "props": {
+               "pointerEvents": "box-none",
+               "style": {
+                "alignItems": "center",
+                "flexDirection": "row",
+                "flexWrap": "wrap",
+                "gap": 6,
+                "paddingTop": 2
+               },
+               "testID": "qandeel-personal-world-mode"
+              },
+              "children": [
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "This conversation",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": true
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:session"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    {
+                     "borderColor": "#ECCC8A"
+                    }
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "This conversation"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "All my topics now",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": false
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:current"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    null
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "All my topics now"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             },
              {
               "type": "View",
               "props": {
@@ -41152,6 +42652,156 @@
              {
               "type": "View",
               "props": {
+               "pointerEvents": "box-none",
+               "style": {
+                "alignItems": "center",
+                "flexDirection": "row",
+                "flexWrap": "wrap",
+                "gap": 6,
+                "paddingTop": 2
+               },
+               "testID": "qandeel-personal-world-mode"
+              },
+              "children": [
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "This conversation",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": true
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:session"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    {
+                     "borderColor": "#ECCC8A"
+                    }
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "This conversation"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "All my topics now",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": false
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:current"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    null
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "All my topics now"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             },
+             {
+              "type": "View",
+              "props": {
                "collapsable": false,
                "pointerEvents": "box-none",
                "style": {
@@ -44799,6 +46449,156 @@
              "testID": "qandeel-personal-rail-holder"
             },
             "children": [
+             {
+              "type": "View",
+              "props": {
+               "pointerEvents": "box-none",
+               "style": {
+                "alignItems": "center",
+                "flexDirection": "row",
+                "flexWrap": "wrap",
+                "gap": 6,
+                "paddingTop": 2
+               },
+               "testID": "qandeel-personal-world-mode"
+              },
+              "children": [
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "This conversation",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": true
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:session"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    {
+                     "borderColor": "#ECCC8A"
+                    }
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "This conversation"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "All my topics now",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": false
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:current"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    null
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "All my topics now"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             },
              {
               "type": "View",
               "props": {
@@ -48653,6 +50453,156 @@
              "testID": "qandeel-personal-rail-holder"
             },
             "children": [
+             {
+              "type": "View",
+              "props": {
+               "pointerEvents": "box-none",
+               "style": {
+                "alignItems": "center",
+                "flexDirection": "row",
+                "flexWrap": "wrap",
+                "gap": 6,
+                "paddingTop": 2
+               },
+               "testID": "qandeel-personal-world-mode"
+              },
+              "children": [
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "This conversation",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": true
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:session"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    {
+                     "borderColor": "#ECCC8A"
+                    }
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "This conversation"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityLabel": "All my topics now",
+                 "accessibilityRole": "button",
+                 "accessibilityState": {
+                  "selected": false
+                 },
+                 "accessibilityValue": {},
+                 "accessible": true,
+                 "collapsable": false,
+                 "focusable": true,
+                 "onBlur": "[fn]",
+                 "onClick": "[fn]",
+                 "onFocus": "[fn]",
+                 "onResponderGrant": "[fn]",
+                 "onResponderMove": "[fn]",
+                 "onResponderRelease": "[fn]",
+                 "onResponderTerminate": "[fn]",
+                 "onResponderTerminationRequest": "[fn]",
+                 "onStartShouldSetResponder": "[fn]",
+                 "style": {
+                  "justifyContent": "center",
+                  "maxWidth": "100%",
+                  "minHeight": 44,
+                  "minWidth": 44
+                 },
+                 "testID": "qandeel-personal-world-mode:current"
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "style": [
+                    {
+                     "alignItems": "center",
+                     "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                     "borderColor": "rgba(233, 234, 244, 0.16)",
+                     "borderRadius": 16,
+                     "borderWidth": 0.5,
+                     "justifyContent": "center",
+                     "minHeight": 32,
+                     "paddingHorizontal": 12
+                    },
+                    null
+                   ]
+                  },
+                  "children": [
+                   {
+                    "type": "Text",
+                    "props": {
+                     "style": {
+                      "color": "#E9EAF4",
+                      "fontSize": 12,
+                      "lineHeight": 18,
+                      "textAlign": "center"
+                     }
+                    },
+                    "children": [
+                     "All my topics now"
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             },
              {
               "type": "View",
               "props": {

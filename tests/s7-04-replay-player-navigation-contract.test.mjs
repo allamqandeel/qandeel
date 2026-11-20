@@ -166,7 +166,9 @@ const FROZEN = [
   // Previous pin: LivingAnalysisMap 70651062.
   // COSMOS E-2 corrections, Slice A CONTROLLED RE-ANCHOR (2026-11-20, D-3 / D-4): the Personal PEEK names the Thread and
   // offers Name this topic / Open where it began; no Replay surface reads this composition. Previous pin: 58c1adbf.
-  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', 'b1f7d55a94dd1a9f9b36a610519fa176185cd4558249ca9cdb8a9c9c1bb15666'],
+  // RE-ANCHORED by COSMOS E-2 Slice C (PO D-5, Option U, 2026-11-20): the Personal map gained its two mode chips and the
+  // CURRENT-world stage / PEEK; the Replay entry, player and history composition it hosts are untouched (same hashes).
+  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', 'b32e6877225fb7d17edbf1ee57d1289f733a3b0c09630d6826d745eeaf31d922'],
 ];
 
 const shipped = () => {

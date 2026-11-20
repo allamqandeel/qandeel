@@ -34,6 +34,9 @@ export { conversationCopy } from './copy';
 export type { ConversationCatalogController, ConversationCatalogControllerOptions, ConversationCatalogState, ConversationCatalogStatus } from './conversation-catalog-controller';
 export { conversationDisplayName, createConversationCatalogController } from './conversation-catalog-controller';
 export { CONVERSATION_CATALOG_COPY_GATE, conversationCatalogCopy, type ConversationCatalogCopy } from './catalog/copy';
+// COSMOS E-2 corrections, Slice C: the user-level CURRENT Personal World (the Product Owner's D-5, Option U).
+export type { CurrentPersonalWorldController, CurrentPersonalWorldControllerOptions, CurrentPersonalWorldState, CurrentPersonalWorldStatus } from './current-personal-world-controller';
+export { createCurrentPersonalWorldController } from './current-personal-world-controller';
 export { CONVERSATIONS_ENTRY_TEST_ID, ConversationsEntry } from './ConversationsEntry';
 export { CONVERSATION_CATALOG_TEST_ID, ConversationCatalogSurface, type ConversationSwitchOutcome, type ConversationSwitchTarget } from './ConversationCatalogSurface';
 

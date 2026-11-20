@@ -133,7 +133,9 @@ const FROZEN = [
   // family word and offers Name this topic / Open where it began; no Replay surface mounts or reads this composition, so
   // Replay's chrome, acts, words, routes and refusals are unchanged. Every frozen field keeps its meaning.
   // Previous pins: LivingAnalysisMap 58c1adbf, historical-projection-wire 7bc8f628, historical-projection.d.ts 17b9e915.
-  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', 'b1f7d55a94dd1a9f9b36a610519fa176185cd4558249ca9cdb8a9c9c1bb15666'],
+  // RE-ANCHORED by COSMOS E-2 Slice C (PO D-5, Option U, 2026-11-20): the Personal map gained its two mode chips and the
+  // CURRENT-world stage / PEEK; the Replay entry, player and history composition it hosts are untouched (same hashes).
+  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', 'b32e6877225fb7d17edbf1ee57d1289f733a3b0c09630d6826d745eeaf31d922'],
   ['apps/mobile/src/projection/historical-projection-wire.ts', '4c3fd718f6eb19092cf6b63ef5e95335b92ed4409fe9ecec32c65258bac050ee'],
   ['apps/mobile/src/state/store.ts', '3177b9b6a322dc506a5095018b4dd9b14dddacc21bcfd77297decd5dbe62fff3'],
   ['packages/runtime/src/historical-projection.d.ts', '8a7dd96eec4175cad34556f51aa614220d6e0a601e1425a7382dd58711dd2cdf'],

@@ -80,6 +80,9 @@ export type {
   ThreadAliasOutcome,
 } from './conversation/conversation-catalog-api';
 export { ConversationCatalogApiClient } from './conversation/conversation-catalog-api';
+// COSMOS E-2 corrections, Slice C (the Product Owner's D-5, Option U): the user-level CURRENT Personal World.
+export type { CurrentPersonalWorldApiConfig, CurrentPersonalWorldOutcome } from './conversation/current-personal-world-api';
+export { CurrentPersonalWorldApiClient } from './conversation/current-personal-world-api';
 export type {
   ConversationExchangeView,
   ConversationVoiceNoteView,

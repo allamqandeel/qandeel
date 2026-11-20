@@ -189,7 +189,7 @@ type FieldOutcome = { readonly outcome: string };
 
 /** What a field controller offers, in the words the two production controllers share. */
 export interface FieldAuthority {
-  readonly world: 'PUBLIC' | 'SHARED';
+  readonly world: WorldKind;
   read(): FieldRead;
   subscribe(listener: () => void): () => void;
   setEnvelope(envelope: ViewportEnvelope): void;

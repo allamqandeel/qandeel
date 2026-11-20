@@ -89,8 +89,9 @@ import {
   type RecoveryWriter,
 } from '../../recovery';
 import {
-  createConversationCatalogController, createConversationController,
+  createConversationCatalogController, createConversationController, createCurrentPersonalWorldController,
   type ConversationCatalogController, type ConversationController, type ConversationSwitchOutcome, type ConversationSwitchTarget,
+  type CurrentPersonalWorldController,
 } from '../../conversation';
 import { createAccountController, type AccountController } from '../../account';
 import {
@@ -254,6 +255,12 @@ export interface IntegrationSessionRuntime {
    * server's and is never held across generations.
    */
   readonly catalog: ConversationCatalogController;
+  /**
+   * COSMOS E-2 corrections, Slice C (the Product Owner's D-5, Option U): the person's CURRENT Personal World for THIS
+   * identity — the Threads they have now, read on the transport bound to it and held for presentation only. Beside the
+   * Session-bound historical projection, never instead of it: the timeline, Replay and history stay Session-scoped.
+   */
+  readonly currentWorld: CurrentPersonalWorldController;
   /**
    * W1B-01: the account's first use for THIS identity — the Name QANDEEL addresses the reader by, the
    * one-time Welcome and which Conversation opening is owed — on the T-12P account transport bound to
@@ -554,6 +561,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     if (session === null) return;
     session.recovery.writer.retire();
     session.catalog.retire();
+    session.currentWorld.retire();
     session.callListening.retire();
     session.playbackOwner.retire();
     session.call.retire();
@@ -638,6 +646,8 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     });
     // Slice B: the catalog of THIS identity, naming THIS Session as the open one.
     const catalog = createConversationCatalogController({ transport: entry.conversationCatalogFor(bundle), currentSessionId: bundle.sessionId, isCurrent });
+    // Slice C: the CURRENT Personal World of THIS identity (read when the person asks for that mode, never at launch).
+    const currentWorld = createCurrentPersonalWorldController({ transport: entry.currentPersonalWorldFor(bundle), isCurrent });
 
     const activity = entry.activityFor(bundle);
     const shared = entry.sharedWorldsFor(bundle);
@@ -728,6 +738,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       liveDriver: entry.liveDriverFor(bundle),
       recovery: { origin: decision.kind === 'RESUME' ? 'RESUMED' : decision.kind === 'OPEN' ? 'OPENED' : decision.kind === 'NEW' ? 'NEW' : 'FRESH', writer },
       catalog,
+      currentWorld,
       conversation,
       // S7-02: the Replay entry reads THIS Session's conversation, by the same bundle Session id.
       replayEntry: createReplayEntryController({ sessionId: bundle.sessionId, transport: entry.replayFor(bundle), conversation, isCurrent }),

@@ -8,6 +8,9 @@ export { createPublicCosmosOwner } from './owners/public';
 export { createSharedCosmosOwner } from './owners/shared';
 export type { PersonalCosmosOwnerOptions } from './owners/personal';
 export { createPersonalCosmosOwner, inspectionRequestOf } from './owners/personal';
+// COSMOS E-2 corrections, Slice C (D-5, Option U): the CURRENT Personal World's owner, beside the Session-bound one.
+export type { CurrentPersonalCosmosOwnerOptions } from './owners/personal-current';
+export { createCurrentPersonalCosmosOwner, currentThreadIdOf, currentThreadMarkId } from './owners/personal-current';
 export type { CosmosProductCopy } from './copy';
 export { COSMOS_ACT_LABELS_APPROVED, COSMOS_PRODUCT_COPY_GATE, cosmosProductCopy } from './copy';
 export type { CosmosWorldViewProps } from './CosmosWorldView';

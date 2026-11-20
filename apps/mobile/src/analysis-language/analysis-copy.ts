@@ -94,6 +94,17 @@ export interface AnalysisCopy {
   readonly cancelName: string;
   /** The act that opens the conversation at the moment the topic began (the same conversation, or another one). */
   readonly openSource: string;
+
+  // ------------------------------------------------------------------- COSMOS E-2 Slice C: the CURRENT Personal World (D-5, U)
+  /** The Personal map's two modes: this conversation's Session-bound world, and the person's current world of all topics. */
+  readonly worldModeThisConversation: string;
+  readonly worldModeAllTopics: string;
+  /** The current world's honest note: it is the present, with no timeline and no conversation position. */
+  readonly currentWorldNote: string;
+  /** The current world served empty — truthful, never invented. */
+  readonly currentWorldEmpty: string;
+  /** The current world could not be read now. */
+  readonly currentWorldUnavailable: string;
 }
 
 /** COSMOS E-2 Slice A Product Copy Gate — the eight rows above, in both languages, PROPOSED to the Product Owner. */
@@ -101,6 +112,13 @@ export const PERSONAL_TOPIC_NAME_COPY_GATE = Object.freeze({
   status: 'COSMOS E-2 PRODUCT COPY GATE (Slice A) — OPEN — 8 rows PROPOSED, awaiting the Product Owner',
   approved: [] as readonly string[],
   proposed: ['topicNameFromWords', 'topicNameYours', 'topicUnnamed', 'nameTopic', 'topicNameField', 'saveName', 'cancelName', 'openSource'] as readonly string[],
+});
+
+/** COSMOS E-2 Slice C Product Copy Gate — the five rows above, in both languages, PROPOSED to the Product Owner. */
+export const PERSONAL_CURRENT_WORLD_COPY_GATE = Object.freeze({
+  status: 'COSMOS E-2 PRODUCT COPY GATE (Slice C) — OPEN — 5 rows PROPOSED, awaiting the Product Owner',
+  approved: [] as readonly string[],
+  proposed: ['worldModeThisConversation', 'worldModeAllTopics', 'currentWorldNote', 'currentWorldEmpty', 'currentWorldUnavailable'] as readonly string[],
 });
 
 const digits = (value: number): string => String(value);
@@ -157,6 +175,12 @@ const AR: AnalysisCopy = Object.freeze<AnalysisCopy>({
   saveName: 'حفظ',
   cancelName: 'إلغاء',
   openSource: 'افتح حيث بدأ',
+  // PROPOSED — COSMOS E-2 Product Copy Gate (Slice C)
+  worldModeThisConversation: 'هذه المحادثة',
+  worldModeAllTopics: 'كل موضوعاتي الآن',
+  currentWorldNote: 'موضوعاتك كما هي الآن، بلا خط زمني',
+  currentWorldEmpty: 'لا موضوعات بعد',
+  currentWorldUnavailable: 'تعذّر قراءة موضوعاتك الآن',
 });
 
 const EN: AnalysisCopy = Object.freeze<AnalysisCopy>({
@@ -209,6 +233,12 @@ const EN: AnalysisCopy = Object.freeze<AnalysisCopy>({
   saveName: 'Save',
   cancelName: 'Cancel',
   openSource: 'Open where it began',
+  // PROPOSED — COSMOS E-2 Product Copy Gate (Slice C)
+  worldModeThisConversation: 'This conversation',
+  worldModeAllTopics: 'All my topics now',
+  currentWorldNote: 'Your topics as they are now, with no timeline',
+  currentWorldEmpty: 'No topics yet',
+  currentWorldUnavailable: 'Your topics could not be read right now',
 });
 
 /** The Analysis words for one Product language. */

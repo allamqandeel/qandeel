@@ -41,6 +41,7 @@ import { bootstrapCanonicalRuntime } from './bootstrap/canonical-runtime-bootstr
 import type { BootstrapResult, CanonicalRuntimeBundle, InitialViewpoint } from './bootstrap/bootstrap-types';
 import { ConversationSessionApiClient, type RuntimeHttpFetch } from './conversation/conversation-session-api';
 import { ConversationCatalogApiClient } from './conversation/conversation-catalog-api';
+import { CurrentPersonalWorldApiClient } from './conversation/current-personal-world-api';
 import { ConversationTurnApiClient } from './conversation/conversation-turn-api';
 import { AccountApiClient, LoginIdAvailabilityClient } from './account/account-api';
 import { UnderstandingApiClient } from './understanding-api';
@@ -155,6 +156,8 @@ export interface MobileRuntimeEntry {
   conversationTurnsFor(bundle: CanonicalRuntimeBundle): ConversationTurnApiClient;
   /** Slice B: the person's own conversation catalog, on the same identity-bound seam. */
   conversationCatalogFor(bundle: CanonicalRuntimeBundle): ConversationCatalogApiClient;
+  /** Slice C (D-5, Option U): the person's CURRENT Personal World, on the same identity-bound seam. */
+  currentPersonalWorldFor(bundle: CanonicalRuntimeBundle): CurrentPersonalWorldApiClient;
   /**
    * W1B-01 — the account client for a bundle this coordinator produced, on the same AC-01 seam bound
    * to the bundle's own auth generation: a replaced identity's request is refused before it is issued.
@@ -407,6 +410,9 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
     },
     conversationCatalogFor(bundle) {
       return new ConversationCatalogApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
+    },
+    currentPersonalWorldFor(bundle) {
+      return new CurrentPersonalWorldApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
     },
     accountFor(bundle) {
       return new AccountApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });

@@ -74,6 +74,15 @@
  * name line (`qandeel-personal-peek:name`) and the acts row (`:name-acts` holding `:source`): 7 → 12 host elements, the
  * three previous texts and testIDs unchanged and in the same order. The structural-diff script (which forbids added
  * elements by design) is therefore not the proof here; the added elements ARE the change.
+ *
+ * COSMOS E-2 corrections, Slice C — CONTROLLED RE-ANCHOR (Product Owner decision D-5, Option U, of 2026-11-20; Contract §31):
+ * the Personal map gained its two mode chips ("This conversation" / "All my topics now") at the start of the rail; the map
+ * opens in the Session-bound mode, so every recorded case is that mode with the chips added and nothing else. The golden was
+ * regenerated ONCE for that intended change (old sha256 136bc101…, new 733a298f…). Before it was rewritten, a per-case
+ * comparison proved: in EVERY one of the 13 cases the new tree equals the old one exactly once the ONE chips subtree
+ * (`qandeel-personal-world-mode`, 7 host elements: two buttons, the Session one selected) is taken out; keys, order, texts,
+ * testIDs, handlers and accessibility of everything else are byte-identical. The CURRENT mode is not recorded here (it is
+ * proven by personal-current-world.test.tsx), so the Session-bound screen stays the one this golden protects.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
