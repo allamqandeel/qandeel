@@ -350,8 +350,11 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
         })}
       </View>
 
-      {/* A known world with nothing in this region: the one absence the production chrome does not say. */}
-      {absence.kind !== 'REGION_EMPTY' ? null : (
+      {/* A known world with nothing in this region: the one absence the production chrome does not say. It speaks of the
+          CANONICAL camera's region, so it stands down while Overview (presentation only) frames the whole world: there the
+          reader sees every entry, and the card's sentence would contradict the picture (COSMOS E-2 HONOR acceptance, PO
+          decision 2026-11-20). Leaving Overview returns to that region, and the card with it. */}
+      {absence.kind !== 'REGION_EMPTY' || overview ? null : (
         <View pointerEvents="box-none" style={styles.absenceWrap}>
           {/* Slice E D-3 (SE-FU-2; diag run 44364253792): the card and its words take no touch, so a drag that starts on
               them still moves the stage; "Go to the nearest" keeps its own. Its live region and words are unchanged. */}

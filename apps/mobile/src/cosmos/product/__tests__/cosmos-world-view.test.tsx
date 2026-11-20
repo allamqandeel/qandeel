@@ -194,6 +194,23 @@ describe('CosmosWorldView — the stage over an owner', () => {
     expect(view.queryByTestId(COSMOS_NEAREST_TEST_ID)).toBeNull();
   });
 
+  it('COSMOS E-2 (PO 2026-11-20): Overview frames the whole world, so the "Nothing in this region" card stands down while it is on, and returns with the region', async () => {
+    const { owner, acts, set } = fakeOwner({});
+    // The canonical camera is at the centre; the one place the world holds is far away: REGION_EMPTY.
+    set({ list: compileStage({ world: 'PERSONAL', rungs: 5, entities: [{ id: 'THREAD:far', kind: 'THREAD', x: 900, y: -300, dye: 1, label: null, fromRung: 0 }], focusId: null, rtl: false }), worldIndex: [{ id: 'THREAD:far', x: 900, y: -300 }], shown: [] });
+    view = await mount(owner);
+    const copy = cosmosProductCopy('en');
+    expect(view.getByText(copy.regionEmpty)).toBeTruthy();
+    acts.length = 0;
+    await press(view, COSMOS_OVERVIEW_TEST_ID);
+    expect(view.queryByText(copy.regionEmpty)).toBeNull();
+    expect(view.queryByTestId(COSMOS_NEAREST_TEST_ID)).toBeNull();
+    await press(view, COSMOS_OVERVIEW_TEST_ID);
+    expect(view.getByText(copy.regionEmpty)).toBeTruthy();
+    // Still presentation only: nothing was written to the owner.
+    expect(acts.filter((a) => a.kind !== 'setGlass')).toEqual([]);
+  });
+
   it('G-6: the unplaced register lists each object by the owner\'s family word, and a press is one inspection', async () => {
     const { owner, acts, set } = fakeOwner({});
     set({ unplaced: [{ id: 'EMERGING_FOCUS:e1', family: 'EMERGING_FOCUS' }, { id: 'READING:r9', family: 'READING' }] });
