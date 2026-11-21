@@ -1,6 +1,8 @@
-# COSMOS Production Integration Contract — v1.21 (§31.8 THE HONOR DEVICE ACCEPTANCE PASS AND THE PO'S DECISION ON ITS DEFECTS (2026-11-20 / 21): DEFECT-1 / DEFECT-2 FIXED; DEFECT-3 PERSONAL TOPIC NAMES — A DOCUMENTED FROZEN-CANVAS AMENDMENT (NO OVERPRINT, A READABLE MIDDLE SIZE); DEFECT-4 THE NAME EDITOR AND THE KEYBOARD — A MINIMAL SHARED-SHEET LIFT; THE OVERVIEW ABSENCE CARD CORRECTED; THE READING PEEK AND NAME-TAP SELECTION ESCALATED TO THE PO; RE-CHECKED ON THE HONOR; E-2 STILL NOT ACCEPTED; iOS NOT TESTED
+# COSMOS Production Integration Contract — v1.22 (§31.9 THE PO DIRECTIVE "COSMOS E-2 FINAL CORRECTIONS, EMULATOR VALIDATION & GITHUB CI AUTHORIZATION" (2026-11-21): PERSONAL TOPIC NAMES IN PUBLIC'S LABEL LANGUAGE (STAGE AMENDMENT), FITTED NOT DROPPED (CANVAS AMENDMENT, PERSONAL ONLY), A NAME TAP INSPECTS ITS TOPIC, NO LABEL ACROSS THE TIMELINE, THE KEYBOARD LIFT CORRECTED; EMULATOR-VALIDATED; THE READING STATEMENT ESCALATED (NOT PASS); PUSH + DRAFT PR + CI AUTHORISED; E-2 NOT ACCEPTED; NO MERGE)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
+**Status (v1.22, 2026-11-21):** `AS v1.21 — PLUS §31.9: b0bb9f18 (§2 / §3 / §4 / §6), c5f352fd (§7 KEYBOARD LIFT; c80a8e14 REVERTED IN 567f803a); EMULATOR (QANDEEL_API36, E-2 SYNTHETIC) 28 PASS / 1 FAIL FIXED / 1 BLOCKED (READING) / 1 OPEN; READING STATEMENT ESCALATED WITH A NARROW AMENDMENT (NOT APPLIED); 27 COPY GATE ROWS PRESENTED, NONE PROMOTED; PHYSICAL HONOR NOT VERIFIED; E-2 NOT ACCEPTED; NO MERGE, NO HOSTED MIGRATION, NO REPLAY`
+**Change log v1.21 → v1.22 (2026-11-21).** New §31.9 records the final corrections with their amendments and proofs, the Reading escalation with the exact conflicting clauses and the proposed amendment, the emulator validation, the Copy Gate presentation, push / PR / CI and the open obligations. Nothing earlier is rewritten; §31.8's R1 / R3 canvas rules are withdrawn by §31.9.1 (recorded there).
 **Status (v1.21, 2026-11-21):** `AS v1.20 — PLUS §31.8: THE HONOR ACCEPTANCE PASS (61c88e88, 14be8a68) AND THE PO DECISION "HONOR E-2 ACCEPTANCE DEFECTS" DELIVERED LOCALLY ON cosmos/e2-corrections — 01e3dad0 (keyboardLift), 2178202a (OVERVIEW CARD), aa3989a0 (R1: stage.ts RESTORED, CANVAS OVERLAP-GATE AMENDMENT, PEEK HANDLED TAPS), e8183544 (R2: KEYBOARD DISMISSED ON CLOSE), a243a9d8 (R3: PO TITLE SIZE); 4f35ca16 SUPERSEDED; READING PEEK STATEMENT AND NAME-TAP SELECTION ESCALATED (NOT IMPLEMENTED); INSTALLED HONOR BUILD a243a9d8 (sha256 ea68a595…6217e); E-2 NOT ACCEPTED; iOS NOT TESTED (BG-10); NO PUSH, NO CI, NO MERGE, NO REPLAY`
 **Change log v1.20 → v1.21 (2026-11-21).** New §31.8 records the HONOR acceptance pass, the PO's decision on its defects with each delivered commit and proof, the audit of the three further findings, the verification, the HONOR re-check and what was not done. Nothing earlier is rewritten; §31.7 item 2 is answered by §31.8.
 **Status (v1.20, 2026-11-20):** `AS v1.19 — PLUS §31.6: THE PO APPROVED D-1 … D-5 AND THE WORK RESUMED ON cosmos/e2-corrections — SLICE D-2 (72a3752e), SLICE B (4e523bf6 + 28c74a2f + 64177c57), SLICE A (637930b2 + 5b7e36a3), SLICE C (1e9ced6c + fed1982d), THE E-2 FIXTURE (78b151b0) DELIVERED LOCALLY; MIGRATIONS 0197 / 0198 / 0199 ADDED (NOT HOSTED); SLICE E COPY GATE CLOSED (f2dd8006); SLICE A / B / C COPY GATES OPEN; E-2 NOT ACCEPTED UNTIL THE PO REVIEWS THE NEXT SYNTHETIC BUILD ON THE HONOR; iOS NOT TESTED (BG-10); NO PUSH, NO CI, NO MERGE, NO REPLAY` — previously: `AS v1.18 — PLUS THE PO DIRECTIVE "COSMOS E-2 FINDINGS, PERSONAL WORLD PRODUCT CORRECTIONS & PUBLIC WORLD CLOSURE" (§31): E-2 RUN BY THE PO ON THE HONOR WITH THE SYNTHETIC BUILD 92dc31bb (com.qandeel.mobile.e2) — NOT ACCEPTED; COSMOS NOT CLOSED — THE ARCHITECTURE / DEPENDENCY AUDIT DELIVERED BEFORE ANY PRODUCTION CHANGE — SLICE E (c077beed + R1 7cc03f3a) AND SLICE D-1 (ec822252) DELIVERED LOCALLY, JEST / tsc / ESLINT GREEN, iOS NOT TESTED — THE E-2 UNDERSTANDING MESSAGE A FIXTURE GAP, CLOSED (f3510893 + 31104adb) — SLICE E COPY GATE OPEN, 3 ROWS PROPOSED — SLICES A, B, C AND D-2 STOPPED FOR THE PO DECISIONS D-1 – D-5 — NO PUSH, NO CI, NO MERGE, NO REPLAY`
@@ -3778,6 +3780,79 @@ Every item is **NOT TESTED on iOS** and **NOT REVIEWED on the HONOR** until the 
 **Not done:** no push, PR, CI, iOS campaign, merge, hosted migration or Replay. E-2 is NOT ACCEPTED and COSMOS is NOT CLOSED; the acceptance decision is the PO's.
 
 ---
+
+### 31.9 The PO directive "COSMOS E-2 Final Corrections, Emulator Validation & GitHub CI Authorization" (2026-11-21) — corrections delivered, emulator-validated; the Reading statement ESCALATED; E-2 still NOT ACCEPTED
+
+The baseline was `a243a9d8` (code) / `f0d920d8` (governance, v1.21). The intelligence architecture, the cosmic design, the canonical camera, Replay and every other world's rules are unchanged.
+
+**31.9.1 Delivered (branch `cosmos/e2-corrections`).**
+
+| § | Requirement | Delivered | Proof |
+|---|---|---|---|
+| §2 | Personal topic names speak Public's label language | `b0bb9f18`. **Frozen-stage amendment** (`cosmos/core/stage.ts`, THREAD branch, marked `AMENDED` in place): an unselected Thread name is an ordinary label (`major: false`, `emphasis: false`) in its body's dye, exactly as a Public place at Mid. The selected Thread is the bright title (`major: true`, `emphasis: true`, tint −1 = white), exactly as Public's selected subject. The canvas's R1 overlap-gate condition and R3 middle size (§31.8) are **withdrawn**, so `placeLabels` is back to its frozen size and gate rules. Contrast is the existing light-of-dye treatment, unchanged | `label-anchor.test.tsx` "COSMOS E-2 final corrections" block, 7 cases (size, role and colour equal Public's; the selected title equals Public's selected size in white; each name in its own body's colour) |
+| §3 | Discoverability with no overprint | `b0bb9f18`, **frozen-canvas amendment, Personal only**: a name whose 16 pt edge shift would drop it is instead **shortened to the room it has** (`LABEL_FIT_MIN_CHARS = 10`, ending «…»), still centred within 16 pt of its body. A name that cannot keep 10 characters, or that would overprint a heavier label, is left out. It is discoverable by a tap on its body or name (the bright title and the PEEK carry the full name), by panning and by zooming. The selected title is placed first and whole. No name is invented and no parallel hierarchy is added. Shared and Public keep the frozen rule (`fit: world === 'PERSONAL'`) | same block: no two drawn boxes intersect; the Karim name is shortened on its body and is dropped without the fit; the selected title comes first and a neighbour under it is left out |
+| §4 | A tap on a name inspects its topic | `b0bb9f18`: the canvas Tap gesture now reports the world point it hit. On Personal only, `labelBodyAt` looks that point up against the settled label layout of the current rung. A tap inside a drawn name, and not on any body, is re-aimed to that name's own body and sent through the **same** `onTap` → `owner.tap` → `nearestHit` path. There is no second hit test and no gesture engine; pan, pinch, double tap, Back and the focal anchor are untouched | `labelBodyAt` positive case, plus three negatives: a body, empty space, and a name whose body is not a hit |
+| §6 | Labels never cross the timeline | `b0bb9f18`: `CosmosWorldView` passes the measured rail top (`onRailLayout`) to the canvas as `labelFloor` (Personal only: only Personal has a rail). `placeLabels` leaves out any label that would reach it. The map is not shrunk, no band is added, and timeline semantics are unchanged | floor case (left out at the floor, kept above it) |
+| §7 | Keyboard: the editor is visible | **Found on the emulator and fixed.** `c5f352fd`: `keyboardLift` (§31.8, `01e3dad0`) lifted a PEEK by the overlap **less the bottom inset**. The PEEK's scroller, however, shows content down to the sheet's bottom edge, so the name row scrolled there stayed 24 dp under the keyboard on Android 16. A logged diagnostic run measured it: keyboard top 577.9 dp (exact), sheet bottom 913.9, overlap 336, inset 24, lift 312. The lift is now the **whole** overlap, still capped at the top band; EXPANDED and CLOSED are unchanged. The first attempt, `c80a8e14`, assumed React Native reported the keyboard top low; the logged run refuted that, and it is reverted in `567f803a`. History is kept, not rewritten | `sheet-geometry.test.ts` (whole-overlap case, with the measured numbers) |
+
+**Root and suite verification (local, Windows).** `tsc --noEmit` exits 0. ESLint reports 0 problems on the changed files. Jest over `src/cosmos src/integration src/shared-world src/public-world`: 88 suites, 872 tests. The only failures are the pre-existing Windows baseline (`proof-root` 4, `proof-root-deep-link` 2, `depth` 3, `w2-account-access` 3). `proof-root-pinch` also timed out at 5 s, but only while the emulator was loading the machine; it times out identically on the unchanged `b0bb9f18`. Each new case fails with its fix reverted in place (stage: 5 fail; canvas: 6 fail; keyboard: 1 fails). These root contracts read the changed files and exit 0: `s5-03b-public-semantic-field-viewer`, `t12-integration`, `vport-01`, `vport-02`, `cosmos-e2-thread-names`, `s7-03`, `s7-04`. The E-2 build script temporarily rewrites `apps/mobile/package.json` `main`, so these contracts fail while a build is running; run them after the build.
+
+**31.9.2 §5 The Reading statement — ESCALATED, NOT implemented, NOT PASS.** On the emulator the Reading PEEK still shows only «قراءة» / "Reading", the family «تركيز ناشئ» / "Emerging focus", "You are inspecting a reading." and the lineage "Inside a thread, inside a place." The directive forbids marking this PASS, and it is not marked PASS. Three authorities conflict:
+1. **This contract, §19 "Content (SD-3, made exact)"**: "The PEEK holds only these, each from its existing owner: 1. The family word … 2. T-08's inspection statement (`inspectionSentence`) … 3. T-08's lineage … 4. T-04's context choice … 5. 'Go to this place' … No new word, label, link or read."
+2. **PG-02 / INTEL-TM-01** (migration 0151; `apps/api/src/hypothesis/hypothesis-evidence-reliance.ts`):
+   - "REVIEW_PENDING … withheld for good in V1";
+   - "NO_REMAINING_SUPPORT … withheld";
+   - and in `understanding-projection.ts`: "a statement is shown exactly when QANDEEL may rely on it. A withheld item carries no statement".
+3. **The historical projection** (`0072_historical_coverage_projection_disclosure_v1.sql` line 2344, unchanged by every later definition; 0151 states "every historical migration [is] untouched") emits `'statement', h.statement` at the readings-and-findings depth **with no reliance filter**. The Understanding surface's tokens are opaque, so the client cannot join them to a reading id to learn its reliance.
+
+Showing `DisclosedReading.statement` in the PEEK as served today would therefore show statements that PG-02 withholds everywhere else. That is a leak, not a presentation choice, so no client change can make it truthful.
+
+**The proposed narrow amendment, for the PO** (nothing is applied):
+- (a) A new forward-only migration in which the historical projection's reading carries its exact-version reliance (`evidence_change`). Its statement is emitted only when that reliance is `NONE`; otherwise only the evidence-change kind is emitted.
+- (b) An SD-3 amendment adding item 6. When `analyticalObject` is DISCLOSED, the render is RENDERABLE and fresh, and the reliance is `NONE`, the Reading PEEK shows the statement framed as QANDEEL's reading. It reuses the approved Understanding wording for its status and confidence where it exists; any new framing words go through a Copy Gate as PROPOSED. When the reliance is not `NONE`, the PEEK shows the approved evidence-change line in its place.
+- (c) Disclosure, depth and the T-08 inspection order are unchanged: nothing is read deeper than it is today.
+
+This needs the PO's decision. It also touches the hypothesis-restraint principle and a hosted migration's eventual deployment.
+
+**31.9.3 Emulator validation (PO: "The HONOR phone is NOT available now").** The run used the Android Emulator `QANDEEL_API36` (Android 16, 1080 × 2400 at 420 dpi, x86_64) against the **E-2 synthetic build** `com.qandeel.mobile.e2`. That is synthetic acceptance and does not exercise the real backend. The production `com.qandeel.mobile` was never touched. The arm64 HONOR build cannot run on an x86_64 emulator, so validation used x86_64 builds of the same commits.
+
+Evidence is in `QANDEEL_REPORTS/COSMOS-V5/integration/final-01/e2-corrections/emu-final/` (`results.tsv`, `run.log`, screenshots). Totals: 28 PASS, 1 FAIL (the keyboard, fixed in `c5f352fd` and re-checked PASS), 1 BLOCKED (the Reading), 1 OPEN, 8 INFO.
+- **Labels (en):** Public's ordinary size, each name in its body's hue; no overprint. At THE WHOLE WORLD 5 of 7 names are drawn, 3 of them shortened on their bodies. The two unnamed bodies are named by a tap.
+- **Name tap:** a tap on a drawn name, away from its body, opens that Thread's PEEK with its full name (en and ar). Negative controls held: empty space, beside a name, pan, double tap (one depth in), and the selection is never re-aimed. A tap on a Shared name inspects nothing.
+- **Timeline (en / ar):** no name crosses the mode chips or the rail; the lowest name is left out. With "All my topics now" (no timeline) the floor follows the lower chips and 6 of 7 names are drawn.
+- **Keyboard:** on `b0bb9f18` the name row was 24 dp under the keyboard (**FAIL**). On `c5f352fd` the field, Save and Cancel are above it; one tap saves «Mama tests»; the keyboard closes; the alias is the title and the PEEK says "Your name for it".
+- **Regression:**
+  - Public: Overview card; Mid labels attached; no pop-in (0.02 % changed over 1.5 s); Information / Discussion · 2 tabs; the panel's Back from Near to Mid.
+  - Shared: Far → Mid → Near → panel Back.
+  - Conversations: the list, switching both ways, and the Current marker.
+  - Arabic chrome: confirmed.
+- **Viewport 360 × 800 dp:** 3 of 7 names in en and in ar. There is no overprint, and the chips and timeline are clear. **OPEN:** a *selected* topic beside the depth rail gets no map title, because its fitted title would be under 10 characters. Its ring and the PEEK's full name identify it. This is for the PO; one option is to let the selected title shift inward beyond 16 pt.
+- **Harness notes:**
+  - A system Back at Public Mid with nothing focused (the World's root) backgrounded the app. That is by design (§19.6) and was a harness-rule breach, not a defect.
+  - The emulator exited (139) after `wm size reset` and was restarted.
+- **Physical HONOR: NOT VERIFIED** (the device was unavailable). Emulator results do not stand in for it.
+
+**31.9.4 Copy Gates (§11).** The 27 PROPOSED rows (Slice A 8, Slice B 14, Slice C 5) are collected in `QANDEEL_REPORTS/COSMOS-V5/integration/final-01/e2-corrections/COPY_GATE_27_REVIEW.md`:
+- Five can reuse APPROVED strings byte-exact:
+  - Slice A `saveName` / `cancelName`;
+  - Slice B `back` («رجوع», p3.back);
+  - Slice B `save` / `cancel` (S7-02 / S4-01).
+- One alignment decision: Slice B `tryAgain`, proposed «حاول مجددًا», against the frozen VI-01 «إعادة المحاولة».
+- 21 need wording decisions.
+
+**Nothing is promoted;** every row stays PROPOSED in source until the PO decides. No new copy was added by these corrections.
+
+**31.9.5 Push, PR and CI.** Authorised by the directive (push + Draft PR + CI, **not** merge); the results are recorded in §31.9.6.
+
+**31.9.6 CI.** Pending at the time of writing; recorded on completion.
+
+**31.9.7 Open obligations.**
+- **The Reading statement (§31.9.2).** It needs the PO's decision on the amendment.
+- **The selected title at the edge on narrow phones (§31.9.3).**
+- **The 27 Copy Gate rows.**
+- **The physical HONOR acceptance** of the final build.
+- **iOS BG-10.** Run by CI on the PR; see §31.9.6.
+- **Merge.** E-2 is **NOT ACCEPTED** and COSMOS is **NOT CLOSED**. Merging needs the PO's personal acceptance and the separate instruction «ادمج». No hosted migration (0197–0199) has been applied, and Replay has not started.
 
 ## Appendix A — files opened for this contract (main @ `5a21971d`, cosmos @ `d5c45571` + working tree)
 
