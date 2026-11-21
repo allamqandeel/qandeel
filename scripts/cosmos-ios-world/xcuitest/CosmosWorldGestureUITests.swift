@@ -328,12 +328,16 @@ final class CosmosWorldGestureUITests: XCTestCase {
     } else {
       note("pan-z-path", "the step landed on content at \(second)")
     }
-    // A drag on open stage while the stage is zoomed in: it moves the world (measured) and keeps the depth. It is UPWARD,
-    // 120 pt like the first-depth pan (implementing the PO's option-1 decision of 2026-11-21, contract §31.10.7): a leftward
-    // drag carries most of a narrow screen's beads out
-    // of view (iPhone SE: 2 of 5 left), so the three-core constellation X-PAN-ZOOMED needs when one mark's beads share a
-    // hue could not be shown. The direction never chooses what the analyser measures.
-    let zTo = CGPoint(x: from.x, y: from.y - 120)
+    // A drag on open stage while the stage is zoomed in: it moves the world (measured) and keeps the depth. It is UPWARD
+    // (implementing the PO's option-1 decision of 2026-11-21, contract §31.10.7): a leftward drag carries most of a narrow
+    // screen's beads out of view (iPhone SE: 2 of 5 left), so the three-core constellation X-PAN-ZOOMED needs when one
+    // mark's beads share a hue could not be shown. It is 120 pt on a regular screen (unchanged, PASS on iPhone 17) and
+    // 60 pt on a narrow one (PO, 2026-11-21: fix the path, not the limits). On iPhone SE an upward 120 pt carried the top
+    // bead to the stage band's edge and moved the background layers 105 pt against the beads, so a bead's halo hue drifted
+    // 16° (gate 44899406521). Half the drag keeps every bead well inside the stage and halves that relative shift. The
+    // tolerance stays max(20 pt, 25 %), so 20 pt here. The drag never chooses what the analyser measures.
+    let zoomedDrag: CGFloat = screen.width < 390 ? 60 : 120
+    let zTo = CGPoint(x: from.x, y: from.y - zoomedDrag)
     note("pan-z-spec", "\(Int(zTo.x - from.x)),\(Int(zTo.y - from.y))")
     note("pan-z-overlays-before", overlayFrames())
     shot("pan-z-before")
