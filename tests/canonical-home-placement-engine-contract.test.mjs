@@ -455,7 +455,7 @@ test('no Thread id allocation, no Home durable allocation, no lifecycle / LF, no
   // additive V2 projection, allocates no Home and no Thread and is pinned by its own contract; excluded from this census.)
   const THREAD_NAMES_MIGRATION = '0198_cosmos_e2_thread_names_v1.sql';
   const CURRENT_WORLD_MIGRATION_NAME = '0199_cosmos_e2_current_personal_world_v1.sql';
-  assert.deepEqual(migrations.filter((name) => name !== THREAD_NAMES_MIGRATION && name !== CURRENT_WORLD_MIGRATION_NAME && SUBSTRATE_MIGRATION_NAME.test(name)), [B2B2_MIGRATION, B2B3_MIGRATION, B3_MIGRATION],
+  assert.deepEqual(migrations.filter((name) => name !== THREAD_NAMES_MIGRATION && name !== CURRENT_WORLD_MIGRATION_NAME && name !== '0200_cosmos_e2_reading_reliance_gate_v1.sql' && SUBSTRATE_MIGRATION_NAME.test(name)), [B2B2_MIGRATION, B2B3_MIGRATION, B3_MIGRATION],
     'exactly one Home / Thread SUBSTRATE migration exists (T-03B2b2), plus the T-03B2b3 READ / AUDIT migration and the T-03B3 lifecycle migration');
   for (const name of [B3_MIGRATION, B3D_MIGRATION, C_MIGRATION]) {
     assert.doesNotMatch(read(`database/migrations/${name}`), /CREATE FUNCTION public\.(?:osdap_|compute_canonical_home_placement)|UPDATE public\.conversation_thread_homes|placement_x\s*=|placement_y\s*=/u,
@@ -516,7 +516,20 @@ test('no Thread id allocation, no Home durable allocation, no lifecycle / LF, no
     `${CURRENT_WORLD_MIGRATION} creates, writes or restructures no Thread / Home table and computes no placement`);
   assert.equal((currentWorld.match(/conversation_thread_homes/gu) ?? []).length, 1, `${CURRENT_WORLD_MIGRATION} names the Home table exactly once: the read JOIN`);
   assert.match(currentWorld, /JOIN public\.conversation_thread_homes h ON h\.thread_id = t\.id/u, `${CURRENT_WORLD_MIGRATION} reads a committed Home by its Thread`);
-  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION && candidate !== ERASURE_MIGRATION && candidate !== RETRY_MIGRATION && candidate !== THREAD_NAMES_MIGRATION && candidate !== CURRENT_WORLD_MIGRATION)) {
+  // COSMOS E-2 Reading correction (PO directive "COMPLETE ALL CORRECTIONS BEFORE FINAL CI", 2026-11-21; contract §31.10):
+  // migration 0200 REPLACES the V2 projection to gate each Reading through the 0151 reliance core, and re-states 0198's
+  // Thread name read VERBATIM — the caller's own Thread (`t.user_id = caller`) and its private alias — and nothing else: it
+  // creates, alters, writes or deletes no Thread / Home row, names no Home and defines no placement. It is exempt on exactly
+  // those terms and pinned by its own contract (database/tests/cosmos-e2-reading-reliance-gate-v1.test.mjs); outside them it
+  // carries no Home substrate.
+  const READING_GATE_MIGRATION = '0200_cosmos_e2_reading_reliance_gate_v1.sql';
+  const readingGate = read(`database/migrations/${READING_GATE_MIGRATION}`);
+  assert.doesNotMatch(readingGate, /(?:CREATE|ALTER|DROP)\s+TABLE\b|(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+public\.conversation_thread|conversation_thread_homes|thread_home|osdap|home_placement|home_anchor|canonical_spatial|thread_establish/iu,
+    `${READING_GATE_MIGRATION} creates, writes or restructures no Thread / Home table and computes no placement`);
+  assert.equal((readingGate.match(/conversation_threads/gu) ?? []).length, 1, `${READING_GATE_MIGRATION} names the Thread table exactly once: the 0198 ownership read`);
+  assert.match(readingGate, /JOIN public\.conversation_threads t ON t\.id = \(e\.value ->> 'id'\)::uuid AND t\.user_id = caller/u,
+    `${READING_GATE_MIGRATION} reads the caller's own Thread, as 0198 does`);
+  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION && candidate !== ERASURE_MIGRATION && candidate !== RETRY_MIGRATION && candidate !== THREAD_NAMES_MIGRATION && candidate !== CURRENT_WORLD_MIGRATION && candidate !== READING_GATE_MIGRATION)) {
     const text = name === VOICE_MIGRATION ? withoutVoiceRecreations(read(`database/migrations/${name}`))
       : name === MIGRATION_0191 ? withoutLiveCallRecreations(read(`database/migrations/${name}`)) : read(`database/migrations/${name}`);
     assert.doesNotMatch(text, /home_anchor|canonical_spatial|osdap|thread_home|home_placement|conversation_threads/iu, `${name} carries no Home substrate`);

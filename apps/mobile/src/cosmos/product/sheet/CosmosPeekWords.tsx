@@ -25,6 +25,11 @@ export interface CosmosPeekWordsProps {
   /** COSMOS E-2 Slice A: more, below the acts (the alias editor, the source chip). */
   readonly extra?: ReactNode;
   readonly statement: string;
+  /**
+   * COSMOS E-2 (SD-3 item 6, §31.10): the inspected Reading's own statement, exactly as the server disclosed it relied on;
+   * or, `withheld`, the approved evidence-change line shown in its place. Never composed or inferred here.
+   */
+  readonly reading?: { readonly text: string; readonly withheld: boolean } | null;
   readonly lineage: string | null;
   /** The context choice, drawn by its owner (or none). */
   readonly choice?: ReactNode;
@@ -33,11 +38,11 @@ export interface CosmosPeekWordsProps {
   /** The least height of the words (so the PEEK reaches what it must cover), and the bottom inset they keep clear of. */
   readonly minHeight: number;
   readonly bottomInset: number;
-  /** The root's test id; the parts are `:family`, `:statement`, `:lineage` and `:go`. */
+  /** The root's test id; the parts are `:family`, `:statement`, `:reading`, `:lineage` and `:go`. */
   readonly testID: string;
 }
 
-export function CosmosPeekWords({ language, family, name = null, statement, lineage, choice = null, go, minHeight, bottomInset, testID, extra = null }: CosmosPeekWordsProps) {
+export function CosmosPeekWords({ language, family, name = null, statement, reading = null, lineage, choice = null, go, minHeight, bottomInset, testID, extra = null }: CosmosPeekWordsProps) {
   const rtl = language === 'ar';
   const words = { writingDirection: rtl ? 'rtl' : 'ltr', textAlign: rtl ? 'right' : 'left' } as const;
   return (
@@ -52,6 +57,9 @@ export function CosmosPeekWords({ language, family, name = null, statement, line
         <Text testID={`${testID}:name-hint`} style={[typeStyle('metadata'), styles.lineage, words]}>{name.hint}</Text>
       )}
       <Text testID={`${testID}:statement`} style={[typeStyle('supporting'), styles.statement, words]}>{statement}</Text>
+      {reading === null ? null : (
+        <Text testID={`${testID}:reading`} style={[typeStyle(reading.withheld ? 'metadata' : 'supporting'), reading.withheld ? styles.lineage : styles.statement, words]}>{reading.text}</Text>
+      )}
       {lineage === null ? null : (
         <Text testID={`${testID}:lineage`} style={[typeStyle('metadata'), styles.lineage, words]}>{lineage}</Text>
       )}

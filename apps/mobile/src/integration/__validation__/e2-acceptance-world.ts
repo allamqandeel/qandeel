@@ -177,7 +177,12 @@ const APPEARANCES: readonly AppearanceFixture[] = [
 ];
 const UNGROUNDED: readonly ReadingFixture[] = [{ id: 'e2-reading-ungrounded-1', versionAtTc: 2 }, { id: 'e2-reading-ungrounded-2' }];
 const READINGS: readonly ReadingFixture[] = [
-  ...[...new Set(APPEARANCES.map((a) => a.readingId))].map((id, i) => ({ id, versionAtTc: i % 5 === 0 ? 2 : 1 })),
+  // COSMOS E-2 (0200): the server's reliance, as it would serve it — most Readings relied on (their statement shown), and
+  // some withheld (REVIEW_PENDING / NO_REMAINING_SUPPORT: no words of their own; the PEEK shows the approved line instead).
+  ...[...new Set(APPEARANCES.map((a) => a.readingId))].map((id, i) => ({
+    id, versionAtTc: i % 5 === 0 ? 2 : 1,
+    evidenceChange: i % 6 === 1 ? 'REVIEW_PENDING' as const : i % 6 === 4 ? 'NO_REMAINING_SUPPORT' as const : 'NONE' as const,
+  })),
   ...UNGROUNDED,
 ];
 const FOCUSES: readonly FocusFixture[] = [{ id: 'e2-focus-1', startedSp: 18 }, { id: 'e2-focus-2', startedSp: 34 }, { id: 'e2-focus-3', startedSp: 49 }];

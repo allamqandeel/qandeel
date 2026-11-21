@@ -8,7 +8,7 @@ export const MATERIAL = '66666666-6666-4666-8666-666666666666';
 export const GAP = '77777777-7777-4777-8777-777777777777';
 export const TURN = '88888888-8888-4888-8888-888888888888';
 
-/** A coherent Layer-A row exactly as `get_session_historical_projection_v1` returns it at TC = 2 of a 3-Moment Session. */
+/** A coherent Layer-A row exactly as `get_session_historical_projection_v2` (0198, 0200) returns it at TC = 2 of a 3-Moment Session. */
 export function projectionRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     session_id: SESSION, live_head: 3, tc: 2, sealed: true,
@@ -25,7 +25,7 @@ export function projectionRow(overrides: Record<string, unknown> = {}): Record<s
       assumptions: [], disconfirmingConditions: ['direct feedback observed'], statusAtTc: 'ACTIVE', versionAtTc: 3,
       lineage: [{ kind: 'CREATED', fromStatus: null, toStatus: 'CANDIDATE', fromVersion: null, toVersion: 1 }, { kind: 'VERSION_ADVANCED', fromStatus: 'CANDIDATE', toStatus: 'CANDIDATE', fromVersion: 1, toVersion: 2 },
         { kind: 'STATUS_TRANSITION', fromStatus: 'CANDIDATE', toStatus: 'ACTIVE', fromVersion: 2, toVersion: 3 }],
-      subjectGroundings: [{ emergingFocusId: FOCUS, groundedAtSp: 2 }] }],
+      subjectGroundings: [{ emergingFocusId: FOCUS, groundedAtSp: 2 }], evidenceChange: 'NONE' }],
     reading_relations: [],
     evidence_participations: [{ hypothesisId: READING, evidenceId: `memory:${MATERIAL}`, memoryId: MATERIAL, role: 'SUPPORTING' }],
     materials: [{ id: MATERIAL, type: 'GOAL', content: 'wants a calmer team', source: 'USER_STATED', confidence: 1, importance: 0.8, version: 1, supersedesMemoryId: null, supersededByMemoryId: null,

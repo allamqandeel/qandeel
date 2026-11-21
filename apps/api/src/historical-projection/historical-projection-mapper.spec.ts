@@ -117,15 +117,19 @@ describe('S7-01: the analytical families of one Replay moment are mapped by the 
     const { session_id: _s, live_head: _l, tc: _t, sealed: _x, revision: _r, moments: _m, ...families } = row;
     // 0169 reads the frozen V1 projection: its Threads carry no `name` / `origin` (those are the Personal V2 row's only).
     const threads = (families.threads as Record<string, unknown>[]).map(({ name: _n, origin: _o, ...thread }) => thread);
-    return { ...families, threads, materials: (families.materials as Record<string, unknown>[]).map(({ expiry: _e, ...material }) => material) };
+    // ... and its Readings carry no `evidenceChange` (COSMOS E-2 0200 gates V2 only).
+    const readings = (families.readings as Record<string, unknown>[]).map(({ evidenceChange: _c, ...reading }) => reading);
+    return { ...families, threads, readings, materials: (families.materials as Record<string, unknown>[]).map(({ expiry: _e, ...material }) => material) };
   };
 
   it('maps exactly the canonical families, without the header, the Moments or a Material expiry', () => {
     const { sessionId: _s, liveHead: _l, tc: _t, sealed: _x, revision: _r, moments: _m, materials, ...canonical } = mapHistoricalProjectionRow(projectionRow());
     const families = mapHistoricalAnalyticalFamilies(familiesOf(projectionRow()), 2);
-    // Identical to the canonical families except that a V1 Thread is not named and names no Session.
+    // Identical to the canonical families except that a V1 Thread is not named and names no Session, and a V1 Reading
+    // carries no served reliance (0200 is V2's).
     const threads = canonical.threads.map((thread) => ({ ...thread, name: { text: null, source: 'NONE' }, origin: null }));
-    expect(families).toEqual({ ...canonical, threads, materials: materials.map(({ expiry: _e, ...material }) => material) });
+    const readings = canonical.readings.map((reading) => ({ ...reading, evidenceChange: null }));
+    expect(families).toEqual({ ...canonical, threads, readings, materials: materials.map(({ expiry: _e, ...material }) => material) });
     expect(JSON.stringify(families)).not.toMatch(/expiry|committedText|liveHead|sessionId|GROUNDING_WORDING/u);
   });
 
@@ -136,6 +140,46 @@ describe('S7-01: the analytical families of one Replay moment are mapped by the 
     const [thread] = v1.threads as Record<string, unknown>[];
     expect(() => mapHistoricalAnalyticalFamilies({ ...v1, threads: [{ ...thread, origin: { sessionId: 'x', sp: 1 } }] }, 2)).toThrow(/unknown key origin/u);
     expect(() => mapHistoricalAnalyticalFamilies({ ...v1, threads: [{ ...thread, name: { text: 'n', source: 'USER_ALIAS' } }] }, 2)).toThrow(/unknown key name/u);
+    const [reading] = v1.readings as Record<string, unknown>[];
+    expect(() => mapHistoricalAnalyticalFamilies({ ...v1, readings: [{ ...reading, evidenceChange: 'NONE' }] }, 2)).toThrow(/unknown key evidenceChange/u);
+  });
+
+  // COSMOS E-2 (migration 0200; PG-02 / INTEL-TM-01): a Reading's own words cross exactly when QANDEEL may rely on it.
+  describe('the served reliance of a Reading (0200)', () => {
+    const [reading] = projectionRow().readings as Record<string, unknown>[];
+    const [confidence] = projectionRow().confidences as Record<string, unknown>[];
+    const withheld = (kind: string, extra: Record<string, unknown> = {}) =>
+      ({ ...reading, statement: null, assumptions: [], disconfirmingConditions: [], evidenceChange: kind, ...extra });
+    const rowWith = (entry: Record<string, unknown>, confidences = projectionRow().confidences) => projectionRow({ readings: [entry], confidences });
+
+    it('a relied-on Reading carries its statement and NONE', () => {
+      const [mapped] = mapHistoricalProjectionRow(projectionRow()).readings;
+      expect(mapped).toMatchObject({ statement: 'the manager avoids direct feedback', disconfirmingConditions: ['direct feedback observed'], evidenceChange: 'NONE' });
+    });
+
+    it.each(['REVIEW_PENDING', 'NO_REMAINING_SUPPORT'])('a %s Reading crosses with no words of its own, and keeps its identity and history', (kind) => {
+      const confidences = (projectionRow().confidences as Record<string, unknown>[]).map((entry) => ({ ...entry, assumptions: [] }));
+      const [mapped] = mapHistoricalProjectionRow(rowWith(withheld(kind), confidences)).readings;
+      expect(mapped).toMatchObject({ id: READING, statement: null, assumptions: [], disconfirmingConditions: [], evidenceChange: kind, statusAtTc: 'ACTIVE', versionAtTc: 3 });
+      expect(mapped.lineage).toHaveLength(3);
+      expect(JSON.stringify(mapHistoricalProjectionRow(rowWith(withheld(kind), confidences)).readings)).not.toMatch(/the manager avoids direct feedback|direct feedback observed/u);
+    });
+
+    it('refuses a withheld Reading that carries any word of its own, never repairing it', () => {
+      for (const extra of [{ statement: 'the manager avoids direct feedback' }, { assumptions: ['a'] }, { disconfirmingConditions: ['b'] }]) {
+        expect(() => mapHistoricalProjectionRow(rowWith(withheld('REVIEW_PENDING', extra)))).toThrow(/a withheld Reading carries words of its own/u);
+      }
+    });
+
+    it('refuses a relied-on Reading without a statement, a missing or unknown reliance, and a Confidence of a withheld Reading that carries assumptions', () => {
+      expect(() => mapHistoricalProjectionRow(rowWith({ ...reading, statement: null }))).toThrow(HistoricalProjectionIntegrityError);
+      const { evidenceChange: _c, ...noReliance } = reading;
+      expect(() => mapHistoricalProjectionRow(rowWith(noReliance))).toThrow(/missing evidenceChange/u);
+      expect(() => mapHistoricalProjectionRow(rowWith({ ...reading, evidenceChange: 'CLEAR' }))).toThrow(HistoricalProjectionIntegrityError);
+      expect(() => mapHistoricalProjectionRow(rowWith({ ...reading, evidenceChange: null }))).toThrow(HistoricalProjectionIntegrityError);
+      expect(() => mapHistoricalProjectionRow(rowWith(withheld('NO_REMAINING_SUPPORT'), [{ ...confidence, assumptions: ['the team is small'] }])))
+        .toThrow(/the Confidence of a withheld Reading carries its assumptions/u);
+    });
   });
 
   it('fails closed on a header, a Material expiry, a missing family, a coherence defect or a TC that is not a Session Position', () => {

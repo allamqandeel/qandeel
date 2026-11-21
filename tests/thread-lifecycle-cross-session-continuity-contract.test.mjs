@@ -495,7 +495,9 @@ test('the continuity provider is lazy and strict, and no Thread, Home, binding o
   for (const [file, blob] of [
     // RE-ANCHORED by COSMOS E-2 Slice C (PO D-5, Option U): index.d.ts gains the additive `CurrentPersonalThread` /
     // `CurrentPersonalWorld` export (current-personal-world.d.ts); the Thread lifecycle wire it re-exports is unchanged.
-    ['packages/runtime/src/index.d.ts', '92d13ffa566e39a77ebd878d60e6cf7a7dbaf151'],
+    // RE-ANCHORED by the COSMOS E-2 Reading correction (PO directive 2026-11-21; migration 0200): index.d.ts re-exports the
+    // ADDITIVE `DisclosedReadingEvidenceChange`; the Thread lifecycle wire it re-exports is unchanged. Previous blob 92d13ffa.
+    ['packages/runtime/src/index.d.ts', '0a703a95a7f03643baafbf16695739e7dfbf5117'],
     ['packages/runtime/src/temporal.d.ts', '9d945e6f2d65bdefbc334b0bc5ac884789f21a89'],
     ['packages/runtime/package.json', '932b837629f23b5cb765eda196fb659418d07916'],
   ]) {

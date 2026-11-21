@@ -410,6 +410,9 @@ function decodeAnalyticalRung(raw: unknown, tc: number): ReplayAnalyticalObjectV
       versionAtTc,
       lineage,
       subjectGroundings,
+      // A Replay moment reads the frozen V1 projection (0169), which carries no reliance: nothing crosses for it, so it is
+      // null here (COSMOS E-2 0200 gates the Personal projection only; Replay is unchanged).
+      evidenceChange: null,
     });
   });
   const readingIds = new Set(readings.map((reading) => reading.id));

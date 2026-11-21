@@ -141,10 +141,16 @@ const FROZEN = [
   // scroller keeps handled taps, so Save works while the keyboard is open; no Replay surface reads it. Previous: d6b64a32.
   // RE-ANCHORED once more by the DEFECT-4 R2 fix (HONOR re-check, 2026-11-20): closing the topic-name editor also closes
   // the keyboard; no Replay surface reads it. Previous: 3f0a0633.
-  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '10c4a08ca91c2bf4d35b68382e718d38f2d7b3833c54175c1a4ac68c29fb8200'],
-  ['apps/mobile/src/projection/historical-projection-wire.ts', '4c3fd718f6eb19092cf6b63ef5e95335b92ed4409fe9ecec32c65258bac050ee'],
+  // COSMOS E-2 CONTROLLED RE-ANCHOR (Product Owner directive "COMPLETE ALL CORRECTIONS BEFORE FINAL CI", 2026-11-21;
+  // contract §31.10; migration 0200, PG-02 / INTEL-TM-01): the Personal Reading PEEK shows the Reading statement only when the server disclosed it relied on (evidenceChange NONE), else the approved INTEL-TM-01 line; no Replay surface mounts or reads this composition. Previous pin: 10c4a08c.
+  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', 'b9504257fb58f9bc2dbd225a3c0d2b13e4de4668a5b51f196bb4307f2cb9de66'],
+  // COSMOS E-2 CONTROLLED RE-ANCHOR (Product Owner directive "COMPLETE ALL CORRECTIONS BEFORE FINAL CI", 2026-11-21;
+  // contract §31.10; migration 0200, PG-02 / INTEL-TM-01): each Reading carries its served reliance `evidenceChange`; a withheld Reading carries no words of its own and is refused whole otherwise; every frozen field keeps its meaning. Previous pin: 4c3fd718.
+  ['apps/mobile/src/projection/historical-projection-wire.ts', 'f25513003b8caa515594614bfa1ea44d575e7a8e88ae0f8d19d1915b3932d266'],
   ['apps/mobile/src/state/store.ts', '3177b9b6a322dc506a5095018b4dd9b14dddacc21bcfd77297decd5dbe62fff3'],
-  ['packages/runtime/src/historical-projection.d.ts', '8a7dd96eec4175cad34556f51aa614220d6e0a601e1425a7382dd58711dd2cdf'],
+  // COSMOS E-2 CONTROLLED RE-ANCHOR (Product Owner directive "COMPLETE ALL CORRECTIONS BEFORE FINAL CI", 2026-11-21;
+  // contract §31.10; migration 0200, PG-02 / INTEL-TM-01): DisclosedReading gains `evidenceChange` (null only where the serving projection is the frozen V1 a Replay moment reads) and its `statement` is null exactly when withheld; every other field is unchanged. Previous pin: 8a7dd96e.
+  ['packages/runtime/src/historical-projection.d.ts', 'de40d62c6ab9deeacb39a95ed7d6278b5b536f72c0fd2911492815a409b0e943'],
   ['apps/api/src/replay/replay.controller.ts', 'f7fb49fdfbcc2d936b3c4a9dea89bfe24a0466acd861600959312d53452c4a0a'],
   ['apps/api/src/replay/replay.module.ts', '76d7012b0a76cfea0bad39d264e1d011a3b4c0089231538b31f50381a6e0e985'],
   ['apps/api/src/replay/replay.repository.ts', '5921784cd2e14323304ea5b5d37b5f5c201b1f6915950d467f527dcb3f6df874'],
@@ -158,9 +164,13 @@ const FROZEN = [
   // S8B-07 CP1-B RE-ANCHOR (2026-11-08, step 6, F-1 `1f82e769`, CA-07B-2 record): a mixed V2 version's moments are
   // readable. The one viewing answer covers the moments that are not original audio; an original-audio moment carries no
   // text, or the version is refused whole. MIXED, V1 and the wire are unchanged; nothing else in the service changed.
-  ['apps/api/src/replay/replay.service.ts', 'c473807ae960916cd3ebec4c63d78054affa32a1b1f54c8fce1010dbd20964f9'],
+  // COSMOS E-2 CONTROLLED RE-ANCHOR (Product Owner directive "COMPLETE ALL CORRECTIONS BEFORE FINAL CI", 2026-11-21;
+  // contract §31.10; migration 0200, PG-02 / INTEL-TM-01): a Replay moment is V1 again (PR #402 CI): its Threads leave without the V2 name / origin, and a Reading leaves without `evidenceChange` (a Reading carrying one, or no statement, is refused whole); the F-2 narrowing line, G-1 and the version decoders are unchanged. Previous pin: c473807a.
+  ['apps/api/src/replay/replay.service.ts', 'fd6f2f855145706ff304889ec80153721775b372db5d58db6469fd080f082fb0'],
   // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D1, F-2 Option B: the Replay Reading's scope is typed as its class alone).
-  ['apps/api/src/replay/replay.types.ts', '165fc747f2274ca198f311227e94547feb663dcda8da9384dee18d088599b76c'],
+  // COSMOS E-2 CONTROLLED RE-ANCHOR (Product Owner directive "COMPLETE ALL CORRECTIONS BEFORE FINAL CI", 2026-11-21;
+  // contract §31.10; migration 0200, PG-02 / INTEL-TM-01): the Replay World rung keeps V1 Threads (no name / origin) and a Replay Reading omits `evidenceChange`; the scope is still typed as its class alone. Previous pin: 165fc747.
+  ['apps/api/src/replay/replay.types.ts', 'c5854aa5a00353d47df84001c1916d391591d6dd1ad18b028081dcbfb8fb9cb5'],
   ['database/migrations/0169_replay_personal_secure_integration_erasure_v1.sql', '319435d8514b8d4621667d75dbd62efb645ed4beb38e769fcc479066eb52fa2d'],
   // S7-04 RE-ANCHOR (2026-10-19): the S7-02 Replay read keeps the current version the S7-01 read already answered
   // (`currentVersion`: its id, its revision, whether it is the private copy) - no new server field, no new route.

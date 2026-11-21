@@ -27,6 +27,7 @@ const MIGRATIONS = 'database/migrations';
 const M0151 = '0151_personal_evidence_truth_maintenance_v1.sql';
 const M0152 = '0152_memory_subject_identity_atomicity_v1.sql';
 const M0186 = '0186_s8b_03_personal_voice_notes_v1.sql';
+const M0200 = '0200_cosmos_e2_reading_reliance_gate_v1.sql';
 const RECORD = 'docs/e2e/QANDEEL_INTEL_TM_01_PERSONAL_EVIDENCE_TRUTH_MAINTENANCE_IMPLEMENTATION_RECORD_v1.md';
 const MARK = ' -- INTEL-TM-01 (0151)';
 const AR = Object.freeze({
@@ -62,7 +63,11 @@ const shipped = Object.freeze({
   // S8B-03 CP1 (2026-10-31, E2): 0186 is admitted to re-create L1 (`personal_evidence_standing_v1`) once, for MACHINE_ASR
   // Evidence, and nothing else of L1 / L3; it is held to exactly that below.
   m0186: read(`${MIGRATIONS}/${M0186}`),
-  otherMigrationTexts: readdirSync(join(root, MIGRATIONS)).filter((name) => name.endsWith('.sql') && name !== M0151 && name !== M0152 && name !== M0186).map((name) => read(`${MIGRATIONS}/${name}`)).join('\n'),
+  // COSMOS E-2 Reading correction (PO directive 2026-11-21; contract §31.10): 0200 is admitted to CALL the L3 core — the
+  // Personal projection V2 withholds a Reading's own words exactly as every other surface does — and nothing else of L1 /
+  // L3; it is held to exactly that below.
+  m0200: read(`${MIGRATIONS}/${M0200}`),
+  otherMigrationTexts: readdirSync(join(root, MIGRATIONS)).filter((name) => name.endsWith('.sql') && name !== M0151 && name !== M0152 && name !== M0186 && name !== M0200).map((name) => read(`${MIGRATIONS}/${name}`)).join('\n'),
   api: apiSources(),
   mobileApi: read('apps/mobile/src/runtime-entry/understanding-api.ts'),
   mobileCopy: read('apps/mobile/src/understanding/copy.ts'),
@@ -98,6 +103,11 @@ function migrationViolations(world) {
   if (!/GRANT EXECUTE ON FUNCTION public\.hypothesis_evidence_reliance_v1\(uuid\[\]\) TO authenticated;/u.test(world.m0151)) out.push('the authenticated reliance read is not granted');
   if ((world.m0151.match(/^GRANT EXECUTE ON FUNCTION /gmu) ?? []).length !== 4) out.push('0151 grants EXECUTE on something beyond the three entry points and the unchanged selector');
   if (/personal_evidence_standing_v1|hypothesis_evidence_change_core_v1/u.test(world.otherMigrationTexts)) out.push('another migration references the L1 / L3 predicates');
+  // 0200 calls the L3 core once, as a consumer: it never names L1, and it defines or replaces neither predicate.
+  if (/personal_evidence_standing_v1/u.test(world.m0200) || (code(world.m0200).match(/public\.hypothesis_evidence_change_core_v1\(/gu) ?? []).length !== 1
+    || /\bCREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+public\.(?:hypothesis_evidence_change_core_v1|personal_evidence_standing_v1)\b/u.test(world.m0200)) {
+    out.push('0200 does more than call the L3 core once');
+  }
   // MEM-AR-01C (K-2): in 0152 the predicates appear only inside their own two CREATE OR REPLACE bodies (the Controlled
   // Changes CC-M2' and CC-M3'), and nowhere else in that migration.
   const m0152 = code(world.m0152);
@@ -253,6 +263,9 @@ const PLANTED = [
   ['the bind refusal becomes PT409', 'migrationViolations', () => plant('m0151', "RAISE EXCEPTION 'QUESTION_BINDING_RELIANCE_WITHHELD' USING ERRCODE='42501',", "RAISE EXCEPTION 'QUESTION_BINDING_RELIANCE_WITHHELD' USING ERRCODE='PT409',")],
   ['the bind guard fires on every update', 'migrationViolations', () => plant('m0151', "FOR EACH ROW WHEN (OLD.state = 'SELECTED' AND NEW.state = 'BOUND')", 'FOR EACH ROW')],
   ['a selector reliance line is dropped', 'migrationViolations', () => plant('m0151', MARK, '')],
+  // COSMOS E-2 Reading correction: 0200 may only CALL the L3 core.
+  ['0200 names the L1 predicate', 'migrationViolations', () => plant('m0200', 'BEGIN;', 'BEGIN;\nSELECT public.personal_evidence_standing_v1(NULL, NULL, NULL);')],
+  ['0200 replaces the L3 core', 'migrationViolations', () => plant('m0200', 'BEGIN;', "BEGIN;\nCREATE OR REPLACE FUNCTION public.hypothesis_evidence_change_core_v1() RETURNS text LANGUAGE sql AS 'SELECT 1';")],
   // MEM-AR-01C (K-2): 0152 may touch the predicates only through its two Controlled Changes.
   ['0152 uses the L1 predicate outside its Controlled Changes', 'migrationViolations', () => plant('m0152', 'CREATE FUNCTION public.memory_subject_v1(', 'SELECT public.personal_evidence_standing_v1(NULL, NULL, NULL);\nCREATE FUNCTION public.memory_subject_v1(')],
   ['0152 redefines the bind guard', 'migrationViolations', () => plant('m0152', 'COMMIT;', 'CREATE OR REPLACE FUNCTION public.guard_formal_question_binding_reliance_v1() RETURNS trigger AS $$ BEGIN RETURN NEW; END; $$ LANGUAGE plpgsql;\nCOMMIT;')],

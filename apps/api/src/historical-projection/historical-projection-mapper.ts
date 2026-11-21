@@ -117,7 +117,12 @@ const THREAD_NAME_KEYS = ['text', 'source'] as const;
 const THREAD_ORIGIN_KEYS = ['sessionId', 'sp'] as const;
 const THREAD_NAME_SOURCES = ['USER_ALIAS', 'GROUNDING_WORDING', 'NONE'] as const;
 const THREAD_APPEARANCE_KEYS = ['bindingId', 'threadId', 'hypothesisId', 'boundSp', 'current'] as const;
-const READING_KEYS = ['id', 'statement', 'type', 'domain', 'scope', 'origin', 'assumptions', 'disconfirmingConditions', 'statusAtTc', 'versionAtTc', 'lineage', 'subjectGroundings'] as const;
+// The frozen V1 Reading (0072): what a Replay moment's analysis carries (0169 reads V1).
+const READING_KEYS_V1 = ['id', 'statement', 'type', 'domain', 'scope', 'origin', 'assumptions', 'disconfirmingConditions', 'statusAtTc', 'versionAtTc', 'lineage', 'subjectGroundings'] as const;
+// COSMOS E-2 (migration 0200; PG-02 / INTEL-TM-01): V2 adds each Reading's served reliance; a withheld Reading's own
+// words are withheld by the server, and anything else is refused here, never repaired.
+const READING_KEYS = [...READING_KEYS_V1, 'evidenceChange'] as const;
+const READING_EVIDENCE_CHANGES = ['NONE', 'REVIEW_PENDING', 'NO_REMAINING_SUPPORT'] as const;
 const LINEAGE_KEYS = ['kind', 'fromStatus', 'toStatus', 'fromVersion', 'toVersion'] as const;
 const SUBJECT_GROUNDING_KEYS = ['emergingFocusId', 'groundedAtSp'] as const;
 const RELATION_KEYS = ['a', 'b'] as const;
@@ -198,9 +203,17 @@ function mapThreadOrigin(raw: unknown, path: string, establishedInSession: boole
   return { sessionId: text(row.sessionId, `${path}.sessionId`), sp };
 }
 
-function mapReading(raw: unknown, index: number, tc: number, emergingFocusIds: ReadonlySet<string>): DisclosedReading {
+function mapReading(raw: unknown, index: number, tc: number, emergingFocusIds: ReadonlySet<string>, version: ThreadVersion): DisclosedReading {
   const path = `readings[${index}]`;
-  const row = record(raw, path, READING_KEYS);
+  const row = record(raw, path, version === 'V2' ? READING_KEYS : READING_KEYS_V1);
+  const evidenceChange = version === 'V2' ? oneOf(row.evidenceChange, `${path}.evidenceChange`, READING_EVIDENCE_CHANGES) : null;
+  const withheld = evidenceChange !== null && evidenceChange !== 'NONE';
+  const assumptions = texts(row.assumptions, `${path}.assumptions`);
+  const disconfirmingConditions = texts(row.disconfirmingConditions, `${path}.disconfirmingConditions`);
+  if (withheld && (row.statement !== null || assumptions.length > 0 || disconfirmingConditions.length > 0)) {
+    return fail(`${path}: a withheld Reading carries words of its own`);
+  }
+  const statement = withheld ? null : text(row.statement, `${path}.statement`);
   // T-03C R2: the canonical subject groundings known at TC - each anchored at
   // its own Session Position and naming an Emerging Focus this Session knows
   // at TC. Never inferred here from statement, scope, Evidence or appearance.
@@ -230,17 +243,18 @@ function mapReading(raw: unknown, index: number, tc: number, emergingFocusIds: R
   if (versionAtTc < 1 || lineage.some((step) => step.toVersion > versionAtTc)) return incoherent(`${path}: lineage beyond the then-current version`);
   return {
     id: text(row.id, `${path}.id`),
-    statement: text(row.statement, `${path}.statement`),
+    statement,
     type: text(row.type, `${path}.type`),
     domain: text(row.domain, `${path}.domain`),
     scope: text(row.scope, `${path}.scope`),
     origin: text(row.origin, `${path}.origin`),
-    assumptions: texts(row.assumptions, `${path}.assumptions`),
-    disconfirmingConditions: texts(row.disconfirmingConditions, `${path}.disconfirmingConditions`),
+    assumptions,
+    disconfirmingConditions,
     statusAtTc: text(row.statusAtTc, `${path}.statusAtTc`),
     versionAtTc,
     lineage,
     subjectGroundings,
+    evidenceChange,
   };
 }
 
@@ -350,10 +364,12 @@ function mapFamilies<M extends DisclosedMaterialAtTc>(row: Row, tc: number, mapM
   }
 
   const emergingFocusIds = new Set(emergingFocuses.map((focus) => focus.id));
-  const readings = list(row.readings, 'readings').map((entry, index) => mapReading(entry, index, tc, emergingFocusIds));
+  const readings = list(row.readings, 'readings').map((entry, index) => mapReading(entry, index, tc, emergingFocusIds, threadVersion));
   const readingIds = new Set(readings.map((reading) => reading.id));
   if (readingIds.size !== readings.length) return incoherent('readings: a Reading appears twice');
   const versionOf = new Map(readings.map((reading) => [reading.id, reading.versionAtTc]));
+  // 0200: a withheld Reading's Confidence carries none of its reader's context (CC-2).
+  const withheldIds = new Set(readings.filter((reading) => reading.evidenceChange !== null && reading.evidenceChange !== 'NONE').map((reading) => reading.id));
 
   const threadReadingAppearances: DisclosedThreadReadingAppearance[] = list(row.thread_reading_appearances, 'thread_reading_appearances').map((entry, index) => {
     const path = `thread_reading_appearances[${index}]`;
@@ -465,6 +481,8 @@ function mapFamilies<M extends DisclosedMaterialAtTc>(row: Row, tc: number, mapM
     if (resolution !== 'PREVALID' && targetVersion > versionAtTc) return incoherent(`${path}: a version beyond TC that is not PREVALID`);
     if (resolution === 'CURRENT' && targetVersion !== versionAtTc) return incoherent(`${path}: CURRENT for a version other than the then-current one`);
     const alternativeReadingIds = texts(confidence.alternativeReadingIds, `${path}.alternativeReadingIds`);
+    const confidenceAssumptions = texts(confidence.assumptions, `${path}.assumptions`);
+    if (withheldIds.has(readingId) && confidenceAssumptions.length > 0) return fail(`${path}: the Confidence of a withheld Reading carries its assumptions`);
     if (alternativeReadingIds.some((id) => !readingIds.has(id))) return incoherent(`${path}: an alternative Reading that is not known at TC`);
     return {
       id: text(confidence.id, `${path}.id`),
@@ -474,7 +492,7 @@ function mapFamilies<M extends DisclosedMaterialAtTc>(row: Row, tc: number, mapM
       missingInformationCodes: texts(confidence.missingInformationCodes, `${path}.missingInformationCodes`),
       supportingEvidenceIds: texts(confidence.supportingEvidenceIds, `${path}.supportingEvidenceIds`),
       contradictingEvidenceIds: texts(confidence.contradictingEvidenceIds, `${path}.contradictingEvidenceIds`),
-      assumptions: texts(confidence.assumptions, `${path}.assumptions`),
+      assumptions: confidenceAssumptions,
       alternativeReadingIds,
     };
   });

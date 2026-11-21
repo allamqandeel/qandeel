@@ -37,6 +37,7 @@ export type {
   DisclosedQuestion,
   DisclosedQuestionAppearance,
   DisclosedReading,
+  DisclosedReadingEvidenceChange,
   DisclosedReadingLineageStep,
   DisclosedReadingRelation,
   DisclosedSessionRung,

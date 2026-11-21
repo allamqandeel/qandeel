@@ -1444,6 +1444,11 @@ jobs:
         run: npm run verify:thread-names:integration
       - name: Verify COSMOS E-2 Slice C current Personal World (0199) against real PostgreSQL
         run: npm run verify:current-personal-world:integration
+      # COSMOS E-2 corrections, the Reading statement (PO directive 2026-11-21; contract §31.10): migration 0200 gates each
+      # Reading of the Personal projection V2 through the 0151 reliance core — a withheld Reading carries no words of its
+      # own. Seeds real Readings, withdraws their evidence, and proves no withheld word reaches the row.
+      - name: Verify COSMOS E-2 Reading reliance gate (0200) against real PostgreSQL
+        run: npm run verify:reading-reliance:integration
       # S8B-07 CP1-B (D-06.6): the Replay pool's ffmpeg - BtbN's 9.0.2 LGPL build, from its own release asset at a pinned
       # autobuild tag, refused unless its sha256 is the one pinned here (the rclone and PostgREST pattern: no registry, no
       # image, no package manager). FFMPEG_BIN / FFPROBE_BIN name it for the media proofs; nothing else uses it.

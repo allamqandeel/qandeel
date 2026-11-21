@@ -12,6 +12,7 @@ import type {
   DisclosedEmergingFocus,
   DisclosedMoment,
   DisclosedReading,
+  DisclosedReadingEvidenceChange,
   DisclosedSessionRung,
   DisclosedSourceProvenanceRung,
   DisclosedThread,
@@ -56,6 +57,8 @@ export interface FocusFixture {
 export interface ReadingFixture {
   readonly id: string;
   readonly versionAtTc?: number;
+  /** COSMOS E-2 (0200): the served reliance; a withheld Reading carries no words of its own (as the server sends it). */
+  readonly evidenceChange?: DisclosedReadingEvidenceChange;
 }
 
 export interface MaterialFixture {
@@ -158,7 +161,7 @@ function reading(fixture: ReadingFixture): DisclosedReading {
   const versionAtTc = fixture.versionAtTc ?? 1;
   return {
     id: fixture.id,
-    statement: `statement of ${fixture.id}`,
+    statement: (fixture.evidenceChange ?? 'NONE') === 'NONE' ? `statement of ${fixture.id}` : null,
     type: 'HYPOTHESIS',
     domain: 'GENERAL',
     scope: 'SESSION',
@@ -173,6 +176,7 @@ function reading(fixture: ReadingFixture): DisclosedReading {
         : { kind: 'VERSION_ADVANCED' as const, fromStatus: 'ACTIVE', toStatus: 'ACTIVE', fromVersion: index, toVersion: index + 1 },
     ),
     subjectGroundings: [],
+    evidenceChange: fixture.evidenceChange ?? 'NONE',
   };
 }
 

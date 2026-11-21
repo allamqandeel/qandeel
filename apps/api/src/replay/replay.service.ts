@@ -161,8 +161,11 @@ function momentOf(row: unknown, index: number): ReplayMoment {
  * refused whole as UNAVAILABLE, never repaired and never passed on. 0169 has already re-digested the analysis to the
  * version's frozen point before this, so the narrowing reaches neither the digest nor the historical truth it guards.
  */
-function readingOf(reading: DisclosedReading): ReplayReading {
+function readingOf({ evidenceChange, ...reading }: DisclosedReading): ReplayReading {
   if (!CANONICAL_READING_SCOPE.test(reading.scope)) return unavailable();
+  // A Replay moment reads the frozen V1 projection, which carries no reliance (COSMOS E-2 0200 gates V2 only): the key
+  // never crosses, and a Reading the mapper did not take from V1 is refused whole.
+  if (evidenceChange !== null || reading.statement === null) return unavailable();
   return { ...reading, scope: REPLAY_READING_SCOPE_CLASS };
 }
 

@@ -61,7 +61,9 @@ function analysisOf(overrides: Record<string, unknown> = {}): Record<string, unk
   const { session_id: _s, live_head: _l, tc: _t, sealed: _x, revision: _r, moments: _m, ...families } = projectionRow();
   const materials = (families.materials as Record<string, unknown>[]).map(({ expiry: _e, ...material }) => material);
   const threads = (families.threads as Record<string, unknown>[]).map(({ name: _n, origin: _o, ...thread }) => thread);
-  return { ...families, threads, materials, ...overrides };
+  // 0169 reads V1: its Readings carry no `evidenceChange` (COSMOS E-2 0200 gates the Personal V2 row only).
+  const readings = (families.readings as Record<string, unknown>[]).map(({ evidenceChange: _c, ...reading }) => reading);
+  return { ...families, threads, readings, materials, ...overrides };
 }
 
 describe('S7-01 - ReplayService', () => {

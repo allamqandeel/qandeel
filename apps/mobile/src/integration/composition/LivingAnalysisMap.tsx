@@ -88,6 +88,7 @@ import {
   type MapActionOutcome, type MapInspectionContext, type ViewportEnvelope,
 } from '../../map';
 import { chromeProjection, contextPathSentence, inspectionSentence, orientationModel, type ChromeProjection } from '../../orientation-chrome';
+import { understandingCopy } from '../../understanding';
 import { returnMapContext, returnWorld } from '../../return-navigation';
 import type { ResponsiveInsets } from '../../responsive';
 import { sessionPosition, type CanonicalStore } from '../../state';
@@ -619,6 +620,21 @@ function PersonalPeek({ store, chrome, context, language, bottomInset, cover, ch
     const asked = inspectionRequestOf(state.inspection);
     if (asked !== null) void projection.refresh({ sessionId, tc, depth: context.disclosure.depth, inspection: asked });
   }, [context, projection, state.inspection]);
+  // COSMOS E-2 (SD-3 item 6, §31.10; migration 0200, PG-02 / INTEL-TM-01): the inspected Reading's own statement, shown
+  // only as the server disclosed it — at the analytical depth this context is authorised for, renderable and fresh, and
+  // relied on (`NONE`). A withheld Reading shows the approved INTEL-TM-01 evidence-change line in its place; its words
+  // never reached this client. Nothing is recomputed, inferred or composed here.
+  const analytical = context === null ? null : context.disclosure.analyticalObject;
+  const disclosedReading = inspected !== null && inspected.family === 'READING' && fresh && render.kind === 'RENDERABLE'
+    && render.family === 'READING' && analytical !== null && analytical.status === 'DISCLOSED'
+    ? analytical.value.readings.find((candidate) => candidate.id === inspected.id) ?? null
+    : null;
+  const reading = disclosedReading === null ? null
+    : disclosedReading.evidenceChange === 'NONE' && disclosedReading.statement !== null
+      ? { text: disclosedReading.statement, withheld: false }
+      : disclosedReading.evidenceChange === 'REVIEW_PENDING' || disclosedReading.evidenceChange === 'NO_REMAINING_SUPPORT'
+        ? { text: understandingCopy(language).evidenceChange[disclosedReading.evidenceChange], withheld: true }
+        : null;
   const origin = thread === null ? null : thread.origin;
   const openSource = origin === null || context === null ? null : () => {
     if (origin.sessionId === context.disclosure.sessionId) {
@@ -633,7 +649,7 @@ function PersonalPeek({ store, chrome, context, language, bottomInset, cover, ch
     <ScrollView style={{ maxHeight: room }} scrollEnabled={overflows} nestedScrollEnabled showsVerticalScrollIndicator={overflows} indicatorStyle="white"
       alwaysBounceVertical={false} keyboardShouldPersistTaps="handled" onContentSizeChange={(_width: number, height: number) => setContentHeight(Math.round(height))}>
       <CosmosPeekWords testID={PERSONAL_PEEK_TEST_ID} language={language} family={family} name={name} statement={inspectionSentence(language, render)}
-        lineage={lineage} choice={choice} go={go === null ? null : { label: copy.goToPlace, onPress: go }} minHeight={minHeight} bottomInset={bottomInset}
+        reading={reading} lineage={lineage} choice={choice} go={go === null ? null : { label: copy.goToPlace, onPress: go }} minHeight={minHeight} bottomInset={bottomInset}
         extra={thread === null ? null : (
           <TopicNameActs key={thread.id} current={thread.name.source === 'USER_ALIAS' ? thread.name.text : null} language={language}
             onAlias={onAlias === undefined ? null : async (alias: string) => { const kept = await onAlias(thread.id, alias); if (kept) refresh(); return kept; }}

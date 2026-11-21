@@ -184,10 +184,18 @@ export interface DisclosedSubjectGrounding {
  * grounding is the separate canonical relation from which the Thread
  * appearance derives - a row here never claims a fully mapped Stage-1
  * Reading merely because it exists.
+ *
+ * COSMOS E-2 (migration 0200; PG-02 / INTEL-TM-01): the Personal projection discloses a Reading's own words exactly
+ * when QANDEEL may rely on it. `evidenceChange` is the server's reliance of the Hypothesis row whose words are served;
+ * when it is not `NONE` the server withholds them (`statement` null, `assumptions` and `disconfirmingConditions`
+ * empty) and a client never recomputes or infers it.
  */
+export type DisclosedReadingEvidenceChange = 'NONE' | 'REVIEW_PENDING' | 'NO_REMAINING_SUPPORT';
+
 export interface DisclosedReading {
   readonly id: string;
-  readonly statement: string;
+  /** The Reading's statement; null exactly when it is withheld (`evidenceChange` is not `NONE`). */
+  readonly statement: string | null;
   readonly type: string;
   readonly domain: string;
   readonly scope: string;
@@ -200,6 +208,12 @@ export interface DisclosedReading {
   readonly lineage: readonly DisclosedReadingLineageStep[];
   /** The canonical subject groundings of this Session known at TC, in Session Position order; empty for an ungrounded Reading. */
   readonly subjectGroundings: readonly DisclosedSubjectGrounding[];
+  /**
+   * The served reliance (0200). Always present on the Personal projection's wire; null only where the serving
+   * projection carries no reliance at all: the frozen V1 read a Replay moment is bound to (0169, unchanged), whose wire
+   * has no such key. A null is never shown as relied on.
+   */
+  readonly evidenceChange: DisclosedReadingEvidenceChange | null;
 }
 
 export interface DisclosedReadingRelation {

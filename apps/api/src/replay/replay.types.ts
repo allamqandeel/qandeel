@@ -153,8 +153,10 @@ export interface ReplaySessionAnalyticsRung {
 /**
  * S7-05 (F-2): a Reading on the Replay wire. Its scope is the canonical scope's CLASS only, never the Session it names: the
  * moment is addressed by its ordinal and Session Position, and no Session id crosses (the header carries none either).
+ * It keeps the frozen V1 shape (0169 reads V1): no `evidenceChange` key (COSMOS E-2 0200 gates the Personal projection V2
+ * only; the service refuses a Reading that carries one, or no statement).
  */
-export type ReplayReading = Omit<DisclosedReading, 'scope'> & { readonly scope: 'CONVERSATION_SESSION' };
+export type ReplayReading = Omit<DisclosedReading, 'scope' | 'evidenceChange'> & { readonly scope: 'CONVERSATION_SESSION' };
 
 /** The ANALYTICAL_OBJECT rung of a Replay moment's analysis: T-03C's, with each Reading's scope narrowed to its class. */
 export type ReplayAnalyticalObjectRung =

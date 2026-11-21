@@ -27,7 +27,7 @@ export function disclosure(overrides: Record<string, unknown> = {}): Record<stri
     analyticalObject: { status: 'DISCLOSED', value: {
       readings: [{ id: READING, statement: 'the manager avoids direct feedback', type: 'CAUSAL', domain: 'GENERAL', scope: `CONVERSATION_SESSION:${SESSION}`, origin: 'SYSTEM_GENERATED', assumptions: [], disconfirmingConditions: [],
         statusAtTc: 'ACTIVE', versionAtTc: 3, lineage: [{ kind: 'CREATED', fromStatus: null, toStatus: 'CANDIDATE', fromVersion: null, toVersion: 1 }, { kind: 'STATUS_TRANSITION', fromStatus: 'CANDIDATE', toStatus: 'ACTIVE', fromVersion: 2, toVersion: 3 }],
-        subjectGroundings: [{ emergingFocusId: 'focus-manager', groundedAtSp: 2 }] }],
+        subjectGroundings: [{ emergingFocusId: 'focus-manager', groundedAtSp: 2 }], evidenceChange: 'NONE' }],
       readingRelations: [],
       materials: [{ id: MATERIAL, type: 'GOAL', content: 'wants a calmer team', source: 'USER_STATED', confidence: 1, importance: 0.8, version: 1, supersedesMaterialId: null, supersededByMaterialId: null, statusAtTc: 'ACTIVE', expiry: { mapping: 'PENDING', sp: null } }],
       gaps: [{ id: GAP, informationNeeded: 'the timeframe', whyItMatters: null, userAnswerability: null, preferredQuestionType: 'FACT_FINDING', readingIds: [READING], statusAtTc: 'OPEN', openEpochAtTc: 1, closureReasonAtTc: null }],
@@ -123,6 +123,33 @@ describe('historical disclosure wire validation', () => {
     expect(decodeHistoricalDisclosure(withReadings([{ ...reading, subjectGroundings: [{ emergingFocusId: 'focus-manager', groundedAtSp: 2, threadId: THREAD }] }]))).toMatchObject({ ok: false, reason: 'MALFORMED_SHAPE' });
     const { subjectGroundings: _dropped, ...ungrounded } = reading;
     expect(decodeHistoricalDisclosure(withReadings([ungrounded]))).toMatchObject({ ok: false, reason: 'MALFORMED_SHAPE' });
+  });
+
+  // COSMOS E-2 (migration 0200; PG-02 / INTEL-TM-01): a Reading's own words cross exactly when QANDEEL may rely on it.
+  it('decodes the served reliance: a relied-on statement, a withheld Reading with no words, and refuses anything else', () => {
+    const analytical = (disclosure().analyticalObject as { value: Record<string, unknown> }).value;
+    const reading = (analytical.readings as Record<string, unknown>[])[0];
+    const withReadings = (readings: unknown[], confidences = analytical.confidences) => disclosure({ analyticalObject: { status: 'DISCLOSED', value: { ...analytical, readings, confidences } } });
+    const decoded = decodeHistoricalDisclosure(disclosure());
+    if (!decoded.ok || decoded.value.analyticalObject.status !== 'DISCLOSED') throw new Error('expected a disclosed analytical rung');
+    expect(decoded.value.analyticalObject.value.readings[0]).toMatchObject({ statement: 'the manager avoids direct feedback', evidenceChange: 'NONE' });
+    for (const kind of ['REVIEW_PENDING', 'NO_REMAINING_SUPPORT']) {
+      const withheld = decodeHistoricalDisclosure(withReadings([{ ...reading, statement: null, evidenceChange: kind }]));
+      if (!withheld.ok || withheld.value.analyticalObject.status !== 'DISCLOSED') throw new Error('expected a withheld Reading to decode');
+      expect(withheld.value.analyticalObject.value.readings[0]).toMatchObject({ id: READING, statement: null, assumptions: [], disconfirmingConditions: [], evidenceChange: kind, versionAtTc: 3 });
+      // A withheld Reading that carries any word of its own is refused whole — never shown, never repaired.
+      expect(decodeHistoricalDisclosure(withReadings([{ ...reading, evidenceChange: kind }]))).toMatchObject({ ok: false, reason: 'INCOHERENT_FAMILY' });
+      expect(decodeHistoricalDisclosure(withReadings([{ ...reading, statement: null, assumptions: ['a'], evidenceChange: kind }]))).toMatchObject({ ok: false, reason: 'INCOHERENT_FAMILY' });
+      expect(decodeHistoricalDisclosure(withReadings([{ ...reading, statement: null, disconfirmingConditions: ['b'], evidenceChange: kind }]))).toMatchObject({ ok: false, reason: 'INCOHERENT_FAMILY' });
+      const [confidence] = analytical.confidences as Record<string, unknown>[];
+      expect(decodeHistoricalDisclosure(withReadings([{ ...reading, statement: null, evidenceChange: kind }], [{ ...confidence, assumptions: ['the team is small'] }])))
+        .toMatchObject({ ok: false, reason: 'INCOHERENT_FAMILY' });
+    }
+    expect(decodeHistoricalDisclosure(withReadings([{ ...reading, statement: null }]))).toMatchObject({ ok: false });
+    expect(decodeHistoricalDisclosure(withReadings([{ ...reading, evidenceChange: 'CLEAR' }]))).toMatchObject({ ok: false });
+    expect(decodeHistoricalDisclosure(withReadings([{ ...reading, evidenceChange: null }]))).toMatchObject({ ok: false });
+    const { evidenceChange: _dropped, ...noReliance } = reading;
+    expect(decodeHistoricalDisclosure(withReadings([noReliance]))).toMatchObject({ ok: false, reason: 'MALFORMED_SHAPE' });
   });
 
   it('refuses a vocabulary outside the closed sets and a Home that is not exact integer text', () => {

@@ -84,7 +84,10 @@ const MOMENT_KEYS = ['id', 'sp', 'sourceRole', 'sourceTurnId', 'ordinalWithinTur
 const FOCUS_KEYS = ['id', 'startedSp', 'lastAttentionSp', 'promotedThreadId', 'state'] as const;
 const QUESTION_APPEARANCE_KEYS = ['bindingId', 'gapId', 'gapOpenEpoch', 'readingId', 'readingVersion', 'questionType', 'sourceTurnId', 'assistantTurnId', 'appearedAtSp'] as const;
 const ANALYTICAL_RUNG_KEYS = ['readings', 'readingRelations', 'materials', 'gaps', 'questions', 'confidences'] as const;
-const READING_KEYS = ['id', 'statement', 'type', 'domain', 'scope', 'origin', 'assumptions', 'disconfirmingConditions', 'statusAtTc', 'versionAtTc', 'lineage', 'subjectGroundings'] as const;
+// COSMOS E-2 (migration 0200; PG-02 / INTEL-TM-01): each Reading carries the server's reliance; a withheld Reading's own
+// words never cross, and a withheld Reading that carries any is refused whole, never repaired or recomputed here.
+const READING_KEYS = ['id', 'statement', 'type', 'domain', 'scope', 'origin', 'assumptions', 'disconfirmingConditions', 'statusAtTc', 'versionAtTc', 'lineage', 'subjectGroundings', 'evidenceChange'] as const;
+const READING_EVIDENCE_CHANGES = ['NONE', 'REVIEW_PENDING', 'NO_REMAINING_SUPPORT'] as const;
 const LINEAGE_KEYS = ['kind', 'fromStatus', 'toStatus', 'fromVersion', 'toVersion'] as const;
 const SUBJECT_GROUNDING_KEYS = ['emergingFocusId', 'groundedAtSp'] as const;
 const RELATION_KEYS = ['a', 'b'] as const;
@@ -310,23 +313,32 @@ function decodeAnalyticalRung(raw: unknown, tc: number): DisclosedAnalyticalObje
       return { emergingFocusId: identity(grounding.emergingFocusId, `${groundingPath}.emergingFocusId`), groundedAtSp: sp(grounding.groundedAtSp, `${groundingPath}.groundedAtSp`, tc) };
     });
     if (new Set(subjectGroundings.map((grounding) => grounding.emergingFocusId)).size !== subjectGroundings.length) return reject('INCOHERENT_FAMILY', `${path}: a subject grounding appears twice`);
+    const evidenceChange = vocabulary(reading.evidenceChange, `${path}.evidenceChange`, READING_EVIDENCE_CHANGES);
+    const assumptions = texts(reading.assumptions, `${path}.assumptions`);
+    const disconfirmingConditions = texts(reading.disconfirmingConditions, `${path}.disconfirmingConditions`);
+    const withheld = evidenceChange !== 'NONE';
+    if (withheld && (reading.statement !== null || assumptions.length > 0 || disconfirmingConditions.length > 0)) {
+      return reject('INCOHERENT_FAMILY', `${path}: a withheld Reading carries words of its own`);
+    }
     return {
       id: identity(reading.id, `${path}.id`),
-      statement: text(reading.statement, `${path}.statement`),
+      statement: withheld ? null : text(reading.statement, `${path}.statement`),
       type: text(reading.type, `${path}.type`),
       domain: text(reading.domain, `${path}.domain`),
       scope: text(reading.scope, `${path}.scope`),
       origin: text(reading.origin, `${path}.origin`),
-      assumptions: texts(reading.assumptions, `${path}.assumptions`),
-      disconfirmingConditions: texts(reading.disconfirmingConditions, `${path}.disconfirmingConditions`),
+      assumptions,
+      disconfirmingConditions,
       statusAtTc: text(reading.statusAtTc, `${path}.statusAtTc`),
       versionAtTc,
       lineage,
       subjectGroundings,
+      evidenceChange,
     };
   });
   const readingIds = new Set(readings.map((reading) => reading.id));
   const versionOf = new Map(readings.map((reading) => [reading.id, reading.versionAtTc]));
+  const withheldIds = new Set(readings.filter((reading) => reading.evidenceChange !== 'NONE').map((reading) => reading.id));
   const readingRelations = list(value.readingRelations, `${base}.readingRelations`, (entry, path): DisclosedReadingRelation => {
     const relation = shape(entry, path, RELATION_KEYS);
     const a = identity(relation.a, `${path}.a`);
@@ -394,6 +406,7 @@ function decodeAnalyticalRung(raw: unknown, tc: number): DisclosedAnalyticalObje
     const resolution = vocabulary(confidence.resolution, `${path}.resolution`, CONFIDENCE_RESOLUTIONS);
     const versionAtTc = versionOf.get(readingId);
     if (versionAtTc === undefined) return reject('INCOHERENT_FAMILY', `${path}: a Reading that is not known at TC`);
+    if (withheldIds.has(readingId) && texts(confidence.assumptions, `${path}.assumptions`).length > 0) return reject('INCOHERENT_FAMILY', `${path}: the Confidence of a withheld Reading carries its assumptions`);
     if ((resolution === 'PREVALID') !== (targetVersion > versionAtTc) || (resolution === 'CURRENT' && targetVersion !== versionAtTc)) return reject('INCOHERENT_FAMILY', `${path}: resolution disagrees with the then-current version`);
     return {
       id: identity(confidence.id, `${path}.id`), readingId, targetVersion, resolution,
