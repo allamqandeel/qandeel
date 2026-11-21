@@ -3993,7 +3993,7 @@ The baseline was `d8c7b39c`: §31.9 plus the two PR #402 CI fixes, `891b757f` (R
   - **Drawn twice at two shifts:** NOT TESTED, a second rigid shift is supported.
   - **iPhone 17 ar frames of #401:** X-PAN-ZOOMED still PASS on its single core, and X-ANCHOR and X-PAN-AFTER-PINCH are unchanged.
 - **Live check.** The iOS simulator cannot run on this Windows machine. The live SE result is the iOS World gate's SE leg on this head.
-- **Live run 1, gate 44899406521 on .** iPhone 17 en and ar: X-PAN-ZOOMED PASS on the single core (0,−105 against 0,−120). API CI and Mobile CI are green.
+- **Live run 1, gate 44899406521 on `ecefa6ad`.** iPhone 17 en and ar: X-PAN-ZOOMED PASS on the single core (0,−105 against 0,−120). API CI and Mobile CI are green.
   - On iPhone SE, every bead stayed in view and moved about 0,−105, yet the case is NOT TESTED: only 2 cores matched.
   - One bead's halo hue drifted 16° (limit 15°). One bead reached the stage band's top edge. One was not detected after the drag.
   - Its two before-frames, from two runs, give identical hues, so the rendering is deterministic. The drift comes from the background layers moving against the beads during the drag.
