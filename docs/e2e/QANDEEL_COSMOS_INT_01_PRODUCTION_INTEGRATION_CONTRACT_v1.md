@@ -1,6 +1,10 @@
-# COSMOS Production Integration Contract — v1.23 (§31.10 THE PO DIRECTIVE "COMPLETE ALL CORRECTIONS BEFORE FINAL CI" AND THE PO COPY GATE DECISION (2026-11-21): THE READING STATEMENT GATED BY PG-02 (MIGRATION 0200, SD-3 ITEM 6), THE NARROW-SCREEN SELECTED TITLE, THE 27-ROW COPY GATE CLOSED, THE RECURRING TEST FAILURES FIXED AT THEIR CAUSES; E-2 NOT ACCEPTED; NO MERGE) — v1.22 (§31.9 THE PO DIRECTIVE "COSMOS E-2 FINAL CORRECTIONS, EMULATOR VALIDATION & GITHUB CI AUTHORIZATION" (2026-11-21): PERSONAL TOPIC NAMES IN PUBLIC'S LABEL LANGUAGE (STAGE AMENDMENT), FITTED NOT DROPPED (CANVAS AMENDMENT, PERSONAL ONLY), A NAME TAP INSPECTS ITS TOPIC, NO LABEL ACROSS THE TIMELINE, THE KEYBOARD LIFT CORRECTED; EMULATOR-VALIDATED; THE READING STATEMENT ESCALATED (NOT PASS); PUSH + DRAFT PR + CI AUTHORISED; E-2 NOT ACCEPTED; NO MERGE)
+# COSMOS Production Integration Contract — v1.24 (§31.11 FINAL CLOSURE: COSMOS-INT-01, COSMOS-FINAL-01 AND E-2 ACCEPTED / MERGED / CLOSED — 2026-11-21; INTEGRATED THROUGH PR #402 AS 90819192 FROM THE ACCEPTED SOURCE f478204b) — v1.23 (§31.10 THE PO DIRECTIVE "COMPLETE ALL CORRECTIONS BEFORE FINAL CI" AND THE PO COPY GATE DECISION (2026-11-21): THE READING STATEMENT GATED BY PG-02 (MIGRATION 0200, SD-3 ITEM 6), THE NARROW-SCREEN SELECTED TITLE, THE 27-ROW COPY GATE CLOSED, THE RECURRING TEST FAILURES FIXED AT THEIR CAUSES; E-2 NOT ACCEPTED; NO MERGE) — v1.22 (§31.9 THE PO DIRECTIVE "COSMOS E-2 FINAL CORRECTIONS, EMULATOR VALIDATION & GITHUB CI AUTHORIZATION" (2026-11-21): PERSONAL TOPIC NAMES IN PUBLIC'S LABEL LANGUAGE (STAGE AMENDMENT), FITTED NOT DROPPED (CANVAS AMENDMENT, PERSONAL ONLY), A NAME TAP INSPECTS ITS TOPIC, NO LABEL ACROSS THE TIMELINE, THE KEYBOARD LIFT CORRECTED; EMULATOR-VALIDATED; THE READING STATEMENT ESCALATED (NOT PASS); PUSH + DRAFT PR + CI AUTHORISED; E-2 NOT ACCEPTED; NO MERGE)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
+**Status:** `COSMOS-INT-01 — ACCEPTED / MERGED / CLOSED — 2026-11-21 (v1.24, §31.11). COSMOS-FINAL-01 AND E-2 INCLUDED. PO ACCEPTANCE ON THE PHYSICAL HONOR ALI-NX1 (SYNTHETIC-DATA BUILD f478204b; HOSTED BACKEND NOT PROVEN). INTEGRATED THROUGH PR #402 AS MERGE 90819192 (TREE IDENTICAL TO f478204b). iOS WORLD GATE 44934797727 FAILED / INCOMPLETE — ACCEPTED BY EXPLICIT PO EXCEPTION, NOT PASS. MIGRATIONS 0197 – 0200 MERGED, NOT HOSTED. NEXT PLANNED PRODUCT TASK: S8B-07 REPLAY (NOT STARTED)`
+
+The status lines below are kept as the history of each version. Where they say "E-2 NOT ACCEPTED", "PHYSICAL HONOR NOT VERIFIED", "NOT MERGED" or "COSMOS NOT CLOSED", that was true when they were written and is superseded by §31.11.
+
 **Status (v1.23, 2026-11-21):** `AS v1.22 — PLUS §31.10: 43b14861 (READING GATE, MIGRATION 0200 NOT HOSTED, SD-3 ITEM 6), f4c449cb (NARROW-SCREEN SELECTED TITLE; §31.9.3 CAUSE CORRECTED), d5239caf (COPY GATE CLOSED: 27 APPROVED; NO NEW READING COPY), 900511be (TEST RELIABILITY: LOCALE + TIMER-TICK CAUSES); LOCAL ALL GREEN; EMULATOR PASS (en / ar); PHYSICAL HONOR NOT VERIFIED; E-2 NOT ACCEPTED; NO MERGE, NO HOSTED MIGRATION, NO REPLAY`
 **Change log v1.22 → v1.23 (2026-11-21).** New §31.10 records the three approved correction groups, the Copy Gate closure, the test-reliability causes and fixes, the verification, the emulator validation and the open obligations. §19 SD-3 gains item 6 (marked AMENDED). §31.9.3's attribution of the narrow-screen cause is corrected by §31.10.2; nothing else earlier is rewritten.
 **Status (v1.22, 2026-11-21):** `AS v1.21 — PLUS §31.9: b0bb9f18 (§2 / §3 / §4 / §6), c5f352fd (§7 KEYBOARD LIFT; c80a8e14 REVERTED IN 567f803a); EMULATOR (QANDEEL_API36, E-2 SYNTHETIC) 28 PASS / 1 FAIL FIXED / 1 BLOCKED (READING) / 1 OPEN; READING STATEMENT ESCALATED WITH A NARROW AMENDMENT (NOT APPLIED); 27 COPY GATE ROWS PRESENTED, NONE PROMOTED; PHYSICAL HONOR NOT VERIFIED; E-2 NOT ACCEPTED; NO MERGE, NO HOSTED MIGRATION, NO REPLAY`
@@ -4024,6 +4028,82 @@ The baseline was `d8c7b39c`: §31.9 plus the two PR #402 CI fixes, `891b757f` (R
 - **Merge.** E-2 is **NOT ACCEPTED** and COSMOS is **NOT CLOSED**. Merging needs the PO's personal acceptance and the separate instruction «ادمج».
 - PR #402 stays Draft, stacked on #401.
 - No hosted migration (0197–0200) has been applied, and Replay has not started.
+
+**31.10.8 is superseded by §31.11.** Its open obligations are discharged or carried as §31.11 records them.
+
+### 31.11 Final closure — ACCEPTED / MERGED / CLOSED (PO, 2026-11-21)
+
+**Status:** `COSMOS-INT-01 — ACCEPTED / MERGED / CLOSED — 2026-11-21`. It covers COSMOS-INT-01, COSMOS-FINAL-01 and E-2.
+
+**31.11.1 Integration.**
+- Repository `allamqandeel/qandeel`. Integration PR #402, merged into `main` as merge commit
+  `90819192980f6223beff127139cf813ec4446529` (parents `5a21971d` and `f478204b`).
+- Accepted source: `f478204ba19e68a47fdc8d45e333f6ac125a562b`. All 151 COSMOS commits are in `main`, and the merged tree is
+  identical to the accepted source tree (`2eb784ba`; 0 files differ).
+- PR #394 was marked merged by GitHub. PRs #395 – #401 were closed as superseded by #402, without independent merges. No
+  COSMOS PR remains open.
+
+**31.11.2 What the Product Owner accepted.**
+- the approved S3-R2 cosmic visual system;
+- its integration across the Personal, Shared and Public Worlds;
+- the FAR → MID → NEAR → ANALYTICAL presentation and navigation;
+- the timeline, camera, gestures, zoom, pan and touch interaction;
+- the detail sheets, inspection and navigation controls;
+- the E-2 Personal World and conversation corrections (§31);
+- the Public World Information / Discussion integration;
+- Arabic / right-to-left and the approved UI corrections;
+- the physical Android acceptance on the HONOR ALI-NX1.
+
+The acceptance build:
+- APK `qandeel-e2-synthetic-f478204b.apk`, package `com.qandeel.mobile.e2`, arm64-v8a Release;
+- source `f478204b`, sha256 `b688ef3b2bb349e6468a9837592f655e149ace95ce1ddc4fda8f68059c5569c1`;
+- installed on the HONOR ALI-NX1 (Android 15).
+
+**It is a synthetic-data build:** the production composition over the in-memory E-2 world. The physical test does not prove
+hosted backend connectivity, real persistence, real model replies or a production deployment.
+
+**31.11.3 Final test record (as run; nothing rewritten as PASS).**
+- API CI 44934797719: PASS. Mobile CI 44934797722: PASS.
+- iOS World gate 44934797727: **FAILED / INCOMPLETE — accepted by explicit Product Owner exception.**
+  - iPhone 17 ar: PASS.
+  - iPhone 17 en: U-EMPTY NOT TESTED. Maestro's `ue-field` passed its 150 s bound; every other case passed.
+  - iPhone SE:
+    - The Personal door passed.
+    - From mid-run, Maestro steps hung (exit 124). S-LAND, U-LAND, S-EMPTY, U-EMPTY and P-LAND are NOT TESTED, and U-TAP
+      is FAIL: its tap command was itself stopped at 150 s.
+    - The job reached its 120-minute limit and was cancelled before the native XCUITest steps, and its evidence was not
+      uploaded.
+- SE-FU-1: an accepted V1 limitation (§30.6), Future Improvements item 022. Not PASS, not FIXED.
+- The iPhone SE Personal entry failure of gate 44908792454: root cause unproven. DIAG-SE-DOOR (run 44928574802, branch
+  `diag/se-door`, never merged) passed 10 / 10 cycles: **NOT REPRODUCED, not FIXED** (§31.10.7).
+- The harness follow-ups are non-blocking unless a later release gate requires them. They are admitted as
+  `QAN-BL-CI-04`.
+
+**31.11.4 Database and deployment boundary.**
+- Migrations 0197 (conversation catalog), 0198 (Thread names), 0199 (the user's current Personal World) and 0200 (the
+  Reading reliance gate) are merged into the source repository.
+- They are **NOT applied to hosted Supabase.** The next migration number is **0201**.
+- Hosted application, any API or mobile release, and the verification of the E-2 backend on hosted infrastructure remain
+  separately controlled work (HOSTED-DEPLOY-01, under its own Product Owner authorization). They are not closed by this
+  record.
+
+**31.11.5 Backlog (BG-08).**
+- Inherited: none.
+- Admitted at this closure, all `OPEN — UNASSIGNED`:
+  - `QAN-BL-VIS-02` (§12 REPLAY-COSMOS-01);
+  - `QAN-BL-NAV-04` (§12 PERSONAL-DETAIL-01);
+  - `QAN-BL-CI-04` (the iOS World gate residue in 31.11.3).
+- `QAN-BL-CW-08` is unchanged.
+- The §11 RN Skia 2.7.0 `QAN-INF-03` exception stays a standing record, with its return condition.
+- Index: 112 items.
+
+**31.11.6 What stays as it is.**
+- The frozen S3-R2 visual authority, and every approved implementation decision and amendment recorded in this contract.
+- The privacy, consent, retention and Public World publication restrictions.
+- Replay V1 and its old renderer (G-5).
+- No COSMOS work is reopened. The next planned product task is **S8B-07 Replay**, on its approved and frozen scope (the
+  [S8B-07 record](QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §14, CP2-A WP0 v0.3.1). It is not started, and its
+  execution needs the Product Owner's authorization.
 
 ## Appendix A — files opened for this contract (main @ `5a21971d`, cosmos @ `d5c45571` + working tree)
 
