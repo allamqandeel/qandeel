@@ -106,8 +106,13 @@ BEGIN
     RETURN;
   END IF;
   -- The same person already created a Session for this request: that Session is the answer, never a second one.
+  -- A concurrent creation of the same request is waited for by ON CONFLICT and, once committed, is visible to this
+  -- statement (READ COMMITTED); under REPEATABLE READ the INSERT itself refuses an invisible conflict. So the earlier
+  -- Session can be missing here only when it was deleted in between, and the one path that deletes a Session is the 0130
+  -- account deletion, which removes the person in the same transaction: the caller no longer exists, which is FORBIDDEN
+  -- exactly like the identity check above. Never 40001: PROD-RETRY-01 (0150) admits no new retryable escape.
   SELECT * INTO earlier FROM public.conversation_sessions s WHERE s.user_id = u AND s.client_request_id = p_client_request_id;
-  IF NOT FOUND THEN RAISE EXCEPTION 'SESSION_CREATION_RACE' USING ERRCODE = '40001'; END IF;
+  IF NOT FOUND THEN RAISE EXCEPTION 'FORBIDDEN' USING ERRCODE = '42501'; END IF;
   RETURN NEXT earlier;
 END$$;
 

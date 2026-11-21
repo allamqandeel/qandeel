@@ -16,6 +16,9 @@
 //   T4   the title: a rename appends (two ledger rows, the newest shown); whitespace is normalised; empty, blank and
 //        81-character titles are INVALID_TITLE (22023); no ledger row is ever rewritten (55000, even by the owner role)
 //   T5   a Session's deletion (the 0130 account-deletion path) takes its titles with it and nothing else
+//   T6   two connections, committed fixtures removed afterwards: a creation of the same request that waits on an
+//        uncommitted one answers the EARLIER Session once it commits (one row, no 40001), and a creation that waits on
+//        an uncommitted one that rolls back creates its own Session
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import process from 'node:process';
@@ -45,6 +48,63 @@ async function rejected(operation, codes = ['42501'], message = null) {
   assert.ok(codes.includes(error.code), `unexpected rejection code ${error.code} (wanted ${codes.join(',')}): ${error.message}`);
   if (message) assert.match(error.message, message);
   return error;
+}
+
+/** T6: real races on two connections; the committed person and Sessions are removed in `finally`. */
+async function verifyConcurrentCreation() {
+  const first = new Client({ connectionString: process.env.DATABASE_URL });
+  const second = new Client({ connectionString: process.env.DATABASE_URL });
+  await first.connect(); await second.connect();
+  const person = randomUUID();
+  const as = async (c) => {
+    await c.query('SET LOCAL ROLE authenticated');
+    await c.query("SELECT set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: person, role: 'authenticated' })]);
+  };
+  const createOn = async (c, id, request) => (await c.query('SELECT * FROM public.create_conversation_session_v2($1, $2)', [id, request])).rows[0];
+  const blocked = async (c) => {
+    for (let i = 0; i < 200; i += 1) {
+      const { rows: waiting } = await client.query(
+        "SELECT 1 FROM pg_stat_activity WHERE pid = $1 AND wait_event_type = 'Lock'", [c.processID]);
+      if (waiting.length) return;
+      await new Promise((resolve) => { setTimeout(resolve, 25); });
+    }
+    throw new Error('the second creation never waited on the first');
+  };
+  try {
+    await client.query('INSERT INTO auth.users(id) VALUES ($1)', [person]);
+    // (a) the winner commits: the waiter answers the EARLIER Session, never a second one and never 40001.
+    const winnerId = randomUUID();
+    await first.query('BEGIN'); await as(first);
+    assert.equal((await createOn(first, winnerId, 'race-1')).id, winnerId);
+    await second.query('BEGIN'); await as(second);
+    const waiter = createOn(second, randomUUID(), 'race-1');
+    await blocked(second);
+    await first.query('COMMIT');
+    const answered = await waiter;
+    await second.query('COMMIT');
+    assert.equal(answered.id, winnerId, 'the waiting creation answers the EARLIER Session');
+    assert.equal((await client.query("SELECT count(*)::int n FROM public.conversation_sessions WHERE user_id = $1 AND client_request_id = 'race-1'", [person])).rows[0].n, 1,
+      'exactly one Session for the request');
+    // (b) the first creator rolls back: the waiter creates its own Session.
+    const loserId = randomUUID(); const ownId = randomUUID();
+    await first.query('BEGIN'); await as(first);
+    assert.equal((await createOn(first, loserId, 'race-2')).id, loserId);
+    await second.query('BEGIN'); await as(second);
+    const own = createOn(second, ownId, 'race-2');
+    await blocked(second);
+    await first.query('ROLLBACK');
+    assert.equal((await own).id, ownId, 'after a rollback the waiting creation is the Session');
+    await second.query('COMMIT');
+    assert.equal((await client.query("SELECT count(*)::int n FROM public.conversation_sessions WHERE user_id = $1 AND client_request_id = 'race-2'", [person])).rows[0].n, 1);
+  } finally {
+    for (const c of [first, second]) { try { await c.query('ROLLBACK'); } catch { /* none open */ } await c.end(); }
+    await client.query('DELETE FROM public.session_semantic_clocks WHERE user_id = $1', [person]);
+    await client.query('DELETE FROM public.conversation_sessions WHERE user_id = $1', [person]);
+    await client.query('DELETE FROM public.users WHERE id = $1', [person]);
+    await client.query('DELETE FROM auth.users WHERE id = $1', [person]);
+    assert.equal((await client.query('SELECT count(*)::int n FROM public.conversation_sessions WHERE user_id = $1', [person])).rows[0].n, 0,
+      'the race fixtures are removed');
+  }
 }
 
 const CREATE_V1 = 'public.create_conversation_session_v1(uuid)';
@@ -219,6 +279,8 @@ try {
   await identity('authenticated', a);
   await title(secondId, 'Second');
   await identity('postgres');
+  // In the 0130 order: the Session's semantic clock (0065, a restricting foreign key) leaves first, then the Session.
+  await q('DELETE FROM public.session_semantic_clocks WHERE session_id = $1', [secondId]);
   await q('DELETE FROM public.conversation_sessions WHERE id = $1', [secondId]);
   assert.equal((await rows('SELECT count(*)::int n FROM public.conversation_session_titles WHERE session_id = $1', [secondId]))[0].n, 0,
     'the deleted Session took its titles with it');
@@ -229,6 +291,10 @@ try {
 
   await identity('postgres');
   await q('ROLLBACK');
+
+  // ---------------------------------------------------------------------------------------------------------- T6
+  stage = 'T6 concurrent creation';
+  await verifyConcurrentCreation();
   console.log('migration 0197 verified');
 } catch (error) {
   console.error(`migration 0197 verification failed at stage: ${stage}`);

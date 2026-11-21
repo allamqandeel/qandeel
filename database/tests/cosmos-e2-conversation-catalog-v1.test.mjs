@@ -75,6 +75,10 @@ test('C — the three definers derive the owner from auth.uid(), fail closed, an
   assert.match(createV2, /ON CONFLICT \(user_id, client_request_id\) WHERE client_request_id IS NOT NULL DO NOTHING/u);
   assert.match(createV2, /SELECT \* INTO earlier FROM public\.conversation_sessions s WHERE s\.user_id = u AND s\.client_request_id = p_client_request_id;/u);
   assert.match(createV2, /RAISE EXCEPTION 'INVALID_CLIENT_REQUEST_ID' USING ERRCODE = '22023'/u);
+  // PROD-RETRY-01 (0150): the creation lets no retryable SQLSTATE escape. A vanished earlier Session means the person was
+  // deleted (the 0130 account deletion), which is FORBIDDEN like the identity check.
+  assert.doesNotMatch(createV2, /'40001'|'40P01'|'PT409'/u, 'the creation raises no 40001, 40P01 or PT409');
+  assert.match(createV2, /p_client_request_id;\n\s*IF NOT FOUND THEN RAISE EXCEPTION 'FORBIDDEN' USING ERRCODE = '42501'; END IF;\n\s*RETURN NEXT earlier;/u);
   // list: owned rows, newest ACTIVITY first, the opening is the first USER message excerpt, bounded.
   assert.match(list, /LANGUAGE plpgsql STABLE SECURITY DEFINER/u, 'the catalog read writes nothing');
   assert.match(list, /WHERE s\.user_id = u\n/u);
