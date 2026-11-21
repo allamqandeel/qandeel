@@ -4,6 +4,7 @@
  */
 import { ConversationCatalogApiClient, ConversationSessionApiClient, type RuntimeHttpFetch } from '../../runtime-entry';
 import { CONVERSATION_CATALOG_COPY_GATE, conversationCatalogCopy } from '../catalog/copy';
+import { conversationCopy } from '../copy';
 import { conversationDisplayName, createConversationCatalogController } from '../conversation-catalog-controller';
 
 const SESSION_1 = '11111111-1111-4111-8111-111111111111';
@@ -168,15 +169,36 @@ describe('Slice B — the catalog controller', () => {
 });
 
 describe('Slice B — the copy gate', () => {
-  it('holds 14 rows PROPOSED and none APPROVED until the Product Owner decides', () => {
-    expect(CONVERSATION_CATALOG_COPY_GATE.approved).toEqual([]);
-    expect(CONVERSATION_CATALOG_COPY_GATE.proposed).toHaveLength(14);
-    for (const language of ['ar', 'en'] as const) {
+  // The PO COPY GATE DECISION of 2026-11-21 (COSMOS E-2): every row, byte-exact, Arabic authoritative.
+  const APPROVED = {
+    entryName: ['المحادثات', 'Conversations'],
+    title: ['المحادثات', 'Conversations'],
+    back: ['رجوع', 'Back'],
+    newChat: ['محادثة جديدة', 'New chat'],
+    untitled: ['بلا عنوان', 'Untitled'],
+    current: ['الحالية', 'Current'],
+    rename: ['تغيير الاسم', 'Rename'],
+    renameFieldName: ['اسم المحادثة', 'Conversation name'],
+    save: ['حفظ', 'Save'],
+    cancel: ['إلغاء', 'Cancel'],
+    loading: ['جارٍ تحميل المحادثات…', 'Loading conversations…'],
+    unavailable: ['تعذّر عرض المحادثات الآن.', "Conversations can't be shown right now."],
+    tryAgain: ['إعادة المحاولة', 'Try again'],
+    busy: ['أكمل الإجراء الحالي أولًا.', 'Finish the current action first.'],
+  } as const;
+
+  it('is CLOSED: all 14 rows APPROVED by the Product Owner on 2026-11-21, none PROPOSED, each byte-exact', () => {
+    expect(CONVERSATION_CATALOG_COPY_GATE.status).toMatch(/^COSMOS E-2 PRODUCT COPY GATE \(Slice B\) — CLOSED — 14 rows APPROVED by the Product Owner, 2026-11-21/u);
+    expect(CONVERSATION_CATALOG_COPY_GATE.proposed).toEqual([]);
+    expect([...CONVERSATION_CATALOG_COPY_GATE.approved].sort()).toEqual(Object.keys(APPROVED).sort());
+    for (const [index, language] of (['ar', 'en'] as const).entries()) {
       const copy = conversationCatalogCopy(language);
-      expect(Object.keys(copy).sort()).toEqual([...CONVERSATION_CATALOG_COPY_GATE.proposed].sort());
-      for (const value of Object.values(copy)) expect(value.trim().length).toBeGreaterThan(0);
+      expect(Object.keys(copy).sort()).toEqual(Object.keys(APPROVED).sort());
+      for (const [key, pair] of Object.entries(APPROVED)) expect(copy[key as keyof typeof APPROVED]).toBe(pair[index]);
     }
-    expect(conversationCatalogCopy('ar').untitled).toBe('محادثة بلا عنوان');
-    expect(conversationCatalogCopy('ar').newChat).toBe('محادثة جديدة');
+  });
+
+  it('Try again is the frozen VI-01 T03 wording, byte-identical in both languages', () => {
+    for (const language of ['ar', 'en'] as const) expect(conversationCatalogCopy(language).tryAgain).toBe(conversationCopy(language).tryAgain);
   });
 });

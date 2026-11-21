@@ -5,7 +5,7 @@
  * durable manual title.
  *
  * What a row says is the person's own title, else the person's own first words (the server's excerpt), else the
- * honest «محادثة بلا عنوان». No AI name, no invented theme, no count for a name. The row open now is marked, in words.
+ * honest «بلا عنوان». No AI name, no invented theme, no count for a name. The row open now is marked, in words.
  */
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { FlatList, Text, TextInput, View } from 'react-native';

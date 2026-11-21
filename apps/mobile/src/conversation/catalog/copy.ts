@@ -4,19 +4,21 @@
  *
  * Every string carries its source:
  *
- *   - PROPOSED — COSMOS E-2 PRODUCT COPY GATE (Slice B), awaiting the Product Owner. No row below is approved yet; the
- *     gate test holds the count, and the strings ship in the synthetic acceptance build only as PROPOSED words.
+ *   - APPROVED / REUSED — COSMOS E-2 PRODUCT COPY GATE (Slice B), CLOSED by the PO COPY GATE DECISION of 2026-11-21
+ *     (COSMOS E-2, "Complete Wording Approval Before Consolidated CI"): all 14 rows, Arabic authoritative.
+ *     back / save / cancel reuse approved wording, tryAgain is the frozen VI-01 T03 wording, and untitled reuses the
+ *     approved «بلا عنوان», which the Product Owner authorized for the conversation context. The gate test holds the values.
  *
  * Nothing here names an AI: a conversation's name is the person's own title, else the person's own first words, else
- * the honest «محادثة بلا عنوان» / "Untitled conversation". There is no invented theme, no number for a name and no
+ * the honest «بلا عنوان» / "Untitled". There is no invented theme, no number for a name and no
  * claim about the conversation's content.
  */
 import type { ChromeLanguage } from '../../orientation-chrome';
 
 export const CONVERSATION_CATALOG_COPY_GATE = {
-  status: 'COSMOS E-2 PRODUCT COPY GATE (Slice B) — OPEN — 14 rows PROPOSED, awaiting the Product Owner',
-  approved: [],
-  proposed: [
+  status: 'COSMOS E-2 PRODUCT COPY GATE (Slice B) — CLOSED — 14 rows APPROVED by the Product Owner, 2026-11-21 (back / save / cancel / tryAgain / untitled REUSE approved wording)',
+  proposed: [],
+  approved: [
     'entryName', 'title', 'back', 'newChat', 'untitled', 'current', 'rename', 'renameFieldName', 'save', 'cancel',
     'loading', 'unavailable', 'tryAgain', 'busy',
   ],
@@ -47,37 +49,37 @@ export interface ConversationCatalogCopy {
 }
 
 const AR: ConversationCatalogCopy = Object.freeze({
-  entryName: 'المحادثات', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  title: 'المحادثات', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  back: 'رجوع', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  newChat: 'محادثة جديدة', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  untitled: 'محادثة بلا عنوان', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  current: 'الحالية', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  rename: 'إعادة التسمية', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  renameFieldName: 'اسم المحادثة', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  save: 'حفظ', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  cancel: 'إلغاء', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  loading: 'جارٍ القراءة…', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  unavailable: 'تعذّر عرض المحادثات الآن.', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  tryAgain: 'حاول مجددًا', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  busy: 'أكمل ما يجري أولًا.', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
+  entryName: 'المحادثات', // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  title: 'المحادثات', // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  back: 'رجوع', // REUSED approved wording 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  newChat: 'محادثة جديدة', // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  untitled: 'بلا عنوان', // REUSED approved «بلا عنوان», PO-authorized for the conversation context 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  current: 'الحالية', // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  rename: 'تغيير الاسم', // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  renameFieldName: 'اسم المحادثة', // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  save: 'حفظ', // REUSED approved wording 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  cancel: 'إلغاء', // REUSED approved wording 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  loading: 'جارٍ تحميل المحادثات…', // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  unavailable: 'تعذّر عرض المحادثات الآن.', // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  tryAgain: 'إعادة المحاولة', // REUSED — VI-01 T03 (frozen) 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  busy: 'أكمل الإجراء الحالي أولًا.', // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
 });
 
 const EN: ConversationCatalogCopy = Object.freeze({
-  entryName: 'Conversations', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  title: 'Conversations', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  back: 'Back', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  newChat: 'New chat', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  untitled: 'Untitled conversation', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  current: 'Current', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  rename: 'Rename', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  renameFieldName: 'Conversation name', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  save: 'Save', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  cancel: 'Cancel', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  loading: 'Reading…', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  unavailable: 'Conversations can’t be shown right now.', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  tryAgain: 'Try again', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
-  busy: 'Finish what’s in progress first.', // PROPOSED — COSMOS E-2 Product Copy Gate (Slice B)
+  entryName: 'Conversations', // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  title: 'Conversations', // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  back: 'Back', // REUSED approved wording 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  newChat: 'New chat', // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  untitled: 'Untitled', // REUSED approved wording, PO-authorized for the conversation context 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  current: 'Current', // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  rename: 'Rename', // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  renameFieldName: 'Conversation name', // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  save: 'Save', // REUSED approved wording 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  cancel: 'Cancel', // REUSED approved wording 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  loading: 'Loading conversations…', // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  unavailable: "Conversations can't be shown right now.", // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  tryAgain: 'Try again', // REUSED — VI-01 T03 (frozen) 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
+  busy: 'Finish the current action first.', // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice B)
 });
 
 export function conversationCatalogCopy(language: ChromeLanguage): ConversationCatalogCopy {

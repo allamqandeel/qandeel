@@ -107,18 +107,20 @@ export interface AnalysisCopy {
   readonly currentWorldUnavailable: string;
 }
 
-/** COSMOS E-2 Slice A Product Copy Gate — the eight rows above, in both languages, PROPOSED to the Product Owner. */
+/** COSMOS E-2 Slice A Product Copy Gate — the eight rows above, in both languages: CLOSED,
+ * APPROVED by the PO COPY GATE DECISION of 2026-11-21 (COSMOS E-2, "Complete Wording Approval Before Consolidated CI"). */
 export const PERSONAL_TOPIC_NAME_COPY_GATE = Object.freeze({
-  status: 'COSMOS E-2 PRODUCT COPY GATE (Slice A) — OPEN — 8 rows PROPOSED, awaiting the Product Owner',
-  approved: [] as readonly string[],
-  proposed: ['topicNameFromWords', 'topicNameYours', 'topicUnnamed', 'nameTopic', 'topicNameField', 'saveName', 'cancelName', 'openSource'] as readonly string[],
+  status: 'COSMOS E-2 PRODUCT COPY GATE (Slice A) — CLOSED — 8 rows APPROVED by the Product Owner, 2026-11-21 (saveName / cancelName REUSE approved wording)',
+  approved: ['topicNameFromWords', 'topicNameYours', 'topicUnnamed', 'nameTopic', 'topicNameField', 'saveName', 'cancelName', 'openSource'] as readonly string[],
+  proposed: [] as readonly string[],
 });
 
-/** COSMOS E-2 Slice C Product Copy Gate — the five rows above, in both languages, PROPOSED to the Product Owner. */
+/** COSMOS E-2 Slice C Product Copy Gate — the five rows above, in both languages: CLOSED,
+ * APPROVED by the PO COPY GATE DECISION of 2026-11-21 (COSMOS E-2, "Complete Wording Approval Before Consolidated CI"). */
 export const PERSONAL_CURRENT_WORLD_COPY_GATE = Object.freeze({
-  status: 'COSMOS E-2 PRODUCT COPY GATE (Slice C) — OPEN — 5 rows PROPOSED, awaiting the Product Owner',
-  approved: [] as readonly string[],
-  proposed: ['worldModeThisConversation', 'worldModeAllTopics', 'currentWorldNote', 'currentWorldEmpty', 'currentWorldUnavailable'] as readonly string[],
+  status: 'COSMOS E-2 PRODUCT COPY GATE (Slice C) — CLOSED — 5 rows APPROVED by the Product Owner, 2026-11-21',
+  approved: ['worldModeThisConversation', 'worldModeAllTopics', 'currentWorldNote', 'currentWorldEmpty', 'currentWorldUnavailable'] as readonly string[],
+  proposed: [] as readonly string[],
 });
 
 const digits = (value: number): string => String(value);
@@ -166,21 +168,21 @@ const AR: AnalysisCopy = Object.freeze<AnalysisCopy>({
   exploreRight: 'استكشاف يمين الخريطة',
   exploreLeft: 'استكشاف يسار الخريطة',
   describe: (family, placement) => `${family}، ${placement}`,
-  // PROPOSED — COSMOS E-2 Product Copy Gate (Slice A)
+  // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice A), PO decision; saveName / cancelName REUSE approved wording
   topicNameFromWords: 'من كلامك',
   topicNameYours: 'اسم من اختيارك',
-  topicUnnamed: 'موضوع بلا اسم بعد',
+  topicUnnamed: 'موضوع بلا اسم',
   nameTopic: 'تسمية الموضوع',
   topicNameField: 'اسم الموضوع',
   saveName: 'حفظ',
   cancelName: 'إلغاء',
-  openSource: 'افتح حيث بدأ',
-  // PROPOSED — COSMOS E-2 Product Copy Gate (Slice C)
+  openSource: 'فتح المحادثة الأصلية',
+  // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice C), PO decision
   worldModeThisConversation: 'هذه المحادثة',
   worldModeAllTopics: 'كل موضوعاتي الآن',
-  currentWorldNote: 'موضوعاتك كما هي الآن، بلا خط زمني',
+  currentWorldNote: 'العرض الحالي بلا خط زمني',
   currentWorldEmpty: 'لا موضوعات بعد',
-  currentWorldUnavailable: 'تعذّر قراءة موضوعاتك الآن',
+  currentWorldUnavailable: 'تعذّر عرض موضوعاتك الآن.',
 });
 
 const EN: AnalysisCopy = Object.freeze<AnalysisCopy>({
@@ -224,21 +226,21 @@ const EN: AnalysisCopy = Object.freeze<AnalysisCopy>({
   exploreRight: 'Explore right on the map',
   exploreLeft: 'Explore left on the map',
   describe: (family, placement) => `${family}. ${placement}`,
-  // PROPOSED — COSMOS E-2 Product Copy Gate (Slice A)
+  // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice A), PO decision; saveName / cancelName REUSE approved wording
   topicNameFromWords: 'From your words',
   topicNameYours: 'Your name for it',
-  topicUnnamed: 'No name yet',
+  topicUnnamed: 'Unnamed topic',
   nameTopic: 'Name this topic',
   topicNameField: 'Topic name',
   saveName: 'Save',
   cancelName: 'Cancel',
-  openSource: 'Open where it began',
-  // PROPOSED — COSMOS E-2 Product Copy Gate (Slice C)
+  openSource: 'Open the original conversation',
+  // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice C), PO decision
   worldModeThisConversation: 'This conversation',
   worldModeAllTopics: 'All my topics now',
-  currentWorldNote: 'Your topics as they are now, with no timeline',
+  currentWorldNote: 'No timeline in the current view',
   currentWorldEmpty: 'No topics yet',
-  currentWorldUnavailable: 'Your topics could not be read right now',
+  currentWorldUnavailable: "Your topics can't be shown right now.",
 });
 
 /** The Analysis words for one Product language. */

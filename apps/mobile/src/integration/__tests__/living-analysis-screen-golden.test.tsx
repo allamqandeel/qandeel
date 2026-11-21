@@ -66,7 +66,7 @@
  * Handlers, testIDs, roles, labels, states, the artwork and every other value are unchanged.
  *
  * COSMOS E-2 corrections, Slice A — CONTROLLED RE-ANCHOR (Product Owner decisions D-3 / D-4 of 2026-11-20; Contract §31):
- * the Personal PEEK names the inspected Thread (the user's alias over the grounding wording, else "No name yet") beneath the
+ * the Personal PEEK names the inspected Thread (the user's alias over the grounding wording, else "Unnamed topic") beneath the
  * family word, and offers Open where it began (and Name this topic where the composition can rename; this recording cannot,
  * so that chip is absent). The golden was regenerated ONCE for that intended change (old sha256 ddf12cfa…, new 136bc101…).
  * Before it was rewritten, a per-case comparison of the two recordings proved: 12 of the 13 cases are byte-identical; in

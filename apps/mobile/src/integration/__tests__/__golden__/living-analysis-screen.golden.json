@@ -43792,7 +43792,7 @@
                      "testID": "qandeel-personal-peek:name"
                     },
                     "children": [
-                     "No name yet"
+                     "Unnamed topic"
                     ]
                    },
                    {
@@ -43913,7 +43913,7 @@
                      {
                       "type": "View",
                       "props": {
-                       "accessibilityLabel": "Open where it began",
+                       "accessibilityLabel": "Open the original conversation",
                        "accessibilityRole": "button",
                        "accessibilityState": {},
                        "accessibilityValue": {},
@@ -43964,7 +43964,7 @@
                            }
                           },
                           "children": [
-                           "Open where it began"
+                           "Open the original conversation"
                           ]
                          }
                         ]
