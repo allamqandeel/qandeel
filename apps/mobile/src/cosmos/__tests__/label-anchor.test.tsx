@@ -209,6 +209,39 @@ describe("COSMOS E-2 final corrections — Personal topic names in Public's labe
     expect(placeLabels(at(300), 0, rungScale(0), HOME, W, H, FOCUS_Y, 1, false, { floor: FOCUS_Y + 300 + 40 })).toHaveLength(1);
   });
 
+  describe('narrow-screen selected title (PO directive "COMPLETE ALL CORRECTIONS BEFORE FINAL CI", 2026-11-21)', () => {
+    // A major (selected) title at rung 0, k = 1: size 23, so its drawn height is 23 + 5 = 28 pt.
+    const titleAt = (y: number, major: boolean) => [{ ...label(major ? 'selected' : 'other', 0, major, 'Mother'), y }];
+    const FLOOR = FOCUS_Y + 300 + 10;
+    const lowest = FLOOR - 23 - 5;
+
+    it('the selected Personal title reaching the floor is lifted by exactly the shortfall, and stays centred on its body', () => {
+      const placed = placeLabels(titleAt(300, true), 0, rungScale(0), HOME, W, H, FOCUS_Y, 1, false, { floor: FLOOR, fit: true });
+      expect(placed).toHaveLength(1);
+      expect(placed[0]).toMatchObject({ id: 'selected', major: true, text: 'Mother', top: lowest });
+      expect(placed[0]!.box[3]).toBeLessThanOrEqual(FLOOR);
+      expect(placed[0]!.left + LABEL_WIDTH / 2).toBe(W / 2);
+    });
+
+    it('a selected title already above the floor is not moved', () => {
+      const placed = placeLabels(titleAt(200, true), 0, rungScale(0), HOME, W, H, FOCUS_Y, 1, false, { floor: FLOOR, fit: true });
+      expect(placed[0]!.top).toBe(FOCUS_Y + 200);
+    });
+
+    it('an unselected label at the floor is still left out, in the Personal world too', () => {
+      expect(placeLabels(titleAt(300, false), 0, rungScale(0), HOME, W, H, FOCUS_Y, 1, false, { floor: FLOOR, fit: true })).toEqual([]);
+    });
+
+    it('Shared and Public (no `fit`) keep the frozen rule: the selected title at the floor is left out', () => {
+      expect(placeLabels(titleAt(300, true), 0, rungScale(0), HOME, W, H, FOCUS_Y, 1, false, { floor: FLOOR })).toEqual([]);
+    });
+
+    it('a body too far below the floor (more than two title heights) is never drawn away from: its title is left out', () => {
+      expect(placeLabels(titleAt(300 + 2 * 28 + 1, true), 0, rungScale(0), HOME, W, H, FOCUS_Y, 1, false, { floor: FLOOR + 2 * 28 + 1, fit: true })).toHaveLength(1);
+      expect(placeLabels(titleAt(300 + 2 * 28 + 1, true), 0, rungScale(0), HOME, W, H, FOCUS_Y, 1, false, { floor: FLOOR, fit: true })).toEqual([]);
+    });
+  });
+
   it('§4 a tap inside a drawn name resolves to its own body; a body, empty space and a name without a hit do not', () => {
     const layer = personal(null);
     const layout = { rung: 0, scale: rungScale(0), labels: placedAt(null) };

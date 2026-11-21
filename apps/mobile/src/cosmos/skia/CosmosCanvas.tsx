@@ -216,7 +216,7 @@ export function placeLabels(labels: readonly StageLabel[], rung: number, scale: 
   for (const label of [...labels].sort((a, b) => weight(b) - weight(a))) {
     if (out.length >= MAX_LABELS_PER_RUNG) break;
     let px = (label.x - camera.cx) * scale + width / 2;
-    const py = (label.y - camera.cy) * scale + focusY;
+    let py = (label.y - camera.cy) * scale + focusY;
     if (px < -1.5 * width || px > 2.5 * width || py < -1.5 * height || py > 2.5 * height) continue;
     const size = label.major ? clamp(23 * Math.pow(k, 0.6), 15, 30) : clamp(12.5 * Math.pow(k, 0.6), 10.5, 17);
     let text = label.text.length > LABEL_MAX_CHARS ? `${label.text.slice(0, LABEL_MAX_CHARS - 1)}…` : label.text;
@@ -225,10 +225,20 @@ export function placeLabels(labels: readonly StageLabel[], rung: number, scale: 
     let w = widthOf(text);
     const inView = px >= 0 && px <= width && py >= 0 && py <= height;
     if (inView) {
-      if (px < 24 || px > width - 24 || py < 96 || py > height - 40) continue;
+      if (px < 24 || px > width - 24 || py < 96) continue;
       // AMENDED (PO directive "COSMOS E-2 Final Corrections", 2026-11-21, §6): no label is laid out over the host's bottom
       // rail (the Personal timeline and its chips). `floor` is that rail's measured top; a world without a rail has none.
-      if (options.floor !== undefined && py + size * fontScale + 5 > options.floor) continue;
+      const lowest = Math.min(height - 40, options.floor === undefined ? Infinity : options.floor - size * fontScale - 5);
+      if (py > lowest) {
+        // AMENDED (PO directive "COMPLETE ALL CORRECTIONS BEFORE FINAL CI", 2026-11-21, narrow-screen selected title; `fit`
+        // is the Personal world only): the SELECTED topic stays identifiable by its title. Where its title would reach the
+        // floor (on a 360 dp phone a body low beside the depth rail), it is lifted by exactly the shortfall — the smallest
+        // inward move — and by no more than two of its own heights, so it stays on its body; a body lower than that keeps
+        // the frozen rule. Every other label, and Shared and Public, are unchanged: left out at the floor.
+        const lift = py - lowest;
+        if (!(label.major && options.fit === true) || lift > 2 * (size * fontScale + 5)) continue;
+        py = lowest;
+      }
       let whole = clamp(px, Math.min(w / 2 + railLeft, width / 2), Math.max(width - w / 2 - railRight, width / 2));
       if (!label.major && Math.abs(whole - px) > LABEL_EDGE_SHIFT_MAX) {
         // AMENDED (same directive, §3; `fit` is passed for the Personal world only): a topic name near an edge is shortened
