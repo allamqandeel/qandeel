@@ -57,7 +57,20 @@ enter() {
   mt "$1-launch" launch.yaml "NAME=gate-$1-launch" || return 1
   sleep 8
   mt "$1-door" timed-id.yaml "NAME=gate-$1-door" TAP=qandeel-depth-to-analysis WAIT=qandeel-cosmos-timeline-rail ||
-    { shot "$1-door-failed"; dump "$1-door-failed"; return 1; }
+    { shot "$1-door-failed"; dump "$1-door-failed"; door_evidence "$1"; return 1; }
+}
+# door_evidence <name>: AFTER a failed door only (PO, 2026-11-21; DIAG-SE-DOOR run 44928574802 did not reproduce the SE
+# failure of gate 44908792454 in 10 cycles), what tells a lost tap from a driver failure: Maestro's debug folder for that
+# step (its command records carry each command's own timestamps and durations), the simulator's log of the Maestro XCTest
+# driver and of the app's JavaScript for the last 5 minutes, and the wall-clock time this was taken. Nothing is recorded
+# while a case runs (no video, no log stream), so the tap sequence, its waits and its timing are those of every other run.
+door_evidence() {
+  local d="$OUT/$1-door-evidence" m; mkdir -p "$d"; date -u +%Y-%m-%dT%H:%M:%SZ > "$d/taken-at.txt"
+  m="$(sed -n '/==== Debug output/{n;p;}' "$OUT/$1-door.log" | tr -d '[:space:]')"
+  [ -n "$m" ] && [ -d "$m" ] || m="$(ls -td "$HOME"/.maestro/tests/*/ 2>/dev/null | head -n 1)"
+  [ -n "$m" ] && cp -R "$m" "$d/maestro" 2>/dev/null; echo "maestro debug folder: ${m:-none}" >> "$d/taken-at.txt"
+  node "$ROOT/scripts/validation/bounded-run.mjs" --seconds 90 --label "$1-door-log" -- xcrun simctl spawn "$UDID" log show --last 5m     --style ndjson --predicate 'process CONTAINS "maestro-driver" OR subsystem == "com.facebook.react.log"' > "$d/simulator-log.ndjson" 2> "$d/simulator-log.err"
+  say "  $1-door evidence kept in $(basename "$d") (maestro: ${m:+kept})"
 }
 # tapcase <case> <name> <point> [f1]: one tap, then the PEEK within 6 s; the PEEK is closed by its handle afterwards.
 # With f1 (COSMOS-FINAL-01 F-1): the PEEK's statement is the server's answer about the inspected object, read within 6 s

@@ -4000,6 +4000,24 @@ The baseline was `d8c7b39c`: §31.9 plus the two PR #402 CI fixes, `891b757f` (R
 - **PO decision (2026-11-21): fix the path, not the limits.** The three-core minimum, the 15° hue window, the 6 pt rigid fit, the uniqueness rule, the tolerance and the map code are unchanged, as are the passing iPhone 17 path and its evidence.
   - On a screen narrower than 390 pt, the zoomed drag is 60 pt upward. Every bead then stays well inside the stage, and the background's shift against the beads is halved.
   - The tolerance stays max(20 pt, 25 %), which is 20 pt there.
+- **Live run 2, gate 44908792454 on `126674e0`.** iPhone 17 en and ar: success. iPhone SE (attempt 2, the first was cut by the step's 60 minutes on a slow runner): X-PAN-ZOOMED PASS from a constellation of 4 cores (0,−44 against 0,−60), X-ANCHOR and X-PAN-AFTER-PINCH PASS.
+  - Its Personal entry failed once. Maestro reported the door tap COMPLETED, but the rail never appeared. P-TAP-RAIL, P-TAP, F1-RESOLVED, P-PAN and P-PAN-RAIL are therefore NOT TESTED, and the gate stays failed.
+  - The failure's hierarchy shows the Conversation as the current depth with no crossing in progress: during a crossing the Conversation is hidden from accessibility, and its door was present and enabled. A blocked or undrawn crossing, and an Analysis that opened unseen, are ruled out.
+  - Not ruled out: a tap the driver never delivered, or a touch the door did not recognise. The Release proof build carries no app marks, and Maestro's debug folder was not kept.
+  - This is not SE-FU-1: the tap came about 40 s after the Conversation appeared. The same run's native fresh-install door tap responded (`tap=true`, 565 ms).
+  - #401's SE failure (run 44707574152) is a different symptom: Maestro's tap command itself never completed.
+- **DIAG-SE-DOOR (PO-approved diagnostic campaign, 2026-11-21): NOT REPRODUCED.** It ran on the unmerged diagnostic branch `diag/se-door` (`2ed33279` on `126674e0`), run 44928574802.
+  - The build was instrumented with markers that observe only.
+  - It ran 10 fresh-install cycles of the gate's own entry: launch, 8 s, one door tap, 60 s for the rail, no retry.
+  - All 10 cycles passed, and each recorded the whole chain: root touch, door press-in, `onPress`, the crossing request, the depth change and the fade's settle.
+  - Timings: touch to JavaScript 53–360 ms; press-in to `onPress` 1–88 ms; `onPress` to the settled Analysis 1.0–2.3 s.
+  - This repairs nothing. The cause of the single SE failure remains unproven, and no application change follows from it. SE-FU-1 is not reopened and item 022 is unchanged.
+- **PO decision (2026-11-21): evidence on failure, then one final gate.** After a failed Personal door, `run-world-gate.sh` now keeps, besides the existing screenshot and hierarchy:
+  - Maestro's debug folder for that step, whose command records carry their own timestamps;
+  - the simulator's log of the Maestro driver and of the app's JavaScript for the last 5 minutes;
+  - the time this evidence was taken.
+  - Nothing is recorded while a case runs. Video was not added: it would have to record every entry, because a failure is known only afterwards, and that would load the simulator under test. This is a documented limitation.
+  - The tap sequence, waits, timeouts, retries, assertions and verdicts are unchanged. The application is unchanged since `ecefa6ad`, whose API CI and Mobile CI are green.
 
 **31.10.8 Open obligations.**
 - **The physical HONOR acceptance** of the final build (the arm64 E-2 build is handed over with this record).
