@@ -1,6 +1,8 @@
-# COSMOS Production Integration Contract — v1.22 (§31.9 THE PO DIRECTIVE "COSMOS E-2 FINAL CORRECTIONS, EMULATOR VALIDATION & GITHUB CI AUTHORIZATION" (2026-11-21): PERSONAL TOPIC NAMES IN PUBLIC'S LABEL LANGUAGE (STAGE AMENDMENT), FITTED NOT DROPPED (CANVAS AMENDMENT, PERSONAL ONLY), A NAME TAP INSPECTS ITS TOPIC, NO LABEL ACROSS THE TIMELINE, THE KEYBOARD LIFT CORRECTED; EMULATOR-VALIDATED; THE READING STATEMENT ESCALATED (NOT PASS); PUSH + DRAFT PR + CI AUTHORISED; E-2 NOT ACCEPTED; NO MERGE)
+# COSMOS Production Integration Contract — v1.23 (§31.10 THE PO DIRECTIVE "COMPLETE ALL CORRECTIONS BEFORE FINAL CI" AND THE PO COPY GATE DECISION (2026-11-21): THE READING STATEMENT GATED BY PG-02 (MIGRATION 0200, SD-3 ITEM 6), THE NARROW-SCREEN SELECTED TITLE, THE 27-ROW COPY GATE CLOSED, THE RECURRING TEST FAILURES FIXED AT THEIR CAUSES; E-2 NOT ACCEPTED; NO MERGE) — v1.22 (§31.9 THE PO DIRECTIVE "COSMOS E-2 FINAL CORRECTIONS, EMULATOR VALIDATION & GITHUB CI AUTHORIZATION" (2026-11-21): PERSONAL TOPIC NAMES IN PUBLIC'S LABEL LANGUAGE (STAGE AMENDMENT), FITTED NOT DROPPED (CANVAS AMENDMENT, PERSONAL ONLY), A NAME TAP INSPECTS ITS TOPIC, NO LABEL ACROSS THE TIMELINE, THE KEYBOARD LIFT CORRECTED; EMULATOR-VALIDATED; THE READING STATEMENT ESCALATED (NOT PASS); PUSH + DRAFT PR + CI AUTHORISED; E-2 NOT ACCEPTED; NO MERGE)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
+**Status (v1.23, 2026-11-21):** `AS v1.22 — PLUS §31.10: 43b14861 (READING GATE, MIGRATION 0200 NOT HOSTED, SD-3 ITEM 6), f4c449cb (NARROW-SCREEN SELECTED TITLE; §31.9.3 CAUSE CORRECTED), d5239caf (COPY GATE CLOSED: 27 APPROVED; NO NEW READING COPY), 900511be (TEST RELIABILITY: LOCALE + TIMER-TICK CAUSES); LOCAL ALL GREEN; EMULATOR PASS (en / ar); PHYSICAL HONOR NOT VERIFIED; E-2 NOT ACCEPTED; NO MERGE, NO HOSTED MIGRATION, NO REPLAY`
+**Change log v1.22 → v1.23 (2026-11-21).** New §31.10 records the three approved correction groups, the Copy Gate closure, the test-reliability causes and fixes, the verification, the emulator validation and the open obligations. §19 SD-3 gains item 6 (marked AMENDED). §31.9.3's attribution of the narrow-screen cause is corrected by §31.10.2; nothing else earlier is rewritten.
 **Status (v1.22, 2026-11-21):** `AS v1.21 — PLUS §31.9: b0bb9f18 (§2 / §3 / §4 / §6), c5f352fd (§7 KEYBOARD LIFT; c80a8e14 REVERTED IN 567f803a); EMULATOR (QANDEEL_API36, E-2 SYNTHETIC) 28 PASS / 1 FAIL FIXED / 1 BLOCKED (READING) / 1 OPEN; READING STATEMENT ESCALATED WITH A NARROW AMENDMENT (NOT APPLIED); 27 COPY GATE ROWS PRESENTED, NONE PROMOTED; PHYSICAL HONOR NOT VERIFIED; E-2 NOT ACCEPTED; NO MERGE, NO HOSTED MIGRATION, NO REPLAY`
 **Change log v1.21 → v1.22 (2026-11-21).** New §31.9 records the final corrections with their amendments and proofs, the Reading escalation with the exact conflicting clauses and the proposed amendment, the emulator validation, the Copy Gate presentation, push / PR / CI and the open obligations. Nothing earlier is rewritten; §31.8's R1 / R3 canvas rules are withdrawn by §31.9.1 (recorded there).
 **Status (v1.21, 2026-11-21):** `AS v1.20 — PLUS §31.8: THE HONOR ACCEPTANCE PASS (61c88e88, 14be8a68) AND THE PO DECISION "HONOR E-2 ACCEPTANCE DEFECTS" DELIVERED LOCALLY ON cosmos/e2-corrections — 01e3dad0 (keyboardLift), 2178202a (OVERVIEW CARD), aa3989a0 (R1: stage.ts RESTORED, CANVAS OVERLAP-GATE AMENDMENT, PEEK HANDLED TAPS), e8183544 (R2: KEYBOARD DISMISSED ON CLOSE), a243a9d8 (R3: PO TITLE SIZE); 4f35ca16 SUPERSEDED; READING PEEK STATEMENT AND NAME-TAP SELECTION ESCALATED (NOT IMPLEMENTED); INSTALLED HONOR BUILD a243a9d8 (sha256 ea68a595…6217e); E-2 NOT ACCEPTED; iOS NOT TESTED (BG-10); NO PUSH, NO CI, NO MERGE, NO REPLAY`
@@ -1715,8 +1717,9 @@ Regressions:
 3. **T-08's lineage** (`contextPathSentence`), in role `metadata`, when there is one.
 4. **T-04's context choice.** The same `CosmosContextualActs` instance and executor (`switchContext`), with `acts={[]}` and `note={false}`. This is its ONE functional home: the rail's instance has `choice={false}` (SD-4).
 5. **"Go to this place"** («الانتقال إلى هذا الموضع»). It is T-04's `directJump`, with the same request the accessible Map's `direct-jump` sends. It is offered exactly where the Map offers it: the inspected object has ONE locus in the current scene. It is never offered where a context would have to be elected.
+6. **AMENDED by §31.10.1 (PO directive "COMPLETE ALL CORRECTIONS BEFORE FINAL CI", 2026-11-21; narrow SD-3 amendment).** For a **Reading** only, and only where the analytical-object rung is DISCLOSED, the render is RENDERABLE with family READING, and the context is fresh: the Reading's own words, as the server served them. Where the served reliance (`evidenceChange`, migration 0200, PG-02 / INTEL-TM-01) is `NONE`, the statement is shown under the family word «قراءة» / "Reading" and T-08's inspection sentence. Otherwise only the approved INTEL-TM-01 evidence-change line is shown (`understandingCopy(language).evidenceChange[kind]`). The statement is never shown, held or recomputed on the client, and no new word is added. Depth, disclosure and the T-08 order are unchanged.
 
-Conversation and Replay stay in their top-band places (G-7). They are not drawn in the PEEK, and nothing in it is presented as the object's Replay. No new word, label, link or read.
+Conversation and Replay stay in their top-band places (G-7). They are not drawn in the PEEK, and nothing in it is presented as the object's Replay. No new word, label, link or read beyond item 6.
 
 **Presentation.**
 - PEEK covers the timeline rail (SD-4): it reaches at least the rail's top. The rail is never re-mounted. Beneath an open PEEK it is kept in place, hidden, inert (`pointerEvents="none"`) and hidden from accessibility, so its layout and the stage's usable centre are unchanged. Closing reveals it exactly as it was.
@@ -3853,6 +3856,121 @@ Evidence is in `QANDEEL_REPORTS/COSMOS-V5/integration/final-01/e2-corrections/em
 - **The physical HONOR acceptance** of the final build.
 - **iOS BG-10.** Run by CI on the PR; see §31.9.6.
 - **Merge.** E-2 is **NOT ACCEPTED** and COSMOS is **NOT CLOSED**. Merging needs the PO's personal acceptance and the separate instruction «ادمج». No hosted migration (0197–0199) has been applied, and Replay has not started.
+
+### 31.10 The PO directive "COMPLETE ALL CORRECTIONS BEFORE FINAL CI" and the PO COPY GATE DECISION (2026-11-21) — the Reading amendment, the narrow-screen title and the Copy Gate delivered in one consolidated cycle; E-2 still NOT ACCEPTED
+
+The baseline was `d8c7b39c`: §31.9 plus the two PR #402 CI fixes, `891b757f` (Replay boundary) and `d8c7b39c` (runtime-entry scope pin). Each correction group is its own commit. The cosmic design, the canonical camera, the gestures, Replay and every other world's rules are unchanged.
+
+**31.10.1 Group 1 — the Reading statement (APPROVED by the PO; controlled contract amendment), `43b14861`.** This answers §31.9.2 with the proposed amendment (a) – (c).
+- **Migration 0200** `0200_cosmos_e2_reading_reliance_gate_v1.sql` (forward-only, one transaction) **replaces** `get_session_historical_projection_v2` (0198) with the same signature and row shape.
+  - Each disclosed Reading is gated through the ONE 0151 L3 core, `hypothesis_evidence_change_core_v1`, on the caller's own Hypothesis row. A row that cannot be found fails closed to `REVIEW_PENDING`.
+  - A Reading QANDEEL may rely on is V1's, plus `evidenceChange: 'NONE'`.
+  - A withheld Reading carries `statement: null`, `assumptions: []` and `disconfirmingConditions: []`, plus its `evidenceChange` (`REVIEW_PENDING` / `NO_REMAINING_SUPPORT`). Its Confidence carries `assumptions: []`.
+  - No confidence is computed anywhere. V1 (0072) and the Replay reader (0169) are untouched. Historical truth, temporal gating (V1 decides every rung), provenance and the hypothesis's uncertainty are preserved.
+  - Postgres-owned definer, `authenticated` only, self-asserted.
+- **Server and client.**
+  - The API mapper and the mobile wire require `evidenceChange` on V2. They refuse a withheld Reading that carries words, and the Confidence of a withheld Reading that carries assumptions.
+  - `ReplayService` strips the key and refuses a Reading that carries one, so the frozen V1 Replay wire is unchanged.
+  - The mobile Replay decoder states it as `null`.
+  - `DisclosedReading.statement` is `string | null`, and `evidenceChange` is added to the runtime type.
+- **PEEK (SD-3 item 6, amended in §19 above).** Only at the authorised depth, with reliance `NONE`, does the PEEK show the statement. Otherwise it shows the approved INTEL-TM-01 line, PO-approved 2026-10-10:
+  - «هذا الاستنتاج يحتاج إلى مراجعة بعد تغيير معلومات كان يعتمد عليها.» / "This conclusion needs review after a change to information it relied on."
+  - «لا توجد حاليًا معلومات مؤهلة تدعم هذا الاستنتاج، ولذلك لن يعتمد عليه قنديل.» / "No eligible information currently supports this conclusion, so QANDEEL won't rely on it."
+
+  **No new Reading copy was needed**, so none is PROPOSED.
+- **Proofs.**
+  - `database/verify-migration-0200.mjs` runs against real PostgreSQL, in API CI after verify-0199, and was run locally on PostgreSQL 17:
+    - T0 catalogue;
+    - T1 fails closed as V1 does;
+    - T2 positive: every Reading relied on;
+    - T3 negative: evidence changed through `server_mark_memory_deleted_v1`;
+    - **T4 the wire proof**: sentinel statement, assumption and condition words are absent from the whole serialised row;
+    - T5 every other column equals V1's.
+
+    Against the old 0198 body it fails at T0.
+  - The static contract `database/tests/cosmos-e2-reading-reliance-gate-v1.test.mjs` (6 tests) passes.
+  - API mapper: V1 refusal plus 4 reliance cases.
+  - Mobile wire reliance case.
+  - PEEK: NONE in en/ar, withheld ×4, above-analytical-depth, Thread case. With the PEEK's reading removed, 6 fail.
+- **Controlled re-anchors.** Each is in place, with its reason and its previous pin:
+  - the s7-03 / s7-04 / s7-05 frozen-file pins;
+  - the runtime `index.d.ts` blob (thread-lifecycle, thread-runtime-integration-readiness);
+  - the s8b-05 migration order;
+  - the canonical-home and thread-establishment substrate censuses (0200 re-states 0198's ownership read only);
+  - INTEL-TM-01's predicate census (0200 may only CALL the L3 core).
+- **Residue, recorded.** V1 and the Replay projection still carry a Reading's statement ungated. The Replay player does not show it. That is unchanged by this directive (Replay is not authorised) and stays visible here for the Replay owner.
+- **Not done:** no hosted database deployment of 0197–0200.
+
+**31.10.2 Group 2 — the narrow-screen selected title (APPROVED by the PO), `f4c449cb`.**
+- **§31.9.3 corrected.** The OPEN row's cause was **not** the 10-character fit. It was the §6 floor rule: on a 360 dp phone the selected body sits low beside the depth rail, and its title's bottom reached the rail's measured top, so it was left out.
+- **Fix (frozen-canvas amendment, Personal only, marked `AMENDED` in `placeLabels`).** The selected (major) title is lifted by exactly the shortfall, which is the smallest inward move, and by at most two of its own heights. So it stays attached to its body and never crosses the rail, the timeline, the chips or other titles. Every other label, and Shared and Public, keep the frozen rule. The map, camera and gestures are unchanged.
+- **Tests (`label-anchor.test.tsx`).**
+  - The title gets the minimal lift.
+  - A title above the floor is not moved.
+  - An unselected label is still left out.
+  - With no `fit`, the frozen rule holds.
+  - A body further below is never drawn away from.
+
+  With the fix reverted in place, 2 fail.
+
+**31.10.3 The Copy Gate — CLOSED (PO COPY GATE DECISION, 2026-11-21), `d5239caf`.** All 27 rows are APPROVED byte-exact, Arabic authoritative, with provenance on every row. The gate objects show `approved` = all rows and `proposed` = none.
+- **Slice A (8).** Changed: `topicUnnamed` «موضوع بلا اسم» / "Unnamed topic" and `openSource` «فتح المحادثة الأصلية» / "Open the original conversation". The new wording names the conversation and no message position. `saveName` / `cancelName` reuse approved wording.
+- **Slice B (14).** Changed:
+  - `untitled` «بلا عنوان» / "Untitled" (approved wording, PO-authorised for the conversation context);
+  - `rename` «تغيير الاسم»;
+  - `loading` «جارٍ تحميل المحادثات…» / "Loading conversations…";
+  - `tryAgain` «إعادة المحاولة», the frozen VI-01 T03 wording (asserted identical to `conversationCopy`);
+  - `busy` «أكمل الإجراء الحالي أولًا.» / "Finish the current action first.";
+  - `unavailable` (en) "Conversations can't be shown right now.".
+
+  `back` / `save` / `cancel` reuse approved wording.
+- **Slice C (5).** Changed: `currentWorldNote` «العرض الحالي بلا خط زمني» / "No timeline in the current view" (one compact line, asserted unpunctuated and ≤ 32 characters, so no map area is lost) and `currentWorldUnavailable` «تعذّر عرض موضوعاتك الآن.» / "Your topics can't be shown right now.".
+- **English apostrophes.** Both English `can't` rows use the ASCII apostrophe, exactly as the PO's decision has them. The earlier PROPOSED catalog row used the typographic `’`.
+- **Tests.**
+  - `analysis-language/__tests__/cosmos-e2-copy-gate.test.ts` holds Slices A and C byte-exact.
+  - `conversation-catalog.test.ts` holds Slice B.
+  - The Living Analysis golden recording is regenerated; its only change is the two Slice A strings.
+- **Reading copy:** none new (31.10.1). Nothing unreviewed is labelled APPROVED.
+
+**31.10.4 Test reliability (PO request before push, 2026-11-21: "find the real cause of each recurring failure and fix it; do not disable or weaken"), `900511be`.** The recurring local failures recorded since §31.9 as the "Windows baseline" had real causes:
+- **`w2-account-access` (3) and `depth` (3).**
+  - Cause: `deviceProductLanguage()` reads the host's `Intl` locale. This machine is `ar-EG`, so the Arabic chrome rendered and every English expectation failed; CI's `en-US` hid it.
+  - Fix: each suite pins the device language as an explicit test input, the idiom `proof-root` already used. Direction stays the platform's own, and no assertion changed.
+- **`proof-root` (4), `proof-root-deep-link` (2) and `proof-root-pinch` (1).**
+  - Cause: each `settle` is 96 real `setTimeout(0)` waits. On Windows each wait lasts one host timer tick (about 15.6 ms, against about 1 ms on Linux), so whole tests exceeded Jest's 5 s timeout. Proven: under the CPU profiler, which raises the timer resolution, the same test took 1.1 s instead of 6 s.
+  - Fix: the shared `settleLong` runs the same 96 event-loop turns as `setImmediate`, then one timer `settle`, so zero-delay timers still fire. No timeout was raised and no assertion changed.
+- **forward-safety.** The mirror cases were not "hangs". They all failed downstream of ONE real stale pin, the runtime `index.d.ts` blob in `thread-runtime-integration-readiness`, re-anchored in `43b14861`. One later run failed once inside the mirror on `qan-inf-03` (expo-doctor) while the machine was under load. It did not reproduce in 5 attempts (alone, under API Jest load, and 3 times in parallel), and the full contract then passed 35 / 35 on an idle machine.
+- **The 0200 static contract** was corrected to match the Replay service as written (`reading.statement === null`).
+
+**31.10.5 Verification (local, Windows, at `900511be`).**
+- Root contracts: 1785 / 1785, and forward-safety 35 / 35.
+- `test:database` 1334 / 1334; `test:task-closure-governance-contract` 25 / 25.
+- API: `tsc` 0; Jest 347 suites, 7840 pass, 1 skipped. The skip is the S8A-02 CP2 preregistered one-shot check, which runs only with its independent set, by design.
+- Mobile: `tsc` 0; ESLint 0 on the changed files; Jest **311 suites, 3889 tests, 0 failures**. This is the first fully green local run on Windows.
+- Local PostgreSQL 17: verify-0072 / 0151 / 0169 / 0198 / 0199 / 0200 pass.
+
+**31.10.6 Emulator validation.**
+- **Build and setup:**
+  - x86_64 E-2 synthetic build of `d5239caf` (sha256 `887ff98c…a575d1`, package `com.qandeel.mobile.e2`).
+  - Emulator `QANDEEL_API36`, en-US and ar-EG (RTL), 1080 × 2400 and 360 × 800 dp.
+  - Evidence: `QANDEEL_REPORTS/COSMOS-V5/integration/final-01/e2-corrections/emu-final2/EMULATOR_REPORT.md`.
+- **Reading relied on (en / ar): PASS.** The PEEK shows the family word, T-08's sentence, the Reading's own statement, then the lineage.
+- **Reading withheld, REVIEW_PENDING (en / ar): PASS.** The approved INTEL-TM-01 line appears byte-exact, and no withheld statement is on screen or in the accessibility tree.
+- **NO_REMAINING_SUPPORT on device: NOT TESTED.** No such Reading lay on the inspected Thread. It is unit- and verifier-proven.
+- **Selected title at 360 × 800 dp beside the depth rail (en / ar): PASS.** It is drawn on its body with no collision, which fixes the §31.9.3 OPEN row. At 1080 × 2400 it is unchanged.
+- **Copy (en / ar): PASS.**
+  - Catalog: «المحادثات» / «رجوع» / «محادثة جديدة» / «الحالية» / «تغيير الاسم», RTL in Arabic.
+  - Current-world note: «العرض الحالي بلا خط زمني» is one compact line under the chips, with no map area lost.
+- **Emulator stability (INFO).** The emulator exited or hung three times, on a per-app locale change, a zygote restart and a `wm size` restore. It was restarted cold each time.
+- **Physical HONOR: NOT VERIFIED.**
+
+**31.10.7 Push and CI.** The four commits (`43b14861`, `f4c449cb`, `d5239caf`, `900511be`) and this record are pushed to Draft PR #402 without force. It stays Draft and stacked on #401. The CI results on that head are recorded with the delivery report.
+
+**31.10.8 Open obligations.**
+- **The physical HONOR acceptance** of the final build (the arm64 E-2 build is handed over with this record).
+- **Merge.** E-2 is **NOT ACCEPTED** and COSMOS is **NOT CLOSED**. Merging needs the PO's personal acceptance and the separate instruction «ادمج».
+- PR #402 stays Draft, stacked on #401.
+- No hosted migration (0197–0200) has been applied, and Replay has not started.
 
 ## Appendix A — files opened for this contract (main @ `5a21971d`, cosmos @ `d5c45571` + working tree)
 
