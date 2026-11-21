@@ -82,9 +82,11 @@ export interface SharedWorldAreaProps {
    * opens that World's own surface, which reads the server again before drawing anything.
    */
   readonly introductionEntry?: { readonly worldId: string; readonly n: number } | null;
+  /** COSMOS-FINAL-01 E-1: the reader's own account Name, for the reader's own speaker badge (shown to the reader only). */
+  readonly readerName?: string | null;
 }
 
-export function SharedWorldArea({ controller, language, insets, activity, introductions, introductionSharing, introductionEntry }: SharedWorldAreaProps) {
+export function SharedWorldArea({ controller, language, insets, activity, introductions, introductionSharing, introductionEntry, readerName = null }: SharedWorldAreaProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = sharedCopy(language);
@@ -125,11 +127,16 @@ export function SharedWorldArea({ controller, language, insets, activity, introd
   // S4-03: Back from Manage World returns to the World it manages; from an ended World, to the root.
   // SHARED-VIS-01: from the conversation, Back returns to the same World's field; inside the field, it first releases a
   // focused place; from the field's root, to the Shared root.
+  // COSMOS-INT-01 Slice D CP2 (§19.6, SD-5): this stays the ONE handler. While the World's field is shown, its open Detail
+  // Sheet is asked first (EXPANDED → PEEK → CLOSED, presentation only); only then does the order below run, unchanged.
   const placeKind = state.place.kind;
   const worldView = state.worldView;
+  const sheetBack = useRef<(() => boolean) | null>(null);
+  const registerSheetBack = useCallback((back: (() => boolean) | null) => { sheetBack.current = back; }, []);
   useEffect(() => {
     if (placeKind === 'ROOT') return undefined;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (placeKind === 'WORLD' && worldView === 'MAP' && sheetBack.current?.() === true) return true;
       if (placeKind === 'MANAGE') controller.closeManage();
       else if (placeKind === 'WORLD' && controller.field !== null && worldView === 'CONVERSATION') controller.closeConversation();
       else if (placeKind === 'WORLD' && controller.field !== null && controller.field.back()) return true;
@@ -204,7 +211,7 @@ export function SharedWorldArea({ controller, language, insets, activity, introd
       <>
         {header(ended === null ? null : labelOfWorld(copy, ended), true)}
         <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 16, paddingLeft: insets.left, paddingRight: insets.right }}>
-          <SharedClosedWorld controller={controller} language={language} palette={palette} />
+          <SharedClosedWorld controller={controller} language={language} palette={palette} readerName={readerName} />
         </ScrollView>
       </>,
       'qandeel-shared-ended-world',
@@ -217,7 +224,8 @@ export function SharedWorldArea({ controller, language, insets, activity, introd
       const world = state.entry.world;
       return frame(
         <SharedLivingAnalysis controller={controller.field} language={language} insets={insets} title={labelOfWorld(copy, world)}
-          onBack={() => controller.toRoot()} onConversation={() => controller.openConversation()} onManage={() => controller.openManage()} />,
+          onBack={() => controller.toRoot()} onConversation={() => controller.openConversation()} onManage={() => controller.openManage()}
+          registerSheetBack={registerSheetBack} />,
         'qandeel-shared-world-field',
         true,
       );
@@ -261,7 +269,7 @@ export function SharedWorldArea({ controller, language, insets, activity, introd
                 <Text style={{ ...typeStyle('action'), color: palette.restInk, writingDirection: writing }}>{lifecycle.manageWorld}</Text>
               </Control>
             </View>
-            <SharedThread key={world.worldId} controller={controller} language={language} palette={palette} />
+            <SharedThread key={world.worldId} controller={controller} language={language} palette={palette} readerName={readerName} />
           </ScrollView>
           <SharedSendBar key={`send-${world.worldId}`} controller={controller} language={language} palette={palette} bottomInset={insets.bottom} />
         </KeyboardAvoidingView>,

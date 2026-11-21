@@ -18,7 +18,7 @@
 //   404                                            a Session this caller cannot see
 
 import { BadRequestException, ConflictException, Controller, Get, NotFoundException, Param, Query, Req, UseGuards } from '@nestjs/common';
-import type { HistoricalDisclosure, HistoricalInspectionRequest, HistoricalProjectionUnavailableBody, HistoricalSemanticDepth } from '@qandeel/runtime';
+import type { CurrentPersonalWorld, HistoricalDisclosure, HistoricalInspectionRequest, HistoricalProjectionUnavailableBody, HistoricalSemanticDepth } from '@qandeel/runtime';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { disclose, isHistoricalFamily, isHistoricalSemanticDepth } from '../historical-projection/historical-disclosure';
@@ -49,6 +49,22 @@ export class ConversationHistoricalProjectionController {
     try {
       const knowledge = await this.projection.project(accessToken, sessionId, selected);
       return disclose(knowledge, semanticDepth, inspection);
+    } catch (error) {
+      if (error instanceof HistoricalProjectionUnavailableError) throw toHttp(error);
+      throw error;
+    }
+  }
+
+  /**
+   * COSMOS E-2 corrections, Slice C (PO D-5, Option U; migration 0199): the user-level CURRENT Personal World — the
+   * Threads the caller has NOW, with Home, served name and origin. Beside the Session-bound read above; it carries no
+   * TC, no Live Head, no lifecycle and no appearance (Session-anchored facts stay under the frozen temporal authority).
+   */
+  @Get('personal-world')
+  async personalWorld(@Req() request: AuthenticatedRequest): Promise<CurrentPersonalWorld> {
+    const { accessToken } = request.authenticatedUser;
+    try {
+      return await this.projection.currentPersonalWorld(accessToken);
     } catch (error) {
       if (error instanceof HistoricalProjectionUnavailableError) throw toHttp(error);
       throw error;

@@ -43,7 +43,7 @@ added there.
 
 | Surface / state | Arabic | English |
 |---|---|---|
-| Composer placeholder | كلامك هنا | Write here |
+| Composer placeholder | كلامك هنا — revised to **اكتب هنا** by the Product Owner on 2026-11-16 (§11) | Write here |
 | Composer accessible name | رسالتك لقنديل | Your message to QANDEEL |
 | Send accessible name (icon-only control) | إرسال | Send |
 | User turn, assistive attribution | كلامك: {text} | You: {text} |
@@ -310,3 +310,94 @@ Locally, `integration/__tests__/analysis-language.test.tsx` censuses every visib
 production Analysis depth in both languages; `timeline/__tests__/language.test.tsx` covers the bilingual commands; the
 T-06 and T-04 suites carry the Arabic surface. The T-06 contract's T-05 byte pins are re-anchored for the four T-05
 files whose words moved, with their store-free authority asserted directly.
+
+## 11. Later Product Owner revision — the composer placeholder (UI-POLISH-01, 2026-11-16)
+
+The Product Owner’s message "QANDEEL — PO UI Polish Decisions" (2026-11-16, item 4) replaces the Arabic composer placeholder
+«كلامك هنا» with the approved «اكتب هنا». The English `Write here` is unchanged; it already says the same thing.
+
+- **Canonical source:** `apps/mobile/src/conversation/copy.ts` (`composerPlaceholder`), now «اكتب هنا».
+- **Reuse, not copy:** the Shared World conversation (`shared-world/conversation-copy.ts`), the Introduction World (which uses the
+  same `SharedComposer`) and the Public discussion with its replies (`public-world/field/discussion-copy.ts`) all reference this one row.
+  They therefore change with it, and no duplicate source can bring the old phrase back.
+- **Not touched:** search placeholders, authored message content and historical messages.
+- **Re-anchored pins:** `conversation/__tests__/surface.test.tsx` and this contract’s APPROVED table
+  (`tests/w1a-01-conversation-core-contract.test.mjs`). Each carries its reason, and the protection — exactly the approved strings, in
+  the one copy module — is unchanged.
+
+## 12. Later Product Owner revision — the app-wide type refinement (UI-POLISH-01, 2026-11-16)
+
+The Product Owner's directions "a refined, cohesive typography scale" (2026-11-16) and "App-Wide Typography & Premium UI
+Refinement — Final PO Direction" (2026-11-16) refine the type this surface resolves.
+
+**Where the refinement lives.** In ONE product-side layer, `typeStyle()` in `apps/mobile/src/conversation/visual/theme.ts`.
+The frozen E3 source and `canonical-visual.generated.ts` are not edited. Every role is still read only through
+`typeStyle`, and the faces (Estedad Regular / Medium) are E3's own.
+
+| Role | E3 | Refined |
+|---|---|---|
+| statement (titles) | 32 / 50 | 26 / 41 |
+| body (conversation text) | 17 / 30 | 16 / 26 |
+| supporting | 15 / 25 | 14 / 22 |
+| action | 14 / 23 | 14 / 22 |
+| metadata | 12 / 20 | 12 / 18 |
+
+**Why these values.**
+- The sizes are Material 3's (Body Large 16, Body Medium / Label Large 14, Body Small 12).
+- The leadings are Arabic-first. Estedad's own line box is 1.525 em (Regular) and 1.54 em (Medium), and its tallest ink, stacked marks included, spans 1.45 em, so every leading stays at or above 1.5 em.
+- Font scaling is untouched.
+
+**Kept as they are** (exceptions with their own authority):
+- the COSMOS chrome;
+- the orientation chrome;
+- the boot screens;
+- the Introductions VIS-1 local sizes.
+
+**Targets.**
+- The Personal composer field keeps the 44-point target at the new body leading: its minimum height is the target, with 9-point inner padding.
+- The Public search field is 44 points.
+
+**The navigation words (Product Owner, "Additional Mandatory UI Fix: Bottom Navigation Label Truncation").**
+- Cause: every destination word fits its cell (the Shared word measures 89 dp in a 111 dp cell). Android under-measured the centred, shrink-wrapped Arabic label and then ellipsized it.
+- Fix:
+  - the word's box is the cell's full width;
+  - the cell's side padding is 2 dp;
+  - only where a large accessibility size on a narrow screen cannot hold the word is it fitted to the cell (`adjustsFontSizeToFit`, never below 0.6). It is never cut.
+- Unchanged: the destinations, the routing, the glyphs and the 56-point band.
+
+**Re-anchored pins.** Each carries its reason, and the original protection is asserted:
+- `conversation/__tests__/surface.test.tsx`: the roles still come only from `typeStyle`.
+- The Living Analysis screen golden: a structural diff shows no change in structure, only the 26 font-size and 107 line-height leaves of the three moved roles.
+
+**Device evidence** is outside the repository, in `E:\QANDEEL_REPORTS\COSMOS-V5\integration\ui-polish\`, with the report `slice-d\final-review\FINAL_HONOR_REVIEW_REPORT.md`:
+- before and after on the HONOR in both languages;
+- an emulator check at font scale 1.0 / 1.3 / 2.0 and at 320 dp.
+
+## 13. Controlled amendment — the section-heading role (UI-POLISH-01 closure pass, 2026-11-16)
+
+The Product Owner's "Final Closure Task" (2026-11-16, Issue B) approves ONE controlled addition to the roles above: a
+**section heading**. It is for headings inside secondary surfaces, where the 26 / 41 title of §12 is too large.
+
+| Role | Size / leading | Face | Ratio |
+|---|---|---|---|
+| `section` (new) | **20 / 32** | E3's display weight: Estedad Medium | 1.6 |
+
+**Where it lives.** The role is added in the same product-side layer (`typeStyle()` in `conversation/visual/theme.ts`).
+The frozen E3 source and `canonical-visual.generated.ts` are not edited; `section` reuses E3's display weight.
+
+**Why 32.**
+- The PO's target was "approximately 20 / 30".
+- The F1R2 REV-05 contract `text.arabic-must-not-clip` keeps 1.6 as the current production threshold, and lowering it is
+  legitimate only as a measured result. 20 / 32 meets that threshold outright, with no measured exception.
+- At 20, Estedad Medium's own line box is 30.8 and its tallest ink is 29.
+- 32 is inside the PO's original 28–32 band. The references for comparison: Material 3 Title Large 22 / 28, Apple HIG Title 3 20 / 25, Fluent 2 Title 2 20 / 24; all are Latin leadings.
+
+**First and only use.** «النقاش» / Discussion, when `PublicDiscussion` is hosted in the COSMOS Detail Sheet.
+- Outside the sheet it keeps the 26 / 41 title.
+- Major screen titles keep 26 / 41.
+- Other candidates are identified but not changed: the Settings sub-section titles (Account security, Public ID, Shared ID, Introduction shares, Former shared material). Each would need its own justification.
+
+**Proof.**
+- `public-discussion.test.tsx`: in the sheet the heading is 20 / 32 Medium, still the one header (ar, en).
+- `public-discussion-threads.test.tsx`: outside the sheet it is 26 / 41.
+- HONOR: see the closure report.

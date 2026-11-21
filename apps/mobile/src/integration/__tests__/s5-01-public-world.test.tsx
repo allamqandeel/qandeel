@@ -22,6 +22,7 @@ import type { SharedLinkSource } from '../../shared-world';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { deviceProductLocale } from '../locale/device-locale';
 import { harness, settle, type IntegrationHarness } from '../__fixtures__/integration';
+import { resize } from '../../responsive/__fixtures__/composition';
 
 jest.mock('expo-status-bar', () => {
   const { createElement } = jest.requireActual<typeof import('react')>('react');
@@ -117,6 +118,9 @@ describe('S5-01 A — the third Global Area', () => {
     expect(view.queryByTestId('qandeel-public-title')).toBeNull();
     expect(view.queryByTestId('qandeel-public-field')).toBeNull();
     expect(view.getByTestId('qandeel-switcher-public_world').props.accessibilityState).toMatchObject({ selected: true });
+    // COSMOS-FINAL-01 O-2: the pending shell draws a loading indication, and the World navigation stays usable over it.
+    expect(within(view.getByTestId('qandeel-public-transition')).getByTestId('qandeel-public-opening-indicator')).toBeTruthy();
+    expect(view.getByTestId('qandeel-switcher-my_world')).toBeTruthy();
 
     await act(async () => { release?.(); await settle(); });
     expect(view.getByTestId('qandeel-public-root')).toBeTruthy();
@@ -135,6 +139,11 @@ describe('S5-01 A — the third Global Area', () => {
     // section (WP1 §2.5), drawn while search is closed; the world frame and the chrome band still hold no control.
     expect(field.queryAllByRole('button').map((button) => button.props.testID)).toEqual(['qandeel-activity-entry', 'qandeel-public-compose-entry', 'qandeel-public-authoring-entry',
       'qandeel-public-section-control']);
+    // RE-ANCHORED by COSMOS-INT-01 Slice D (PO, 2026-11-16, Contract v1.5 §19.3 / §19.5; validation only): the field's state
+    // is the content of the COSMOS Detail Sheet, in the STAGE, which the surface draws once it has measured its glass — so
+    // the surface is laid out here, after the no-control assertions above (which keep reading the unmeasured field). The
+    // protection is unchanged: an empty World is said to be empty, and nothing stands in for content.
+    await resize(view, 400, 800, { mapHeight: 800 });
     expect(view.getByTestId('qandeel-public-field-empty')).toBeTruthy();
     // The Personal world is untouched and still mounted beneath; only the Public routes were asked, on the reader's token.
     expect(runtime.store.getState()).toBe(storeBefore);

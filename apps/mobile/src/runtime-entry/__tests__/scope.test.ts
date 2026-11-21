@@ -50,13 +50,20 @@ test('§12 — the public barrel is exactly this surface, and the three private 
   // S8B-06 CP3 added exactly three, deliberately: CallTruthApiClient, the read-only call-truth transport (a plain class, no
   // socket), callConnectUrl, the call channel's address derived from the API base (a URL rule, not copy), and
   // decodeCallTruth, its strict decoder (an unreadable truth is UNAVAILABLE, never "no call").
+  // COSMOS E-2 corrections, Slice B (PO D-2, 2026-11-20) added exactly one: ConversationCatalogApiClient, the Personal
+  // conversation catalog transport — the list and the durable manual rename (a plain class).
+  // COSMOS E-2 corrections, Slice C (PO D-5 = Option U, 2026-11-20; fed1982d) added exactly one: CurrentPersonalWorldApiClient,
+  // the user-level current Personal World read beside the Session-bound projection (a plain class). This pin was missed
+  // in fed1982d and caught by the first CI run on PR #402.
   expect(Object.keys(runtimeEntry).sort()).toEqual([
     'AccountApiClient',
     'ActivityApiClient',
     'CONVERSATION_HISTORY_PAGE_LIMIT',
     'CallTruthApiClient',
+    'ConversationCatalogApiClient',
     'ConversationSessionApiClient',
     'ConversationTurnApiClient',
+    'CurrentPersonalWorldApiClient',
     'EXPORT_VOICE_FILE_NAME',
     'FOREGROUND_CATCH_UP_INTERVAL_MS',
     'INTRODUCTION_HOMETOWN_MAX_LENGTH',
@@ -131,7 +138,7 @@ test('P55/P57 — the layer exports no React component and no reader-facing copy
     // S6-05's Introduction World transport is a plain class too, and so are S6-06's sharing and continuation transports.
     // S7-02's Replay entry transport is a plain class too, and so is S7-03's read-only Replay history transport, and S7-04's
     // Replay lifecycle transport.
-    if (['ConversationSessionApiClient', 'ConversationTurnApiClient', 'AccountApiClient', 'LoginIdAvailabilityClient', 'UnderstandingApiClient', 'ActivityApiClient', 'PushApiClient', 'SharedWorldApiClient', 'PublicWorldApiClient', 'PublicAuthoringApiClient', 'InteractionPreferencesApiClient', 'IntroductionsApiClient', 'IntroductionProposalsApiClient', 'IntroductionWorldsApiClient', 'IntroductionSharingApiClient', 'IntroductionContinuationApiClient', 'IntroductionAlertsApiClient', 'IntroductionsEnrollmentApiClient', 'ReplayApiClient', 'ReplayHistoryApiClient', 'ReplayLifecycleApiClient', 'CallTruthApiClient'].includes(name)) continue;
+    if (['ConversationSessionApiClient', 'ConversationTurnApiClient', 'AccountApiClient', 'LoginIdAvailabilityClient', 'UnderstandingApiClient', 'ActivityApiClient', 'PushApiClient', 'SharedWorldApiClient', 'PublicWorldApiClient', 'PublicAuthoringApiClient', 'InteractionPreferencesApiClient', 'IntroductionsApiClient', 'IntroductionProposalsApiClient', 'IntroductionWorldsApiClient', 'IntroductionSharingApiClient', 'IntroductionContinuationApiClient', 'IntroductionAlertsApiClient', 'IntroductionsEnrollmentApiClient', 'ReplayApiClient', 'ReplayHistoryApiClient', 'ReplayLifecycleApiClient', 'CallTruthApiClient', 'ConversationCatalogApiClient', 'CurrentPersonalWorldApiClient'].includes(name)) continue;
     expect(name[0]).toBe(name[0].toLowerCase());
   }
   // The only strings the layer exports are config KEY NAMES and client option flags — never a

@@ -24,13 +24,23 @@
  *
  * It holds no store, no projection, no camera, no time and no words of its own. Nothing here animates: motion is the
  * world view's, entirely.
+ *
+ * ## COSMOS-INT-01 Slice B — the STAGE presentation (Product Owner D-2, 2026-11-15)
+ *
+ * A world may bring a `stage` instead of a `world`. The same screen then composes the same way — the top band first
+ * and above, T-11's column with the measured world frame and the ONE support band — but the world is drawn as one
+ * full-surface stage UNDER the composition, and the frame and the support band become glass over it: the frame reports
+ * the GLASS (the whole surface, with the top band and the support band as its insets) and draws nothing; the band is
+ * drawn as a scrim. Nothing of the screen's authority moves: the plan still decides the frame's floor and the band's
+ * room, the band still claims no touch, and the envelope the world's authority projects through is still a MEASURED
+ * fact of this composition (the glass), never a prediction.
  */
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useCallback, useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAnalysisInk } from '../analysis-visual';
 import { AnalysisAppearanceScope } from '../appearance';
-import { viewportEnvelope, type ViewportEnvelope } from '../map/camera';
+import { envelopeEquals, viewportEnvelope, type ViewportEnvelope } from '../map/camera';
 import {
   ResponsiveChromeBand,
   ResponsiveMapFrame,
@@ -61,8 +71,14 @@ export interface LivingAnalysisSurfaceProps {
   /** The envelope this surface is presented inside; T-11 uses it to retire a stale measurement. */
   readonly envelope: { readonly width: number; readonly height: number };
   readonly top?: LivingAnalysisTopBand | null;
-  /** The world, in the envelope its frame actually measured. Never called without one. */
-  readonly world: (envelope: ViewportEnvelope) => ReactNode;
+  /** The world, in the envelope its frame actually measured. Never called without one. Not called when a `stage` is given. */
+  readonly world?: (envelope: ViewportEnvelope) => ReactNode;
+  /**
+   * COSMOS-INT-01 (STAGE): the world as one full-surface stage under the composition, given the GLASS — the whole
+   * surface, with the top band and the support band as its insets — as the frame actually measured it. Never called
+   * without one. With a stage, the frame draws nothing and the support band is drawn as glass.
+   */
+  readonly stage?: (glass: ViewportEnvelope) => ReactNode;
   readonly timeline: LivingAnalysisTimeline | null;
   /** The world's chrome, composed in the chrome band the plan allocated. */
   readonly chrome: (composition: ChromeComposition) => ReactNode;
@@ -78,7 +94,29 @@ export function LivingAnalysisSurface(props: LivingAnalysisSurfaceProps) {
   );
 }
 
-function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelope, top = null, world, timeline, chrome, after = null }: LivingAnalysisSurfaceProps) {
+export const LIVING_ANALYSIS_STAGE_TEST_ID = 'qandeel-living-analysis-stage';
+
+/**
+ * COSMOS-INT-01 Slice E D-3 (PO D-c / D-d, 2026-11-18): the most of the window a top band may hold. Below it the band is
+ * exactly as accepted; only past it (enlarged text, narrow screens) does the band stop growing and scroll its own
+ * content, in its own place above the world, so the map keeps its room and never competes with a scrolling overlay.
+ * Font scaling is untouched (W1A-01); every action of the band stays in it.
+ */
+export const TOP_BAND_MAX_SHARE = 0.4;
+
+/** The band's room: its measured height, up to the share above (whole points). */
+export function topBandRoom(measured: number, windowHeight: number): { readonly height: number; readonly scrolls: boolean } {
+  const cap = Math.floor(windowHeight * TOP_BAND_MAX_SHARE);
+  return measured > cap ? { height: cap, scrolls: true } : { height: measured, scrolls: false };
+}
+
+/** The frame's one job under a stage: to report the glass it measured. It renders nothing and decides nothing. */
+function GlassReporter({ glass, onGlass }: { readonly glass: ViewportEnvelope; readonly onGlass: (glass: ViewportEnvelope) => void }) {
+  useLayoutEffect(() => { onGlass(glass); }, [glass, onGlass]);
+  return null;
+}
+
+function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelope, top = null, world, stage, timeline, chrome, after = null }: LivingAnalysisSurfaceProps) {
   // VPORT-02: the Analysis's own ground, under the world and the support alike. The Analysis is one dark place under
   // every appearance preference (G3 Decision A); the support band painted nothing and showed the window behind it.
   const ink = useAnalysisInk();
@@ -94,8 +132,17 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
     setChromeContent((current) => (current === points ? current : points));
   }, []);
   const chromeOnly = timeline === null;
-  const topHeight = top === null ? null : top.height;
+  // COSMOS-INT-01 (STAGE): the glass the frame measured, held by value so an equal measurement is never a relayout.
+  const staged = stage !== undefined;
+  // Slice E D-3 (CP4 review, Replay contract protection): the cap is the COSMOS stage's only. The `world=` presentation
+  // (Replay's player and composite) keeps its band exactly as accepted: its measured height, unscrolled, at every size.
+  const room = top === null ? null : staged ? topBandRoom(top.height, surfaceEnvelope.height) : { height: top.height, scrolls: false };
+  const topHeight = room === null ? null : room.height;
   const surfaceInsets = useMemo(() => (topHeight === null ? insets : { ...insets, top: topHeight }), [insets, topHeight]);
+  const [glass, setGlass] = useState<ViewportEnvelope | null>(null);
+  const onGlass = useCallback((next: ViewportEnvelope) => {
+    setGlass((current) => (current !== null && envelopeEquals(current, next) ? current : next));
+  }, []);
 
   const surface = (
     // T-11's own surface identity is kept: the responsive container belongs to that owner, and
@@ -114,8 +161,30 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
         const linePoints = plan.support.arrangement === 'STACKED' ? Math.min(lineHeight, plan.support.chromePoints) : 0;
         return (
           <>
-            <ResponsiveMapFrame frame={plan.mapFrame}>
+            {/*
+              COSMOS-INT-01 (STAGE): the stage fills the surface UNDER the frame and the band, in the glass the frame
+              reported. It is mounted first, so the frame's and the band's own controls stay above it; a touch that
+              reaches neither (the frame draws nothing; the band is box-none) belongs to the stage.
+            */}
+            {staged ? (
+              <View testID={LIVING_ANALYSIS_STAGE_TEST_ID} style={StyleSheet.absoluteFill}>
+                {glass === null ? null : stage(glass)}
+              </View>
+            ) : null}
+            <ResponsiveMapFrame frame={plan.mapFrame} style={staged ? styles.stageFrame : undefined}>
               {(rect) => {
+                if (staged) {
+                  // The GLASS: the whole measured surface; the frame's top inset (the top band) above, and everything
+                  // the plan laid out beneath the frame (the gap, the support band) below. A measured fact, as the
+                  // frame's envelope always was.
+                  const measured = viewportEnvelope(plan.surface.width, plan.surface.height, {
+                    top: rect.insetTop,
+                    right: rect.insetRight,
+                    bottom: Math.max(0, plan.surface.height - rect.height),
+                    left: rect.insetLeft,
+                  });
+                  return measured === null ? null : <GlassReporter glass={measured} onGlass={onGlass} />;
+                }
                 const envelope = viewportEnvelope(rect.width, rect.height, {
                   top: rect.insetTop,
                   right: rect.insetRight,
@@ -124,7 +193,7 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
                 });
                 // A surface that cannot be composed renders nothing rather than a guess. T-11 refuses
                 // the same rects T-04's validator refuses, so this is null only when there is no rect.
-                return envelope === null ? null : world(envelope);
+                return envelope === null || world === undefined ? null : world(envelope);
               }}
             </ResponsiveMapFrame>
 
@@ -134,7 +203,7 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
               clear local state that a resize must not touch. Which way they sit inside it is the
               plan's decision, never this composition's.
             */}
-            <ResponsiveSupportBand support={plan.support}>
+            <ResponsiveSupportBand support={plan.support} style={staged ? styles.glassBand : undefined}>
               {timeline === null ? null : (
                 <ResponsiveTimelineRow
                   widthPoints={plan.timelineWidthPoints}
@@ -148,7 +217,7 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
                 </ResponsiveTimelineRow>
               )}
 
-              <ResponsiveChromeBand chrome={plan.chrome} support={plan.support} yieldPoints={linePoints} onContentHeight={chromeOnly ? onChromeContent : undefined}>
+              <ResponsiveChromeBand chrome={plan.chrome} support={plan.support} yieldPoints={linePoints} onContentHeight={chromeOnly ? onChromeContent : undefined} anchorEnd={timeline !== null}>
                 {chrome(plan.chrome)}
               </ResponsiveChromeBand>
             </ResponsiveSupportBand>
@@ -167,7 +236,17 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
         it exactly as it treats the status bar: the band's measured height is the world's top inset,
         so T-11 keeps everything the reader must see out from under it.
       */}
-      <View style={styles.band}>{top.content}</View>
+      {staged ? (
+        <View style={styles.band}>
+          {/* Slice E D-3: ONE element at every size (no remount at the threshold); it scrolls only past the band's room. */}
+          <ScrollView style={[styles.bandScroll, room?.scrolls === true ? { maxHeight: room.height } : null]} scrollEnabled={room?.scrolls === true} bounces={false}
+            showsVerticalScrollIndicator={room?.scrolls === true} keyboardShouldPersistTaps="always">
+            {top.content}
+          </ScrollView>
+        </View>
+      ) : (
+        <View style={styles.band}>{top.content}</View>
+      )}
       {surface}
     </>
   );
@@ -175,4 +254,9 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
 
 const styles = StyleSheet.create({
   band: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1 },
+  bandScroll: { flexGrow: 0 },
+  // COSMOS-INT-01 (STAGE): the frame is glass — it reports its measurement and takes no touch from the stage beneath.
+  stageFrame: { pointerEvents: 'none' },
+  // The support band's glass over the stage: the stage's own glass tone, so the band reads as one with its chrome.
+  glassBand: { backgroundColor: 'rgba(11, 13, 26, 0.62)' },
 });

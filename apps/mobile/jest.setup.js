@@ -58,6 +58,10 @@ jest.mock('react-native-reanimated', () => {
       set: (next) => {
         state.value = typeof next === 'function' ? next(state.value) : next;
       },
+      // COSMOS-INT-01: the canvas writes its camera values through `modify`.
+      modify: (fn) => {
+        state.value = fn(state.value);
+      },
     };
   };
 
@@ -163,8 +167,19 @@ jest.mock('@shopify/react-native-skia', () => {
   // (there is no GPU here); it returns an inert handle so a test proves the element tree, the strata
   // grid and their opacities, never the pixels a picture would draw.
   const picture = Object.freeze({ __standIn: 'SkPicture' });
+  // COSMOS-INT-01 — the stage's parts: an atlas, image shaders and fills over decoded plates. No GPU here either: the
+  // image stand-in has a size and nothing else, so the element tree and the camera the stage asks for can be asserted.
+  const disposable = () => ({ dispose: () => undefined });
+  const pathBuilder = () => { const b = { build: disposable, dispose: () => undefined }; for (const m of ['moveTo', 'lineTo', 'close']) b[m] = () => b; return b; };
+  const image = { width: () => 1024, height: () => 1024, dispose: () => undefined };
   return {
     Canvas: element('Canvas'),
+    Fill: element('Fill'),
+    ImageShader: element('ImageShader'),
+    Atlas: element('Atlas'),
+    FilterMode: { Nearest: 0, Linear: 1 },
+    MipmapMode: { None: 0, Nearest: 1, Linear: 2 },
+    useImage: () => image,
     Group: element('Group'),
     Circle: element('Circle'),
     Rect: element('Rect'),
@@ -186,6 +201,8 @@ jest.mock('@shopify/react-native-skia', () => {
       RuntimeEffect: { Make: () => Object.freeze({ __standIn: 'SkRuntimeEffect' }) },
       // S8B-06 CP3 — no raster surface here, so a raster tile records its drawing directly (and that, as above, draws nothing).
       Surface: { Make: () => null, MakeOffscreen: () => null },
+      RSXform: disposable,
+      PathBuilder: { Make: pathBuilder },
     },
     ClipOp: { Difference: 0, Intersect: 1 },
     PointMode: { Points: 0, Lines: 1, Polygon: 2 },

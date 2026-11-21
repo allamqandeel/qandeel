@@ -24,6 +24,7 @@ import { createIntegrationRuntime, type IntegrationRuntime, type IntegrationSess
 import { createS401ProofWorld, type S401ProofWorld } from '../__validation__/s401-proof-world';
 import { SHARED_VIS_WORLD_A, SHARED_VIS_WORLD_B, pick } from '../__validation__/shared-vis-proof-field';
 import { settle } from '../__fixtures__/integration';
+import { resize } from '../../responsive/__fixtures__/composition';
 import { createInertVoiceNoteDevice } from '../../voice-note';
 
 jest.mock('expo-status-bar', () => {
@@ -83,6 +84,11 @@ describe('SHARED-VIS-01 — the Shared World field over the S4 proof world', () 
     await openWorld(view, pick(SHARED_VIS_WORLD_A.name, LANGUAGE));
     expect(view.getByTestId('qandeel-shared-world-field')).toBeTruthy();
     const field = app.sharedWorld.field!;
+    // RE-ANCHORED by COSMOS-INT-01 Slice D CP2 (PO, 2026-11-16, Contract v1.6 §19.15; validation only): the place's panel is
+    // the content of the COSMOS Detail Sheet, in the STAGE, which the surface draws once it has measured its glass — so the
+    // surface is laid out here, as the S5-01 Public World test does. Layout reads nothing (the field's envelope is recorded
+    // only); every assertion below is unchanged.
+    await resize(view, 400, 800, { mapHeight: 800 });
 
     // D3: every place but the one resting on a line the reader cannot see.
     const servedA = field.getState().entries.map((e) => e.meaning);

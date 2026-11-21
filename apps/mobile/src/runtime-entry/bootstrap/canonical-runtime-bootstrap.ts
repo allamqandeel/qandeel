@@ -95,6 +95,11 @@ export interface BootstrapRequest {
    */
   readonly existingSessionId?: string;
   /**
+   * COSMOS E-2 corrections, Slice B (the Product Owner's D-2): the client request identity of a New Chat. With it the
+   * one create call below is idempotent on the server (migration 0197); without it the call is the 0030 creation.
+   */
+  readonly clientRequestId?: string;
+  /**
    * T-13 — the reader's validated durable viewpoint, constructed INTO the store in place of the fresh
    * entry laws. Judged against the fresh snapshot first; refused whole if it is incoherent with it.
    */
@@ -140,7 +145,7 @@ export async function bootstrapCanonicalRuntime(request: BootstrapRequest): Prom
   if (request.existingSessionId !== undefined) {
     sessionId = request.existingSessionId;
   } else {
-    const outcome = await clients.conversation.createSession(identity.accessToken);
+    const outcome = await clients.conversation.createSession(identity.accessToken, request.clientRequestId);
     if (!isCurrent()) return failed({ kind: 'RETIRED' });
     if (outcome.kind !== 'CREATED') return failed({ kind: 'SESSION_ACQUISITION', outcome });
     sessionId = outcome.session.sessionId;

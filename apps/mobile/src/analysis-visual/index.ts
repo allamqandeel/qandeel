@@ -44,7 +44,7 @@ export interface AnalysisTypeStyle {
   readonly includeFontPadding?: false;
 }
 
-const ROLES: readonly TypeRole[] = ['body', 'supporting', 'action', 'metadata', 'statement'];
+const ROLES: readonly TypeRole[] = ['body', 'supporting', 'action', 'metadata', 'statement', 'section'];
 /** One frozen style object per role and face state, so a windowed list's `renderItem` never churns on a scroll. */
 const CACHE = Object.freeze({
   ready: Object.freeze(Object.fromEntries(ROLES.map((role) => [role, Object.freeze(typeStyle(role))]))) as Readonly<Record<TypeRole, AnalysisTypeStyle>>,

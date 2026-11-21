@@ -1,0 +1,13 @@
+# COSMOS-FINAL-01 coverage (PO 2026-11-20): scroll the screen (inside an EXPANDED sheet: its content) until the element
+# whose id matches ID is visible, then tap it.
+appId: com.qandeel.mobile
+---
+- scrollUntilVisible:
+    element:
+      id: "${ID}"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    retryTapIfNoChange: false
+    waitToSettleTimeoutMs: 1500
+    id: "${ID}"

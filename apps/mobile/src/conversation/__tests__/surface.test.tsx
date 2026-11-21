@@ -5,16 +5,18 @@
 import { act, fireEvent, render, type RenderResult } from '@testing-library/react-native';
 import { AccessibilityInfo, FlatList, StyleSheet } from 'react-native';
 
+import { QANDEEL_INITIALS, SPEAKER_TONES } from '../../attribution';
 import { ConversationSurface, conversationCopy, createConversationController, type ConversationController } from '..';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import { CANONICAL_VISUAL } from '../visual/canonical-visual.generated';
+import { typeStyle } from '../visual/theme';
 import { exchange, flush, page, scriptedTransport, type ScriptedTransport } from '../__fixtures__/conversation';
 
 const SESSION = '11111111-1111-4111-8111-111111111111';
 const PALETTE = CANONICAL_VISUAL.palettes.DARK.standard;
 const INSETS = { top: 44, right: 0, bottom: 34, left: 0 };
 
-async function mounted(language: ChromeLanguage, history = [exchange('fixture: السلام عليكم', { reply: 'fixture: وعليكم السلام' })]) {
+async function mounted(language: ChromeLanguage, history = [exchange('fixture: السلام عليكم', { reply: 'fixture: وعليكم السلام' })], readerName: string | null = null) {
   const transport = scriptedTransport();
   let key = 0;
   const controller = createConversationController({
@@ -28,7 +30,7 @@ async function mounted(language: ChromeLanguage, history = [exchange('fixture: �
   });
   const opened = { count: 0 };
   const view = await render(
-    <ConversationSurface controller={controller} language={language} insets={INSETS} onOpenAnalysis={() => { opened.count += 1; }} />,
+    <ConversationSurface controller={controller} language={language} insets={INSETS} onOpenAnalysis={() => { opened.count += 1; }} readerName={readerName} />,
   );
   await act(async () => {
     await flush();
@@ -112,7 +114,8 @@ describe('W1A-01 — paragraph direction is independent of the speaker', () => {
     const turn = exchange('fixture: hello', { reply: 'أهلا بيك fixture' });
     const { view } = await mounted('en', [turn]);
     const reply = byTestId(view, `qandeel-reply-${turn.reply!.id}`);
-    const [{ node: paragraph }] = texts(reply);
+    // COSMOS-FINAL-01 E-1: QANDEEL's badge stands before its words; the paragraph is the words themselves.
+    const { node: paragraph } = texts(reply).find(({ text }) => text !== QANDEEL_INITIALS)!;
     expect(style(paragraph)).toMatchObject({ textAlign: 'right', writingDirection: 'rtl' });
     expect(style(reply).alignSelf).toBe('flex-end');
   });
@@ -131,15 +134,19 @@ describe('W1A-01 — the frozen roles: UTTERANCE is the committed turn, FIELD is
     expect(PALETTE.routes.field.startsWith('qandeel.role.field.fill')).toBe(true);
   });
 
-  it('text is set in the Estedad v8.5 static faces at the E3 roles, with no letter-spacing and no synthetic weight', async () => {
+  it('text is set in the Estedad v8.5 static faces at the refined E3 roles, with no letter-spacing and no synthetic weight', async () => {
     const { view, controller } = await mounted('ar');
     const [first] = controller.getState().exchanges;
     const [{ node: paragraph }] = texts(byTestId(view, `qandeel-utterance-${first.userTurn.id}`));
-    expect(style(paragraph)).toMatchObject({ fontFamily: 'Estedad-Regular', fontSize: 17, lineHeight: 30 });
+    // UI-POLISH-01 RE-ANCHOR (Product Owner, 2026-11-16, "App-Wide Typography & Premium UI Refinement"). The original
+    // protection was that a paragraph is the E3 body role in the Regular face (17 / 30) and the door is the action role in
+    // the Medium face (14 / 23). It still holds: the same roles, the same faces, read through `typeStyle`, now at the
+    // refined body 16 / 26 and action 14 / 22 (theme.ts). The exact numbers stay pinned, so no silent drift passes.
+    expect(style(paragraph)).toMatchObject({ ...typeStyle('body'), fontFamily: 'Estedad-Regular', fontSize: 16, lineHeight: 26 });
     expect(style(paragraph).letterSpacing).toBeUndefined();
     expect(style(paragraph).fontWeight).toBeUndefined();
     const door = view.getByText(conversationCopy('ar').doorLabel);
-    expect(style(door)).toMatchObject({ fontFamily: 'Estedad-Medium', fontSize: 14, lineHeight: 23 });
+    expect(style(door)).toMatchObject({ ...typeStyle('action'), fontFamily: 'Estedad-Medium', fontSize: 14, lineHeight: 22 });
   });
 });
 
@@ -158,9 +165,11 @@ describe('W1A-01 — accessible names are the approved ones', () => {
     expect(door.props.accessibilityRole).toBe('button');
   });
 
+  // UI-POLISH-01 RE-ANCHOR (Product Owner, 2026-11-16): the Arabic composer placeholder is the approved «اكتب هنا» (was
+  // «كلامك هنا»); every other string, and the English 'Write here', is pinned exactly as before.
   it('the exact approved strings, both languages', () => {
     expect(conversationCopy('ar')).toMatchObject({
-      composerPlaceholder: 'كلامك هنا', composerName: 'رسالتك لقنديل', sendName: 'إرسال', waitingForReply: 'في انتظار رد قنديل',
+      composerPlaceholder: 'اكتب هنا', composerName: 'رسالتك لقنديل', sendName: 'إرسال', waitingForReply: 'في انتظار رد قنديل',
       sendUnconfirmed: 'تعذّر التأكد من إرسال الرسالة.', sendRefused: 'تعذّر إرسال الرسالة.', replyFailed: 'تعذّر إكمال رد قنديل.', historyUnavailable: 'تعذّر تحميل المحادثة.',
       tryAgain: 'إعادة المحاولة', doorLabel: 'تحليل المحادثة', doorName: 'تحليل المحادثة', backLabel: 'المحادثة', backName: 'المحادثة',
     });
@@ -310,7 +319,7 @@ describe('W1A-01 — nothing but the approved words and the one depth control', 
     const pending = exchange('fixture: third', { replyState: 'PENDING' });
     const { view } = await mounted('ar', [exchange('fixture: first', { reply: 'fixture: reply' }), failed, pending]);
     const copy = conversationCopy('ar');
-    const approved = new Set([copy.doorLabel, copy.replyFailed, copy.waitingForReply, copy.tryAgain, copy.historyUnavailable, copy.sendUnconfirmed]);
+    const approved = new Set([copy.doorLabel, copy.replyFailed, copy.waitingForReply, copy.tryAgain, copy.historyUnavailable, copy.sendUnconfirmed, QANDEEL_INITIALS]);
     const marks = new RegExp(`^[${String.fromCodePoint(0x200e)}${String.fromCodePoint(0x200f)}]`, 'u');
     const shown = texts(view.toJSON()).map(({ text }) => text.replace(marks, ''));
     expect(shown.length).toBeGreaterThan(3);
@@ -448,5 +457,52 @@ describe('S8B-03 — the neutral slots: the surface draws what it is handed, and
       toEnd.mockRestore();
       raf.mockRestore();
     }
+  });
+});
+
+describe('COSMOS-FINAL-01 E-1 — every turn carries its speaker’s badge (PO UI-Polish Addendum, 2026-11-20)', () => {
+  const badge = (view: RenderResult, id: string) => ({
+    fill: style(byTestId(view, `qandeel-speaker-${id}`)).backgroundColor,
+    initials: texts(byTestId(view, `qandeel-speaker-${id}`)).map(({ text }) => text).join(''),
+  });
+
+  it('Arabic: the reader’s turns carry «م ع» as separate letters, QANDEEL’s carry QA, each on one stable tone', async () => {
+    const history = [exchange('fixture: one', { reply: 'fixture: r1' }), exchange('fixture: two', { reply: 'fixture: r2' })];
+    const { view, controller } = await mounted('ar', history, 'منى عادل');
+    const tones = SPEAKER_TONES.DARK;
+    for (const turn of controller.getState().exchanges) {
+      expect(badge(view, turn.userTurn.id)).toEqual({ fill: tones.READER.fill, initials: 'م ع' });
+      expect(badge(view, turn.reply!.id)).toEqual({ fill: tones.QANDEEL.fill, initials: QANDEEL_INITIALS });
+      // The badge stands at the turn's own edge: the reader's on the right, QANDEEL's on the left.
+      expect(style(view.getByTestId(`qandeel-utterance-${turn.userTurn.id}`)).flexDirection).toBe('row-reverse');
+      expect(style(view.getByTestId(`qandeel-reply-${turn.reply!.id}`)).flexDirection).toBe('row');
+    }
+    expect(tones.READER.fill).not.toBe(tones.QANDEEL.fill);
+  });
+
+  it('English: Latin initials are capitals written together; with no Name the reader’s badge is its tone alone', async () => {
+    const named = await mounted('en', undefined, 'mona adel');
+    const [first] = named.controller.getState().exchanges;
+    expect(badge(named.view, first.userTurn.id).initials).toBe('MA');
+    const nameless = await mounted('en');
+    const [only] = nameless.controller.getState().exchanges;
+    expect(badge(nameless.view, only.userTurn.id)).toEqual({ fill: SPEAKER_TONES.DARK.READER.fill, initials: '' });
+  });
+
+  it('the badge is a visual mark only: the turn keeps its one accessible name, and the badge is hidden from assistive technology', async () => {
+    const { view, controller } = await mounted('ar', [exchange('fixture: one', { reply: 'fixture: r1' })], 'منى عادل');
+    const [first] = controller.getState().exchanges;
+    const copy = conversationCopy('ar');
+    expect(view.getByTestId(`qandeel-utterance-${first.userTurn.id}`).props.accessibilityLabel).toBe(copy.userTurnName(first.userTurn.content));
+    expect(byTestId(view, `qandeel-speaker-${first.userTurn.id}`).props.importantForAccessibility).toBe('no-hide-descendants');
+    expect(byTestId(view, `qandeel-speaker-${first.userTurn.id}`).props.accessibilityElementsHidden).toBe(true);
+  });
+
+  it('rows are slightly tighter and the slab sits close around its words', async () => {
+    const { view, controller } = await mounted('en', [exchange('fixture: one', { reply: 'fixture: r1' })], 'Mona Adel');
+    const [first] = controller.getState().exchanges;
+    const slab = style(view.getByTestId(`qandeel-utterance-${first.userTurn.id}`));
+    expect([slab.marginTop, slab.paddingTop, slab.paddingBottom, slab.paddingRight]).toEqual([22, 8, 9, 14]);
+    expect(style(view.getByTestId(`qandeel-reply-${first.reply!.id}`)).marginTop).toBe(12);
   });
 });

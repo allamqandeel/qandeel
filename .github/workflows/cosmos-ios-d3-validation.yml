@@ -1,0 +1,117 @@
+name: iOS D-3 validation (COSMOS enlarged text, before / after)
+# COSMOS-INT-01 Slice E, D-3 (PO 2026-11-18; contract §24): the one-off validation the per-PR iOS World gate does not
+# carry. It runs ONLY on a push to a `cosmos/validate/**` branch, so that the same harness can measure the accepted
+# baseline (fc2e13c6 + this harness, application unchanged) and the exact D-3 head, on the same runner image:
+#   - D-a / D-b: two rounds of a fresh install on a freshly booted iPhone 17 (en), the door tapped once at its first
+#     visible frame, cold and warm timings recorded (testFreshInstallFirstVisibleDoorTapOpensTheAnalysis);
+#   - SE-FU-2 on iOS (testPersonalDeeperBeadsTheRailLineAndTheCardPassTheirTouchToTheStage);
+#   - layout, frames and screenshots of every World at the reader's text size (testLayoutAtTheReadersTextSize):
+#     iPhone 17 en / ar at the default size and AX3, en at AX5; the small iPhone en at the default size, AX3 and AX5,
+#     ar at AX3 and AX5.
+# Evidence only: every test's outcome is recorded in summary.tsv and nothing is retried. It is not a merge gate; the
+# D-3 report judges the evidence (PASS / FAIL / NOT TESTED per case).
+on:
+  push:
+    branches: ['cosmos/validate/**']
+concurrency:
+  group: cosmos-ios-d3-validation-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+  IOS_RUNTIME_SUFFIX: iOS-26-5
+jobs:
+  validate:
+    name: D-3 validation — fresh install, SE-FU-2, enlarged-text layout
+    runs-on: macos-26
+    timeout-minutes: 240
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Select Xcode 26.6 explicitly
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - {name: Install dependencies from the root lockfile, run: npm ci}
+      - name: Select the S401 proof entry (this ephemeral checkout only; recorded)
+        env: {S401_SHARED_PROOF: '1'}
+        run: |
+          mkdir -p "$RUNNER_TEMP/evidence"
+          node apps/mobile/scripts/select-s401-proof-entry.mjs --apply
+          git diff -- apps/mobile/package.json | tee "$RUNNER_TEMP/evidence/entry-diff.txt"
+      - {name: Generate the iOS project (CNG), run: npm run prebuild:ios --workspace @qandeel/mobile}
+      - name: Install CocoaPods dependencies
+        working-directory: apps/mobile/ios
+        run: pod install
+      - name: Add the native UI-test target (this ephemeral checkout only)
+        run: |
+          ruby -rxcodeproj -e 1 2>/dev/null || gem install --user-install --no-document xcodeproj
+          ruby scripts/cosmos-ios-world/xcuitest/add-uitest-target.rb apps/mobile/ios scripts/cosmos-ios-world/xcuitest/CosmosWorldGestureUITests.swift
+      - name: Build the proof Release simulator app and its native UI tests (one build)
+        run: |
+          set -o pipefail
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          xcodebuild -quiet -workspace "$workspace" -scheme QandeelWorldUITests -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build-for-testing
+          app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' ! -name '*-Runner.app' | head -n 1)"
+          xctestrun="$(find apps/mobile/ios/build/Build/Products -maxdepth 1 -name '*.xctestrun' | head -n 1)"
+          test -n "$app"; test -n "$xctestrun"; echo "APP=$app" >> "$GITHUB_ENV"; echo "XCTESTRUN=$xctestrun" >> "$GITHUB_ENV"
+          { echo "head=$(git rev-parse HEAD)"; echo "app=$(basename "$app")"; xcodebuild -version; } > "$RUNNER_TEMP/evidence/identity.txt"
+      - name: iPhone 17 — boot, English
+        run: |
+          bash scripts/cosmos-ios-world/sim.sh 'iPhone 17' "$RUNNER_TEMP/evidence/iphone17"
+      - name: iPhone 17 — D-a fresh install, two rounds (cold and warm timings)
+        timeout-minutes: 40
+        run: |
+          U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/fresh"
+          source scripts/cosmos-ios-world/d3-validate-lib.sh
+          set_lang "$U" en-US en_US; xcrun simctl ui "$U" content_size large
+          fresh_round "$U" "$E" fresh-r1
+          fresh_round "$U" "$E" fresh-r2
+      - name: iPhone 17 — SE-FU-2 (the deeper beads, the rail line, the card)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 20
+        run: |
+          U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/sefu2"
+          source scripts/cosmos-ios-world/d3-validate-lib.sh
+          run_test "$U" "$E" sefu2 testPersonalDeeperBeadsTheRailLineAndTheCardPassTheirTouchToTheStage
+      - name: iPhone 17 — layout (en default / AX3 / AX5, ar default / AX3)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 60
+        run: |
+          U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/layout"
+          source scripts/cosmos-ios-world/d3-validate-lib.sh
+          layout_pass "$U" "$E" i17-en-default en-US en_US large
+          layout_pass "$U" "$E" i17-en-AX3 en-US en_US accessibility-extra-large
+          layout_pass "$U" "$E" i17-en-AX5 en-US en_US accessibility-extra-extra-extra-large
+          layout_pass "$U" "$E" i17-ar-default ar-EG ar_EG large
+          layout_pass "$U" "$E" i17-ar-AX3 ar-EG ar_EG accessibility-extra-large
+          xcrun simctl shutdown "$U" || true
+      - name: The small iPhone — boot and install
+        if: ${{ !cancelled() }}
+        run: |
+          bash scripts/cosmos-ios-world/sim.sh 'iPhone SE (3rd generation)|iPhone 16e' "$RUNNER_TEMP/evidence/small"
+      - name: The small iPhone — layout (en default / AX3 / AX5, ar AX3 / AX5)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 70
+        run: |
+          U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/layout"
+          source scripts/cosmos-ios-world/d3-validate-lib.sh
+          xcrun simctl install "$U" "$APP"
+          layout_pass "$U" "$E" se-en-default en-US en_US large
+          layout_pass "$U" "$E" se-en-AX3 en-US en_US accessibility-extra-large
+          layout_pass "$U" "$E" se-en-AX5 en-US en_US accessibility-extra-extra-extra-large
+          layout_pass "$U" "$E" se-ar-AX3 ar-EG ar_EG accessibility-extra-large
+          layout_pass "$U" "$E" se-ar-AX5 ar-EG ar_EG accessibility-extra-extra-extra-large
+      - name: Summary
+        if: ${{ !cancelled() }}
+        run: |
+          for f in "$RUNNER_TEMP"/evidence/*/summary.tsv; do [ -f "$f" ] && { echo "## $f"; cat "$f"; }; done | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with: {name: 'd3-validation', path: '${{ runner.temp }}/evidence', if-no-files-found: warn}

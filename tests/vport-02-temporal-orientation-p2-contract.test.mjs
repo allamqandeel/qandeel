@@ -173,8 +173,12 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
   // 366f7d15.
   for (const [path, blob] of [
     ['apps/mobile/src/map/renderer/MapCanvas.tsx', 'a82f761fa4eaede3db08c55f25ceb7da7cff595e'],
-    ['apps/mobile/src/map/renderer/MapSurface.tsx', '680b2a42ceaff81a79e17ae9aae2557c6da6c68f'],
-    ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'aff512d968104c429afe6a0f8ed90c574963ef84'],
+    // COSMOS-INT-01 D-1 CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15: controlled authority port of MAP-CLOSE-01 CA-Z1 / CA-O1,
+    // approved 2026-11-14): a pinch's step carries where the fingers were (CA-Z1), and MapSurface holds its anchor once the
+    // reader has acted (CA-O1); no element, paint or prop of the world changes, so both goldens are unchanged. Previous pins:
+    // MapSurface 680b2a42, WorldViewSurface aff512d9.
+    ['apps/mobile/src/map/renderer/MapSurface.tsx', '852ac1e21c4b3b192eaee97aaee10fba334ee59f'],
+    ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'dbeb313005977109aa0763b4ef281bcb6a13c029'],
     ['apps/mobile/src/map/renderer/WorldCanvas.tsx', 'e0ddba0057a6506cc5b68454a7a41b8f923bbb5f'],
     ['apps/mobile/src/map/renderer/useWorldSurface.ts', 'ed4f83bade4ffa4af906f54cadb644febc19eee8'],
     ['apps/mobile/src/map/visual/WorldMarks.tsx', '8b81a4e4c6fb002e3e9c5088a316d5844723638b'],
@@ -229,13 +233,39 @@ test('the frozen G3 composition and the dark Analysis ground are wired on the pr
   // screen — the dark ground, the Timeline row that says the line, the chrome band that yields its room — is the one
   // Living Analysis surface's; the Personal Analysis hands it the line, the Timeline and the chrome. Both are asserted.
   const screen = code(`${MOBILE}/living-analysis/LivingAnalysisSurface.tsx`);
+  const rail = code(`${MOBILE}/cosmos/product/chrome/CosmosTimelineRail.tsx`);
   assert.match(screen, /style=\{\{ backgroundColor: ink\.world \}\}/u, 'the Analysis paints its own dark ground');
-  assert.match(composition, /line: <TemporalOrientationLine store=\{store\} language=\{locale\.language\} preview=\{preview\} \/>,/u);
+  // COSMOS-INT-01 Slice C CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15; Contract v1.3 §14 C-1…C-6, §15.5): the Timeline is
+  // the stage's rail and the line is said ONCE, directly above it — the composition hands the line to the rail (previous form:
+  // `line: <TemporalOrientationLine … />,` in the surface's `timeline`). Return Live keeps ONE home, the rail's Live edge:
+  // the contextual controls never carry RETURN_LIVE_HEAD (previous form: `temporalLine="WITH_TIMELINE"` and
+  // `returnLiveHome="LIVE_EDGE"` on OrientationChrome). The surface itself is unchanged and still says the line in its
+  // Timeline row for any host that brings one.
+  // COSMOS-INT-01 Slice C UX correction CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15; Contract v1.4 §16 U-6 / A-4): the
+  // line is no longer DRAWN — the rail says the committed Moment compactly ("Moment 12") and carries T-08's own sentence
+  // for that state as the label's accessible label, through the same `temporalOrientationLine`; the rail also carries the
+  // contextual acts (§16 A-3). Previous form: `line={<TemporalOrientationLine store={store} language={locale.language}
+  // preview={preview} />}` handed to the rail. The surface itself is unchanged.
+  assert.doesNotMatch(composition, /<TemporalOrientationLine\b/u, 'the T-08 line component is not composed (§16 A-4)');
+  assert.match(composition, /acts=\{RAIL_ACTS\}/u, 'the rail carries the contextual acts (§16 A-3)');
+  assert.match(rail, /temporalOrientationLine\(store, language, previewState\)/u, 'the compact label speaks T-08\'s own sentence');
+  assert.match(rail, /copy\.timelinePoint\(bounds\.committedTc\)/u, 'the compact label is T-05\'s word for the canonical committed Moment');
   assert.match(screen, /line=\{timeline\.line\}/u, 'the line is said in the Timeline row');
-  assert.match(composition, /temporalLine="WITH_TIMELINE"/u);
-  assert.match(composition, /returnLiveHome="LIVE_EDGE"/u);
+  assert.doesNotMatch(composition, /<OrientationChrome\b|<TemporalTargetLayer\b|timeline=\{\{/u, 'the old row and band are not composed (C-6)');
+  assert.match(composition, /timeline=\{null\}/u);
+  const acts = code(`${MOBILE}/cosmos/product/chrome/CosmosContextualActs.tsx`);
+  assert.match(acts, /\.filter\(\(id\) => id !== 'RETURN_LIVE_HEAD' && !\(id === 'RETURN_WORLD' && model\.spatial\.depth === 'WORLD'\)\)/u, 'Return Live has one home, the rail');
+  // COSMOS-INT-01 §17.4 CONTROLLED RE-ANCHOR (PO, 2026-11-16, deliverable B): the pinned form `onOutcome?.(commitLiveEdgeIntent(store, preview));`
+  // never ran the act when no observer was attached (an optional call does not evaluate its arguments), and the product host
+  // attaches none: the Live words were dead on the HONOR. The act now runs first and the observer is told afterwards; the old
+  // form is forbidden so it cannot return.
+  assert.match(rail, /const outcome = commitLiveEdgeIntent\(store, preview\);\s*onOutcome\?\.\(outcome\);/u, 'the rail\'s Live words are T-06\'s Live edge intent, run whether or not an observer is attached');
+  assert.doesNotMatch(rail, /onOutcome\?\.\(commitLiveEdgeIntent\(/u, 'no optional call may carry the Live edge intent as its argument');
   // SHARED-VIS-01 controlled re-anchor: the band also reports its content height, but only for a world with no track.
-  assert.match(screen, /<ResponsiveChromeBand chrome=\{plan\.chrome\} support=\{plan\.support\} yieldPoints=\{linePoints\} onContentHeight=\{chromeOnly \? onChromeContent : undefined\}>/u, 'OrientationChrome yields the line\'s room');
+  // COSMOS-INT-01 D-1 CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15; MAP-CLOSE-01 CA-O2, approved with conditions 2026-11-14): the
+  // band also keeps its end in view for a world with time (Personal), so Back stays under the finger; the line's room is
+  // unchanged. Previous form: the same element ending at `onContentHeight={chromeOnly ? onChromeContent : undefined}>`.
+  assert.match(screen, /<ResponsiveChromeBand chrome=\{plan\.chrome\} support=\{plan\.support\} yieldPoints=\{linePoints\} onContentHeight=\{chromeOnly \? onChromeContent : undefined\} anchorEnd=\{timeline !== null\}>/u, 'OrientationChrome yields the line\'s room');
   // Every Analysis chrome owner paints with the Analysis ink.
   for (const path of [
     `${MOBILE}/orientation-chrome/OrientationChrome.tsx`,

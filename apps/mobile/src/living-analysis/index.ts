@@ -3,4 +3,4 @@
  * projection and capabilities; the screen, its composition and its world view are shared.
  */
 export type { LivingAnalysisSurfaceProps, LivingAnalysisTimeline, LivingAnalysisTopBand } from './LivingAnalysisSurface';
-export { LivingAnalysisSurface } from './LivingAnalysisSurface';
+export { LIVING_ANALYSIS_STAGE_TEST_ID, LivingAnalysisSurface } from './LivingAnalysisSurface';

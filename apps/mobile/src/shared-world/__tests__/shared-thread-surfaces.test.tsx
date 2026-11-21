@@ -6,6 +6,7 @@
 import { act, cleanup, fireEvent, render, within } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 
+import { QANDEEL_INITIALS, SPEAKER_TONES, otherSpeakerTone } from '../../attribution';
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore, type AppearancePreference } from '../../appearance';
 import { conversationCopy } from '../../conversation';
 import { CANONICAL_VISUAL } from '../../conversation/visual/canonical-visual.generated';
@@ -84,10 +85,10 @@ function world(options: { conversation?: boolean; send?: () => Promise<SharedSen
   return { controller: createSharedWorldController({ transport, isCurrent: () => true }), transport, read };
 }
 
-async function openWorld(language: ChromeLanguage, preference: AppearancePreference, w: ReturnType<typeof world>) {
+async function openWorld(language: ChromeLanguage, preference: AppearancePreference, w: ReturnType<typeof world>, readerName: string | null = null) {
   const view = await render(
     <AppearanceProvider authority={appearance(preference)}>
-      <SharedWorldArea controller={w.controller} language={language} insets={INSETS} />
+      <SharedWorldArea controller={w.controller} language={language} insets={INSETS} readerName={readerName} />
     </AppearanceProvider>,
   );
   await settle();
@@ -117,6 +118,33 @@ describe.each([['ar', 'DARK'], ['en', 'LIGHT']] as const)('S4-02 Shared conversa
     expect(flat(view.getByTestId(`qandeel-shared-material-human-${THEIRS}`)).alignSelf).toBe('flex-end');
     // A mixed paragraph takes its direction from its words (majority Arabic), not from the reader's language.
     expect(flat(within(other).getByText(/Q3 numbers/u)).writingDirection).toBe('rtl');
+  });
+
+  it('COSMOS-FINAL-01 E-1: each speaker carries one badge — the reader’s initials, another person’s from their Name, QANDEEL QA — on a stable tone', async () => {
+    const readerName = language === 'ar' ? 'منى عادل' : 'Mona Adel';
+    const view = await openWorld(language, preference, world(), readerName);
+    // The badge is hidden from assistive technology, so it is read from the rendered tree, not by query.
+    type Node = { props: Record<string, unknown>; children: unknown[] | null };
+    const nodes: Node[] = [];
+    const visit = (n: unknown) => {
+      if (n === null || typeof n !== 'object') return;
+      if (Array.isArray(n)) { n.forEach(visit); return; }
+      nodes.push(n as Node);
+      ((n as Node).children ?? []).forEach(visit);
+    };
+    visit(view.toJSON());
+    const badge = (id: string) => {
+      const circle = nodes.find((node) => node.props.testID === `qandeel-speaker-${id}`)!;
+      const initials = nodes.find((node) => node.props.testID === `qandeel-speaker-${id}-initials`);
+      return { fill: (StyleSheet.flatten(circle.props.style as never) as { backgroundColor: string }).backgroundColor, initials: (initials?.children ?? []).join('') };
+    };
+    const tones = SPEAKER_TONES[preference];
+    expect(badge(MINE)).toEqual({ fill: tones.READER.fill, initials: language === 'ar' ? 'م ع' : 'MA' });
+    expect(badge(THEIRS)).toEqual({ fill: tones[otherSpeakerTone('Bassem Fixture')].fill, initials: 'BF' });
+    expect(badge(QANDEEL)).toEqual({ fill: tones.QANDEEL.fill, initials: QANDEEL_INITIALS });
+    // The Name and the accessible names are unchanged; the badge adds nothing a reader could not already see.
+    expect(within(view.getByTestId(`qandeel-shared-material-human-${THEIRS}`)).getByText('Bassem Fixture')).toBeTruthy();
+    expect(view.getByTestId(`qandeel-shared-material-self-${MINE}`).props.accessibilityLabel).toBe(copy.selfTurnName('Fixture words of mine'));
   });
 
   it('draws the input only while sending is open, with no voice or microphone control of any kind', async () => {

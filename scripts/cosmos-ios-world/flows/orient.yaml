@@ -1,0 +1,4 @@
+# COSMOS-FINAL-01 coverage (PO 2026-11-20): rotate the device to O (PORTRAIT | LANDSCAPE_LEFT | LANDSCAPE_RIGHT).
+appId: com.qandeel.mobile
+---
+- setOrientation: ${O}

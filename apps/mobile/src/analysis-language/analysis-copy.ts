@@ -79,14 +79,57 @@ export interface AnalysisCopy {
   readonly exploreLeft: string;
   /** How a map object's Product type and its placement are joined into one spoken description. */
   readonly describe: (family: string, placement: string) => string;
+
+  // ------------------------------------------------------------------- COSMOS E-2 Slice A: Personal topic names (D-3 / D-4)
+  /** The hint under a name that is the person's own grounding wording. */
+  readonly topicNameFromWords: string;
+  /** The hint under a name the person gave the topic themselves. */
+  readonly topicNameYours: string;
+  /** Shown in the name's place when the server has no truthful name: honest, never invented. */
+  readonly topicUnnamed: string;
+  /** The act that opens the alias field, and the field's accessible name. */
+  readonly nameTopic: string;
+  readonly topicNameField: string;
+  readonly saveName: string;
+  readonly cancelName: string;
+  /** The act that opens the conversation at the moment the topic began (the same conversation, or another one). */
+  readonly openSource: string;
+
+  // ------------------------------------------------------------------- COSMOS E-2 Slice C: the CURRENT Personal World (D-5, U)
+  /** The Personal map's two modes: this conversation's Session-bound world, and the person's current world of all topics. */
+  readonly worldModeThisConversation: string;
+  readonly worldModeAllTopics: string;
+  /** The current world's honest note: it is the present, with no timeline and no conversation position. */
+  readonly currentWorldNote: string;
+  /** The current world served empty — truthful, never invented. */
+  readonly currentWorldEmpty: string;
+  /** The current world could not be read now. */
+  readonly currentWorldUnavailable: string;
 }
+
+/** COSMOS E-2 Slice A Product Copy Gate — the eight rows above, in both languages: CLOSED,
+ * APPROVED by the PO COPY GATE DECISION of 2026-11-21 (COSMOS E-2, "Complete Wording Approval Before Consolidated CI"). */
+export const PERSONAL_TOPIC_NAME_COPY_GATE = Object.freeze({
+  status: 'COSMOS E-2 PRODUCT COPY GATE (Slice A) — CLOSED — 8 rows APPROVED by the Product Owner, 2026-11-21 (saveName / cancelName REUSE approved wording)',
+  approved: ['topicNameFromWords', 'topicNameYours', 'topicUnnamed', 'nameTopic', 'topicNameField', 'saveName', 'cancelName', 'openSource'] as readonly string[],
+  proposed: [] as readonly string[],
+});
+
+/** COSMOS E-2 Slice C Product Copy Gate — the five rows above, in both languages: CLOSED,
+ * APPROVED by the PO COPY GATE DECISION of 2026-11-21 (COSMOS E-2, "Complete Wording Approval Before Consolidated CI"). */
+export const PERSONAL_CURRENT_WORLD_COPY_GATE = Object.freeze({
+  status: 'COSMOS E-2 PRODUCT COPY GATE (Slice C) — CLOSED — 5 rows APPROVED by the Product Owner, 2026-11-21',
+  approved: ['worldModeThisConversation', 'worldModeAllTopics', 'currentWorldNote', 'currentWorldEmpty', 'currentWorldUnavailable'] as readonly string[],
+  proposed: [] as readonly string[],
+});
 
 const digits = (value: number): string => String(value);
 
 const AR: AnalysisCopy = Object.freeze<AnalysisCopy>({
   // Arabic amended by LANG-01 CA-19 (PC-01).
   followingConversation: 'متابعة المحادثة مفعّلة الآن',
-  rejoinConversation: 'العودة لمتابعة المحادثة',
+  // APPROVED 2026-11-16 — COSMOS-INT-01 Product Copy Gate: RETURN_LIVE_HEAD's concise label (was «العودة لمتابعة المحادثة»).
+  rejoinConversation: 'متابعة الآن',
 
   temporalNavigation: 'التنقل الزمني',
   momentNumber: 'رقم اللحظة',
@@ -125,11 +168,27 @@ const AR: AnalysisCopy = Object.freeze<AnalysisCopy>({
   exploreRight: 'استكشاف يمين الخريطة',
   exploreLeft: 'استكشاف يسار الخريطة',
   describe: (family, placement) => `${family}، ${placement}`,
+  // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice A), PO decision; saveName / cancelName REUSE approved wording
+  topicNameFromWords: 'من كلامك',
+  topicNameYours: 'اسم من اختيارك',
+  topicUnnamed: 'موضوع بلا اسم',
+  nameTopic: 'تسمية الموضوع',
+  topicNameField: 'اسم الموضوع',
+  saveName: 'حفظ',
+  cancelName: 'إلغاء',
+  openSource: 'فتح المحادثة الأصلية',
+  // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice C), PO decision
+  worldModeThisConversation: 'هذه المحادثة',
+  worldModeAllTopics: 'كل موضوعاتي الآن',
+  currentWorldNote: 'العرض الحالي بلا خط زمني',
+  currentWorldEmpty: 'لا موضوعات بعد',
+  currentWorldUnavailable: 'تعذّر عرض موضوعاتك الآن.',
 });
 
 const EN: AnalysisCopy = Object.freeze<AnalysisCopy>({
   followingConversation: 'Following the conversation',
-  rejoinConversation: 'Rejoin the conversation',
+  // APPROVED 2026-11-16 — COSMOS-INT-01 Product Copy Gate: RETURN_LIVE_HEAD's concise label (was «Rejoin the conversation»).
+  rejoinConversation: 'Follow live',
 
   temporalNavigation: 'Temporal navigation',
   momentNumber: 'Moment number',
@@ -167,6 +226,21 @@ const EN: AnalysisCopy = Object.freeze<AnalysisCopy>({
   exploreRight: 'Explore right on the map',
   exploreLeft: 'Explore left on the map',
   describe: (family, placement) => `${family}. ${placement}`,
+  // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice A), PO decision; saveName / cancelName REUSE approved wording
+  topicNameFromWords: 'From your words',
+  topicNameYours: 'Your name for it',
+  topicUnnamed: 'Unnamed topic',
+  nameTopic: 'Name this topic',
+  topicNameField: 'Topic name',
+  saveName: 'Save',
+  cancelName: 'Cancel',
+  openSource: 'Open the original conversation',
+  // APPROVED 2026-11-21 — COSMOS E-2 Product Copy Gate (Slice C), PO decision
+  worldModeThisConversation: 'This conversation',
+  worldModeAllTopics: 'All my topics now',
+  currentWorldNote: 'No timeline in the current view',
+  currentWorldEmpty: 'No topics yet',
+  currentWorldUnavailable: "Your topics can't be shown right now.",
 });
 
 /** The Analysis words for one Product language. */

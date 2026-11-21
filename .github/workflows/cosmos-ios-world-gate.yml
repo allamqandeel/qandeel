@@ -1,0 +1,185 @@
+name: iOS World gate (COSMOS stages, touch)
+# COSMOS-INT-01 Slice E (PO decisions D-1 / D-2, 2026-11-18; backlog BG-10): the iOS World-level integration gate.
+#
+# What it is NOT: Mobile CI's `verify-ios` boot smoke. That job installs the unconfigured Product binary and proves it
+# launches (it can show only CONFIG_REFUSED); its purpose is unchanged and it stays as it is.
+#
+# What it is: the S401 proof build (the production composition, ProductRoot, over the labelled SYNTHETIC proof network;
+# one recorded change of the mobile manifest's `main` in this ephemeral checkout only), on an iOS simulator, with REAL
+# touch on the Personal, Shared and Public COSMOS stages and assertions on what each touch must do
+# (scripts/cosmos-ios-world/run-world-gate.sh), then the native XCUITest gestures Maestro cannot inject — a genuine
+# double tap, a two-finger pinch — from the SAME build (scripts/cosmos-ios-world/xcuitest; PO, 2026-11-18). Every case
+# is PASS / FAIL / NOT TESTED in results.tsv; the job fails unless every case passed. Nothing retries a failed case.
+#
+# Change-aware: it runs for a pull request that changes the mobile application, its shared packages, the API, the
+# database, the dependency lock, or this gate; for a push to main; and on manual dispatch.
+on:
+  pull_request:
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/**'
+      # COSMOS-FINAL-01 (BG-10 backend scope, contract §21.2): the API, the database and its migrations — what the iOS
+      # client reads — run the same simulator interaction (the shared packages above carry the wire contracts).
+      - 'apps/api/**'
+      - 'database/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/cosmos-ios-world/**'
+      - 'scripts/validation/bounded-run.mjs'
+      - '.github/workflows/cosmos-ios-world-gate.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+concurrency:
+  group: cosmos-ios-world-gate-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+  MAESTRO_CLI_NO_ANALYTICS: 1
+  MAESTRO_VERSION: 2.10.0
+  MAESTRO_ZIP_SHA256: 29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991
+  IOS_RUNTIME_SUFFIX: iOS-26-5
+jobs:
+  world-gate:
+    name: iOS World gate — ${{ matrix.device }} ${{ matrix.lang }}
+    runs-on: macos-26
+    # 120 holds the World gate's 60 minutes (run 44707574152: setup <= 38.5, clean native 14.4, fresh install 3.7 minutes).
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        # BG-10's permanent language / size matrix (PO, COSMOS-FINAL-01 continuation, 2026-11-20, item 4; contract §30.7):
+        # the reference cell, Arabic (right-to-left), and the small iPhone. Every cell runs every case; none is weakened.
+        include:
+          - {cell: i17-en, device: 'iPhone 17', lang: en, langtag: en-US, langloc: en_US}
+          - {cell: i17-ar, device: 'iPhone 17', lang: ar, langtag: ar-EG, langloc: ar_EG}
+          - {cell: small-en, device: 'iPhone SE (3rd generation)|iPhone 16e', lang: en, langtag: en-US, langloc: en_US}
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
+      MAESTRO_IOS_DRIVER_PORT: 22087
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Select Xcode 26.6 explicitly
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - {name: Install dependencies from the root lockfile, run: npm ci}
+      - name: Select the S401 proof entry (this ephemeral checkout only; recorded)
+        env: {S401_SHARED_PROOF: '1'}
+        run: |
+          mkdir -p "$RUNNER_TEMP/evidence"
+          node apps/mobile/scripts/select-s401-proof-entry.mjs --apply
+          git diff -- apps/mobile/package.json | tee "$RUNNER_TEMP/evidence/entry-diff.txt"
+      - {name: Generate the iOS project (CNG), run: npm run prebuild:ios --workspace @qandeel/mobile}
+      - name: Install CocoaPods dependencies
+        working-directory: apps/mobile/ios
+        run: pod install
+      - name: Add the native UI-test target (this ephemeral checkout only)
+        # One XCUITest target and its shared scheme, added to the generated project (scripts/cosmos-ios-world/xcuitest).
+        # The xcodeproj gem ships with CocoaPods; it is installed for the user only if this Ruby cannot load it.
+        run: |
+          ruby -rxcodeproj -e 1 2>/dev/null || gem install --user-install --no-document xcodeproj
+          ruby scripts/cosmos-ios-world/xcuitest/add-uitest-target.rb apps/mobile/ios scripts/cosmos-ios-world/xcuitest/CosmosWorldGestureUITests.swift
+      - name: Build the proof Release simulator app and its native UI tests (one build)
+        run: |
+          set -o pipefail
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          xcodebuild -quiet -workspace "$workspace" -scheme QandeelWorldUITests -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build-for-testing
+          app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' ! -name '*-Runner.app' | head -n 1)"
+          xctestrun="$(find apps/mobile/ios/build/Build/Products -maxdepth 1 -name '*.xctestrun' | head -n 1)"
+          test -n "$app"; test -n "$xctestrun"; echo "APP=$app" >> "$GITHUB_ENV"; echo "XCTESTRUN=$xctestrun" >> "$GITHUB_ENV"
+          { echo "head=$(git rev-parse HEAD)"; echo "entry=src/integration/__validation__/s401-proof-entry.tsx"; echo "app=$(basename "$app")"; echo "xctestrun=$(basename "$xctestrun")"; xcodebuild -version; } > "$RUNNER_TEMP/evidence/identity.txt"
+      - name: Setup Temurin JDK 17 (Maestro)
+        uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: '17'}
+      - name: Boot the simulator
+        env: {CANDIDATES: '${{ matrix.device }}'}
+        run: bash scripts/cosmos-ios-world/sim.sh "$CANDIDATES" "$RUNNER_TEMP/evidence"
+      - name: Install the proof app
+        run: xcrun simctl install "$IOS_SIM_UDID" "$APP"
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | shasum -a 256 --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro" && cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Set the simulator language and prove the driver
+        env: {LANGTAG: '${{ matrix.langtag }}', LANGLOC: '${{ matrix.langloc }}'}
+        run: bash scripts/cosmos-ios-world/setup.sh "$IOS_SIM_UDID" "$RUNNER_TEMP/evidence"
+      - name: World gate (Personal, Shared, Public; real touch; assertions)
+        # 60 (was 40): run 44707574152 took 38.5 min in i17-ar and was cut at 40 in i17-en (contract §30).
+        timeout-minutes: 60
+        run: bash scripts/cosmos-ios-world/run-world-gate.sh "$RUNNER_TEMP/evidence/gate" "$IOS_SIM_UDID"
+      - name: Native gestures (XCUITest; double tap, pinch, the current depth bead, focal anchoring, pan; D-3 overlays and layout)
+        # Runs even when a World gate case failed, so every case is classified. The same build's runner, no rebuild.
+        if: ${{ !cancelled() && env.XCTESTRUN != '' }}
+        timeout-minutes: 40
+        run: |
+          E="$RUNNER_TEMP/evidence"; X="$E/xcui"; mkdir -p "$X" "$E/gate"
+          # A World gate that outlived its step's timeout is stopped first, with every process under it: in run 44707574152
+          # (i17-en) it went on relaunching and tapping the app for 20 minutes alongside this run. The gate is frozen before
+          # its tree is read, so it starts nothing new. Its cut is a NOT TESTED row, so the job stays red.
+          tree() { echo "$1"; for c in $(pgrep -P "$1"); do tree "$c"; done; }
+          gate="$(pgrep -f 'cosmos-ios-world/run-world-gate\.sh' || true)"
+          if [ -n "$gate" ]; then
+            kill -STOP $gate 2>/dev/null || true
+            pids="$(for p in $gate; do tree "$p"; done)"
+            kill -STOP $pids 2>/dev/null || true; kill -KILL $pids 2>/dev/null || true
+            printf 'GATE-DEADLINE\tNOT TESTED\tthe World gate outlived its step timeout and was stopped; its later cases did not run\n' >> "$E/gate/results.tsv"
+          fi
+          # A Maestro CLI left without its parent (re-parented when its step was cancelled) is stopped too.
+          pkill -KILL -f "$HOME/.maestro/" || true
+          # The Maestro driver is an XCTest runner too; it is stopped so that one runner drives the simulator.
+          xcrun simctl terminate "$IOS_SIM_UDID" dev.mobile.maestro-driver-iosUITests.xctrunner 2>/dev/null || true
+          # D-3: the fresh-install case runs on its own, last (below), so that this run and the World gate keep the D-1 conditions.
+          xcodebuild test-without-building -xctestrun "$XCTESTRUN" -destination "id=$IOS_SIM_UDID" -resultBundlePath "$X/gestures.xcresult" \
+            -skip-testing QandeelWorldUITests/CosmosWorldGestureUITests/testFreshInstallFirstVisibleDoorTapOpensTheAnalysis > "$X/xcodebuild.log" 2>&1 || true
+          grep -E "Test [Cc]ase|error: -\[|\*\* TEST" "$X/xcodebuild.log" || true
+          xcrun xcresulttool export attachments --path "$X/gestures.xcresult" --output-path "$X/attachments" || true
+          # Compact evidence: the attachments and the log are kept; the result bundle (which repeats them) is not.
+          rm -rf "${X:?}/gestures.xcresult"
+      - name: SE-FU-1 fresh install (D-a; XCUITest; the door tapped once at its first visible frame, no settle, no retry)
+        # PO 2026-11-18 (contract §24.1 D-a / D-b): a freshly booted simulator and a fresh install of the same build, then the
+        # one test alone. Its cold and warm timings are recorded in its row; they are judged in the D-3 report, not here.
+        if: ${{ !cancelled() && env.XCTESTRUN != '' }}
+        timeout-minutes: 20
+        run: |
+          E="$RUNNER_TEMP/evidence"; X="$E/xcui"; mkdir -p "$X"
+          xcrun simctl terminate "$IOS_SIM_UDID" dev.mobile.maestro-driver-iosUITests.xctrunner 2>/dev/null || true
+          xcrun simctl shutdown "$IOS_SIM_UDID" 2>/dev/null || true
+          xcrun simctl boot "$IOS_SIM_UDID"
+          node scripts/validation/bounded-run.mjs --seconds 300 --label ios-simulator-reboot -- xcrun simctl bootstatus "$IOS_SIM_UDID" -b > /dev/null
+          xcrun simctl uninstall "$IOS_SIM_UDID" com.qandeel.mobile 2>/dev/null || true
+          xcrun simctl install "$IOS_SIM_UDID" "$APP"
+          xcodebuild test-without-building -xctestrun "$XCTESTRUN" -destination "id=$IOS_SIM_UDID" -resultBundlePath "$X/fresh.xcresult" \
+            -only-testing QandeelWorldUITests/CosmosWorldGestureUITests/testFreshInstallFirstVisibleDoorTapOpensTheAnalysis > "$X/fresh.log" 2>&1 || true
+          grep -E "Test [Cc]ase|error: -\[|\*\* TEST" "$X/fresh.log" || true
+          xcrun xcresulttool export attachments --path "$X/fresh.xcresult" --output-path "$X/fresh-attachments" || true
+          rm -rf "${X:?}/fresh.xcresult"
+      - name: Classify the native runs
+        if: ${{ !cancelled() && env.XCTESTRUN != '' }}
+        run: |
+          E="$RUNNER_TEMP/evidence"; X="$E/xcui"; mkdir -p "$X" "$E/gate"
+          [ -f "$E/gate/results.tsv" ] || printf 'case\tresult\tdetail\n' > "$E/gate/results.tsv"
+          cat "$X/xcodebuild.log" "$X/fresh.log" > "$X/native.log" 2>/dev/null || true
+          wpt="$(sed -n 's/.*device widthPoints=\([0-9]*\).*/\1/p' "$E/gate/gate.log" 2>/dev/null | head -n 1)"
+          node scripts/cosmos-ios-world/xcui-analyse.mjs "$X/native.log" "$X/attachments,$X/fresh-attachments" "${wpt:-0}" "$E/gate/results.tsv"
+      - name: Results
+        if: ${{ !cancelled() }}
+        run: |
+          f="$RUNNER_TEMP/evidence/gate/results.tsv"
+          if [ -f "$f" ]; then { echo '### iOS World gate'; echo; echo '| case | result | detail |'; echo '|---|---|---|'; tail -n +2 "$f" | awk -F'\t' '{print "| "$1" | "$2" | "$3" |"}'; } >> "$GITHUB_STEP_SUMMARY"; cat "$f"
+          else echo 'no results.tsv: every case NOT TESTED' | tee -a "$GITHUB_STEP_SUMMARY"; fi
+          # The job passes only when every case, the World gate's and the native ones, is PASS.
+          [ -f "$f" ] && ! tail -n +2 "$f" | awk -F'\t' '$2 != "PASS"' | grep -q .
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with: {name: 'ios-world-gate-${{ matrix.cell }}', path: '${{ runner.temp }}/evidence', if-no-files-found: warn}

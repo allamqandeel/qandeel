@@ -20,15 +20,31 @@
  * evolves while TC stays the Live Head: it is invalidated when a newer
  * revision or a greater Live Head of the same Session is observed. Nothing here
  * reads the wall clock, polls, or writes canonical state.
+ *
+ * COSMOS-FINAL-01 F-1: `V = Disclose(K(TC), semanticDepth, inspectionContext)` — a disclosure asked with an
+ * inspection is a different V from the one asked without it, and is held under its own key: (Session, TC,
+ * depth, the exact requested inspection). Without an inspection the key, and every reader of it, is exactly
+ * as before. The same Session prefix means the same invalidation: an inspected open-head V is dropped on a
+ * newer revision, and forgotten with its Session, exactly like the plain one.
  */
-import type { HistoricalDisclosure, HistoricalProjectionUnavailableCode, HistoricalRevision, HistoricalSemanticDepth } from '@qandeel/runtime';
+import type {
+  HistoricalDisclosure,
+  HistoricalInspectionRequest,
+  HistoricalProjectionUnavailableCode,
+  HistoricalRevision,
+  HistoricalSemanticDepth,
+} from '@qandeel/runtime';
 
 export type HistoricalDisclosureEntry =
   | { readonly status: 'NOT_FETCHED' }
   | { readonly status: 'FETCHED'; readonly value: HistoricalDisclosure; readonly sealed: boolean }
   | { readonly status: 'UNAVAILABLE'; readonly code: HistoricalProjectionUnavailableCode };
 
-const keyOf = (sessionId: string, tc: number, depth: HistoricalSemanticDepth): string => [sessionId, String(tc), depth].join(' ');
+/** The exact requested inspection, as a key: every field the server answers about, absent ones included. */
+export const inspectionKey = (inspection: HistoricalInspectionRequest): string =>
+  JSON.stringify([inspection.family, inspection.id, inspection.version ?? null, inspection.appearance?.kind ?? null, inspection.appearance?.bindingId ?? null]);
+const keyOf = (sessionId: string, tc: number, depth: HistoricalSemanticDepth, inspection?: HistoricalInspectionRequest): string =>
+  [sessionId, String(tc), depth, ...(inspection === undefined ? [] : [inspectionKey(inspection)])].join(' ');
 const belongsTo = (key: string, sessionId: string): boolean => key.startsWith(sessionId + ' ');
 
 const revisionEquals = (a: HistoricalRevision, b: HistoricalRevision): boolean =>
@@ -39,19 +55,19 @@ export class HistoricalDisclosureCache {
   private readonly revisions = new Map<string, HistoricalRevision>();
 
   /** What the client holds for (Session, TC, depth). NOT_FETCHED is the absence of a fetch, not the absence of history. */
-  lookup(sessionId: string, tc: number, depth: HistoricalSemanticDepth): HistoricalDisclosureEntry {
-    return this.entries.get(keyOf(sessionId, tc, depth)) ?? { status: 'NOT_FETCHED' };
+  lookup(sessionId: string, tc: number, depth: HistoricalSemanticDepth, inspection?: HistoricalInspectionRequest): HistoricalDisclosureEntry {
+    return this.entries.get(keyOf(sessionId, tc, depth, inspection)) ?? { status: 'NOT_FETCHED' };
   }
 
   /** Observes the delivered revision for the Session (dropping older open-head disclosures), then holds the disclosure. */
-  hold(value: HistoricalDisclosure): void {
+  hold(value: HistoricalDisclosure, inspection?: HistoricalInspectionRequest): void {
     this.observeRevision(value.sessionId, value.revision);
-    this.entries.set(keyOf(value.sessionId, value.tc, value.depth), Object.freeze({ status: 'FETCHED', value, sealed: value.sealed }));
+    this.entries.set(keyOf(value.sessionId, value.tc, value.depth, inspection), Object.freeze({ status: 'FETCHED', value, sealed: value.sealed }));
   }
 
   /** Holds a typed refusal so a reader never mistakes "refused" for "unknown" or "not fetched". */
-  holdUnavailable(sessionId: string, tc: number, depth: HistoricalSemanticDepth, code: HistoricalProjectionUnavailableCode): void {
-    this.entries.set(keyOf(sessionId, tc, depth), Object.freeze({ status: 'UNAVAILABLE', code }));
+  holdUnavailable(sessionId: string, tc: number, depth: HistoricalSemanticDepth, code: HistoricalProjectionUnavailableCode, inspection?: HistoricalInspectionRequest): void {
+    this.entries.set(keyOf(sessionId, tc, depth, inspection), Object.freeze({ status: 'UNAVAILABLE', code }));
   }
 
   /**

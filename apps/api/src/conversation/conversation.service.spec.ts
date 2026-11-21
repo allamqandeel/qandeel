@@ -27,6 +27,8 @@ describe('ConversationService', () => {
   beforeEach(() => {
     repository = {
       createSession: jest.fn(), findSession: jest.fn(), createTurn: jest.fn(),
+      createSessionForRequest: jest.fn(), listSessions: jest.fn(), setSessionTitle: jest.fn(),
+      setThreadAlias: jest.fn(),
       findTurnByIdempotencyKey: jest.fn(), cancelTurn: jest.fn(),
       // T-03A2 / T-03D: present so a post-finalization semantic failure can be
       // PROVEN never to reach the generation-failure lifecycle command.
@@ -57,6 +59,77 @@ describe('ConversationService', () => {
   it('binds the repository-returned canonical session ID to the active request scope',async()=>{
     const correlation=new CorrelationService();service=new ConversationService(repository,orchestrator,correlation,semantic,turnWork);repository.createSession.mockResolvedValue(session);
     await correlation.runRequest(async()=>{await service.createSession('user-a','token-a');expect(correlation.current()?.session_id).toBe(session.id);});
+  });
+
+  // COSMOS E-2 corrections, Slice B (the Product Owner's D-2, 2026-11-20): the conversation catalog.
+  describe('Personal topic alias (Slice A, migration 0198)', () => {
+    const thread = '3e7a2b1c-5d4e-4f6a-9b8c-1d2e3f4a5b6c';
+    it('appends a normalised alias for an owned Thread, and answers not found for one it may not name', async () => {
+      repository.setThreadAlias.mockResolvedValue({ thread_id: thread, alias: 'My manager', created_at: 'now' });
+      await expect(service.renameThread('user-a', 'token-a', thread, { alias: '  My   manager ' })).resolves.toEqual({ thread_id: thread, alias: 'My manager', created_at: 'now' });
+      expect(repository.setThreadAlias).toHaveBeenCalledWith('token-a', thread, 'My manager');
+      repository.setThreadAlias.mockRejectedValueOnce(new DataApiError(403));
+      await expect(service.renameThread('user-a', 'token-a', thread, { alias: 'x' })).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.renameThread('user-a', 'token-a', 'not-a-uuid', { alias: 'x' })).rejects.toBeInstanceOf(NotFoundException);
+    });
+    it('refuses a malformed alias before any database call', async () => {
+      for (const body of [{ alias: '' }, { alias: '   ' }, { alias: 'x'.repeat(61) }, { alias: 7 }, {}, 'x', ['x']]) {
+        await expect(service.renameThread('user-a', 'token-a', thread, body)).rejects.toBeInstanceOf(BadRequestException);
+      }
+      expect(repository.setThreadAlias).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('conversation catalog (Slice B, migration 0197)', () => {
+    it('creates through the idempotent command when the body names a client request identity, else exactly as before', async () => {
+      repository.createSessionForRequest.mockResolvedValue(session);
+      await expect(service.createSession('user-a', 'token-a', { clientRequestId: 'request-1' })).resolves.toBe(session);
+      expect(repository.createSessionForRequest).toHaveBeenCalledWith('token-a', expect.stringMatching(/^[0-9a-f-]{36}$/), 'request-1');
+      expect(repository.createSession).not.toHaveBeenCalled();
+      repository.createSession.mockResolvedValue(session);
+      await expect(service.createSession('user-a', 'token-a', {})).resolves.toBe(session);
+      await expect(service.createSession('user-a', 'token-a', undefined)).resolves.toBe(session);
+      expect(repository.createSession).toHaveBeenCalledTimes(2);
+      expect(repository.createSessionForRequest).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses a malformed client request identity before any database call', async () => {
+      for (const body of [{ clientRequestId: '' }, { clientRequestId: 'x'.repeat(129) }, { clientRequestId: 7 }, 'request-1', ['request-1']]) {
+        await expect(service.createSession('user-a', 'token-a', body)).rejects.toBeInstanceOf(BadRequestException);
+      }
+      expect(repository.createSession).not.toHaveBeenCalled();
+      expect(repository.createSessionForRequest).not.toHaveBeenCalled();
+    });
+
+    it('lists the caller’s catalog with a bounded limit (default 50, at most 100) and no user id in the call', async () => {
+      repository.listSessions.mockResolvedValue([]);
+      await expect(service.listSessions('user-a', 'token-a', {})).resolves.toEqual([]);
+      expect(repository.listSessions).toHaveBeenLastCalledWith('token-a', 50);
+      await service.listSessions('user-a', 'token-a', { limit: '7' });
+      expect(repository.listSessions).toHaveBeenLastCalledWith('token-a', 7);
+      for (const query of [{ limit: '0' }, { limit: '101' }, { limit: 'ten' }, { limit: '-1' }, { limit: '1.5' }]) {
+        await expect(service.listSessions('user-a', 'token-a', query)).rejects.toBeInstanceOf(BadRequestException);
+      }
+      expect(repository.listSessions).toHaveBeenCalledTimes(2);
+    });
+
+    it('renames an owned session by appending a normalised title, and answers not found for a session it may not title', async () => {
+      const id = '2d6f1f4e-9d3e-4c0a-8f1b-0a7c1f6e5d44';
+      repository.setSessionTitle.mockResolvedValue({ session_id: id, title: 'My first topic', created_at: 'now' });
+      await expect(service.renameSession('user-a', 'token-a', id, { title: '  My   first  topic ' }))
+        .resolves.toEqual({ session_id: id, title: 'My first topic', created_at: 'now' });
+      expect(repository.setSessionTitle).toHaveBeenCalledWith('token-a', id, 'My first topic');
+      for (const body of [{ title: '' }, { title: '   ' }, { title: 'x'.repeat(81) }, { title: 3 }, {}, null, 'title']) {
+        await expect(service.renameSession('user-a', 'token-a', id, body)).rejects.toBeInstanceOf(BadRequestException);
+      }
+      await expect(service.renameSession('user-a', 'token-a', 'not-a-uuid', { title: 'x' })).rejects.toBeInstanceOf(NotFoundException);
+      expect(repository.setSessionTitle).toHaveBeenCalledTimes(1);
+      // The database refuses another person's Session as FORBIDDEN (42501 -> 403); the route never leaks existence.
+      repository.setSessionTitle.mockRejectedValueOnce(new DataApiError(403));
+      await expect(service.renameSession('user-a', 'token-a', id, { title: 'Theirs' })).rejects.toBeInstanceOf(NotFoundException);
+      repository.setSessionTitle.mockRejectedValueOnce(new DataApiError(503));
+      await expect(service.renameSession('user-a', 'token-a', id, { title: 'Theirs' })).rejects.toBeInstanceOf(DataApiError);
+    });
   });
 
   it('fails closed when a user-scoped session is invisible', async () => {

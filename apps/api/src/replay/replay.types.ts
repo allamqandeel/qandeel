@@ -3,6 +3,7 @@ import type {
   DisclosedQuestionAppearance,
   DisclosedReading,
   DisclosedSourceProvenanceRung,
+  DisclosedThread,
   DisclosedThreadRung,
   DisclosedWorldRung,
   HistoricalRung,
@@ -152,13 +153,24 @@ export interface ReplaySessionAnalyticsRung {
 /**
  * S7-05 (F-2): a Reading on the Replay wire. Its scope is the canonical scope's CLASS only, never the Session it names: the
  * moment is addressed by its ordinal and Session Position, and no Session id crosses (the header carries none either).
+ * It keeps the frozen V1 shape (0169 reads V1): no `evidenceChange` key (COSMOS E-2 0200 gates the Personal projection V2
+ * only; the service refuses a Reading that carries one, or no statement).
  */
-export type ReplayReading = Omit<DisclosedReading, 'scope'> & { readonly scope: 'CONVERSATION_SESSION' };
+export type ReplayReading = Omit<DisclosedReading, 'scope' | 'evidenceChange'> & { readonly scope: 'CONVERSATION_SESSION' };
 
 /** The ANALYTICAL_OBJECT rung of a Replay moment's analysis: T-03C's, with each Reading's scope narrowed to its class. */
 export type ReplayAnalyticalObjectRung =
   Omit<Extract<DisclosedAnalyticalRungs<DisclosedMaterialAtTc>['analyticalObject'], { status: 'DISCLOSED' }>['value'], 'readings'>
   & { readonly readings: readonly ReplayReading[] };
+
+/**
+ * A Replay's World rung keeps the shape it had before COSMOS E-2 Slice A (0198, Projection V2): a Thread's `origin` names a
+ * Session, which never crosses a Replay (S7-01; S7-05 F-2), and its `name` (a grounding wording or the owner's private
+ * alias) is not part of the frozen Replay wire, whose readers accept exactly the V1 Thread keys.
+ */
+export interface ReplayMomentWorldRung extends Omit<DisclosedWorldRung, 'threads'> {
+  readonly threads: readonly Omit<DisclosedThread, 'name' | 'origin'>[];
+}
 
 export type ReplayMomentAnalysisView =
   | {
@@ -166,7 +178,7 @@ export type ReplayMomentAnalysisView =
     readonly ordinal: number;
     readonly tc: number;
     readonly depth: HistoricalSemanticDepth;
-    readonly world: DisclosedWorldRung;
+    readonly world: ReplayMomentWorldRung;
     readonly thread: HistoricalRung<DisclosedThreadRung>;
     readonly session: HistoricalRung<ReplaySessionAnalyticsRung>;
     readonly analyticalObject: HistoricalRung<ReplayAnalyticalObjectRung>;

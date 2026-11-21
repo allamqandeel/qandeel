@@ -290,6 +290,17 @@ idempotent is explicitly out of scope for this task.
 Definitive outcomes are kept distinct: `401`/`403` is `UNAUTHENTICATED` and `4xx` is `REFUSED` — in
 both, no Session was created.
 
+> **Controlled amendment — COSMOS E-2 corrections, Slice B (Product Owner decision D-2, 2026-11-20).**
+> Server-side idempotency now exists for the one path that needs it: `POST /conversation/sessions`
+> accepts an optional JSON body `{ clientRequestId }` (1–128 characters), served by
+> `create_conversation_session_v2` (migration 0197) under a unique `(user_id, client_request_id)`
+> index, so a retry of the same request identity answers the EARLIER Session and creates nothing. The
+> body-less 0030 call is unchanged and still not idempotent; the launch bootstrap still issues it once
+> per auth generation, and the client still reports `OUTCOME_UNKNOWN` and never retries on its own.
+> Only the approved New Chat action sends a request identity. The same migration adds the
+> server-authoritative list (`GET /conversation/sessions`) this section said did not exist, and the
+> durable manual rename (`PATCH /conversation/sessions/:sessionId/title`).
+
 **Duplicate prevention** lives in one owner. `createMobileRuntimeEntry` memoises its in-flight
 bootstrap per auth generation, so a rerender, a remount or a second call returns the *same* attempt. A
 token refresh does not change the auth generation and therefore never reaches the create call. The

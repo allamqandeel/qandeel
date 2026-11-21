@@ -1,0 +1,10 @@
+# COSMOS-INT-01 Slice E — iOS World gate: one 600 ms pan that STARTS where the depth rail stands (75%,57% on an
+# iPhone 17, inside the 179 x 220 block the stretched beads used to cover; diag run 44255421709) and ends at 35%,57%.
+# Every value is a literal: Maestro 2.10 resolves a swipe's start, end and duration BEFORE ${} substitution.
+appId: com.qandeel.mobile
+---
+- swipe:
+    waitToSettleTimeoutMs: 1500
+    start: "75%,57%"
+    end: "35%,57%"
+    duration: 600

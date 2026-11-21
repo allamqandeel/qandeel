@@ -57,4 +57,4 @@ export type { HistoricalDisclosureRequest, HistoricalFetchLike, HistoricalProjec
 export { HistoricalProjectionApiClient, HistoricalTransportError } from './historical-projection-api';
 
 export type { HistoricalDisclosureEntry } from './historical-projection-cache';
-export { HistoricalDisclosureCache } from './historical-projection-cache';
+export { HistoricalDisclosureCache, inspectionKey } from './historical-projection-cache';

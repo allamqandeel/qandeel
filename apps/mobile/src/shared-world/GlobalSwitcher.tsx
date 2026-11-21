@@ -12,7 +12,7 @@
  *   - switching ≠ pushing (I-08A4 §4): choosing a destination calls `onSelect` and nothing else — no route, no Back
  *     history, no Session, no canonical write. Choosing the current destination does nothing.
  */
-import { Text, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 
 import { Control, typeStyle, usePalette } from '../conversation';
 import { NavGlyph } from '../iconography';
@@ -24,6 +24,19 @@ export type WorldArea = 'MY_WORLD' | 'SHARED_WORLD' | 'PUBLIC_WORLD';
 
 /** The plate's height inside the 56 pt the P2-A / P4-C proofs give the switcher. */
 export const GLOBAL_SWITCHER_HEIGHT = 56;
+/** The glyph (24) and a little air: the cell stacks the glyph and the word's one line, centred, with no gap of its own. */
+const GLYPH_AND_AIR = 24 + 4;
+/** The action role's leading (theme.ts: 14 / 22), which the platform scales with the reader's text size. */
+const WORD_LEADING = 22;
+/**
+ * COSMOS-INT-01 Slice E D-3 (PO D-c, 2026-11-18): the plate's height at the reader's text size. It is the accepted 56
+ * points at the default size and every size up to iOS's largest non-accessibility one (xxxL, 1.235: 55.2 → 56); only at
+ * the accessibility sizes does it grow with the word's own line, so the destination words stay on the screen and readable
+ * (iPhone SE at AX3 drew them below its edge). Font scaling is untouched (W1A-01).
+ */
+export function globalSwitcherHeight(fontScale: number): number {
+  return Math.max(GLOBAL_SWITCHER_HEIGHT, Math.ceil(GLYPH_AND_AIR + WORD_LEADING * Math.max(1, fontScale)));
+}
 const HAIRLINE = 1;
 export const GLOBAL_SWITCHER_TEST_ID = 'qandeel-global-switcher';
 
@@ -36,6 +49,7 @@ export interface GlobalSwitcherProps {
 
 export function GlobalSwitcher({ area, language, bottomInset, onSelect }: GlobalSwitcherProps) {
   const palette = usePalette();
+  const { fontScale } = useWindowDimensions();
   const copy = sharedCopy(language);
   const publicWords = publicCopy(language);
   const writing = language === 'ar' ? 'rtl' : 'ltr';
@@ -53,7 +67,7 @@ export function GlobalSwitcher({ area, language, bottomInset, onSelect }: Global
       style={{ backgroundColor: palette.field, paddingBottom: bottomInset, direction: writing }}
     >
       <View style={{ height: HAIRLINE, backgroundColor: palette.tertiary, opacity: 0.4 }} />
-      <View style={{ height: GLOBAL_SWITCHER_HEIGHT, flexDirection: 'row' }}>
+      <View style={{ height: globalSwitcherHeight(fontScale), flexDirection: 'row' }}>
         {items.map((item) => {
           const selected = item.key === area;
           return (
@@ -73,13 +87,23 @@ export function GlobalSwitcher({ area, language, bottomInset, onSelect }: Global
                   if (!selected) onSelect(item.key);
                 }}
                 testID={`qandeel-switcher-${item.key.toLowerCase()}`}
-                style={{ flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 0, paddingHorizontal: 6 }}
+                style={{ flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 0, paddingHorizontal: 2 }}
               >
                 <NavGlyph name={item.glyph} color={palette.restInk} />
+                {/* UI-POLISH-01 (Product Owner, 2026-11-16: every destination word whole, never ellipsized). The HONOR showed
+                    the Shared word, and once the Personal word, cut to an ellipsis. The words fit their cells: Estedad
+                    at 14 sp measures the Shared word at 89 dp against a 111 dp cell, and the Personal word at 35 dp.
+                    Android under-measures a centred, shrink-wrapped Arabic label and then ellipsizes into its own box,
+                    so the word's box is the cell's whole width (alignSelf stretch). The cell's side padding is 2 dp, so
+                    the word still fits on a 320 dp screen. Only when even that cannot hold it, at large accessibility
+                    sizes on narrow screens, the word is fitted to the cell instead of cut. The switcher's 56-point band
+                    is reserved by the composition, so the word stays one line. */}
                 <Text
                   numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.6}
                   // The word's weight is SELECTED's second channel: the medium face when selected, the regular one at rest.
-                  style={{ ...typeStyle('action'), fontFamily: selected ? typeStyle('action').fontFamily : typeStyle('body').fontFamily, color: palette.restInk, textAlign: 'center', writingDirection: writing }}
+                  style={{ ...typeStyle('action'), fontFamily: selected ? typeStyle('action').fontFamily : typeStyle('body').fontFamily, color: palette.restInk, textAlign: 'center', writingDirection: writing, alignSelf: 'stretch' }}
                 >
                   {item.word}
                 </Text>

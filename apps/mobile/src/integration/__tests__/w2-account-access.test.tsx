@@ -17,6 +17,15 @@ import { createIntegrationRuntime, type IntegrationRuntime } from '../runtime/in
 import { TEST_CONFIG, authPortDouble, httpDouble, serveHappyPath, settle, type AuthPortDouble, type HttpDouble } from '../__fixtures__/integration';
 import { createInertVoiceNoteDevice } from '../../voice-note';
 
+// The device's Product language is an input of this suite, pinned here: `deviceProductLanguage` reads the HOST's `Intl`
+// locale, so without the pin every English expectation below silently depended on the machine running Jest (an Arabic
+// host rendered the Arabic chrome and failed). Direction stays the platform's own, exactly as in the Product.
+jest.mock('../locale/device-locale', () => {
+  const actual = jest.requireActual<typeof import('../locale/device-locale')>('../locale/device-locale');
+  const { productLocale } = jest.requireActual<typeof import('../locale/product-locale')>('../locale/product-locale');
+  return { ...actual, deviceProductLanguage: () => 'en', deviceProductLocale: () => productLocale('en', actual.deviceLayoutDirection()) };
+});
+
 const METRICS: Metrics = { frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 44, left: 0, right: 0, bottom: 34 } };
 const EN = productSignInCopy('en');
 

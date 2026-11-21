@@ -83,8 +83,11 @@ test('@qandeel/runtime is a TYPE-ONLY workspace package that ships no JavaScript
 
   const files = listFiles(join(rootPath, 'packages/runtime')).map((file) => relative(file)).sort();
   // (T-03D added src/live-focus.d.ts: the authoritative LF wire value and transition event.
-  // T-03C added src/historical-projection.d.ts: the historical disclosure wire, V.)
+  // T-03C added src/historical-projection.d.ts: the historical disclosure wire, V.
+  // RE-ANCHORED by COSMOS E-2 Slice C (PO D-5, Option U, 2026-11-20; migration 0199): src/current-personal-world.d.ts,
+  // the user-level CURRENT Personal World wire — still a .d.ts, still type-only, still no JavaScript shipped.)
   assert.deepEqual(files, ['packages/runtime/README.md', 'packages/runtime/package.json',
+    'packages/runtime/src/current-personal-world.d.ts',
     'packages/runtime/src/historical-projection.d.ts', 'packages/runtime/src/index.d.ts', 'packages/runtime/src/live-focus.d.ts', 'packages/runtime/src/temporal.d.ts']);
 
   // It joins the existing root workspace and the ONE root lockfile.

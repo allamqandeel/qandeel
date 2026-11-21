@@ -58,8 +58,15 @@ const CONSUMERS = ['apps/mobile/src/replay-composite', 'apps/mobile/src/replay-p
 /** Byte-identical to the base `f9bc3947` (LF-normalised): the narrowing changes neither the migration nor the frozen wire. */
 const UNCHANGED = [
   ['database/migrations/0169_replay_personal_secure_integration_erasure_v1.sql', '319435d8514b8d4621667d75dbd62efb645ed4beb38e769fcc479066eb52fa2d'],
-  ['packages/runtime/src/historical-projection.d.ts', '17b9e91511d2cb47938e36dccd94e57dce6ca83d600509584792c33dc3d9b9b1'],
-  ['apps/mobile/src/projection/historical-projection-wire.ts', '7bc8f628268b503d6c5f8a80b204138cc3dfe7db9d1b07ec81eae14d0069f451'],
+  // COSMOS E-2 corrections, Slice A CONTROLLED RE-ANCHOR (PO decisions D-3 / D-4, 2026-11-20): the shared wire grows
+  // ADDITIVELY (a Thread's `name` and `origin`, Controlled Personal Projection V2, 0198); the Reading scope narrowing and
+  // every S7-05 field are unchanged. Previous pins: 17b9e915, 7bc8f628.
+  // COSMOS E-2 CONTROLLED RE-ANCHOR (Product Owner directive "COMPLETE ALL CORRECTIONS BEFORE FINAL CI", 2026-11-21;
+  // contract §31.10; migration 0200, PG-02 / INTEL-TM-01): DisclosedReading gains `evidenceChange` (null only where the serving projection is the frozen V1 a Replay moment reads) and its `statement` is null exactly when withheld; every other field is unchanged. Previous pin: 8a7dd96e.
+  ['packages/runtime/src/historical-projection.d.ts', 'de40d62c6ab9deeacb39a95ed7d6278b5b536f72c0fd2911492815a409b0e943'],
+  // COSMOS E-2 CONTROLLED RE-ANCHOR (Product Owner directive "COMPLETE ALL CORRECTIONS BEFORE FINAL CI", 2026-11-21;
+  // contract §31.10; migration 0200, PG-02 / INTEL-TM-01): each Reading carries its served reliance `evidenceChange`; a withheld Reading carries no words of its own and is refused whole otherwise; every frozen field keeps its meaning. Previous pin: 4c3fd718.
+  ['apps/mobile/src/projection/historical-projection-wire.ts', 'f25513003b8caa515594614bfa1ea44d575e7a8e88ae0f8d19d1915b3932d266'],
 ];
 
 const CANONICAL = "const CANONICAL_READING_SCOPE = /^CONVERSATION_SESSION:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;";
@@ -67,7 +74,9 @@ const CLASS = "const REPLAY_READING_SCOPE_CLASS = 'CONVERSATION_SESSION';";
 const VERIFY = 'if (!CANONICAL_READING_SCOPE.test(reading.scope)) return unavailable();';
 const NARROW = 'return { ...reading, scope: REPLAY_READING_SCOPE_CLASS };';
 const MAPPED = 'readings: rungs.analyticalObject.value.readings.map(readingOf)';
-const TYPED = "export type ReplayReading = Omit<DisclosedReading, 'scope'> & { readonly scope: 'CONVERSATION_SESSION' };";
+// COSMOS E-2 CONTROLLED RE-ANCHOR (PO directive 2026-11-21; contract §31.10; migration 0200): the Replay Reading also omits
+// `evidenceChange` (0169 reads V1, which carries no reliance); its scope is still typed as its class alone.
+const TYPED = "export type ReplayReading = Omit<DisclosedReading, 'scope' | 'evidenceChange'> & { readonly scope: 'CONVERSATION_SESSION' };";
 const DECODED = "const READING_SCOPE_CLASSES = ['CONVERSATION_SESSION'] as const;";
 const DECODE = 'scope: vocabulary(reading.scope, `${path}.scope`, READING_SCOPE_CLASSES),';
 

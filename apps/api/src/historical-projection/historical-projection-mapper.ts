@@ -24,11 +24,15 @@ import type {
   DisclosedReadingRelation,
   DisclosedSubjectGrounding,
   DisclosedThread,
+  DisclosedThreadName,
+  DisclosedThreadOrigin,
   DisclosedThreadReadingAppearance,
   HistoricalExpiryMapping,
   LiveFocusWireValue,
   ReadingLineageStepKind,
   ThreadStateAtTc,
+  CurrentPersonalThread,
+  CurrentPersonalWorld,
 } from '@qandeel/runtime';
 import { HistoricalProjectionIntegrityError, type HistoricalKnowledge } from './historical-projection.types';
 
@@ -101,9 +105,24 @@ function integerText(value: unknown, path: string): string {
 const MOMENT_KEYS = ['id', 'sp', 'sourceRole', 'sourceTurnId', 'ordinalWithinTurn', 'committedText', 'spanStart', 'spanEnd'] as const;
 const FOCUS_KEYS = ['id', 'startedSp', 'lastAttentionSp', 'promotedThreadId'] as const;
 const LIVE_FOCUS_KEYS = ['kind', 'ref', 'atSp', 'reasonCode'] as const;
-const THREAD_KEYS = ['id', 'establishmentPath', 'establishedInSession', 'establishedSp', 'groundingEmergingFocusId', 'home', 'sessionLifecycle'] as const;
+// COSMOS E-2 Slice A (D-3 / D-4): V2 adds `name` and `origin` per Thread; everything else is V1's.
+const THREAD_KEYS = ['id', 'establishmentPath', 'establishedInSession', 'establishedSp', 'groundingEmergingFocusId', 'home', 'sessionLifecycle', 'name', 'origin'] as const;
+// The frozen V1 Thread (0072): what `get_session_historical_projection_v1` returns, and so what a Replay moment's analysis
+// carries (0169 reads V1, never V2). PR #402 CI: requiring V2's keys here refused every real Replay analysis.
+const THREAD_KEYS_V1 = ['id', 'establishmentPath', 'establishedInSession', 'establishedSp', 'groundingEmergingFocusId', 'home', 'sessionLifecycle'] as const;
+/** A V1 Thread has no name and no origin: it is NOT named (never a fabricated name) and names no Session. */
+const NO_THREAD_NAME: DisclosedThreadName = Object.freeze({ text: null, source: 'NONE' });
+type ThreadVersion = 'V1' | 'V2';
+const THREAD_NAME_KEYS = ['text', 'source'] as const;
+const THREAD_ORIGIN_KEYS = ['sessionId', 'sp'] as const;
+const THREAD_NAME_SOURCES = ['USER_ALIAS', 'GROUNDING_WORDING', 'NONE'] as const;
 const THREAD_APPEARANCE_KEYS = ['bindingId', 'threadId', 'hypothesisId', 'boundSp', 'current'] as const;
-const READING_KEYS = ['id', 'statement', 'type', 'domain', 'scope', 'origin', 'assumptions', 'disconfirmingConditions', 'statusAtTc', 'versionAtTc', 'lineage', 'subjectGroundings'] as const;
+// The frozen V1 Reading (0072): what a Replay moment's analysis carries (0169 reads V1).
+const READING_KEYS_V1 = ['id', 'statement', 'type', 'domain', 'scope', 'origin', 'assumptions', 'disconfirmingConditions', 'statusAtTc', 'versionAtTc', 'lineage', 'subjectGroundings'] as const;
+// COSMOS E-2 (migration 0200; PG-02 / INTEL-TM-01): V2 adds each Reading's served reliance; a withheld Reading's own
+// words are withheld by the server, and anything else is refused here, never repaired.
+const READING_KEYS = [...READING_KEYS_V1, 'evidenceChange'] as const;
+const READING_EVIDENCE_CHANGES = ['NONE', 'REVIEW_PENDING', 'NO_REMAINING_SUPPORT'] as const;
 const LINEAGE_KEYS = ['kind', 'fromStatus', 'toStatus', 'fromVersion', 'toVersion'] as const;
 const SUBJECT_GROUNDING_KEYS = ['emergingFocusId', 'groundedAtSp'] as const;
 const RELATION_KEYS = ['a', 'b'] as const;
@@ -145,9 +164,9 @@ function mapThreadState(raw: unknown): ThreadStateAtTc {
   }
 }
 
-function mapThread(raw: unknown, index: number, tc: number): DisclosedThread {
+function mapThread(raw: unknown, index: number, tc: number, version: ThreadVersion): DisclosedThread {
   const path = `threads[${index}]`;
-  const row = record(raw, path, THREAD_KEYS);
+  const row = record(raw, path, version === 'V2' ? THREAD_KEYS : THREAD_KEYS_V1);
   const home = record(row.home, `${path}.home`, ['x', 'y']);
   const establishedInSession = boolean(row.establishedInSession, `${path}.establishedInSession`);
   const establishedSp = sessionPositionOrNull(row.establishedSp, `${path}.establishedSp`);
@@ -161,12 +180,40 @@ function mapThread(raw: unknown, index: number, tc: number): DisclosedThread {
     groundingEmergingFocusId: textOrNull(row.groundingEmergingFocusId, `${path}.groundingEmergingFocusId`),
     home: { x: integerText(home.x, `${path}.home.x`), y: integerText(home.y, `${path}.home.y`) },
     state: mapThreadState(row.sessionLifecycle),
+    name: version === 'V2' ? mapThreadName(row.name, `${path}.name`) : NO_THREAD_NAME,
+    origin: version === 'V2' ? mapThreadOrigin(row.origin, `${path}.origin`, establishedInSession, establishedSp) : null,
   };
 }
 
-function mapReading(raw: unknown, index: number, tc: number, emergingFocusIds: ReadonlySet<string>): DisclosedReading {
+/** The name is a closed pair: text exactly when the source is not NONE. */
+function mapThreadName(raw: unknown, path: string): DisclosedThreadName {
+  const row = record(raw, path, THREAD_NAME_KEYS);
+  const source = oneOf(row.source, `${path}.source`, THREAD_NAME_SOURCES);
+  const text = textOrNull(row.text, `${path}.text`);
+  if ((source === 'NONE') !== (text === null)) return incoherent(`${path}: a name carries text exactly when it has a source`);
+  return { text, source };
+}
+
+/** The origin names the caller's own Session; for a Thread established here it is THIS Session at the establishing SP. */
+function mapThreadOrigin(raw: unknown, path: string, establishedInSession: boolean, establishedSp: number | null): DisclosedThreadOrigin {
+  const row = record(raw, path, THREAD_ORIGIN_KEYS);
+  const sp = integer(row.sp, `${path}.sp`);
+  if (sp < 1) return incoherent(`${path}.sp: a Session Position is at least 1`);
+  if (establishedInSession && sp !== establishedSp) return incoherent(`${path}: a Thread established here originates at its establishing Session Position`);
+  return { sessionId: text(row.sessionId, `${path}.sessionId`), sp };
+}
+
+function mapReading(raw: unknown, index: number, tc: number, emergingFocusIds: ReadonlySet<string>, version: ThreadVersion): DisclosedReading {
   const path = `readings[${index}]`;
-  const row = record(raw, path, READING_KEYS);
+  const row = record(raw, path, version === 'V2' ? READING_KEYS : READING_KEYS_V1);
+  const evidenceChange = version === 'V2' ? oneOf(row.evidenceChange, `${path}.evidenceChange`, READING_EVIDENCE_CHANGES) : null;
+  const withheld = evidenceChange !== null && evidenceChange !== 'NONE';
+  const assumptions = texts(row.assumptions, `${path}.assumptions`);
+  const disconfirmingConditions = texts(row.disconfirmingConditions, `${path}.disconfirmingConditions`);
+  if (withheld && (row.statement !== null || assumptions.length > 0 || disconfirmingConditions.length > 0)) {
+    return fail(`${path}: a withheld Reading carries words of its own`);
+  }
+  const statement = withheld ? null : text(row.statement, `${path}.statement`);
   // T-03C R2: the canonical subject groundings known at TC - each anchored at
   // its own Session Position and naming an Emerging Focus this Session knows
   // at TC. Never inferred here from statement, scope, Evidence or appearance.
@@ -196,17 +243,18 @@ function mapReading(raw: unknown, index: number, tc: number, emergingFocusIds: R
   if (versionAtTc < 1 || lineage.some((step) => step.toVersion > versionAtTc)) return incoherent(`${path}: lineage beyond the then-current version`);
   return {
     id: text(row.id, `${path}.id`),
-    statement: text(row.statement, `${path}.statement`),
+    statement,
     type: text(row.type, `${path}.type`),
     domain: text(row.domain, `${path}.domain`),
     scope: text(row.scope, `${path}.scope`),
     origin: text(row.origin, `${path}.origin`),
-    assumptions: texts(row.assumptions, `${path}.assumptions`),
-    disconfirmingConditions: texts(row.disconfirmingConditions, `${path}.disconfirmingConditions`),
+    assumptions,
+    disconfirmingConditions,
     statusAtTc: text(row.statusAtTc, `${path}.statusAtTc`),
     versionAtTc,
     lineage,
     subjectGroundings,
+    evidenceChange,
   };
 }
 
@@ -279,7 +327,7 @@ export function mapHistoricalProjectionRow(raw: unknown): HistoricalKnowledge {
   // Every Session Position <= TC is exactly one committed Moment: gapless, in order.
   if (moments.length !== tc || moments.some((moment, index) => moment.sp !== index + 1)) return incoherent('moments: not exactly SP(1) .. SP(TC) in order');
 
-  return { sessionId, liveHead, tc, sealed, revision, moments, ...mapFamilies(row, tc, mapMaterial) };
+  return { sessionId, liveHead, tc, sealed, revision, moments, ...mapFamilies(row, tc, mapMaterial, 'V2') };
 }
 
 /**
@@ -289,10 +337,10 @@ export function mapHistoricalProjectionRow(raw: unknown): HistoricalKnowledge {
  */
 export function mapHistoricalAnalyticalFamilies(raw: unknown, tc: number): HistoricalAnalyticalFamilies<DisclosedMaterialAtTc> {
   if (!Number.isSafeInteger(tc) || tc < 1) return fail('analysis: TC is a Session Position >= 1');
-  return mapFamilies(record(raw, 'analysis', FAMILY_KEYS), tc, mapMaterialAtTc);
+  return mapFamilies(record(raw, 'analysis', FAMILY_KEYS), tc, mapMaterialAtTc, 'V1');
 }
 
-function mapFamilies<M extends DisclosedMaterialAtTc>(row: Row, tc: number, mapMaterialOf: (raw: unknown, index: number, tc: number) => M): HistoricalAnalyticalFamilies<M> {
+function mapFamilies<M extends DisclosedMaterialAtTc>(row: Row, tc: number, mapMaterialOf: (raw: unknown, index: number, tc: number) => M, threadVersion: ThreadVersion): HistoricalAnalyticalFamilies<M> {
 
   const emergingFocuses: DisclosedEmergingFocus[] = list(row.emerging_focuses, 'emerging_focuses').map((entry, index) => {
     const path = `emerging_focuses[${index}]`;
@@ -304,7 +352,7 @@ function mapFamilies<M extends DisclosedMaterialAtTc>(row: Row, tc: number, mapM
   });
 
   const liveFocus = mapLiveFocus(row.live_focus, tc);
-  const threads = list(row.threads, 'threads').map((entry, index) => mapThread(entry, index, tc));
+  const threads = list(row.threads, 'threads').map((entry, index) => mapThread(entry, index, tc, threadVersion));
   const threadIds = new Set(threads.map((thread) => thread.id));
   if (threadIds.size !== threads.length) return incoherent('threads: a Thread appears twice');
   for (const focus of emergingFocuses) {
@@ -316,10 +364,12 @@ function mapFamilies<M extends DisclosedMaterialAtTc>(row: Row, tc: number, mapM
   }
 
   const emergingFocusIds = new Set(emergingFocuses.map((focus) => focus.id));
-  const readings = list(row.readings, 'readings').map((entry, index) => mapReading(entry, index, tc, emergingFocusIds));
+  const readings = list(row.readings, 'readings').map((entry, index) => mapReading(entry, index, tc, emergingFocusIds, threadVersion));
   const readingIds = new Set(readings.map((reading) => reading.id));
   if (readingIds.size !== readings.length) return incoherent('readings: a Reading appears twice');
   const versionOf = new Map(readings.map((reading) => [reading.id, reading.versionAtTc]));
+  // 0200: a withheld Reading's Confidence carries none of its reader's context (CC-2).
+  const withheldIds = new Set(readings.filter((reading) => reading.evidenceChange !== null && reading.evidenceChange !== 'NONE').map((reading) => reading.id));
 
   const threadReadingAppearances: DisclosedThreadReadingAppearance[] = list(row.thread_reading_appearances, 'thread_reading_appearances').map((entry, index) => {
     const path = `thread_reading_appearances[${index}]`;
@@ -431,6 +481,8 @@ function mapFamilies<M extends DisclosedMaterialAtTc>(row: Row, tc: number, mapM
     if (resolution !== 'PREVALID' && targetVersion > versionAtTc) return incoherent(`${path}: a version beyond TC that is not PREVALID`);
     if (resolution === 'CURRENT' && targetVersion !== versionAtTc) return incoherent(`${path}: CURRENT for a version other than the then-current one`);
     const alternativeReadingIds = texts(confidence.alternativeReadingIds, `${path}.alternativeReadingIds`);
+    const confidenceAssumptions = texts(confidence.assumptions, `${path}.assumptions`);
+    if (withheldIds.has(readingId) && confidenceAssumptions.length > 0) return fail(`${path}: the Confidence of a withheld Reading carries its assumptions`);
     if (alternativeReadingIds.some((id) => !readingIds.has(id))) return incoherent(`${path}: an alternative Reading that is not known at TC`);
     return {
       id: text(confidence.id, `${path}.id`),
@@ -440,7 +492,7 @@ function mapFamilies<M extends DisclosedMaterialAtTc>(row: Row, tc: number, mapM
       missingInformationCodes: texts(confidence.missingInformationCodes, `${path}.missingInformationCodes`),
       supportingEvidenceIds: texts(confidence.supportingEvidenceIds, `${path}.supportingEvidenceIds`),
       contradictingEvidenceIds: texts(confidence.contradictingEvidenceIds, `${path}.contradictingEvidenceIds`),
-      assumptions: texts(confidence.assumptions, `${path}.assumptions`),
+      assumptions: confidenceAssumptions,
       alternativeReadingIds,
     };
   });
@@ -449,4 +501,38 @@ function mapFamilies<M extends DisclosedMaterialAtTc>(row: Row, tc: number, mapM
     emergingFocuses, liveFocus, threads, threadReadingAppearances,
     readings, readingRelations, evidenceParticipations, materials, gaps, questions, questionAppearances, confidences,
   };
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// COSMOS E-2 corrections, Slice C (PO D-5, Option U; migration 0199): the user-level CURRENT Personal World row. The
+// same trust boundary as the Session-bound row: exact keys, typed values, a coherent name, a positive origin position.
+// No Session Position, Live Head, lifecycle or appearance is accepted here — the current world carries none.
+// ---------------------------------------------------------------------------------------------------------------------
+const CURRENT_WORLD_ROW_KEYS = ['as_of', 'threads'] as const;
+const CURRENT_THREAD_KEYS = ['id', 'home', 'name', 'origin'] as const;
+
+function mapCurrentThread(raw: unknown, index: number): CurrentPersonalThread {
+  const path = `threads[${index}]`;
+  const row = record(raw, path, CURRENT_THREAD_KEYS);
+  const home = record(row.home, `${path}.home`, ['x', 'y']);
+  return {
+    id: text(row.id, `${path}.id`),
+    home: { x: integerText(home.x, `${path}.home.x`), y: integerText(home.y, `${path}.home.y`) },
+    name: mapThreadName(row.name, `${path}.name`),
+    // Not established "in this Session": there is no Session here, so only the positive-position law applies.
+    origin: mapThreadOrigin(row.origin, `${path}.origin`, false, null),
+  };
+}
+
+export function mapCurrentPersonalWorldRow(raw: unknown): CurrentPersonalWorld {
+  const row = record(raw, 'row', CURRENT_WORLD_ROW_KEYS);
+  const asOf = text(row.as_of, 'row.as_of');
+  if (Number.isNaN(Date.parse(asOf))) return incoherent('row.as_of: the instant of the read is not a date');
+  const threads = list(row.threads, 'row.threads').map((thread, index) => mapCurrentThread(thread, index));
+  const ids = new Set<string>();
+  for (const thread of threads) {
+    if (ids.has(thread.id)) return incoherent(`threads: ${thread.id} appears twice`);
+    ids.add(thread.id);
+  }
+  return { asOf, threads };
 }

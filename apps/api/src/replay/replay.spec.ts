@@ -52,11 +52,18 @@ const momentRow = (ordinal: number, overrides: Record<string, unknown> = {}) => 
   selected_ordinal: ordinal, tc: ordinal, source_role: ordinal % 2 ? 'USER' : 'ASSISTANT', original_medium: 'ORIGINAL_TEXT', omitted_before: 0,
   source_text: `message ${ordinal}`, ...overrides,
 });
-/** The 0169 analysis object: the canonical families at TC 2, without the header, the Moments or a Material's expiry. */
+/**
+ * The 0169 analysis object: the canonical V1 families at TC 2, without the header, the Moments or a Material's expiry.
+ * 0169 reads `get_session_historical_projection_v1`, so its Threads carry no `name` / `origin` (the shared fixture is the V2
+ * Personal row since COSMOS E-2 Slice A; PR #402 CI caught the Replay spec feeding it V2).
+ */
 function analysisOf(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   const { session_id: _s, live_head: _l, tc: _t, sealed: _x, revision: _r, moments: _m, ...families } = projectionRow();
   const materials = (families.materials as Record<string, unknown>[]).map(({ expiry: _e, ...material }) => material);
-  return { ...families, materials, ...overrides };
+  const threads = (families.threads as Record<string, unknown>[]).map(({ name: _n, origin: _o, ...thread }) => thread);
+  // 0169 reads V1: its Readings carry no `evidenceChange` (COSMOS E-2 0200 gates the Personal V2 row only).
+  const readings = (families.readings as Record<string, unknown>[]).map(({ evidenceChange: _c, ...reading }) => reading);
+  return { ...families, threads, readings, materials, ...overrides };
 }
 
 describe('S7-01 - ReplayService', () => {

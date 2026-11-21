@@ -173,8 +173,14 @@ test('§28.6 — the T-12P runtime entry is consumed through its barrel, and the
   // The permanent claim is therefore narrower and stronger than absence: the seam is passed from
   // exactly ONE place, only inside a RESUME decision, only as the record's own locator — never a
   // literal, never a fixture, never a synthesised id, and never beside a create.
+  //
+  // RE-ANCHORED by COSMOS E-2 corrections, Slice B (Product Owner D-2, 2026-11-20): reopening a listed conversation is a
+  // second, equally narrow use of the seam — inside an OPEN decision, as the catalog Session the person chose, inside the
+  // same one function. The server still validates it by snapshot before any store exists, and no literal, fixture or
+  // synthesised id reaches it. The count is therefore exactly two, both inside `bootstrapWithAuthorities`.
   const uses = [...layerCode.matchAll(/existingSessionId/gu)];
-  assert.equal(uses.length, 1, `the existing-Session seam is passed from exactly one place, found ${uses.length}`);
+  assert.equal(uses.length, 2, `the existing-Session seam is passed from exactly two places, found ${uses.length}`);
+  assert.match(layerCode, /if \(decision\.kind === 'OPEN'\) \{\s*return entry\.bootstrap\(\{ storeDependencies: T12_STORE_DEPENDENCIES, existingSessionId: decision\.sessionId \}\);/u, 'the OPEN branch carries the chosen catalog Session, with the authorities');
   assert.match(layerCode, /existingSessionId: decision\.record\.sessionId,/u, 'the seam carries the validated record’s own Session locator');
   for (const fabricated of ["existingSessionId: '", 'existingSessionId: "', 'existingSessionId: SESSION', 'existingSessionId: randomUUID']) {
     assert.equal(layerCode.includes(fabricated), false, `no literal or synthesised Session may reach the seam: ${fabricated}`);
@@ -190,15 +196,21 @@ test('§28.6 — the bootstrap is called in exactly ONE place, and it cannot be 
   // T-13 RE-ANCHOR. The one call site now takes the recovery DECISION beside the entry. Both branches
   // carry the authorities by name; the RESUME branch additionally carries the record's Session locator
   // and viewpoint, and there is still nothing a caller could pass that omits the authorities.
+  //
+  // RE-ANCHORED by COSMOS E-2 corrections, Slice B (Product Owner D-2, 2026-11-20): the one function now takes a
+  // SessionDecision — the FRESH / RESUME recovery decision, or a switch decision (NEW with its request identity, OPEN with
+  // the chosen catalog Session). Four branches, every one of them carrying the authorities by name; still ONE function,
+  // still nothing a caller could pass that omits them.
+  assert.match(runtime, /type SessionDecision = Extract<RecoveryDecision, \{ kind: 'FRESH' \| 'RESUME' \}> \| SwitchDecision;/u, 'the decision is the recovery decision or a switch decision, nothing wider');
   assert.match(
     runtime,
-    /function bootstrapWithAuthorities\(entry: MobileRuntimeEntry, decision: Extract<RecoveryDecision, \{ kind: 'FRESH' \| 'RESUME' \}>\) \{/u,
-    'the one bootstrap function takes the entry and the recovery decision, and nothing that could omit the authorities',
+    /function bootstrapWithAuthorities\(entry: MobileRuntimeEntry, decision: SessionDecision\) \{/u,
+    'the one bootstrap function takes the entry and the Session decision, and nothing that could omit the authorities',
   );
-  assert.equal((runtime.match(/storeDependencies: T12_STORE_DEPENDENCIES/gu) ?? []).length, 2, 'both branches carry the authorities by name');
+  assert.equal((runtime.match(/storeDependencies: T12_STORE_DEPENDENCIES/gu) ?? []).length, 4, 'all four branches carry the authorities by name');
   assert.match(runtime, /return entry\.bootstrap\(\{ storeDependencies: T12_STORE_DEPENDENCIES \}\);/u, 'the FRESH branch is the unchanged clean bootstrap');
   const calls = [...stripComments(layerText).matchAll(/\.bootstrap\(/gu)];
-  assert.equal(calls.length, 2, `exactly one bootstrap function with its two branches, found ${calls.length} call expressions`);
+  assert.equal(calls.length, 4, `exactly one bootstrap function with its four branches, found ${calls.length} call expressions`);
   assert.equal((stripComments(layerText).match(/bootstrapWithAuthorities\(entry, decision\)/gu) ?? []).length, 1, 'the function is invoked from exactly one place');
   // And the runtime entry is never published, so nothing outside this module can start a second one.
   assert.doesNotMatch(stripComments(code['runtime/integration-runtime.ts']), /^\s*entry,$/mu, 'the runtime entry is not exposed');
@@ -528,6 +540,22 @@ test('the barrel is an allowlist, and the deep modules are not a second public s
     // loopback flag, which S8B-06 CP1's contract allows under voice-call/__validation__/ alone, and the layer may not name
     // the live call. It is never a Product entry (its selector refuses without S806_DEVICE_PROOF=1). Counter-test: it
     // reaches exactly the phase surface and the runtime, and every other file outside the layer still reaches the barrel only.
+    // RE-ANCHORED by COSMOS-INT-01 Slice B (Product Owner D-10, 2026-11-15: the COSMOS proof and measurement tooling is
+    // retained, isolated under cosmos/__validation__ and cosmos/__tests__, never on the release path — its entry selector
+    // refuses without COSMOS_PROOF=1). TWO proof-only files reach exactly the layer's labelled SYNTHETIC fixture worlds
+    // (the S5-03B visual field, the SHARED-VIS proof field, the VPORT-01 proof world) and nothing else of T-12: the
+    // fixture network the proof serves under the PRODUCTION clients, and the headless rasteriser test that draws the same
+    // fixtures. Counter-test: the lists are exact, so a third deep import from either file, or any deep import from the
+    // production COSMOS seam (cosmos/product/, cosmos/core/, cosmos/skia/), still fails here.
+    const COSMOS_PROOF_FIXTURES = {
+      'cosmos/__validation__/fixture-transports.ts': ['../../integration/__validation__/s503b-visual-field', '../../integration/__validation__/shared-vis-proof-field', '../../integration/__validation__/vport01-proof-world'],
+      'cosmos/__tests__/headless-pixels.test.tsx': ['../../integration/__validation__/s503b-visual-field', '../../integration/__validation__/shared-vis-proof-field'],
+    };
+    if (relative in COSMOS_PROOF_FIXTURES) {
+      const deep = [...stripComments(readFileSync(file, 'utf8')).matchAll(/from\s+'([^']*\/integration\/[^']+)'/gu)].map((m) => m[1]).sort();
+      assert.deepEqual(deep, COSMOS_PROOF_FIXTURES[relative], `${relative} reaches the labelled synthetic fixture worlds only`);
+      continue;
+    }
     if (relative === 'voice-call/__validation__/S806Cp3ProofRoot.tsx') {
       const deep = [...stripComments(readFileSync(file, 'utf8')).matchAll(/from\s+'([^']*\/integration\/[^']+)'/gu)].map((m) => m[1]).sort();
       assert.deepEqual(deep, ['../../integration/composition/ProductRoot', '../../integration/runtime/integration-runtime'],

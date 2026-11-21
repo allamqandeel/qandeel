@@ -20,7 +20,7 @@
  * Map's does. No camera is fitted to how many Experiences there are: the World has the same physics with none, five or
  * five thousand. World units are a presentation spacing convention only; semantic nearness is the placer's alone.
  */
-import { DEFAULT_MAP_SCALE, WORLD_ORIGIN, panFromTranslation, reinforcedScale } from '../../map/camera';
+import { DEFAULT_MAP_SCALE, WORLD_ORIGIN, focalAnchor, panFromTranslation, reinforcedScale, type SemanticZoomFocal } from '../../map/camera';
 import { absBigInt, type CanonicalWorldAddress, type MapScale } from '../../map/world';
 
 export const PUBLIC_FIELD_DEPTHS = Object.freeze(['FAR', 'MID', 'NEAR'] as const);
@@ -67,9 +67,10 @@ export function panField(camera: PublicFieldCamera, translationX: number, transl
  * One Semantic Zoom step. IN discloses more about the same place; OUT, less. NEAR is focus, so the step into it lands on
  * the given Experience (the caller passes the place it chose); without one there is no act. OUT of NEAR releases focus.
  */
-export function zoomField(camera: PublicFieldCamera, direction: 'IN' | 'OUT', focus: CanonicalWorldAddress | null = null): PublicFieldMove {
+export function zoomField(camera: PublicFieldCamera, direction: 'IN' | 'OUT', focus: CanonicalWorldAddress | null = null, focal: SemanticZoomFocal | null = null): PublicFieldMove {
+  // MAP-CLOSE-01 CA-Z1: with fingers, the rung's anchor keeps the world point under them (the Personal step's exact rule).
   const at = (anchor: CanonicalWorldAddress, depth: PublicFieldDepth): PublicFieldMove =>
-    ({ outcome: 'MOVED', camera: Object.freeze({ anchor, scale: PUBLIC_FIELD_RUNG_SCALE[depth], depth }) });
+    ({ outcome: 'MOVED', camera: Object.freeze({ anchor: (focal === null ? null : focalAnchor(camera, PUBLIC_FIELD_RUNG_SCALE[depth], focal)) ?? anchor, scale: PUBLIC_FIELD_RUNG_SCALE[depth], depth }) });
   if (direction === 'IN') {
     if (camera.depth === 'FAR') return at(camera.anchor, 'MID');
     if (camera.depth === 'MID' && focus !== null) return at(focus, 'NEAR');

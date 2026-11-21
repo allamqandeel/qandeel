@@ -634,7 +634,8 @@ test('the return layer adds no dependency: every import is a relative module of 
   // T-07 does not own. The permanent, SCOPED proof that T-07 adds no dependency is the assertion
   // directly above: the layer imports nothing outside this app. The frozen manifest fact is the
   // exact T-04 renderer pin, and the lockfile denylist below.
-  assert.equal(mobilePackage.dependencies['@shopify/react-native-skia'], '2.6.2', 'the authorized T-04 renderer pin is exact');
+  // QAN-INF-03 CONTROLLED RE-ANCHOR (COSMOS-INT-01, Product Owner D-13 / D-14, 2026-11-15): 2.7.0 (previous pin 2.6.2); the COSMOS renderer (COSMOS-INT-01, Product Owner D-13 / D-14, 2026-11-15) was accepted and proven on 2.7.0; Expo SDK 57 bundles 2.6.2, so the manifest declares the second QAN-INF-03 exception beside the TypeScript one and both offline gates keep running unchanged.
+  assert.equal(mobilePackage.dependencies['@shopify/react-native-skia'], '2.7.0', 'the authorized T-04 renderer pin is exact');
   const lock = await readJson('package-lock.json');
   // `expo-sqlite` left this denylist under T-12P §2.4 (authentication session store only). The
   // T-07 invariant is unaffected and still exactly proven by the import assertion above: the

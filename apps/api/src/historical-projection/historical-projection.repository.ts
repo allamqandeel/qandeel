@@ -1,6 +1,8 @@
 // T-03C - the authenticated Layer-A read seam.
 //
-// ONE owner-scoped read and nothing else: `get_session_historical_projection_v1`
+// ONE owner-scoped read and nothing else: `get_session_historical_projection_v2`
+// (COSMOS E-2 Slice A, D-4: the ADDITIVE Controlled Personal Projection V2 — V1
+// decides everything; V2 adds each Thread's name and origin)
 // through the AUTHENTICATED Data API channel with the caller's own token. The
 // database derives the owner from `auth.uid()`, decides coverage, validates TC
 // against the authoritative Session Position and projects every family by its
@@ -9,8 +11,9 @@
 // to current rows and never writes.
 
 import { DataApiError, readDataApiUpstreamIdentity, type SupabaseDataApiService } from '../conversation/supabase-data-api.service';
-import { mapHistoricalProjectionRow } from './historical-projection-mapper';
+import { mapCurrentPersonalWorldRow, mapHistoricalProjectionRow } from './historical-projection-mapper';
 import { HistoricalProjectionUnavailableError, type HistoricalKnowledge } from './historical-projection.types';
+import type { CurrentPersonalWorld } from '@qandeel/runtime';
 
 const TYPED_REFUSALS = ['HISTORICAL_COVERAGE_UNAVAILABLE', 'LIVE_HEAD_NOT_ESTABLISHED', 'HISTORICAL_BASELINE_MISSING', 'SESSION_POSITION_NOT_ADDRESSABLE'] as const;
 
@@ -41,7 +44,7 @@ export class HistoricalProjectionRepository {
     if (!Number.isSafeInteger(tc) || tc < 1) throw new HistoricalProjectionUnavailableError('SESSION_POSITION_NOT_ADDRESSABLE');
     let rows: unknown;
     try {
-      rows = await this.dataApi.request<unknown>(accessToken, 'rpc/get_session_historical_projection_v1', {
+      rows = await this.dataApi.request<unknown>(accessToken, 'rpc/get_session_historical_projection_v2', {
         method: 'POST',
         body: JSON.stringify({ p_session_id: sessionId, p_tc: tc }),
       });
@@ -52,5 +55,22 @@ export class HistoricalProjectionRepository {
     const knowledge = mapHistoricalProjectionRow(rows[0]);
     if (knowledge.sessionId !== sessionId || knowledge.tc !== tc) throw new HistoricalProjectionUnavailableError('SESSION_NOT_VISIBLE');
     return knowledge;
+  }
+
+  /**
+   * COSMOS E-2 corrections, Slice C (PO D-5, Option U; migration 0199): the ONE world the caller has NOW — their own
+   * Threads with Home, served name and origin — as the caller's own owner-scoped read, beside the Session-bound
+   * projection above and never instead of it. A refusal of the caller's identity is reported as NOT VISIBLE like every
+   * owner-scoped read here; any other transport failure is rethrown untouched.
+   */
+  async currentPersonalWorld(accessToken: string): Promise<CurrentPersonalWorld> {
+    let rows: unknown;
+    try {
+      rows = await this.dataApi.request<unknown>(accessToken, 'rpc/get_user_current_personal_world_v1', { method: 'POST', body: '{}' });
+    } catch (error) {
+      throw classifyProjectionFailure(error) ?? error;
+    }
+    if (!Array.isArray(rows) || rows.length !== 1) throw new HistoricalProjectionUnavailableError('SESSION_NOT_VISIBLE');
+    return mapCurrentPersonalWorldRow(rows[0]);
   }
 }

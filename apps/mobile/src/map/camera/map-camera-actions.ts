@@ -15,7 +15,7 @@ import { dispatchKernelAction, rejected, type MapActionOutcome } from '../outcom
 import { decodeCameraIntent, type MapCamera } from './camera';
 import { panFromExplorationStep, panFromTranslation, type PanResolution, type ViewportExplorationDirection } from './pan';
 import type { ViewportEnvelope } from './viewport';
-import { semanticZoom, type SemanticZoomDirection } from './zoom';
+import { semanticZoom, type SemanticZoomDirection, type SemanticZoomFocal } from './zoom';
 
 /** The camera the canonical state currently holds, or a typed refusal. Never a repaired default. */
 export function currentCamera(store: CanonicalStore): { readonly ok: true; readonly camera: MapCamera } | { readonly ok: false; readonly detail: string } {
@@ -65,10 +65,10 @@ export function exploreViewport(
  * reinforcement. At the World floor or the Provenance ceiling there is no rung to move to, so
  * nothing is dispatched: a boundary is not a no-op act, it is the absence of one.
  */
-export function zoomSemanticStep(store: CanonicalStore, direction: SemanticZoomDirection): MapActionOutcome {
+export function zoomSemanticStep(store: CanonicalStore, direction: SemanticZoomDirection, focal: SemanticZoomFocal | null = null): MapActionOutcome {
   const camera = currentCamera(store);
   if (!camera.ok) return rejected('CAMERA_NOT_DECODABLE', camera.detail);
-  const resolution = semanticZoom(camera.camera, direction);
+  const resolution = semanticZoom(camera.camera, direction, focal);
   if (resolution.outcome === 'AT_RUNG_BOUNDARY') {
     return rejected('AT_RUNG_BOUNDARY', `the ${camera.camera.depth} rung is the ${direction === 'IN' ? 'deepest' : 'shallowest'} disclosure of the frozen lineage`);
   }

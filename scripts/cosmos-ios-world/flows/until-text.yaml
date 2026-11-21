@@ -1,0 +1,7 @@
+# COSMOS-INT-01 Slice E — iOS World gate: wait (up to T ms) until an element whose accessible text matches TEXT is visible.
+appId: com.qandeel.mobile
+---
+- extendedWaitUntil:
+    visible:
+      text: "${TEXT}"
+    timeout: ${T}

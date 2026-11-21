@@ -80,7 +80,10 @@ function runNpmScript(scriptName, extraEnv) {
 
 test('the mandatory fast gate pins Expo dependency validation to the deterministic offline compatibility source', () => {
   const fast = jobSlice('verify-mobile-contracts');
-  const depsLine = stepLine(fast, 'Expo dependency validation (intentional typescript exclusion)');
+  // QAN-INF-03 CONTROLLED RE-ANCHOR (COSMOS-INT-01, Product Owner D-13 / D-14, 2026-11-15): the step names its second declared
+  // exception (react-native-skia 2.7.0 beside TypeScript 5.9); its command, its offline env and every determinism assertion below
+  // are unchanged — the gate is renamed, never weakened. Previous name: 'Expo dependency validation (intentional typescript exclusion)'.
+  const depsLine = stepLine(fast, 'Expo dependency validation (intentional typescript and react-native-skia exclusions)');
   assert.match(depsLine, /run: npm run deps:check:mobile/u);
   assert.match(depsLine, /EXPO_OFFLINE:\s*'1'/u, 'deps:check:mobile must not depend on the live Expo registry');
 

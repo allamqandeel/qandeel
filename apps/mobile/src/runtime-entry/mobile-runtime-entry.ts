@@ -8,6 +8,12 @@
  * auth generation, and a token refresh does not change the auth generation, so it does not reach
  * the create call at all.
  *
+ * COSMOS E-2 corrections, Slice B (Product Owner D-2, 2026-11-20): a person may hold several
+ * conversations. The integration owner opens the next one by `rebind()` — retiring the runtime
+ * generation while the auth generation stays — and bootstrapping again, so there is still exactly one
+ * Session per runtime generation, and a New Chat carries a `clientRequestId` the server answers
+ * idempotently.
+ *
  * Identity replacement and sign-out retire the runtime generation. Everything bound to it — the
  * store, the projection cache, the live driver — is then stale by construction, and every late
  * async completion is dropped rather than applied.
@@ -34,6 +40,8 @@ import { CallTruthApiClient, callConnectUrl } from './call-truth-api';
 import { bootstrapCanonicalRuntime } from './bootstrap/canonical-runtime-bootstrap';
 import type { BootstrapResult, CanonicalRuntimeBundle, InitialViewpoint } from './bootstrap/bootstrap-types';
 import { ConversationSessionApiClient, type RuntimeHttpFetch } from './conversation/conversation-session-api';
+import { ConversationCatalogApiClient } from './conversation/conversation-catalog-api';
+import { CurrentPersonalWorldApiClient } from './conversation/current-personal-world-api';
 import { ConversationTurnApiClient } from './conversation/conversation-turn-api';
 import { AccountApiClient, LoginIdAvailabilityClient } from './account/account-api';
 import { UnderstandingApiClient } from './understanding-api';
@@ -96,6 +104,11 @@ export interface BootstrapOverrides {
   readonly existingSessionId?: string;
   /** T-13 — the validated durable viewpoint the store is constructed from, judged against the fresh snapshot. */
   readonly initialViewpoint?: InitialViewpoint;
+  /**
+   * COSMOS E-2 corrections, Slice B (the Product Owner's D-2, 2026-11-20): the request identity of a New Chat, minted
+   * once per tap by the integration owner. The create call is then idempotent on the server (migration 0197).
+   */
+  readonly clientRequestId?: string;
 }
 
 export interface MobileRuntimeEntry {
@@ -117,6 +130,14 @@ export interface MobileRuntimeEntry {
    */
   bootstrap(overrides?: BootstrapOverrides): Promise<BootstrapResult>;
   /**
+   * COSMOS E-2 corrections, Slice B (the Product Owner's D-2, 2026-11-20): retire the current runtime generation WITHOUT
+   * touching the auth generation, so the next `bootstrap()` for the SAME identity is a genuinely new attempt — the
+   * "separate session-runtime lifecycle under the same authentication generation" a conversation switch needs.
+   * Everything bound to the retired generation (store, projection cache, live driver, writer) is stale by construction
+   * and every late completion is dropped, exactly as after an identity replacement. Nothing is created here.
+   */
+  rebind(): void;
+  /**
    * The live driver for a bundle this coordinator produced.
    *
    * There is at most ONE driver per runtime generation: asking twice returns the same one. Two
@@ -133,6 +154,10 @@ export interface MobileRuntimeEntry {
    * bundle's Session id with every request.
    */
   conversationTurnsFor(bundle: CanonicalRuntimeBundle): ConversationTurnApiClient;
+  /** Slice B: the person's own conversation catalog, on the same identity-bound seam. */
+  conversationCatalogFor(bundle: CanonicalRuntimeBundle): ConversationCatalogApiClient;
+  /** Slice C (D-5, Option U): the person's CURRENT Personal World, on the same identity-bound seam. */
+  currentPersonalWorldFor(bundle: CanonicalRuntimeBundle): CurrentPersonalWorldApiClient;
   /**
    * W1B-01 — the account client for a bundle this coordinator produced, on the same AC-01 seam bound
    * to the bundle's own auth generation: a replaced identity's request is refused before it is issued.
@@ -354,9 +379,14 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
         storeDependencies: overrides.storeDependencies,
         existingSessionId: overrides.existingSessionId,
         initialViewpoint: overrides.initialViewpoint,
+        clientRequestId: overrides.clientRequestId,
       });
       inFlight = attempt;
       return attempt;
+    },
+    rebind() {
+      if (disposed) return;
+      retire();
     },
     liveDriverFor(bundle) {
       if (liveDriver !== null && liveDriver.generation === bundle.runtimeGeneration) return liveDriver.driver;
@@ -377,6 +407,12 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
     },
     conversationTurnsFor(bundle) {
       return new ConversationTurnApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
+    },
+    conversationCatalogFor(bundle) {
+      return new ConversationCatalogApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
+    },
+    currentPersonalWorldFor(bundle) {
+      return new CurrentPersonalWorldApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
     },
     accountFor(bundle) {
       return new AccountApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });

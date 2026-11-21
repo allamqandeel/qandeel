@@ -128,6 +128,37 @@ authority for what the backlog must say at closure, and this document remains th
 adds no second register, no second lifecycle model and no new Product state. It governs only the
 agreement between a closed task's own banner and the closure the register already records.
 
+**BG-10 — Mandatory iOS simulator validation (PO decision, 2026-11-18; permanent).** Every code
+implementation checkpoint carries iOS simulator validation proportionate to its impact:
+- Real application interaction, with assertions on the affected journeys. A build-only or launch-only
+  smoke does not satisfy this rule.
+- Permanent iOS regression coverage for every platform defect found and corrected.
+- Arabic and English, and the responsive sizes, whenever UI, layout, navigation, gestures or
+  presentation are affected.
+- Recorded evidence, with each case classified explicitly as PASS, FAIL or NOT TESTED. A case that did
+  not run is NOT TESTED, never PASS.
+
+A green Android suite, Jest suite or iOS build does not replace iOS simulator interaction.
+
+A pure backend change records an iOS-facing contract-compatibility verification and an impact
+assessment. Simulator interaction is added whenever the change can affect mobile behaviour.
+
+A checkpoint whose required iOS validation is unexecuted or failing is neither closed nor
+merge-ready without the Product Owner's explicit approval.
+
+The rule is enforced by a change-aware CI gate, not by instruction alone. Existing tests are never
+weakened to pass it, and the gate is never bypassed silently. Approvals already given stand, and
+full-matrix reruns are not required where the change does not reach them.
+
+The gate's change-awareness is not limited to the mobile directories (PO, 2026-11-18): backend changes
+that can affect iOS behaviour — the API, the database and its migrations, shared packages and the
+contracts the iOS client reads — bring the same obligation, through iOS-facing contract verification
+and, where behaviour can change, simulator interaction. Until the gate reaches them, that coverage is
+recorded as not yet enforced, never claimed.
+
+It was recorded by COSMOS-INT-01 Slice E, whose iOS baseline found a Personal stage defect (D-1)
+that Android, Jest and the iOS boot smoke had all passed. It relaxes nothing in BG-01 – BG-09.
+
 ---
 
 ## 4. Index
@@ -242,6 +273,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-MOB-05` | Live Call on HONOR: the Call Rail Takes Touches About 400 px Below Where It Is Drawn, and After the Call the Screen Takes No Touch Where It Is Drawn Until the App Restarts | `S8B-07 — Original Audio Replay, Media Rendering & Distribution (CP1-B)` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-PRIV-06` | Protected-Human Analytical Subject-Authority Producer for Replay Distribution | `AUTH-SUBJ-01 — Protected-Human Analytical Subject-Authority Producer` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PROD-12` | Hosted Replay Pool Isolation & Monitoring Proofs | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-CW-08` | Shared World: No Navigation From a Semantic Place's Source to Its Position in the World's Conversation | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 
 ---
 
@@ -3845,6 +3877,34 @@ Admitted by `S8B-07` R-5 (the post-merge governance reconciliation, 2026-11-09) 
 canonical document: record §12.3, §12.4 P-2), at the Product Owner's decision of 2026-11-09. Nothing here authorizes
 implementation (BG-07).
 
+### `QAN-BL-CW-08` — Shared World: No Navigation From a Semantic Place's Source to Its Position in the World's Conversation
+
+- **Title / Finding:** the Shared World's Detail Sheet lists every source of a semantic place (its producer and its exact
+  text, under «مصادر هذا المعنى» / "Sources of this meaning"). A reader cannot go from a source to where it was said in the
+  World's conversation. No such act exists: the conversation has `loadOlder` only, and a source's `materialId` is used
+  only as a list key. A source row is therefore one text, never a button or a link, and nothing pretends the act exists.
+- **Source:** the [COSMOS Production Integration Contract](e2e/QANDEEL_COSMOS_INT_01_PRODUCTION_INTEGRATION_CONTRACT_v1.md)
+  §10 G-3 and §12; the Product Owner's decision SD-2 / G-3 (2026-11-16, §19.2): "the missing capability is recorded as
+  QAN-BL-CW-08 at closure"; §19.15 (CP2); its admission at Slice D CP4 (§19.17).
+- **Why not current work:** Slice D integrates existing acts into the COSMOS Detail Sheet and invents none (§19.5). The
+  jump needs a "scroll to material" contract for the Shared conversation, and possibly a server cursor, which no task
+  holds.
+- **Owner task:** `UNASSIGNED` — the Product Owner named no owner, and none is invented (BG-02).
+- **Severity:** `MEDIUM` — a missing navigation, not a broken or misleading one: the sources are shown in full, and the
+  World's existing Conversation act still opens the conversation.
+- **Reopen condition:** a roadmap or Architecture decision opens source-to-conversation navigation in the Shared World, or
+  any task makes a Shared source row pressable.
+- **Required future properties:** the conversation opens at the source's own message, and only where the reader is
+  allowed to see it now (membership, the S4-02 conversation visibility, the SHARED-VIS-01 D3 source visibility); no
+  other participant's private material is revealed; a source whose message is no longer visible says so instead of
+  jumping elsewhere; the Detail Sheet's Back order (§19.6) and the World's anchors are kept.
+- **Anti-duplication:** checked against all 108 earlier IDs and every tombstone. `QAN-BL-CW-06` (an ended World's read-only
+  map) and `QAN-BL-CW-07` (Shared temporal navigation) are different capabilities; no item held this one.
+- **Status:** `OPEN — UNASSIGNED`
+
+Admitted by `COSMOS-INT-01` Slice D CP4 (2026-11-17, Draft PR #397) under BG-06's second route (explicitly deferred by a
+canonical document: the Product Owner's SD-2 / G-3). Nothing here authorizes implementation (BG-07).
+
 ## 6. Tombstones
 
 ### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
@@ -4722,14 +4782,14 @@ Tombstoned by `S8B-07` CP1-B under the Product Owner's order of 2026-11-08 (BG-0
 | --- | ---: |
 | `DEFERRED — OWNED` | 54 |
 | `VALIDATION — OPEN` | 4 |
-| `OPEN — UNASSIGNED` | 13 |
+| `OPEN — UNASSIGNED` | 14 |
 | `CLOSED — TOMBSTONE` | 37 |
-| **Total** | **108** |
+| **Total** | **109** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 63 |
-| `MEDIUM` | 42 |
+| `MEDIUM` | 43 |
 | `LOW` | 3 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -6319,6 +6379,31 @@ PR, not merged).**
   listed `QAN-BL-PROD-11` (§9).
 - **BG-09:** S8B-07 is not closed. The record and the locators carry `CP1-B MERGED` and the WP0 approval.
 - **Index after R-5: 108 items; 54 / 4 / 13 / 37 by status, 63 / 42 / 3 by severity.**
+
+**COSMOS-INT-01 Slice D CP4 — three-world closure of the Detail Sheet (2026-11-17; Draft PR #397, not merged).**
+
+- **Admitted (BG-06, second route):** `QAN-BL-CW-08` (`MEDIUM`, `OPEN — UNASSIGNED`), at the Product Owner's SD-2 / G-3,
+  which deferred it to this closure.
+- **Not admitted (BG-01):** Finding F-1, which is that production disclosures carry no inspection resolution, so the
+  Personal PEEK cannot show a resolved statement, lineage or context choice. It is an active blocker of COSMOS-INT-01 itself: the Product Owner recorded it as
+  "UNRESOLVED — SLICE E REQUIRED FIX — BLOCKING FINAL COSMOS ACCEPTANCE" (2026-11-17). Its record is the contract's
+  Slice E acceptance register (§20), never this backlog. The same holds for the Product Owner's Slice E requirements
+  E-1 (visible speaker attribution) and E-2 (the hands-on three-world pre-merge gate).
+- **Not admitted yet:** `REPLAY-COSMOS-01` and `PERSONAL-DETAIL-01` (contract §12) stay with COSMOS-INT-01 until its own
+  closure (BG-08).
+- **BG-09:** COSMOS-INT-01 is not closed (Slice E remains). The contract and the locators carry Slice D's state.
+- **Index after Slice D CP4: 109 items; 54 / 4 / 14 / 37 by status, 63 / 43 / 3 by severity.**
+
+**COSMOS-INT-01 Slice E D-3 — administrative closure of the completed D-3 scope (PO, 2026-11-19; Draft PR #400, not merged).**
+
+- **Inherited:** none. No backlog item names COSMOS-INT-01 or Slice E as its owner (BG-05).
+- **Not admitted (BG-01):**
+  - **SE-FU-1** (the first-cold T-ack: 1658 ms instrumented against 250 ms) is an active blocker of COSMOS-INT-01 itself. The Product Owner carried it as an "unresolved mandatory COSMOS acceptance blocker", with the narrowly scoped follow-up `SE-FU-1-LT`.
+  - **The NOT TESTED cases** carried to COSMOS's own acceptance gates: finger latency, Shared → Public, HONOR enlarged text, the detector case and sheet item 8b.
+  - The record of both is the contract's Slice E register (§28), never this backlog. The same holds for F-1, E-1 and E-2 (Slice D CP4 above).
+- **Not admitted (BG-06):** the Replay AX5 selection bar, which wraps one letter per line when the text size is set before launch. It was observed on both builds during D-3's Replay compatibility check (contract §27.1) and is pre-existing from S7-02. No canonical document defers it, and no Architecture designation exists. It is recorded in §27.1 and reported to the Product Owner for designation.
+- **BG-09:** COSMOS-INT-01 is not closed (Slice E remains). The contract (v1.16) and the locators carry D-3's administrative closure.
+- **Index unchanged: 109 items; 54 / 4 / 14 / 37 by status, 63 / 43 / 3 by severity.**
 
 ## 8. What is deliberately not in this backlog
 

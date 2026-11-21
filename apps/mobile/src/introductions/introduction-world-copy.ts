@@ -9,7 +9,7 @@
  * stored or AI message (R-3). Rows already approved elsewhere are reused from their own modules, never copied: the S6-04
  * proposals copy (`proposals-copy.ts`, including `acceptNotYet`, which stays while the launch gate is closed), the Shared
  * World and conversation rows (Back, Try again, «تعذّر ذلك الآن.», «هذا غير متاح الآن.», «جارٍ الفتح», «تعذّر إرسال
- * الرسالة.», «كلامك هنا», «عوالم منتهية», Delete).
+ * الرسالة.», «اكتب هنا» (UI-POLISH-01, 2026-11-16), «عوالم منتهية», Delete).
  */
 import type { ChromeLanguage } from '../orientation-chrome';
 

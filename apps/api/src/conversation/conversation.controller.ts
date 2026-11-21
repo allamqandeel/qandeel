@@ -8,10 +8,33 @@ import { ConversationService } from './conversation.service';
 export class ConversationController {
   constructor(private readonly conversations: ConversationService) {}
 
+  // COSMOS E-2 corrections, Slice B (the Product Owner's D-2, 2026-11-20): an optional `clientRequestId` makes the
+  // creation idempotent (migration 0197); without it the route is the unchanged 0030 creation.
   @Post('sessions')
-  createSession(@Req() request: AuthenticatedRequest) {
+  createSession(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
     const { userId, accessToken } = request.authenticatedUser;
-    return this.conversations.createSession(userId, accessToken);
+    return this.conversations.createSession(userId, accessToken, body);
+  }
+
+  // Slice B: the caller's own conversation catalog (the server-authoritative list behind New Chat / reopen). Read-only.
+  @Get('sessions')
+  listSessions(@Req() request: AuthenticatedRequest, @Query() query: unknown) {
+    const { userId, accessToken } = request.authenticatedUser;
+    return this.conversations.listSessions(userId, accessToken, query);
+  }
+
+  // Slice B: the durable manual title of one owned Session (an append to the 0197 ledger).
+  @Patch('sessions/:sessionId/title')
+  renameSession(@Req() request: AuthenticatedRequest, @Param('sessionId') sessionId: string, @Body() body: unknown) {
+    const { userId, accessToken } = request.authenticatedUser;
+    return this.conversations.renameSession(userId, accessToken, sessionId, body);
+  }
+
+  // Slice A: the person's own name for one owned Personal topic (an append to the 0198 alias ledger).
+  @Patch('threads/:threadId/alias')
+  renameThread(@Req() request: AuthenticatedRequest, @Param('threadId') threadId: string, @Body() body: unknown) {
+    const { userId, accessToken } = request.authenticatedUser;
+    return this.conversations.renameThread(userId, accessToken, threadId, body);
   }
 
   @Get('sessions/:sessionId')

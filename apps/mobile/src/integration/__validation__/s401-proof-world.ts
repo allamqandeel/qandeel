@@ -119,6 +119,7 @@ const OWN_WORDS = { ar: 'كلام القارئ الاختباري السابق',
 const INVITER = { ar: 'هدير الاختبار', en: 'Fixture Hadir' };
 const SELF = { ar: 'القارئ الاختبار', en: 'Fixture Reader' };
 const NEWCOMER = { ar: 'رنا الاختبار', en: 'Fixture Rana' };
+const GUEST = { ar: 'ضيف الاختبار', en: 'Fixture Guest' };
 export const S401_PROOF_SHARED_IDS = Object.freeze(['K7QM-4XWD-P9TR', 'AB12-CD34-EF56', 'MN78-PQ90-RS12']);
 const COMPACT = /^[0-9A-HJKMNP-TV-Z]{12}$/u;
 
@@ -164,6 +165,8 @@ interface ProofPublicPost {
   replyToPostId: string | null;
   ordinal: number;
   author: 'SELF' | 'PEER';
+  /** E-2: the other author's fictional Public ID (null: the S5-04 peer). */
+  label: string | null;
   text: string;
   postedAt: string;
   commandId: string | null;
@@ -178,7 +181,32 @@ interface ProofActivityItem {
   experienceId: string;
 }
 
-type Person = 'SELF' | 'PEER' | 'NEWCOMER';
+type Person = 'SELF' | 'PEER' | 'NEWCOMER' | 'GUEST';
+export type S401ProofPerson = Person;
+type Bilingual = { readonly ar: string; readonly en: string };
+
+/** COSMOS-FINAL-01 E-2 acceptance build: every option is absent in every earlier leg, which then meets this world unchanged. */
+export interface S401ProofWorldOptions {
+  /** SYNTHETIC Names that replace the fixture Names (the reader's too). */
+  readonly names?: Partial<Record<Person, Bilingual>>;
+  /** false: the Public World entry answers ALLOW at once instead of waiting for `publicAllow()`. */
+  readonly publicHeld?: boolean;
+  /** The deterministic QANDEEL line that answers each Shared message the reader sends. */
+  readonly sharedReply?: Bilingual;
+}
+/** E-2: one SYNTHETIC Shared World — its people, its conversation (oldest first) and the field places read from it. */
+export interface S401SeedWorld {
+  readonly name: string;
+  readonly people: readonly Person[];
+  readonly lines: readonly { readonly speaker: Person | 'QANDEEL'; readonly text: string }[];
+  readonly places: readonly {
+    readonly meaning: string; readonly region: string; readonly themes: readonly [string, string]; readonly x: number; readonly y: number;
+    /** Indices into `lines`: the place is served only while every one of them is visible to the reader. */
+    readonly sources: readonly number[];
+  }[];
+}
+/** E-2: one SYNTHETIC discussion post. `by` is a fictional Public ID (null: the reader); `replyTo` indexes an earlier entry. */
+export interface S401SeedPost { readonly by: string | null; readonly text: string; readonly replyTo: number | null }
 interface ProofMaterial {
   materialId: string;
   producer: 'SELF' | 'HUMAN' | 'QANDEEL';
@@ -252,6 +280,8 @@ export interface S401ProofWorld {
   publicAllow(): void;
   /** S5-03B: the Public field answers from the SYNTHETIC visual-review fixture (`s503b-visual-field.ts`). */
   publicSeed(): void;
+  /** COSMOS-FINAL-01 coverage: the Public field is served and answers no Experience at all (its empty state). */
+  publicSeedEmpty(): void;
   /** S6-01: the Introductions preparation opens with the N, K or C synthetic scenario, or its gates close. */
   introductions(action: 'seed-new' | 'seed-known' | 'seed-mixed' | 'seed-portrait' | 'close'): void;
   /** S6-04: four SYNTHETIC private proposals delivered to the reader (`s604-proof-proposals.ts`). */
@@ -272,9 +302,13 @@ export interface S401ProofWorld {
   knowledge(action: 'seed' | 'grow' | 'correct'): void;
   /** S8A-05 CP1: «Write your topic» answers (one SYNTHETIC draft), and four fixture Experiences carry human titles. */
   topics(): void;
+  /** E-2: one SYNTHETIC Shared World with its conversation and field places; returns its id. */
+  seedSharedWorld(fixture: S401SeedWorld): string;
+  /** E-2: SYNTHETIC posts, comments and replies in a served fixture Experience's discussion. */
+  seedDiscussion(experienceId: string, entries: readonly S401SeedPost[]): void;
 }
 
-export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
+export function createS401ProofWorld(language: ChromeLanguage, options: S401ProofWorldOptions = {}): S401ProofWorld {
   const base = createVport01ProofWorld(language);
   // S6-01: answers nothing until a scenario is seeded, so every earlier leg meets the proof world exactly as before.
   const introductions = createS601ProofIntroductions(language);
@@ -294,6 +328,8 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   let publicMode: 'PSEUDONYM' | 'REAL_NAME' = 'PSEUDONYM';
   // S5-03B: off until public/seed, so every earlier leg meets the field exactly as before.
   let publicField = false;
+  // COSMOS-FINAL-01 coverage: after public/seed-empty the served field holds no Experience.
+  let publicEmpty = false;
   // S5-03C smoke: explicit relations the reader requested from their own fixture Experience (and their synthetic acceptance).
   let relations: { relationId: string; own: string; other: string; state: 'REQUEST_SENT' | 'ACTIVE' }[] = [];
   // S5-04 smoke: every fixture Experience's discussion posts, and the reader's Public Activity items (newest first).
@@ -308,9 +344,11 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   let issued = -1;
   const invitations: { invitationId: string }[] = [];
   const worlds: ProofWorld[] = [];
-  const nameOf = (person: Person) => (person === 'SELF' ? SELF[language] : person === 'PEER' ? INVITER[language] : NEWCOMER[language]);
+  const nameIn = (person: Person, fixture: Bilingual) => options.names?.[person]?.[language] ?? fixture[language];
+  const nameOf = (person: Person) => (person === 'SELF' ? nameIn('SELF', SELF) : person === 'PEER' ? nameIn('PEER', INVITER)
+    : person === 'NEWCOMER' ? nameIn('NEWCOMER', NEWCOMER) : nameIn('GUEST', GUEST));
   const membersOf = (world: ProofWorld) => world.people.map((person) => ({ name: nameOf(person), self: person === 'SELF' }));
-  const handleOf = (world: ProofWorld, person: Person) => `5403000${['SELF', 'PEER', 'NEWCOMER'].indexOf(person)}-0000-4000-8000-${world.worldId.slice(0, 8)}0000`;
+  const handleOf = (world: ProofWorld, person: Person) => `5403000${['SELF', 'PEER', 'NEWCOMER', 'GUEST'].indexOf(person)}-0000-4000-8000-${world.worldId.slice(0, 8)}0000`;
   const json = (status: number, body: unknown) => ({ ok: status >= 200 && status < 300, status, json: async () => body });
   // S4-02: each conversation World's material, oldest first; and each committed send command's material.
   const threads = new Map<string, ProofMaterial[]>();
@@ -356,7 +394,7 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   }
   function grantIfComplete(pack: ProofPackage): void {
     const authors = new Set((threads.get(pack.worldId) ?? []).filter((m) => pack.materialIds.includes(m.materialId)).map((m) => m.author));
-    if ((authors.has('SELF') && !pack.self) || ((authors.has('PEER') || authors.has('NEWCOMER')) && !pack.others)) return;
+    if ((authors.has('SELF') && !pack.self) || ((authors.has('PEER') || authors.has('NEWCOMER') || authors.has('GUEST')) && !pack.others)) return;
     pack.granted = true;
     for (const line of threads.get(pack.worldId) ?? []) if (pack.materialIds.includes(line.materialId) && !line.visibleTo.includes(pack.grantee)) line.visibleTo.push(pack.grantee);
   }
@@ -498,7 +536,7 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
       const mine = say(worldId, 'SELF', content);
       sent.set(commandId, mine.materialId);
       // VALIDATION-ONLY deterministic provider seam: one fixed reply per human command.
-      say(worldId, 'QANDEEL', S402_PROOF_LINES.reply[language]);
+      say(worldId, 'QANDEEL', options.sharedReply?.[language] ?? S402_PROOF_LINES.reply[language]);
       return json(200, { outcome: 'COMMITTED', materialId: mine.materialId, qandeel: 'COMMITTED' });
     }
     const removal = /^\/shared\/worlds\/([0-9a-f-]+)\/materials\/([0-9a-f-]+)\/delete$/u.exec(path);
@@ -591,7 +629,7 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   }
 
   function authoring(path: string, method: string) {
-    const publisher = { mode: publicMode, label: publicMode === 'REAL_NAME' ? SELF[language] : S401_ACCOUNT_PUBLIC_ID.publicId };
+    const publisher = { mode: publicMode, label: publicMode === 'REAL_NAME' ? nameOf('SELF') : S401_ACCOUNT_PUBLIC_ID.publicId };
     const draft = (id: string | undefined) => drafts.find((d) => d.experienceId === id);
     const reviewOf = (d: (typeof drafts)[number]) => (d.manifestId === null
       ? { state: 'NO_PACKAGE', lifecycle: d.lifecycle, publisher }
@@ -649,16 +687,16 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   }
 
   // S5-04 — the discussion of one fixture Experience (0147 / `PublicDiscussionService`).
-  const publicLabel = () => (publicMode === 'REAL_NAME' ? SELF[language] : S401_ACCOUNT_PUBLIC_ID.publicId);
+  const publicLabel = () => (publicMode === 'REAL_NAME' ? nameOf('SELF') : S401_ACCOUNT_PUBLIC_ID.publicId);
   // S8A-05 CP1: answers nothing until public/topics, so every earlier leg meets the proof world exactly as before.
   const compose = createS805ProofCompose(() => ({ mode: publicMode, label: publicLabel() }));
   const discussionOf = (experienceId: string) => posts.filter((p) => p.experienceId === experienceId).sort((a, b) => a.ordinal - b.ordinal);
-  const addPost = (experienceId: string, author: ProofPublicPost['author'], text: string, parent: ProofPublicPost | null, commandId: string | null) => {
+  const addPost = (experienceId: string, author: ProofPublicPost['author'], text: string, parent: ProofPublicPost | null, commandId: string | null, label: string | null = null) => {
     const id = uuid();
     // One visible depth (D2): a reply to a reply joins the same root.
     const post: ProofPublicPost = { id, experienceId, threadRootId: parent === null ? id : parent.threadRootId, replyToPostId: parent?.id ?? null,
       ordinal: discussionOf(experienceId).length + 1,
-      author, text, postedAt: at(), commandId, invoked: author === 'SELF' && INVOKES_QANDEEL.test(text), response: null };
+      author, label, text, postedAt: at(), commandId, invoked: author === 'SELF' && INVOKES_QANDEEL.test(text), response: null };
     // VALIDATION-ONLY deterministic provider seam: the ONE Public QANDEEL response of an invoking post.
     if (post.invoked) post.response = { text: S504_PROOF_LINES.qandeel[language], respondedAt: at() };
     posts.push(post);
@@ -667,7 +705,7 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   const postView = (p: ProofPublicPost) => ({
     // S8A-05 CP4 (0182): the exact target, and OP — no proof-world topic is the reader's or the peer's, so never OP here.
     id: p.id, threadRootId: p.threadRootId, replyToPostId: p.replyToPostId, ordinal: p.ordinal, isOp: false,
-    author: p.author === 'SELF' ? { mode: publicMode, label: publicLabel() } : { mode: 'PSEUDONYM', label: S504_PROOF_LINES.peerPublicId },
+    author: p.author === 'SELF' ? { mode: publicMode, label: publicLabel() } : { mode: 'PSEUDONYM', label: p.label ?? S504_PROOF_LINES.peerPublicId },
     text: p.text, postedAt: p.postedAt, own: p.author === 'SELF',
     qandeel: !p.invoked ? { state: 'NONE' } : p.response === null ? { state: 'PENDING' } : { state: 'RESPONDED', text: p.response.text, respondedAt: p.response.respondedAt },
   });
@@ -744,13 +782,13 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   const fetch: RuntimeHttpFetch = async (input, init) => {
     const path = input.replace(/^https?:\/\/[^/]+/u, '').split('?')[0];
     const method = init?.method ?? 'GET';
-    if (path === '/account/identity' && method === 'GET') return json(200, { name: SELF[language], ...S401_ACCOUNT_IDENTITY });
+    if (path === '/account/identity' && method === 'GET') return json(200, { name: nameOf('SELF'), ...S401_ACCOUNT_IDENTITY });
     if (path === '/account/public-id' && method === 'GET') return json(200, S401_ACCOUNT_PUBLIC_ID);
     if (path === '/account/privacy' && method === 'GET') {
       return json(200, { export: { status: 'NONE', availableUntil: null }, deletion: { status: 'NONE', finalAt: null } });
     }
     if (path === '/public/entry' && method === 'GET') {
-      await new Promise<void>((resolve) => { publicReleases.push(resolve); });
+      if (options.publicHeld !== false) await new Promise<void>((resolve) => { publicReleases.push(resolve); });
       return json(200, { outcome: 'ALLOW' });
     }
     if (path === '/public/display') {
@@ -759,9 +797,9 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
         if (mode !== 'PSEUDONYM' && mode !== 'REAL_NAME') return json(400, { outcome: 'INVALID_REQUEST' });
         const outcome = mode === publicMode ? 'UNCHANGED' : 'UPDATED';
         publicMode = mode;
-        return json(200, { outcome, mode, label: mode === 'REAL_NAME' ? SELF[language] : S401_ACCOUNT_PUBLIC_ID.publicId });
+        return json(200, { outcome, mode, label: mode === 'REAL_NAME' ? nameOf('SELF') : S401_ACCOUNT_PUBLIC_ID.publicId });
       }
-      return json(200, { mode: publicMode, label: publicMode === 'REAL_NAME' ? SELF[language] : S401_ACCOUNT_PUBLIC_ID.publicId, realNameAvailable: true });
+      return json(200, { mode: publicMode, label: publicMode === 'REAL_NAME' ? nameOf('SELF') : S401_ACCOUNT_PUBLIC_ID.publicId, realNameAvailable: true });
     }
     if (publicField && (path === '/public/authoring/relations' || path.startsWith('/public/authoring/relations/'))) {
       if (path === '/public/authoring/relations' && method === 'GET') {
@@ -808,6 +846,7 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
     if (publicField && method === 'GET' && (path === '/public/field' || path.startsWith('/public/field/'))) {
       const query = input.includes('?') ? input.slice(input.indexOf('?') + 1) : '';
       // S8A-05 CP1: after public/topics, the four titled fixture Experiences carry their SYNTHETIC title and section.
+      if (path === '/public/field' && publicEmpty) return json(200, { experiences: [] });
       if (path === '/public/field') { const answer = fixtureField(query); return answer ? json(200, { experiences: answer.experiences.map(compose.titled) }) : json(400, {}); }
       if (path === '/public/field/search') {
         const param = (name: string) => decodeURIComponent((new RegExp(`(?:^|&)${name}=([^&]*)`, 'u').exec(query)?.[1] ?? '').replace(/\+/gu, ' '));
@@ -862,6 +901,7 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
     },
     revoke: () => { for (const world of worlds) world.current = false; },
     publicSeed: () => { publicField = true; },
+    publicSeedEmpty: () => { publicField = true; publicEmpty = true; },
     topics: () => { compose.seed(); },
     relationAccept: () => { relations = relations.map((r) => ({ ...r, state: 'ACTIVE' as const })); },
     peerReply: () => {
@@ -972,6 +1012,24 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
       else if (action === 'sharing-more') introductionSharing.more();
       else if (action === 'sharing-success') introductionSharing.success();
       else introductionSharing.complete();
+    },
+    seedSharedWorld: (fixture) => {
+      const worldId = uuid();
+      worlds.push({ ...newWorld(worldId, [...fixture.people]), name: fixture.name });
+      threads.set(worldId, []);
+      const ids = fixture.lines.map((line) => (line.speaker === 'QANDEEL' ? say(worldId, 'QANDEEL', line.text)
+        : line.speaker === 'SELF' ? say(worldId, 'SELF', line.text) : say(worldId, 'HUMAN', line.text, line.speaker)).materialId);
+      for (const place of fixture.places) {
+        places.push({ placeId: uuid(), worldId, meaning: place.meaning, region: place.region, primary: [place.themes[0]], secondary: [place.themes[1]],
+          x: place.x, y: place.y, sources: place.sources.map((index) => ids[index]) });
+      }
+      return worldId;
+    },
+    seedDiscussion: (experienceId, entries) => {
+      const made: ProofPublicPost[] = [];
+      for (const entry of entries) {
+        made.push(addPost(experienceId, entry.by === null ? 'SELF' : 'PEER', entry.text, entry.replyTo === null ? null : made[entry.replyTo], null, entry.by));
+      }
     },
     peerDelete: () => {
       for (const lines of threads.values()) {

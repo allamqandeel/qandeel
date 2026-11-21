@@ -566,9 +566,13 @@ async function verifyStatic() {
   // re-anchor): exactly 0195, the original-audio source truth, follows 0194 and nothing else does (verify-migration-0195).
   // RE-ANCHORED by S8B-07 CP1-B (was: 0195 is the last migration; the Product Owner's CP1-B execution authorization, a
   // declared re-anchor): exactly 0196, the transient media authority, follows 0195 and nothing else does (verify-migration-0196).
-  strict(migrations.at(-3), M0194, '0194 is followed only by 0195');
-  strict(migrations.at(-2), '0195_s8b_07_replay_original_audio_source_truth_v1.sql', 'exactly 0195 follows 0194');
-  strict(migrations.at(-1), '0196_s8b_07_transient_media_v1.sql', 'exactly 0196 follows 0195');
+  // RE-ANCHORED by the COSMOS E-2 corrections (PO D-2 / D-4 / D-5, 2026-11-20, and the PO directive "COMPLETE ALL
+  // CORRECTIONS BEFORE FINAL CI", 2026-11-21; a declared re-anchor): after 0196 come exactly 0197, 0198, 0199 and 0200
+  // (verify-migration-0197 … 0200), and nothing else. The order 0194 → 0195 → 0196 is unchanged.
+  const at0194 = migrations.indexOf(M0194);
+  strict(migrations[at0194 + 1], '0195_s8b_07_replay_original_audio_source_truth_v1.sql', '0194 is followed only by 0195');
+  strict(migrations[at0194 + 2], '0196_s8b_07_transient_media_v1.sql', 'exactly 0196 follows 0195');
+  check(() => assert.deepEqual(migrations.slice(at0194 + 3), ['0197_cosmos_e2_conversation_catalog_v1.sql', '0198_cosmos_e2_thread_names_v1.sql', '0199_cosmos_e2_current_personal_world_v1.sql', '0200_cosmos_e2_reading_reliance_gate_v1.sql'], 'after 0196 exactly the four COSMOS E-2 migrations'));
   const m0194 = readFileSync(`database/migrations/${M0194}`, 'utf8');
   const executable = m0194.replace(/^\s*--.*$/gmu, '');
   ok(!/GRANT /u.test(executable), '0194 grants nothing');

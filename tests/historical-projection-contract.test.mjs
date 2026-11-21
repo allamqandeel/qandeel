@@ -140,8 +140,15 @@ test('the Stage 6.6 v3 matrix reconciles to 31 FULL AFTER BUILD / 4 NOT EXPOSED 
 });
 
 test('Layer A is ONE owner-scoped read and Layer B is a pure server function: no write, no Product action, no RH, no kernel write, no ranking', () => {
-  assert.match(repository, /'rpc\/get_session_historical_projection_v1'/u);
-  assert.equal((repository.match(/'rpc\//gu) ?? []).length, 1, 'exactly ONE RPC');
+  // RE-ANCHORED by COSMOS E-2 corrections, Slice A (Product Owner decisions D-3 / D-4, 2026-11-20): the ONE read is the
+  // ADDITIVE Controlled Personal Projection V2 (migration 0198), which wraps the byte-identical V1 and adds each Thread's
+  // name {text, source} and origin {sessionId, sp}. Still exactly ONE RPC; V1 still decides visibility, coverage and TC.
+  assert.match(repository, /'rpc\/get_session_historical_projection_v2'/u);
+  // RE-ANCHORED by COSMOS E-2 Slice C (PO D-5, Option U, 2026-11-20; migration 0199): the repository now reads TWO owner-scoped
+  // RPCs — the Session-bound V2 projection (the ONE historical read, pinned above and below) and the user-level CURRENT
+  // Personal World (get_user_current_personal_world_v1; no TC, no Live Head). Each is read-only; there is no third RPC.
+  assert.equal((repository.match(/'rpc\//gu) ?? []).length, 2, 'exactly the V2 projection RPC and the 0199 current-world RPC');
+  assert.match(repository, /'rpc\/get_user_current_personal_world_v1'/u, 'the second RPC is the 0199 current-world read');
   assert.match(repository, /body: JSON\.stringify\(\{ p_session_id: sessionId, p_tc: tc \}\)/u, 'the caller supplies a Session and a TC, never a user id, an SP anchor or a version');
   assert.match(repository, /import \{ DataApiError, readDataApiUpstreamIdentity, type SupabaseDataApiService \} from '\.\.\/conversation\/supabase-data-api\.service';/u, 'the AUTHENTICATED channel with the caller\'s own token');
   assert.doesNotMatch(productionCode, /SupabaseServiceRoleApiService|service_role|serviceApi/u, 'no service-role read: the database derives the owner from auth.uid()');
@@ -175,7 +182,11 @@ test('the controller is the ONE authenticated historical read: typed refusals, n
   assert.match(controller, /@Controller\('conversation'\)/u);
   assert.match(controller, /@UseGuards\(SupabaseAuthGuard\)/u);
   assert.match(controller, /@Get\('sessions\/:sessionId\/historical-projection'\)/u);
-  assert.equal((controller.match(/@(?:Get|Post|Put|Patch|Delete)\(/gu) ?? []).length, 1, 'exactly one route');
+  // RE-ANCHORED by COSMOS E-2 Slice C: the controller carries a second GET — the user-level current Personal World
+  // (GET /conversation/personal-world, 0199). Both are reads; there is still no write route here.
+  assert.equal((controller.match(/@(?:Get|Post|Put|Patch|Delete)\(/gu) ?? []).length, 2, 'exactly the historical-projection GET and the current-world GET');
+  assert.equal((controller.match(/@Get\(/gu) ?? []).length, 2, 'both routes are reads');
+  assert.match(controller, /@Get\('personal-world'\)/u, 'the second route is the current-world read');
   assert.doesNotMatch(controller, /@Post|@Put|@Patch|@Delete|WebSocket|Sse|@Sse|EventEmitter|observable/u);
   assert.match(controller, /return disclose\(knowledge, semanticDepth, inspection\);/u, 'Layer B runs on the server; K\(TC\) never leaves it');
   assert.match(controller, /case 'SESSION_NOT_VISIBLE': return new NotFoundException/u);
@@ -308,7 +319,8 @@ test('the client seam is passive and typed: decode, fetch, hold; NOT_FETCHED / D
     (mobileCi.match(/^ {2}build-[a-z0-9-]+:$/gmu) ?? []).length, 'every job past the fast gate stays behind the classifier');
   // The mobile manifest is likewise not owned here. What IS frozen is the renderer version T-04's
   // architecture pins; a later task adding an unrelated dependency is not this contract's business.
-  assert.equal(mobilePackage.dependencies['@shopify/react-native-skia'], '2.6.2', 'the authorized T-04 renderer pin is exact');
+  // QAN-INF-03 CONTROLLED RE-ANCHOR (COSMOS-INT-01, Product Owner D-13 / D-14, 2026-11-15): 2.7.0 (previous pin 2.6.2); the COSMOS renderer (COSMOS-INT-01, Product Owner D-13 / D-14, 2026-11-15) was accepted and proven on 2.7.0; Expo SDK 57 bundles 2.6.2, so the manifest declares the second QAN-INF-03 exception beside the TypeScript one and both offline gates keep running unchanged.
+  assert.equal(mobilePackage.dependencies['@shopify/react-native-skia'], '2.7.0', 'the authorized T-04 renderer pin is exact');
 });
 
 test('R2: the production A-1 path is the canonical subject-grounding authority end to end - server-built universe, opaque handles, server authorization, atomic persistence, derived appearance - and nothing else writes an appearance or a grounding', () => {
@@ -417,7 +429,7 @@ test('anti-scope: no Return-to-Live-Focus, no Go Live + Locate, no Map geometry,
   // FORWARD-SAFE (R2-02): a whole-lockfile hash makes every future authorized dependency fail this
   // contract. What is genuinely frozen is the renderer VERSION T-04 pins, which is asserted from the
   // lockfile itself; and what T-03C permanently owes is that IT pulled nothing in.
-  assert.equal(JSON.parse(read('package-lock.json')).packages['node_modules/@shopify/react-native-skia'].version, '2.6.2', 'the authorized T-04 renderer version is locked exactly');
+  assert.equal(JSON.parse(read('package-lock.json')).packages['node_modules/@shopify/react-native-skia'].version, '2.7.0', 'the authorized T-04 renderer version is locked exactly (QAN-INF-03 re-anchor, COSMOS-INT-01 D-13 / D-14)');
   assert.doesNotMatch(read('package-lock.json'), /historical-projection/u, 'the lockfile knows nothing of T-03C');
   assert.doesNotMatch(read('apps/api/src/app.module.ts'), /historical|projection/iu, 'AppModule is untouched: the controller lives in ConversationModule');
   // W1B-01 re-anchor: the application root now composes AccountModule; every other byte is frozen.

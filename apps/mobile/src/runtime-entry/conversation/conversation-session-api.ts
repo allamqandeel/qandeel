@@ -5,6 +5,11 @@
  * id; this client never synthesises one, never reuses another identity's session, and never treats
  * the authenticated user id as a session id. Those are two different identities and they stay two.
  *
+ * COSMOS E-2 corrections, Slice B (the Product Owner's D-2, 2026-11-20): with a `clientRequestId` the route IS
+ * idempotent (migration 0197, `create_conversation_session_v2`): the same person and the same request identity answer
+ * the EARLIER Session, never a second one, so New Chat may be offered again after an ambiguous outcome WITH THE SAME
+ * identity and still duplicate nothing. Without one, every word below still holds.
+ *
  * THE AMBIGUITY IS REAL AND IS NOT PAPERED OVER. The route is not idempotent: the API generates a
  * fresh UUID per call and the database does an unconditional INSERT, with no `ON CONFLICT`, no
  * `Idempotency-Key` and no reuse of an open session. Worse, the API's own upstream call aborts at
@@ -81,12 +86,15 @@ export class ConversationSessionApiClient {
    * owner enforces that. This method deliberately holds no memo of its own: a client that quietly
    * returned a previous Session would hide a duplicate rather than prevent one.
    */
-  async createSession(accessToken: string): Promise<ConversationSessionOutcome> {
+  async createSession(accessToken: string, clientRequestId?: string): Promise<ConversationSessionOutcome> {
     let response: Awaited<ReturnType<RuntimeHttpFetch>>;
     try {
       response = await this.config.fetch(`${this.config.baseUrl}/conversation/sessions`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
+        headers: clientRequestId === undefined
+          ? { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' }
+          : { Authorization: `Bearer ${accessToken}`, Accept: 'application/json', 'Content-Type': 'application/json' },
+        ...(clientRequestId === undefined ? {} : { body: JSON.stringify({ clientRequestId }) }),
       });
     } catch (cause) {
       // The request may or may not have reached the server. Ambiguous by construction.

@@ -39,8 +39,10 @@ const LAYER_PRODUCTION = listFiles(LAYER).filter((file) => /\.tsx?$/u.test(file)
 // §2 — Product copy: exactly the approved strings, in one place, and nothing invented
 // ---------------------------------------------------------------------------------------------
 
+// UI-POLISH-01 RE-ANCHOR (Product Owner, 2026-11-16): the composer placeholder «كلامك هنا» is replaced by the approved «اكتب هنا»
+// (English 'Write here' unchanged). The protection is the same: exactly the approved strings, in the one copy module.
 const APPROVED = {
-  ar: ['المحادثة', 'تحليل المحادثة', 'إعادة المحاولة', 'قنديل', 'كلامك هنا', 'رسالتك لقنديل', 'إرسال', 'كلامك: ${text}', 'قنديل: ${text}',
+  ar: ['المحادثة', 'تحليل المحادثة', 'إعادة المحاولة', 'قنديل', 'اكتب هنا', 'رسالتك لقنديل', 'إرسال', 'كلامك: ${text}', 'قنديل: ${text}',
     'في انتظار رد قنديل', 'تعذّر التأكد من إرسال الرسالة.', 'تعذّر إرسال الرسالة.', 'تعذّر إكمال رد قنديل.', 'تعذّر تحميل المحادثة.'],
   en: ['Conversation', 'Analysis', 'Analysis of this conversation', 'Try again', 'QANDEEL', 'Write here', 'Your message to QANDEEL', 'Send',
     'You: ${text}', 'QANDEEL: ${text}', "Waiting for QANDEEL's reply", "It couldn't be confirmed that the message was sent.", "The message wasn't sent.",
@@ -267,7 +269,13 @@ test('§6 — the depth pair lands in the Conversation, persists nothing, dispat
   assert.doesNotMatch(map, /setTimeout|setInterval/u);
   assert.match(map, /entry\.status !== 'NOT_FETCHED'/u, 'a projection still being fetched is never treated as drawn');
   // Android system Back: the return act, registered ONLY while Analysis is the depth.
-  assert.match(depth, /if \(depth !== 'ANALYSIS'\) return undefined;\n\s*const subscription = BackHandler\.addEventListener\('hardwareBackPress', \(\) => \{\n\s*cross\('CONVERSATION'\);\n\s*return true;/u);
+  // COSMOS-INT-01 Slice D CP3 re-anchor (Contract v1.7 §19.16, SD-5): the ONE handler first asks the Personal Detail
+  // Sheet, which spends the Back only when it dismissed an open PEEK (presentation only); otherwise the protected
+  // behaviour is exactly the original — the unconditional return to the Conversation, the Back consumed, and the
+  // listener registered only while Analysis is the depth. The sheet's step is a ref read, never a second listener.
+  assert.match(depth, /if \(depth !== 'ANALYSIS'\) return undefined;\n\s*const subscription = BackHandler\.addEventListener\('hardwareBackPress', \(\) => \{\n\s*if \(sheetBack\.current\?\.\(\) === true\) return true;\n\s*cross\('CONVERSATION'\);\n\s*return true;/u);
+  assert.equal((depth.match(/sheetBack\.current\?\.\(\)/gu) ?? []).length, 1, 'the sheet is asked in exactly one place: the Analysis Back handler');
+  assert.doesNotMatch(map, /BackHandler/u, 'the Personal composition registers no Back listener of its own');
   // The frozen boundary: F2's cross-fade, and no cross-fade under Reduced Motion.
   assert.match(depth, /const duration = reduceMotion \? DEPTH_CROSSFADE_REDUCED_MOTION_MS : DEPTH_CROSSFADE_MS;/u);
   // F2's linear fade, paced by RENDERED frames: at most one nominal 60 Hz frame per drawn frame, so a

@@ -807,3 +807,38 @@ NOT closed and NOT merged**: PR #317 stays unmerged (pause head `430118a`, then 
   `DEFERRED — OWNED`, unchanged. LA-VIS-01 inherits no item and admits none.
 - **Not performed.** No S5-03C or S5-04 work, no Shared visual integration and no merge. The S5-03B Copy Gate was closed afterwards, by the Product
   Owner's own decision (§14), not by LA-VIS-01.
+
+## 28. Later Product Owner revision — the search field's visible placeholder (UI-POLISH-01, 2026-11-16)
+
+The Product Owner's "Final Closure Task" (2026-11-16, Issue D) shortens what the compact 44-point Public search field
+SHOWS in English. The full `searchLabel` was clipped at the field's end.
+
+**`searchPlaceholder`** is a new, separate row in `public-world/field/field-copy.ts`, under its own one-row gate
+`PUBLIC_FIELD_PLACEHOLDER_COPY_GATE`: `UI-POLISH-01 PRODUCT COPY GATE — CLOSED — 1 row APPROVED (Product Owner, 2026-11-16)`.
+- English: "Experience, feeling, or meaning".
+- Arabic: the S5-03B `searchLabel` «البحث عن تجربة أو شعور أو معنى», unchanged. It is REUSED by reference and written once.
+
+**Unchanged:**
+- The field's accessible name stays the full `searchLabel` in both languages.
+- The S5-03B gate (13 rows APPROVED, §14), its census and the Relations search (S5-03C reuses `searchLabel`).
+- The search action, the field's height and its width.
+
+**Device proof (plain Release `e2695ece`):**
+- On the HONOR (411 dp at 1.0 font scale) the English placeholder shows in full in a 44.0 dp field. Arabic is unchanged.
+- On the emulator, with its own settings restored afterwards, the field stays 44 dp in every configuration:
+  - English fits at font scale 1.0 and 1.3 on a 411 dp screen, and at 1.0 on a 320 dp screen;
+  - at 1.3 on 320 dp, and at 2.0, its last letters are cut, as is the unchanged Arabic placeholder's;
+  - the full meaning stays the accessible name.
+- Widening or growing the field to fit was not authorised (the PO kept 44 dp and the width).
+
+## 29. Controlled amendment of R1 — a read is authoritative inside its rectangle (COSMOS E-2 corrections, Slice D-2; PO decision D-1 = Option K, 2026-11-20)
+
+**Why.** The Product Owner's E-2 review on the HONOR (COSMOS contract §31) found Public World pop-in: regions of the field went blank on every pan and zoom-out for the length of a round trip. The cause is §20 A2 as worded — "the controller shows exactly what the LATEST read served" together with a zero-margin glass read — so every camera move first emptied everything outside the new glass and then refilled it when the read answered. The Owner decided the pop-in is NOT an accepted limitation and approved Option K.
+
+**What changes (one sentence of R1).** A field read is authoritative INSIDE its rectangle: there the field becomes exactly what it served, and where the read is complete (< 400) every Experience inside that it no longer serves leaves the field, the search results, the focused panel and the nearby context at once — unchanged. OUTSIDE its rectangle, the Experiences that EARLIER READS OF THE SAME VISIT served stay on the field until a read that covers them answers. They are drawn only where the glass reaches them, which is exactly the region a pan or a zoom-out newly uncovers.
+
+**What does not change.** R2 in full: every committed camera move at every rung, every return to the foreground and every entry still asks again for everything on display. Entry still reads the whole World with nothing on display while it is in flight (`publish({ ...INITIAL, status: 'LOADING' })`), so nothing crosses an entry, an identity, an authorization or a section change (every entry starts again from nothing). A read that cannot be made still fails closed and holds nothing. Authoritative removal is unchanged. The field holds no second source of truth: what stays outside the glass is this visit's own served Experiences, drawn until the read that is authoritative for them answers.
+
+**Bound.** `PUBLIC_FIELD_RETAINED_MAX = 2 × PUBLIC_FIELD_READ_BOUND` (800) Experiences at most stay outside a read's rectangle, nearest to the rectangle first (`retainedOutside`, `public-field-controller.ts`).
+
+**Proof.** `public-field.test.tsx`, the Slice D-2 describe: a MID glass covers part of the World and the whole World stays on the field; a pan and a zoom-out show no blank region in flight or after the read; authoritative removal inside at once and outside when covered; the bound, and that entry and a failed read hold nothing. The R2 "semantic zoom re-runs the open search" case is re-anchored: after the zoom IN the glass no longer covers E3, so E3 stays outside it until the step OUT covers and removes it. Root contract test 10 pins the amendment by its code. The G04 / G05 gaps are unchanged.

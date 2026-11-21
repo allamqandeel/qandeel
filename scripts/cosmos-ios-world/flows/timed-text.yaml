@@ -1,0 +1,13 @@
+# COSMOS-INT-01 Slice E iOS World gate (first written for the baseline audit): TIMING = tap on the element TAP (id) issued -> text WAIT visible.
+appId: com.qandeel.mobile
+---
+- evalScript: ${output.t0 = Date.now()}
+- tapOn:
+    retryTapIfNoChange: false
+    waitToSettleTimeoutMs: 1500
+    id: "${TAP}"
+- extendedWaitUntil:
+    visible:
+      text: "${WAIT}"
+    timeout: 60000
+- evalScript: ${console.log('TIMING ' + NAME + ' ' + (Date.now() - output.t0))}

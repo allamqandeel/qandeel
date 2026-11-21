@@ -32,12 +32,13 @@
  *
  * Every word comes from `copy.ts`, exactly as approved. A state with no approved word says nothing.
  */
-import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type ReactElement, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactElement, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
   FlatList,
   KeyboardAvoidingView,
   Pressable,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -47,6 +48,7 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 
+import { QANDEEL_INITIALS, SPEAKER_BADGE_GAP, SpeakerBadge, speakerInitials } from '../attribution';
 import type { ChromeLanguage } from '../orientation-chrome';
 import type { ConversationExchangeView } from '../runtime-entry';
 import { directedParagraphs, oppositeSide, readerDirection, readerSide, withDirectionMark, type PhysicalSide } from './bidi';
@@ -182,6 +184,11 @@ export interface ConversationSurfaceProps {
   readonly exchangeTrailer?: ((exchange: ConversationExchangeView) => ReactElement | null) | null;
   /** S8B-06 CP3 (G1.2): words the composition appends to the depth control's accessible name (the call continues). */
   readonly depthNameSuffix?: string | null;
+  /**
+   * COSMOS-FINAL-01 E-1 (PO UI-Polish Addendum, 2026-11-20): the reader's own account Name, whose initials mark the reader's
+   * turns. Shown to the reader only; with no Name the reader's badge carries its tone alone.
+   */
+  readonly readerName?: string | null;
 }
 
 /** S8B-04 (CP2): what the composition hands as one reply's companion. */
@@ -197,9 +204,19 @@ const HEADER_MIN_HEIGHT = 48;
 export const CONVERSATION_HEADER_MIN_HEIGHT = HEADER_MIN_HEIGHT;
 /** P4-C1 S-B proof geometry: the Personal row beneath the upper chrome, one 44 pt target high. */
 const PERSONAL_ROW_HEIGHT = 44;
+/**
+ * COSMOS-INT-01 Slice E D-3 (PO D-c, 2026-11-18): the most of the window Personal QANDEEL's own row may hold. Below it the
+ * row is exactly as accepted; past it (the largest text sizes on a small screen) the row scrolls its own entries, so the
+ * thread keeps its room and no entry is lost. Font scaling is untouched (W1A-01).
+ */
+const PERSONAL_ROW_MAX_SHARE = 0.3;
 const THREAD_GUTTER = 24;
 const SLAB_END_INSET = 40;
 const REPLY_END_INSET = 48;
+/** COSMOS-FINAL-01 E-1 (PO UI-Polish Addendum): the space above the reader's turn and above QANDEEL's, slightly tighter. */
+const UTTERANCE_GAP = 22;
+const REPLY_GAP = 12;
+const BODY_LINE = typeStyle('body').lineHeight;
 const COMPOSER_MAX_LINES = 5;
 /** How close to the newest turn the reader must be for a new reply to follow them down. */
 const FOLLOW_THRESHOLD = 96;
@@ -213,6 +230,40 @@ const SELECTION_MARK_TOP = 12;
 
 const textAlignFor = (side: PhysicalSide) => side;
 const alignSelfFor = (side: PhysicalSide) => (side === 'right' ? 'flex-end' : 'flex-start');
+/** A turn laid out from its own edge: the speaker badge stands at that edge, the words follow it. */
+const rowFrom = (side: PhysicalSide) => (side === 'right' ? 'row-reverse' : 'row');
+
+/**
+ * The reader's slab: on the reader's own edge, bleeding to the screen edge, close around its words, its rounded corners
+ * facing the conversation. The reader's badge stands inside it at that edge.
+ */
+const slabStyle = (mine: PhysicalSide, contentWidth: number, palette: ConversationPalette) => ({
+  alignSelf: alignSelfFor(mine),
+  maxWidth: Math.max(0, contentWidth - SLAB_END_INSET),
+  backgroundColor: palette.utterance,
+  paddingTop: 8,
+  paddingBottom: 9,
+  flexDirection: rowFrom(mine),
+  columnGap: SPEAKER_BADGE_GAP,
+  ...(mine === 'right'
+    ? { marginRight: -THREAD_GUTTER, paddingRight: THREAD_GUTTER, paddingLeft: 14, borderTopLeftRadius: 18, borderBottomLeftRadius: 18 }
+    : { marginLeft: -THREAD_GUTTER, paddingLeft: THREAD_GUTTER, paddingRight: 14, borderTopRightRadius: 18, borderBottomRightRadius: 18 }),
+} as const);
+
+/** One turn's words after its speaker's badge: the reader's initials, or QANDEEL's `QA`. */
+function Attributed({ who, readerName, testID, children }: {
+  readonly who: 'READER' | 'QANDEEL';
+  readonly readerName: string | null;
+  readonly testID: string;
+  readonly children: ReactNode;
+}) {
+  return (
+    <>
+      <SpeakerBadge initials={who === 'QANDEEL' ? QANDEEL_INITIALS : speakerInitials(readerName)} tone={who} lineHeight={BODY_LINE} testID={testID} />
+      <View style={{ flexShrink: 1 }}>{children}</View>
+    </>
+  );
+}
 
 /** A turn's words, paragraph by paragraph, each in its own direction and aligned to its own start. */
 function Paragraphs({ text, fallback, palette, role }: {
@@ -335,8 +386,9 @@ function Selectable({ id, label, gap, side, selection, palette, language, childr
   );
 }
 
-function ExchangeRow({ exchange, copy, palette, language, contentWidth, selection, utteranceBody, replyCompanion, exchangeTrailer }: {
+function ExchangeRow({ exchange, copy, palette, language, contentWidth, selection, utteranceBody, replyCompanion, exchangeTrailer, readerName }: {
   readonly exchange: ConversationExchangeView;
+  readonly readerName: string | null;
   readonly copy: ConversationCopy;
   readonly palette: ConversationPalette;
   readonly language: ChromeLanguage;
@@ -350,7 +402,7 @@ function ExchangeRow({ exchange, copy, palette, language, contentWidth, selectio
   const theirs = oppositeSide(mine);
   const fallback = readerDirection(language);
   if (selection !== null) {
-    return <SelectingExchangeRow exchange={exchange} copy={copy} palette={palette} language={language} contentWidth={contentWidth} selection={selection} />;
+    return <SelectingExchangeRow exchange={exchange} copy={copy} palette={palette} language={language} contentWidth={contentWidth} selection={selection} readerName={readerName} />;
   }
   // A body the composition draws carries its own controls and draws its own UTTERANCE slab (the Voice Note's slab has
   // P4-C3 §1's own width and insets), so the place it sits in is then neither one assistive element nor a surface.
@@ -366,7 +418,7 @@ function ExchangeRow({ exchange, copy, palette, language, contentWidth, selectio
     <View>
       {/* UTTERANCE — the reader's committed words, on the reader's own edge. */}
       {body !== null ? (
-        <View testID={`qandeel-utterance-${exchange.userTurn.id}`} style={{ alignSelf: alignSelfFor(mine), marginTop: 28 }}>
+        <View testID={`qandeel-utterance-${exchange.userTurn.id}`} style={{ alignSelf: alignSelfFor(mine), marginTop: UTTERANCE_GAP }}>
           {body}
         </View>
       ) : (
@@ -374,20 +426,11 @@ function ExchangeRow({ exchange, copy, palette, language, contentWidth, selectio
         testID={`qandeel-utterance-${exchange.userTurn.id}`}
         accessible
         accessibilityLabel={copy.userTurnName(exchange.userTurn.content)}
-        style={{
-          alignSelf: alignSelfFor(mine),
-          marginTop: 28,
-          maxWidth: Math.max(0, contentWidth - SLAB_END_INSET),
-          backgroundColor: palette.utterance,
-          paddingTop: 11,
-          paddingBottom: 12,
-          // The slab bleeds to the reader's screen edge; its rounded corners face the conversation.
-          ...(mine === 'right'
-            ? { marginRight: -THREAD_GUTTER, paddingRight: THREAD_GUTTER, paddingLeft: 18, borderTopLeftRadius: 18, borderBottomLeftRadius: 18 }
-            : { marginLeft: -THREAD_GUTTER, paddingLeft: THREAD_GUTTER, paddingRight: 18, borderTopRightRadius: 18, borderBottomRightRadius: 18 }),
-        }}
+        style={{ ...slabStyle(mine, contentWidth, palette), marginTop: UTTERANCE_GAP }}
       >
-        <Paragraphs text={exchange.userTurn.content} fallback={fallback} palette={palette} role="body" />
+        <Attributed who="READER" readerName={readerName} testID={`qandeel-speaker-${exchange.userTurn.id}`}>
+          <Paragraphs text={exchange.userTurn.content} fallback={fallback} palette={palette} role="body" />
+        </Attributed>
       </View>
       )}
 
@@ -397,18 +440,22 @@ function ExchangeRow({ exchange, copy, palette, language, contentWidth, selectio
           testID={`qandeel-reply-${exchange.reply.id}`}
           accessible
           accessibilityLabel={copy.replyTurnName(exchange.reply.content)}
-          style={{ alignSelf: alignSelfFor(theirs), marginTop: 16, maxWidth: Math.max(0, contentWidth - REPLY_END_INSET) }}
+          style={{ alignSelf: alignSelfFor(theirs), marginTop: REPLY_GAP, maxWidth: Math.max(0, contentWidth - REPLY_END_INSET), flexDirection: rowFrom(theirs), columnGap: SPEAKER_BADGE_GAP }}
         >
-          <Paragraphs text={exchange.reply.content} fallback={fallback} palette={palette} role="body" />
+          <Attributed who="QANDEEL" readerName={readerName} testID={`qandeel-speaker-${exchange.reply.id}`}>
+            <Paragraphs text={exchange.reply.content} fallback={fallback} palette={palette} role="body" />
+          </Attributed>
         </View>
       ) : releasedText !== null ? (
         <View
           testID={`qandeel-reply-released-${exchange.userTurn.id}`}
           accessible
           accessibilityLabel={copy.replyTurnName(releasedText)}
-          style={{ alignSelf: alignSelfFor(theirs), marginTop: 16, maxWidth: Math.max(0, contentWidth - REPLY_END_INSET) }}
+          style={{ alignSelf: alignSelfFor(theirs), marginTop: REPLY_GAP, maxWidth: Math.max(0, contentWidth - REPLY_END_INSET), flexDirection: rowFrom(theirs), columnGap: SPEAKER_BADGE_GAP }}
         >
-          <Paragraphs text={releasedText} fallback={fallback} palette={palette} role="body" />
+          <Attributed who="QANDEEL" readerName={readerName} testID={`qandeel-speaker-released-${exchange.userTurn.id}`}>
+            <Paragraphs text={releasedText} fallback={fallback} palette={palette} role="body" />
+          </Attributed>
         </View>
       ) : exchange.replyState === 'FAILED' ? (
         <StatusLine text={copy.replyFailed} tone="failure" side={theirs} palette={palette} language={language} testID={`qandeel-reply-failed-${exchange.userTurn.id}`} />
@@ -421,8 +468,9 @@ function ExchangeRow({ exchange, copy, palette, language, contentWidth, selectio
   );
 }
 
-function SelectingExchangeRow({ exchange, copy, palette, language, contentWidth, selection }: {
+function SelectingExchangeRow({ exchange, copy, palette, language, contentWidth, selection, readerName }: {
   readonly exchange: ConversationExchangeView;
+  readonly readerName: string | null;
   readonly copy: ConversationCopy;
   readonly palette: ConversationPalette;
   readonly language: ChromeLanguage;
@@ -434,30 +482,25 @@ function SelectingExchangeRow({ exchange, copy, palette, language, contentWidth,
   const fallback = readerDirection(language);
   return (
     <View>
-      <Selectable id={exchange.userTurn.id} label={copy.userTurnName(exchange.userTurn.content)} gap={28} side={mine} selection={selection} palette={palette} language={language}>
+      <Selectable id={exchange.userTurn.id} label={copy.userTurnName(exchange.userTurn.content)} gap={UTTERANCE_GAP} side={mine} selection={selection} palette={palette} language={language}>
         <View
           testID={`qandeel-utterance-${exchange.userTurn.id}`}
-          style={{
-            alignSelf: alignSelfFor(mine),
-            maxWidth: Math.max(0, contentWidth - SLAB_END_INSET),
-            backgroundColor: palette.utterance,
-            paddingTop: 11,
-            paddingBottom: 12,
-            ...(mine === 'right'
-              ? { marginRight: -THREAD_GUTTER, paddingRight: THREAD_GUTTER, paddingLeft: 18, borderTopLeftRadius: 18, borderBottomLeftRadius: 18 }
-              : { marginLeft: -THREAD_GUTTER, paddingLeft: THREAD_GUTTER, paddingRight: 18, borderTopRightRadius: 18, borderBottomRightRadius: 18 }),
-          }}
+          style={slabStyle(mine, contentWidth, palette)}
         >
-          <Paragraphs text={exchange.userTurn.content} fallback={fallback} palette={palette} role="body" />
+          <Attributed who="READER" readerName={readerName} testID={`qandeel-speaker-${exchange.userTurn.id}`}>
+            <Paragraphs text={exchange.userTurn.content} fallback={fallback} palette={palette} role="body" />
+          </Attributed>
         </View>
       </Selectable>
       {exchange.reply !== null ? (
-        <Selectable id={exchange.reply.id} label={copy.replyTurnName(exchange.reply.content)} gap={16} side={theirs} selection={selection} palette={palette} language={language}>
+        <Selectable id={exchange.reply.id} label={copy.replyTurnName(exchange.reply.content)} gap={REPLY_GAP} side={theirs} selection={selection} palette={palette} language={language}>
           <View
             testID={`qandeel-reply-${exchange.reply.id}`}
-            style={{ alignSelf: alignSelfFor(theirs), maxWidth: Math.max(0, contentWidth - REPLY_END_INSET) }}
+            style={{ alignSelf: alignSelfFor(theirs), maxWidth: Math.max(0, contentWidth - REPLY_END_INSET), flexDirection: rowFrom(theirs), columnGap: SPEAKER_BADGE_GAP }}
           >
-            <Paragraphs text={exchange.reply.content} fallback={fallback} palette={palette} role="body" />
+            <Attributed who="QANDEEL" readerName={readerName} testID={`qandeel-speaker-${exchange.reply.id}`}>
+              <Paragraphs text={exchange.reply.content} fallback={fallback} palette={palette} role="body" />
+            </Attributed>
           </View>
         </Selectable>
       ) : exchange.replyState === 'FAILED' ? (
@@ -493,20 +536,24 @@ export function ConversationSurface({
   replyCompanion = null,
   exchangeTrailer = null,
   depthNameSuffix = null,
+  readerName = null,
 }: ConversationSurfaceProps) {
   const ready = useConversationTypeface();
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
   const palette = usePalette();
   const reduceMotion = useReduceMotion();
   const copy = conversationCopy(language);
-  const { width } = useWindowDimensions();
+  const { width, height: windowHeight } = useWindowDimensions();
+  const [personalRowContent, setPersonalRowContent] = useState(0);
+  const personalRowRoom = Math.floor(windowHeight * PERSONAL_ROW_MAX_SHARE);
+  const personalRowScrolls = personalRowContent > personalRowRoom;
   const mine = readerSide(language);
   const theirs = oppositeSide(mine);
   const endSide = theirs; // the end edge of the reader's line is the edge opposite their start
   const fallback = readerDirection(language);
   const contentWidth = Math.max(0, width - insets.left - insets.right - THREAD_GUTTER * 2);
   // The rows re-render when the mode or the handed body changes; both are held by reference.
-  const rowInputs = useMemo(() => ({ selection, utteranceBody, replyCompanion, exchangeTrailer }), [selection, utteranceBody, replyCompanion, exchangeTrailer]);
+  const rowInputs = useMemo(() => ({ selection, utteranceBody, replyCompanion, exchangeTrailer, readerName }), [selection, utteranceBody, replyCompanion, exchangeTrailer, readerName]);
 
   useEffect(() => {
     controller.ensureHistory();
@@ -693,7 +740,8 @@ export function ConversationSurface({
         }}
       >
         {chromeStart === null ? null : <View testID="qandeel-chrome-start">{chromeStart}</View>}
-        <View style={{ flexDirection: endSide === 'right' ? 'row' : 'row-reverse', alignItems: 'center' }}>
+        {/* Slice E D-3 (PO D-c): the door may shrink and wrap its word, so it never leaves the screen at large text. */}
+        <View style={{ flexDirection: endSide === 'right' ? 'row' : 'row-reverse', alignItems: 'center', flexShrink: 1 }}>
         <Control
           palette={palette}
           language={language}
@@ -703,11 +751,11 @@ export function ConversationSurface({
           controlRef={(node) => {
             doorRef.current = node;
           }}
-          style={{ paddingHorizontal: 12 }}
+          style={{ paddingHorizontal: 12, flexShrink: 1 }}
         >
-          <View style={{ flexDirection: fallback === 'rtl' ? 'row-reverse' : 'row', alignItems: 'center' }}>
+          <View style={{ flexDirection: fallback === 'rtl' ? 'row-reverse' : 'row', alignItems: 'center', flexShrink: 1 }}>
             <Glyph name="depth" color={palette.restInk} direction={fallback} />
-            <Text style={{ ...typeStyle('action'), color: palette.restInk, ...(fallback === 'rtl' ? { marginRight: 6 } : { marginLeft: 6 }) }}>
+            <Text style={{ ...typeStyle('action'), color: palette.restInk, flexShrink: 1, ...(fallback === 'rtl' ? { marginRight: 6 } : { marginLeft: 6 }) }}>
               {copy.doorLabel}
             </Text>
           </View>
@@ -724,6 +772,10 @@ export function ConversationSurface({
         icon-only in the rest ink, and carries its approved name.
       */}
       {onOpenSettings === undefined ? null : (
+        // Slice E D-3: ONE element at every size (no remount at the threshold); it scrolls only past the row's room.
+        <ScrollView style={[{ flexGrow: 0 }, personalRowScrolls ? { maxHeight: personalRowRoom } : null]} scrollEnabled={personalRowScrolls}
+          bounces={false} showsVerticalScrollIndicator={personalRowScrolls} keyboardShouldPersistTaps="always"
+          onContentSizeChange={(_w, h) => setPersonalRowContent((current) => (current === Math.ceil(h) ? current : Math.ceil(h)))}>
         <View
           testID="qandeel-personal-row"
           pointerEvents={selection === null ? 'auto' : 'none'}
@@ -762,6 +814,7 @@ export function ConversationSurface({
             <Glyph name="settings" color={palette.restInk} direction={fallback} />
           </Control>
         </View>
+        </ScrollView>
       )}
 
       <FlatList
@@ -769,7 +822,7 @@ export function ConversationSurface({
         testID="qandeel-conversation-thread"
         data={state.exchanges}
         keyExtractor={(exchange) => exchange.userTurn.id}
-        renderItem={({ item }) => <ExchangeRow exchange={item} copy={copy} palette={palette} language={language} contentWidth={contentWidth} selection={rowInputs.selection} utteranceBody={rowInputs.utteranceBody} replyCompanion={rowInputs.replyCompanion} exchangeTrailer={rowInputs.exchangeTrailer} />}
+        renderItem={({ item }) => <ExchangeRow exchange={item} copy={copy} palette={palette} language={language} contentWidth={contentWidth} selection={rowInputs.selection} utteranceBody={rowInputs.utteranceBody} replyCompanion={rowInputs.replyCompanion} exchangeTrailer={rowInputs.exchangeTrailer} readerName={rowInputs.readerName} />}
         extraData={rowInputs}
         ListHeaderComponent={state.exchanges.length > 0 ? (
           threadHead === null || selection !== null ? historyFailure : (
@@ -889,8 +942,11 @@ export function ConversationSurface({
               ...typeStyle('body'),
               color: palette.primary,
               maxHeight: typeStyle('body').lineHeight * COMPOSER_MAX_LINES,
-              paddingTop: 7,
-              paddingBottom: 7,
+              // UI-POLISH-01: with the refined body leading (26) the field itself stays the 44-point target. 26 + 9 + 9 is
+              // 44; 7 + 7 measured 40.6 on the HONOR. The text stays centred.
+              minHeight: MIN_TARGET,
+              paddingTop: 9,
+              paddingBottom: 9,
               paddingHorizontal: 0,
               textAlign: composerDirection === 'rtl' ? 'right' : 'left',
               writingDirection: composerDirection,

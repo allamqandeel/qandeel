@@ -24,7 +24,7 @@ import {
   type ChromeComposition,
 } from '../../responsive';
 import { RESPONSIVE_SURFACE_TEST_ID, resize } from '../../responsive/__fixtures__/composition';
-import { LivingAnalysisSurface, type LivingAnalysisSurfaceProps } from '../LivingAnalysisSurface';
+import { LivingAnalysisSurface, topBandRoom, type LivingAnalysisSurfaceProps } from '../LivingAnalysisSurface';
 
 const seen: { envelopes: ViewportEnvelope[]; chrome: ChromeComposition[]; appearance: string[] } = { envelopes: [], chrome: [], appearance: [] };
 
@@ -183,6 +183,59 @@ describe('S5-03B R1 — the Living Analysis surface', () => {
     // frame resized mid-travel no longer strands the world (`map/__tests__/world-resize-race.test.tsx`).
     await act(async () => { fireEvent(view.getByTestId(RESPONSIVE_CHROME_MEASURE_TEST_ID), 'layout', layout(0)); });
     expect(styleOf(view.getByTestId(RESPONSIVE_SUPPORT_BAND_TEST_ID)).height).toBe(34);
+  });
+
+  it('COSMOS Slice E D-3 (PO D-c / D-d) — a top band holds at most 40 % of the window; below that it is exactly as accepted', () => {
+    expect(topBandRoom(104, 844)).toEqual({ height: 104, scrolls: false });
+    expect(topBandRoom(337, 844)).toEqual({ height: 337, scrolls: false });
+    expect(topBandRoom(338, 844)).toEqual({ height: 337, scrolls: true });
+    expect(topBandRoom(600, 667)).toEqual({ height: 266, scrolls: true });
+  });
+
+  // The COSMOS stage (the only presentation the cap applies to): the glass it is drawn in carries the band as its top inset.
+  const glass: ViewportEnvelope[] = [];
+  const stage = (envelope: ViewportEnvelope) => {
+    glass.push(envelope);
+    return <View testID="probe-stage" />;
+  };
+  const scrollerOf = (view: RenderResult) => {
+    let node = view.getByTestId('probe-top').parent;
+    while (node !== null && node.props.scrollEnabled === undefined) node = node.parent;
+    return node;
+  };
+
+  it('COSMOS Slice E D-3 — within its room the stage’s band does not scroll and its height is the top inset, as before', async () => {
+    glass.length = 0;
+    const view = await composed(surface({ top: { content: <View testID="probe-top" />, height: 104 }, stage }), 104);
+    // The band's one native scroller.
+    const scroller = scrollerOf(view)!;
+    expect(scroller.props.scrollEnabled).toBe(false);
+    expect(styleOf(scroller).maxHeight).toBeUndefined();
+    expect(glass.at(-1)?.insetTop).toBe(104);
+  });
+
+  it('COSMOS Slice E D-3 — past its room (enlarged text) the stage’s band scrolls its own content in its own place, and the world keeps the rest', async () => {
+    glass.length = 0;
+    // The frame the platform would report under a capped band: the whole window below it.
+    const view = await render(surface({ top: { content: <View testID="probe-top" />, height: 500 }, stage }));
+    await resize(view, 390, 844, { insetTop: Math.floor(844 * 0.4), insetBottom: 34, mapHeight: 844 - 34 });
+    const scroller = scrollerOf(view)!;
+    expect(scroller.props.scrollEnabled).toBe(true);
+    expect(styleOf(scroller).maxHeight).toBe(Math.floor(844 * 0.4));
+    expect(glass.at(-1)?.insetTop).toBe(Math.floor(844 * 0.4));
+    // Every action of the band is still there: its content is mounted whole, never cut.
+    expect(view.getByTestId('probe-top')).toBeTruthy();
+  });
+
+  it.each([104, 400])('COSMOS Slice E D-3 (CP4 review, Replay contract protection) — the `world=` presentation keeps its band as accepted (band %i of 844): measured, unscrolled, uncapped', async (height) => {
+    const view = await render(surface({ top: { content: <View testID="probe-top" />, height } }));
+    await resize(view, 390, 844, { insetTop: height, insetBottom: 34 });
+    // No scroller between the band and its content: the content is the band's own child, as before D-3.
+    expect(scrollerOf(view)).toBeNull();
+    expect(view.getByTestId('probe-top').parent?.props.style).toEqual(expect.objectContaining({ position: 'absolute', top: 0 }));
+    // The band's whole measured height is paid by the world (no 40 % room): the frame's basis is half of what remains under it
+    // (400 capped at 337 would give 236).
+    expect(styleOf(view.getByTestId(RESPONSIVE_MAP_FRAME_TEST_ID)).flexBasis).toBe((844 - height - 34) / 2);
   });
 
   it('mounts the composition observer after the band, outside the layout', async () => {

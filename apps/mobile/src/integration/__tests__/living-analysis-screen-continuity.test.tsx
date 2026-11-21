@@ -9,10 +9,15 @@
 import { act, render, type RenderResult } from '@testing-library/react-native';
 
 import { disclosureFixture } from '../../map/__fixtures__/disclosure';
-import { MAP_SURFACE_TEST_ID, inspectObject, mapInspectionContext, mapProjectionRequest } from '../../map';
-import { ORIENTATION_CHROME_TEST_ID } from '../../orientation-chrome';
+// COSMOS-INT-01 (Product Owner D-2, 2026-11-15): the Personal world is drawn by the COSMOS stage on the ONE surface; the
+// world's node is the stage view (`MapSurface` stays the Replay composite's renderer, G-5).
+// COSMOS-INT-01 Slice C (Contract v1.3 §14 C-6, §15.5): the Timeline row and the chrome band are no longer composed. The
+// owners that hold local state now are the stage, the rail (its measured width and T-06's motion binding) and the
+// headless T-06 / T-05 navigators beside it; the same identity claim is made over them.
+import { COSMOS_RAIL_SEGMENTS_TEST_ID, COSMOS_TIMELINE_RAIL_TEST_ID, COSMOS_WORLD_VIEW_TEST_ID } from '../../cosmos/product';
+import { LIVING_ANALYSIS_STAGE_TEST_ID } from '../../living-analysis';
+import { inspectObject, mapInspectionContext, mapProjectionRequest } from '../../map';
 import type { HistoricalSemanticDepth } from '../../projection';
-import { RESPONSIVE_CHROME_BAND_TEST_ID, RESPONSIVE_TIMELINE_ROW_TEST_ID } from '../../responsive';
 import { resize } from '../../responsive/__fixtures__/composition';
 import { sessionPosition } from '../../state';
 import { temporalTargeting } from '../../temporal-navigation';
@@ -39,8 +44,11 @@ const projection: Responder = (request) => {
   };
 };
 
-const OWNERS = [MAP_SURFACE_TEST_ID, 'qandeel-map-surface-plane', 'qandeel-temporal-target-layer', RESPONSIVE_TIMELINE_ROW_TEST_ID, RESPONSIVE_CHROME_BAND_TEST_ID, ORIENTATION_CHROME_TEST_ID];
-const owners = (view: RenderResult) => OWNERS.map((id) => view.getByTestId(id));
+const OWNERS = [LIVING_ANALYSIS_STAGE_TEST_ID, COSMOS_WORLD_VIEW_TEST_ID, COSMOS_TIMELINE_RAIL_TEST_ID, COSMOS_RAIL_SEGMENTS_TEST_ID, 'qandeel-temporal-navigator', 'timeline-command'];
+// COSMOS-INT-01 Slice D CP3 re-anchor (Contract v1.7 §19.16): the inspection below now opens the Personal PEEK, beneath
+// which the rail stays mounted but is hidden from accessibility (it is covered). The owners are therefore looked up with
+// hidden elements included; the protection is unchanged — each owner is the SAME instance before and after.
+const owners = (view: RenderResult) => OWNERS.map((id) => view.getByTestId(id, { includeHiddenElements: true }));
 
 const element = (h: IntegrationHarness, language: 'en' | 'ar', width: number, height: number) => (
   <LivingAnalysisMap
@@ -52,7 +60,7 @@ const element = (h: IntegrationHarness, language: 'en' | 'ar', width: number, he
   />
 );
 
-it('S5-03B R1 — the Map, the Timeline and the chrome are never remounted by a resize, a preview, an inspection or a language change', async () => {
+it('S5-03B R1 — the Map, the rail and the headless navigators are never remounted by a resize, a preview, an inspection or a language change', async () => {
   const h = await harness({ liveHead: LIVE_HEAD, projection });
   const view = await render(element(h, 'en', 390, 844));
   await act(async () => {

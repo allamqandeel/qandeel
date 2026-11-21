@@ -134,7 +134,10 @@ test('5 — no Activity entry or strip in the Analysis; the entry is composed on
   }
   const depth = code(`${MOBILE}/integration/composition/DepthComposition.tsx`);
   assert.equal((depth.match(/<ActivityEntry\b/gu) ?? []).length, 1, 'one entry');
-  assert.match(depth, /chromeStart=\{onSignOut === undefined \? null : \(\n\s*<ActivityEntry /u, 'handed to the non-Analysis upper chrome');
+  // RE-ANCHORED by COSMOS E-2 corrections, Slice B (PO decision D-2, 2026-11-20): the Conversations entry (the person's own
+  // conversation catalog) now stands beside the Activity entry in the SAME non-Analysis upper chrome, in one row; the Activity
+  // entry is still composed once, at the START edge, and nothing of it reaches the Analysis.
+  assert.match(depth, /chromeStart=\{onSignOut === undefined \? null : \(\n\s*<View[^\n]*\n\s*\{onSwitchConversation === undefined \? null : <ConversationsEntry [^\n]*\n\s*<ActivityEntry /u, 'handed to the non-Analysis upper chrome');
   assert.match(depth, /strip !== null && strip\.form === 'ORDINARY' && depth === 'CONVERSATION'/u, 'the strip host never mounts at the Analysis depth');
   assert.match(depth, /activityShown && depth === 'CONVERSATION' && onSignOut !== undefined \?/u, 'Activity is never reached from the Analysis');
   const surface = read(`${MOBILE}/conversation/ConversationSurface.tsx`);

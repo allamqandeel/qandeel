@@ -195,29 +195,35 @@ const EN: LanguagePack = Object.freeze<LanguagePack>({
   }),
   returns: Object.freeze({
     BACK_ONE_STEP: Object.freeze({
-      label: 'Back one step',
+      // APPROVED 2026-11-16 — COSMOS-INT-01 Product Copy Gate (concise act labels); the hint below is unchanged. Was «Back one step».
+      label: 'Previous step',
       // Restores a captured viewpoint. It does not claim any of the three fields will differ.
       hint: 'Restores the viewpoint your most recent step came from. It does not rejoin the conversation.',
     }),
     EXACT_RETURN: Object.freeze({
-      label: 'Return to the original inspection',
+      // APPROVED 2026-11-16 — COSMOS-INT-01 Product Copy Gate (concise act labels); the hint below is unchanged. Was «Return to the original inspection».
+      label: 'Original view',
       hint: 'Restores exactly the viewpoint this inspection started from.',
     }),
     RETURN_LIVE_HEAD: Object.freeze({
-      label: 'Rejoin the conversation',
+      // APPROVED 2026-11-16 — COSMOS-INT-01 Product Copy Gate (concise act labels); the hint below is unchanged. Was «Rejoin the conversation».
+      label: 'Follow live',
       hint: 'Follows the conversation as it continues. The view does not move.',
     }),
     RETURN_LIVE_FOCUS: Object.freeze({
       // One shot, from here. It is never a way to rejoin, so it promises nothing about the moment.
-      label: 'Move to where attention is now',
+      // APPROVED 2026-11-16 — COSMOS-INT-01 Product Copy Gate (concise act labels); the hint below is unchanged. Was «Move to where attention is now».
+      label: 'Current focus',
       hint: 'Goes once to where attention is now. The moment you are reading does not change.',
     }),
     RETURN_WORLD: Object.freeze({
-      label: 'Return to the whole world',
+      // APPROVED 2026-11-16 — COSMOS-INT-01 Product Copy Gate (concise act labels); the hint below is unchanged. Was «Return to the whole world».
+      label: 'Whole world',
       hint: 'Returns to the world viewpoint at the same moment you are reading.',
     }),
     GO_LIVE_AND_LOCATE: Object.freeze({
-      label: 'Rejoin the conversation and move there',
+      // APPROVED 2026-11-16 — COSMOS-INT-01 Product Copy Gate (concise act labels); the hint below is unchanged. Was «Rejoin the conversation and move there».
+      label: 'Live + locate',
       // The temporal half is owned; the spatial half is CONDITIONAL and says so. Nothing here names
       // the target, its thread, a direction, a distance, or whether a landing will exist at all.
       hint: 'Rejoins the conversation and, if its current attention can be located there, moves the view to it in the same step.',
@@ -333,29 +339,35 @@ const AR: LanguagePack = Object.freeze<LanguagePack>({
   // addressee inflection at all, and here it is also the natural word for every one of the six.
   returns: Object.freeze({
     BACK_ONE_STEP: Object.freeze({
-      label: 'الرجوع خطوة واحدة',
+      // APPROVED 2026-11-16 — COSMOS-INT-01 Product Copy Gate (concise act labels); the hint below is unchanged. Was «الرجوع خطوة واحدة».
+      label: 'تراجع خطوة',
       // The relative clause compresses to a possessive, which is what Arabic actually does here.
       hint: 'يستعيد موضعك قبل خطوتك الأخيرة. لا يعيدك إلى المحادثة الجارية.',
     }),
     EXACT_RETURN: Object.freeze({
-      label: 'العودة إلى المعاينة الأصلية',
+      // APPROVED 2026-11-16 — COSMOS-INT-01 Product Copy Gate (concise act labels); the hint below is unchanged. Was «العودة إلى المعاينة الأصلية».
+      label: 'بداية المعاينة',
       hint: 'يستعيد بالضبط الموضع الذي بدأت منه هذه المعاينة.',
     }),
     RETURN_LIVE_HEAD: Object.freeze({
-      // W1A-01 Product Owner supersession: replaces «العودة إلى المحادثة الجارية».
-      label: 'العودة لمتابعة المحادثة',
+      // W1A-01 Product Owner supersession: replaced «العودة إلى المحادثة الجارية» with «العودة لمتابعة المحادثة».
+      // APPROVED 2026-11-16 — COSMOS-INT-01 Product Copy Gate (concise act labels); the hint below is unchanged.
+      label: 'متابعة الآن',
       hint: 'يتابع المحادثة وهي تستمر. لا يتحرك العرض.',
     }),
     RETURN_LIVE_FOCUS: Object.freeze({
-      label: 'الانتقال إلى موضع الاهتمام الآن',
+      // APPROVED 2026-11-16 — COSMOS-INT-01 Product Copy Gate (concise act labels); the hint below is unchanged. Was «الانتقال إلى موضع الاهتمام الآن».
+      label: 'الاهتمام الآن',
       hint: 'ينتقل مرة واحدة إلى موضع الاهتمام الآن. لا تتغير لحظتك.',
     }),
     RETURN_WORLD: Object.freeze({
-      label: 'العودة إلى العالم كله',
+      // APPROVED 2026-11-16 — COSMOS-INT-01 Product Copy Gate (concise act labels); the hint below is unchanged. Was «العودة إلى العالم كله».
+      label: 'العالم كله',
       hint: 'يعود إلى العالم كله عند اللحظة نفسها.',
     }),
     GO_LIVE_AND_LOCATE: Object.freeze({
-      label: 'العودة إلى المحادثة والانتقال إلى موضعها',
+      // APPROVED 2026-11-16 — COSMOS-INT-01 Product Copy Gate (concise act labels); the hint below is unchanged. Was «العودة إلى المحادثة والانتقال إلى موضعها».
+      label: 'متابعة + موضع',
       hint: 'يعود إلى المحادثة الجارية، وإذا أمكن تحديد موضع الاهتمام هناك، ينقل العرض إليه في الخطوة نفسها.',
     }),
   }),
@@ -444,6 +456,8 @@ const pack = (language: ChromeLanguage): LanguagePack => PACKS[language];
  * family, never the id.
  */
 export const inspectionSentence = (language: ChromeLanguage, render: InspectionRenderState): string => pack(language).inspection(render);
+/** COSMOS-INT-01: the one approved word for a semantic depth, for the stage's depth rail. Decides nothing. */
+export const semanticDepthWord = (language: ChromeLanguage, depth: SemanticDepth): string => pack(language).depth[depth];
 
 /** Where the reader stands in conversational time. A Session Position is reader-facing Product truth. */
 export const temporalSentence = (language: ChromeLanguage, temporal: TemporalChrome): string => pack(language).temporal(temporal);

@@ -80,6 +80,7 @@ import { BackHandler, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useFrameCallback, useSharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { mintPublicCommandId } from '../../public-authoring';
 import {
   ANALYSIS_RETURN_BAR_MIN_HEIGHT,
   AnalysisReturnBar,
@@ -87,6 +88,7 @@ import {
   DEPTH_CROSSFADE_MS,
   DEPTH_CROSSFADE_REDUCED_MOTION_MS,
   useReduceMotion,
+  ConversationCatalogSurface, ConversationsEntry, type ConversationSwitchOutcome, type ConversationSwitchTarget,
 } from '../../conversation';
 import { useVoiceNoteSurface, VoiceNoteSettingsSection } from '../../voice-note';
 import { saveExportVoices } from '../../settings/export-file';
@@ -99,7 +101,7 @@ import { ActivityEntry, ActivitySurface, AttentionStrip, CallSafeStrip, type Pro
 import { CallLine, useCallSurface, type CallRecordCompanion } from '../../call';
 import { CallRecordListening, createReplayAudioSurface, useVoicePassageSelection } from '../../original-audio';
 import { PermissionEducationSheet } from '../../push';
-import { GLOBAL_SWITCHER_HEIGHT, GlobalSwitcher, SharedWorldArea, type WorldArea } from '../../shared-world';
+import { GlobalSwitcher, globalSwitcherHeight, SharedWorldArea, type WorldArea } from '../../shared-world';
 import { PublicWorldArea } from '../../public-world';
 import { PublicShareEntry, usePublicShareSelection } from '../../public-share';
 import { ReplayEntryControl, ReplayEntryMenu, ReplayNoticeLine, useReplaySelection } from '../../replay-entry';
@@ -147,9 +149,14 @@ export interface DepthCompositionProps {
    * Without it (a composition rendered on its own) the Personal row offers no Settings entry.
    */
   readonly onSignOut?: () => Promise<unknown>;
+  /**
+   * COSMOS E-2 corrections, Slice B (the Product Owner's D-2): the integration owner's conversation switch. Without it
+   * (a composition rendered on its own) the Conversation offers no conversations entry.
+   */
+  readonly onSwitchConversation?: (target: ConversationSwitchTarget) => Promise<ConversationSwitchOutcome>;
 }
 
-export function DepthComposition({ runtime, locale, insets, fontScale, envelope, onSignOut }: DepthCompositionProps) {
+export function DepthComposition({ runtime, locale, insets, fontScale, envelope, onSignOut, onSwitchConversation }: DepthCompositionProps) {
   // The safe-area edges as numbers: T-11's inset type allows an absent edge, which is zero.
   const edges = useMemo(
     () => ({ top: insets.top ?? 0, right: insets.right ?? 0, bottom: insets.bottom ?? 0, left: insets.left ?? 0 }),
@@ -265,11 +272,18 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
     [beginFade, depth, fading, incoming, leaving, reduceMotion],
   );
 
+  // COSMOS-INT-01 Slice D CP3 (§19.6, SD-5): the Personal Detail Sheet's step of the ONE Back handler below. The
+  // composition hands it over while it is mounted; it answers `true` when it dismissed the PEEK (presentation only).
+  const sheetBack = useRef<(() => boolean) | null>(null);
+  const registerSheetBack = useCallback((back: (() => boolean) | null) => { sheetBack.current = back; }, []);
+
   // Android system Back at the Analysis depth is the return to the Conversation. Registered only
   // while Analysis is the depth, so at the Conversation Back reaches the platform exactly as before.
+  // Slice D CP3: an open PEEK is dismissed first (that Back is spent); otherwise the return, unchanged.
   useEffect(() => {
     if (depth !== 'ANALYSIS') return undefined;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (sheetBack.current?.() === true) return true;
       cross('CONVERSATION');
       return true;
     });
@@ -346,6 +360,24 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
     });
     return () => subscription.remove();
   }, [closeIntroductions, introductionsShown]);
+
+  // COSMOS E-2 Slice B — the conversation catalog over the Conversation, the same kind of local presentation choice.
+  const [conversationsShown, setConversationsShown] = useState(false);
+  const openConversations = useCallback(() => {
+    replayPlayer.close();
+    setConversationsShown(true);
+  }, [replayPlayer]);
+  const closeConversations = useCallback(() => setConversationsShown(false), []);
+  useEffect(() => {
+    if (!conversationsShown) return undefined;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      closeConversations();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [closeConversations, conversationsShown]);
+  // A switch replaces the runtime generation: the list closes with the conversation it was opened over.
+  useEffect(() => () => setConversationsShown(false), [runtime]);
 
   // A3-01 — Activity over the Conversation. Back returns to exactly where the reader was.
   const openActivity = useCallback(() => {
@@ -577,7 +609,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
 
   // S4-01 — the switcher's band is reserved at the Conversation depth whenever the world can switch, so opening and
   // closing an overlay never re-lays the Conversation out.
-  const switcherBand = onSignOut === undefined ? 0 : GLOBAL_SWITCHER_HEIGHT + 1;
+  // Slice E D-3: the band follows the plate's height at the reader's text size (the accepted 56 up to iOS xxxL).
+  const switcherBand = onSignOut === undefined ? 0 : globalSwitcherHeight(fontScale) + 1;
   const conversationInsets = useMemo(() => ({ ...edges, bottom: edges.bottom + switcherBand }), [edges, switcherBand]);
   const shared = runtime.sharedWorld;
   // S7-02 — the Personal Replay entry: an action on THIS conversation, in the Personal world only, beside the depth control.
@@ -597,6 +630,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   // crossing depths, opening the Analysis or another surface re-reads it and never reopens or ends anything.
   const callOwner = onSignOut === undefined ? null : runtime.call;
   const { exchanges, calls } = useSyncExternalStore(runtime.conversation.subscribe, runtime.conversation.getState);
+  // COSMOS-FINAL-01 E-1: the reader's own account Name, whose initials mark the reader's own turns (shown to the reader only).
+  const readerName = useSyncExternalStore(runtime.account.subscribe, () => runtime.account.getState().displayName);
   // S8B-07 CP1-B (Sheet A): a finished call's recording player beside its record, in the Personal world only; leaving the
   // conversation (a depth, a destination, a selection) releases whatever plays and lets its file go.
   const callListening = onSignOut === undefined ? null : runtime.callListening;
@@ -674,6 +709,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         onOpenAnalysis={() => cross('ANALYSIS')}
         focusDepthControl={crossed && current}
         opening={<ConversationOpening account={runtime.account} language={locale.language} />}
+        readerName={readerName}
         onOpenSettings={onSignOut === undefined ? undefined : openSettings}
         focusSettingsEntry={returnedFromSettings && !settingsShown}
         personalEntry={onSignOut === undefined ? null : (
@@ -698,7 +734,10 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         overlay={onSignOut === undefined ? null : <ReplayEntryMenu controller={runtime.replayEntry} language={locale.language} insets={conversationInsets} />}
         selection={onSignOut === undefined ? null : shareSelection ?? replaySelection}
         chromeStart={onSignOut === undefined ? null : (
-          <ActivityEntry controller={runtime.attention} language={locale.language} onOpen={openActivity} focus={returnedFromActivity && !activityShown} />
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {onSwitchConversation === undefined ? null : <ConversationsEntry language={locale.language} onOpen={openConversations} />}
+            <ActivityEntry controller={runtime.attention} language={locale.language} onOpen={openActivity} focus={returnedFromActivity && !activityShown} />
+          </View>
         )}
         composerEnd={composerEnd}
         composerOverride={voiceSlots.composerOverride}
@@ -721,9 +760,13 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
             runtime={runtime}
             locale={locale}
             insets={analysisInsets}
+            driftPaused={callLive}
             fontScale={fontScale}
             envelope={envelope}
             onComposed={current ? beginFade : undefined}
+            registerSheetBack={registerSheetBack}
+            onAlias={(threadId, alias) => runtime.catalog.renameThread(threadId, alias)}
+            onOpenSource={onSwitchConversation === undefined ? undefined : (sessionId, sp) => onSwitchConversation({ kind: 'OPEN', sessionId, sp })}
             top={{
               content: (
                 <AnalysisReturnBar
@@ -812,6 +855,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
               introductions={runtime.introductionWorlds}
               introductionSharing={runtime.introductionSharing}
               introductionEntry={introductionEntry}
+              readerName={readerName}
             />
           </View>
         ) : null}
@@ -837,6 +881,11 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         {depth === 'CONVERSATION' && leaving === null && onSignOut !== undefined && !settingsShown && !understandingShown && !activityShown && !introductionsShown && !playerOpen ? (
           <View style={styles.switcher}>
             <GlobalSwitcher area={area} language={locale.language} bottomInset={edges.bottom} onSelect={setArea} />
+          </View>
+        ) : null}
+        {conversationsShown && depth === 'CONVERSATION' && onSwitchConversation !== undefined ? (
+          <View style={StyleSheet.absoluteFill} pointerEvents={settingsShown || activityShown ? 'none' : 'auto'}>
+            <ConversationCatalogSurface controller={runtime.catalog} language={locale.language} insets={edges} onBack={closeConversations} onSwitch={onSwitchConversation} mintRequestId={mintPublicCommandId} />
           </View>
         ) : null}
         {activityShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (

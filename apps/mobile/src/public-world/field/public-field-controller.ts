@@ -21,14 +21,23 @@
  * section only, and nothing is ranked, counted or moved. Its list is closed first by Back, and the chosen section is
  * released last, before Back leaves the World's root. Every entry starts again from every section.
  *
- * No cache is a source of display (R1). The field shows exactly what the LATEST read served — never an older read kept
- * for later — and every transition that could show a different part of the World asks again for EVERYTHING on display
- * (R2): the glass, the open search and the focused panel, on any camera move at any rung (FAR included), a return to
- * the foreground, and every entry (the World as a whole, read fresh). A read that answers removes, at once, every Experience it is authoritative for and no
- * longer serves: from the field, the search results, the focused panel and its nearby context. A read that cannot be
- * made fails closed: the field becomes the one honest unavailable state and holds nothing.
+ * No cache is a source of display (R1). Every transition that could show a different part of the World asks again for
+ * EVERYTHING on display (R2): the glass, the open search and the focused panel, on any camera move at any rung (FAR
+ * included), a return to the foreground, and every entry (the World as a whole, read fresh). A read that answers
+ * removes, at once, every Experience it is authoritative for and no longer serves: from the field, the search results,
+ * the focused panel and its nearby context. A read that cannot be made fails closed: the field becomes the one honest
+ * unavailable state and holds nothing.
+ *
+ * COSMOS E-2 corrections, Slice D-2 (PO decision D-1 = Option K, 2026-11-20; a controlled amendment of R1): a read is
+ * authoritative INSIDE its rectangle — there the field becomes exactly what it served. OUTSIDE its rectangle the
+ * Experiences earlier reads of the SAME visit served stay on the field until a read that covers them answers, so a pan
+ * or a zoom out never shows a blank region for the length of a round trip (the user-observed pop-in). What stays is
+ * never older than this visit (every entry starts again from nothing), never survives an authorization, identity,
+ * section or visibility change that re-enters or fails the field closed, is bounded (`PUBLIC_FIELD_RETAINED_MAX`, the
+ * nearest kept), and is no second source of truth: it is drawn only until the read that is authoritative for it
+ * answers, and authoritative removal is unchanged.
  */
-import { envelopeCenter, projectAddress, visibleFootprint, type SemanticZoomDirection, type ViewportEnvelope } from '../../map/camera';
+import { envelopeCenter, projectAddress, unprojectPoint, visibleFootprint, type ScreenPoint, type SemanticZoomDirection, type ViewportEnvelope } from '../../map/camera';
 import type { CanonicalWorldAddress } from '../../map/world';
 import type {
   ForegroundSignal, PublicAuthoringAnswer, PublicFieldContentPage, PublicFieldContentRead, PublicFieldEntry, PublicFieldExperience, PublicFieldPanel,
@@ -105,7 +114,7 @@ export interface PublicFieldController {
    * accessible route): IN is FAR → MID → NEAR (NEAR focuses the place nearest the centre of the glass); OUT is NEAR →
    * MID (focus released) → FAR.
    */
-  step(direction: SemanticZoomDirection): PublicFieldOutcome;
+  step(direction: SemanticZoomDirection, focal?: ScreenPoint | null): PublicFieldOutcome;
   /** Ask the server again for everything on display (the glass, the open search, the focused panel). */
   revalidate(): void;
   /** A tap on the field at a screen point: at FAR it discloses that place at MID. */
@@ -165,8 +174,23 @@ export const PUBLIC_SEARCH_QUERY_MAX = 120;
  * Product gap awaiting the Product Owner's ownership decision).
  */
 export const PUBLIC_FIELD_READ_BOUND = 400;
+/**
+ * Slice D-2 (Option K): the most Experiences kept OUTSIDE the latest read's rectangle. The whole-World entry read and
+ * one glass read are each bounded at 400; what both can leave outside the glass is bounded here too, nearest first.
+ */
+export const PUBLIC_FIELD_RETAINED_MAX = 2 * PUBLIC_FIELD_READ_BOUND;
 
 const within = (r: PublicFieldRectangle, a: CanonicalWorldAddress): boolean => a.x >= r.minX && a.x <= r.maxX && a.y >= r.minY && a.y <= r.maxY;
+const magnitude = (value: bigint): bigint => (value < 0n ? -value : value);
+/** Slice D-2: the entries outside a read's rectangle that stay, nearest to the rectangle first, at most the bound. */
+const retainedOutside = (rectangle: PublicFieldRectangle, entries: readonly PublicFieldEntry[], servedIds: ReadonlySet<string>): readonly PublicFieldEntry[] => {
+  const outside = entries.filter((entry) => !servedIds.has(entry.id) && !within(rectangle, entry.address));
+  if (outside.length <= PUBLIC_FIELD_RETAINED_MAX) return outside;
+  const cx = (rectangle.minX + rectangle.maxX) / 2n;
+  const cy = (rectangle.minY + rectangle.maxY) / 2n;
+  const distance = (entry: PublicFieldEntry) => magnitude(entry.address.x - cx) + magnitude(entry.address.y - cy);
+  return outside.map((entry) => ({ entry, d: distance(entry) })).sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0)).slice(0, PUBLIC_FIELD_RETAINED_MAX).map(({ entry }) => entry);
+};
 
 export function createPublicFieldController({ transport, isCurrent, foreground, discussion = null }: PublicFieldControllerOptions): PublicFieldController {
   const listeners = new Set<() => void>();
@@ -194,9 +218,10 @@ export function createPublicFieldController({ transport, isCurrent, foreground, 
   };
 
   /**
-   * A field read answered: the field becomes exactly what it served (nothing older is kept to be shown again), and where
-   * the read is complete, every Experience inside its rectangle that it no longer serves leaves the search results, the
-   * focused panel and the nearby context too.
+   * A field read answered: inside its rectangle the field becomes exactly what it served, and where the read is
+   * complete, every Experience inside its rectangle that it no longer serves leaves the search results, the focused
+   * panel and the nearby context too. Outside its rectangle (Slice D-2, Option K) what this visit's earlier reads served
+   * stays, bounded, until a read covering it answers.
    */
   const applyServed = (rectangle: PublicFieldRectangle, served: ReadonlyArray<PublicFieldEntry>, extra: Partial<PublicFieldState> = {}) => {
     const ids = new Set(served.map((entry) => entry.id));
@@ -215,7 +240,7 @@ export function createPublicFieldController({ transport, isCurrent, foreground, 
           relations: experience.relations.filter((relation) => !gone(relation.other)) } } };
       }
     }
-    publish({ ...extra, entries: served, focus, search: { ...state.search, results: state.search.results.filter((entry) => !gone(entry)) } });
+    publish({ ...extra, entries: [...served, ...retainedOutside(rectangle, state.entries, ids)], focus, search: { ...state.search, results: state.search.results.filter((entry) => !gone(entry)) } });
   };
 
   /** A read that could not be made: the one honest unavailable state, holding nothing that could be shown again. */
@@ -274,10 +299,10 @@ export function createPublicFieldController({ transport, isCurrent, foreground, 
   }
 
   /** One search read; its answer replaces the results outright (nothing from an earlier answer is kept). */
-  const runSearch = (q: string) => {
+  const runSearch = (q: string, alongside?: Partial<PublicFieldState>) => {
     if (!transport) return;
     const mine = ++searchTicket;
-    publish({ search: { open: true, status: 'SEARCHING', results: [] } });
+    publish({ ...alongside, search: { open: true, status: 'SEARCHING', results: [] } });
     const section = state.section.key ?? undefined;
     void (section === undefined ? transport.search(q) : transport.search(q, section)).catch(() => ({ kind: 'NO_ANSWER' as const })).then((answer) => {
       if (mine !== searchTicket) return;
@@ -394,7 +419,7 @@ export function createPublicFieldController({ transport, isCurrent, foreground, 
       setCamera(moved.camera);
       return APPLIED;
     },
-    step(direction) {
+    step(direction, focal = null) {
       const camera = state.camera;
       if (!camera || state.status !== 'READY' || envelope === null) return NOT_READY;
       if (direction === 'IN' && camera.depth === 'MID') {
@@ -402,12 +427,13 @@ export function createPublicFieldController({ transport, isCurrent, foreground, 
         const glass = envelope;
         const footprint = visibleFootprint(camera, glass);
         const shown = state.entries.filter((entry) => within(footprint, entry.address) && projectAddress(camera, glass, entry.address) !== null);
-        const nearest = nearestTo(camera.anchor, shown);
+        // MAP-CLOSE-01 CA-Z1: the place nearest the pinch's fingers (the centre of the glass when there are none).
+        const nearest = nearestTo((focal === null ? null : unprojectPoint(camera, glass, focal)) ?? camera.anchor, shown);
         if (nearest === null) return { outcome: 'AT_BOUNDARY' };
         focusOn(nearest);
         return APPLIED;
       }
-      const moved = zoomField(camera, direction);
+      const moved = zoomField(camera, direction, null, focal === null ? null : { envelope, point: focal });
       if (moved.outcome !== 'MOVED') return { outcome: moved.outcome };
       if (camera.depth === 'NEAR') releaseFocus();
       setCamera(moved.camera);
@@ -464,7 +490,10 @@ export function createPublicFieldController({ transport, isCurrent, foreground, 
       const q = query.replace(/\s+/gu, ' ').trim();
       if (q.length === 0 || q.length > PUBLIC_SEARCH_QUERY_MAX || !transport) return;
       lastQuery = q;
-      runSearch(q);
+      // COSMOS-FINAL-01 O-1 (PO, 2026-11-19): a search executed while the section list is open closes the list in the same
+      // step as the search starts (never a state with the list closed and an earlier answer still shown). The section and
+      // its scope are kept, so the search asks inside the section shown; Back keeps its order.
+      runSearch(q, state.section.choosing ? { section: { key: state.section.key, choosing: false } } : undefined);
     },
     closeSearch() {
       searchTicket += 1;
