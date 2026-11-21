@@ -274,6 +274,9 @@ that Android, Jest and the iOS boot smoke had all passed. It relaxes nothing in 
 | `QAN-BL-PRIV-06` | Protected-Human Analytical Subject-Authority Producer for Replay Distribution | `AUTH-SUBJ-01 — Protected-Human Analytical Subject-Authority Producer` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PROD-12` | Hosted Replay Pool Isolation & Monitoring Proofs | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-08` | Shared World: No Navigation From a Semantic Place's Source to Its Position in the World's Conversation | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
+| `QAN-BL-VIS-02` | Replay's Personal Map Still Draws With the Pre-COSMOS Renderer (REPLAY-COSMOS-01) | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
+| `QAN-BL-NAV-04` | No Full Personal Detail Surface Beyond the PEEK (PERSONAL-DETAIL-01) | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
+| `QAN-BL-CI-04` | iOS World Gate (BG-10): Maestro Hangs Leave Cases NOT TESTED, Evidence Is Lost When the Job Is Cancelled, and the iPhone SE Cell Exceeds Its Time Budget | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 
 ---
 
@@ -3905,6 +3908,89 @@ implementation (BG-07).
 Admitted by `COSMOS-INT-01` Slice D CP4 (2026-11-17, Draft PR #397) under BG-06's second route (explicitly deferred by a
 canonical document: the Product Owner's SD-2 / G-3). Nothing here authorizes implementation (BG-07).
 
+### `QAN-BL-VIS-02` — Replay's Personal Map Still Draws With the Pre-COSMOS Renderer (REPLAY-COSMOS-01)
+
+- **Title / Finding:** COSMOS draws the live Personal, Shared and Public stages. The Replay passage's Personal map at a
+  moment is still drawn by the previous Living Analysis renderer through `ReplayMomentComposite`, as the Product Owner's
+  G-5 decided. The product therefore carries two map renderers.
+- **Source:** the [COSMOS Production Integration Contract](e2e/QANDEEL_COSMOS_INT_01_PRODUCTION_INTEGRATION_CONTRACT_v1.md) §12 (`REPLAY-COSMOS-01`, recorded by G-5, PO v1.1:
+  "to be admitted to the backlog under BG-06 / BG-08 at the task's closure") and §31.11.
+- **Why not current work:** G-5 kept the old renderer in Replay, and COSMOS changed no Replay surface. S8B-07's approved
+  scope (CP2-A WP0 v0.3.1) does not contain it.
+- **Owner task:** `UNASSIGNED` — the Product Owner named no owner, and none is invented (BG-02).
+- **Severity:** `MEDIUM` — a visual inconsistency, not wrong or misleading content: Replay's own composite truth is unchanged.
+- **Reopen condition:** a roadmap or Architecture decision unifies the Replay renderer, or any task changes the renderer
+  behind `ReplayMomentComposite`.
+- **Required future properties:** the governed projection adapter and viewpoint store unchanged; S7-01 secure
+  integration, S7-03 composite truth (the historical viewpoint, the honest states), S7-04 player navigation, the
+  original-audio and transient-media contracts (`ReplayAudioViews`, the presentation map, the playback owner), and
+  Replay's own spine and moment controls all preserved.
+- **Anti-duplication:** checked against all 109 earlier IDs and every tombstone. `QAN-BL-NAV-02` (Analysis Replay,
+  tombstoned), `QAN-BL-NAV-03` (the Shared / Public Replay surface) and `QAN-BL-VIS-01` (density and LOD) are different
+  capabilities; no item held this one.
+- **Status:** `OPEN — UNASSIGNED`
+
+Admitted by `COSMOS-INT-01` at its closure (2026-11-21) under BG-06's second route (explicitly deferred by a canonical
+document: the contract's §12 / G-5). Nothing here authorizes implementation (BG-07).
+
+### `QAN-BL-NAV-04` — No Full Personal Detail Surface Beyond the PEEK (PERSONAL-DETAIL-01)
+
+- **Title / Finding:** the Personal Detail Sheet is PEEK-only (G-7, V1). There is no full Personal detail surface for a
+  Thread, Reading or Session — the linked conversation at the moment, the analysis, the original recording where it
+  exists — and no expand affordance is shown (the contract's P-12: ABSENT).
+- **Source:** the [COSMOS Production Integration Contract](e2e/QANDEEL_COSMOS_INT_01_PRODUCTION_INTEGRATION_CONTRACT_v1.md) §10 G-7 and §12 (`PERSONAL-DETAIL-01`, recorded by
+  G-7, PO v1.1: "needs a product contract") and §31.11.
+- **Why not current work:** it needs a product contract that no task holds, and COSMOS integrated existing acts only.
+- **Owner task:** `UNASSIGNED` — the Product Owner named no owner, and none is invented (BG-02).
+- **Severity:** `MEDIUM` — a missing surface, not a misleading one: the PEEK states what it holds and offers its
+  existing acts.
+- **Reopen condition:** a product contract for a full Personal detail surface is opened, or any task adds an expand
+  affordance to the Personal sheet.
+- **Required future properties:** it reads only through the historical projection's `inspectFamily` / `inspectId`, the
+  conversation session API and the Replay audio contracts; T-07 return; the no-fabrication rule; only what the reader may
+  see now.
+- **Anti-duplication:** checked against all 109 earlier IDs and every tombstone. `QAN-BL-NAV-01` (the cross-Session
+  timeline), `QAN-BL-NAV-03` (the Shared / Public Replay surface) and `QAN-BL-CW-08` (Shared source navigation) are
+  different capabilities; no item held this one.
+- **Status:** `OPEN — UNASSIGNED`
+
+Admitted by `COSMOS-INT-01` at its closure (2026-11-21) under BG-06's second route (explicitly deferred by a canonical
+document: the contract's §12 / G-7). Nothing here authorizes implementation (BG-07).
+
+### `QAN-BL-CI-04` — iOS World Gate (BG-10): Maestro Hangs Leave Cases NOT TESTED, Evidence Is Lost When the Job Is Cancelled, and the iPhone SE Cell Exceeds Its Time Budget
+
+- **Title / Finding:** on COSMOS's final head `f478204b`, the iOS World gate (run 44934797727) failed:
+  - iPhone 17 en: U-EMPTY NOT TESTED — Maestro's `ue-field` step passed its 150 s bound and was stopped.
+  - iPhone SE: from mid-run, Maestro steps hung one after another. S-LAND, U-LAND, S-EMPTY, U-EMPTY and P-LAND are NOT
+    TESTED, and U-TAP is FAIL because its tap command was itself stopped at 150 s.
+  - The SE job then reached its 120-minute limit and was cancelled before the native XCUITest steps.
+  - The evidence upload is skipped on a cancelled job, so the failure-only door evidence added in `f478204b` was lost.
+  - The one earlier iPhone SE Personal entry failure (gate 44908792454) is still unexplained: DIAG-SE-DOOR (run
+    44928574802, 10 / 10) is NOT REPRODUCED, not fixed.
+  - No three-cell green run exists on the final head.
+- **Source:** the [COSMOS Production Integration Contract](e2e/QANDEEL_COSMOS_INT_01_PRODUCTION_INTEGRATION_CONTRACT_v1.md) §31.10.7 and §31.11; the Product Owner's acceptance of
+  these results as documented exceptions for COSMOS closure (2026-11-21), non-blocking unless a later release gate
+  requires them.
+- **Why not current work:** the Product Owner accepted these results as exceptions for COSMOS, and COSMOS's closure is
+  documentation only.
+- **Owner task:** `UNASSIGNED` — the Product Owner named no owner, and none is invented (BG-02).
+- **Severity:** `MEDIUM` — BG-10 requires real iOS interaction at every code checkpoint. While the gate hangs, a later
+  mobile checkpoint cannot reach a green gate without another Product Owner exception.
+- **Reopen condition:** any later checkpoint on which the iOS World gate runs, or a release gate that requires a green
+  iOS World gate.
+- **Required future properties:**
+  - no case becomes PASS without real proof;
+  - no timeout is raised, no wait added and no retry hidden to reach green;
+  - evidence is uploaded even when the job is cancelled or times out;
+  - a hang can be told from an application failure by the evidence it keeps.
+- **Anti-duplication:** checked against all 109 earlier IDs and every tombstone. `QAN-BL-CI-01` (`CI-IOS-01`) is the
+  Maestro / XCTest driver's startup in Mobile CI, not hangs during this gate; `QAN-BL-CI-03` is the Android emulator. No
+  item held this one.
+- **Status:** `OPEN — UNASSIGNED`
+
+Admitted by `COSMOS-INT-01` at its closure (2026-11-21) under BG-08 (qualifying residue of the closing task, which must
+not survive only in a report). Nothing here authorizes implementation (BG-07).
+
 ## 6. Tombstones
 
 ### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
@@ -4782,14 +4868,14 @@ Tombstoned by `S8B-07` CP1-B under the Product Owner's order of 2026-11-08 (BG-0
 | --- | ---: |
 | `DEFERRED — OWNED` | 54 |
 | `VALIDATION — OPEN` | 4 |
-| `OPEN — UNASSIGNED` | 14 |
+| `OPEN — UNASSIGNED` | 17 |
 | `CLOSED — TOMBSTONE` | 37 |
-| **Total** | **109** |
+| **Total** | **112** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 63 |
-| `MEDIUM` | 43 |
+| `MEDIUM` | 46 |
 | `LOW` | 3 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -6404,6 +6490,32 @@ PR, not merged).**
 - **Not admitted (BG-06):** the Replay AX5 selection bar, which wraps one letter per line when the text size is set before launch. It was observed on both builds during D-3's Replay compatibility check (contract §27.1) and is pre-existing from S7-02. No canonical document defers it, and no Architecture designation exists. It is recorded in §27.1 and reported to the Product Owner for designation.
 - **BG-09:** COSMOS-INT-01 is not closed (Slice E remains). The contract (v1.16) and the locators carry D-3's administrative closure.
 - **Index unchanged: 109 items; 54 / 4 / 14 / 37 by status, 63 / 43 / 3 by severity.**
+
+**COSMOS-INT-01 — task closure: ACCEPTED / MERGED / CLOSED (2026-11-21).** It covers COSMOS-INT-01, COSMOS-FINAL-01 and
+E-2. The stack #394 – #402 is integrated through PR #402 as merge `90819192` (accepted source `f478204b`, identical tree).
+This closure change is documentation only.
+
+- **Inherited:** none. No backlog item names COSMOS-INT-01, COSMOS-FINAL-01 or Slice E as its owner (BG-05).
+- **Admitted (BG-08):**
+  - `QAN-BL-VIS-02` (REPLAY-COSMOS-01) and `QAN-BL-NAV-04` (PERSONAL-DETAIL-01): the residue the contract's §12 held
+    for this closure. Both `MEDIUM`, `OPEN — UNASSIGNED`.
+  - `QAN-BL-CI-04`: the iOS World gate residue the Product Owner accepted as exceptions for this closure. `MEDIUM`,
+    `OPEN — UNASSIGNED`.
+- **Unchanged:** `QAN-BL-CW-08` stays `OPEN — UNASSIGNED`, admitted at Slice D CP4.
+- **Not admitted, each with its own record:**
+  - SE-FU-1 is a Product Owner-accepted V1 limitation, recorded as Future Improvements item 022. It is not PASS and not
+    FIXED (contract §30.6).
+  - F-1, E-1 and E-2 were delivered and accepted (contract §29 – §31). E-2 is the Product Owner's physical HONOR
+    acceptance of the synthetic-data build `f478204b`.
+  - The RN Skia 2.7.0 `QAN-INF-03` exception stays the contract's standing record (§11), with its return condition
+    unchanged: Expo's bundled pin reaches 2.7.0.
+  - The Replay AX5 selection bar stays as recorded at D-3: pre-existing from S7-02, and not admitted.
+- **Hosted:** migrations 0197 – 0200 are merged into the source and are NOT applied to hosted Supabase. Their hosted
+  application stays separately controlled work (HOSTED-DEPLOY-01, under its own Product Owner authorization). The next
+  migration is 0201.
+- **BG-09:** the contract carries `ACCEPTED / MERGED / CLOSED` (v1.24, §31.11), and the locators are updated in the same
+  change.
+- **Index after the COSMOS closure: 112 items; 54 / 4 / 17 / 37 by status, 63 / 46 / 3 by severity.**
 
 ## 8. What is deliberately not in this backlog
 

@@ -1,5 +1,9 @@
 # QANDEEL — Product Roadmap
 
+> **PO SEQUENCING AFTER COSMOS (2026-11-21; status only; authorizes no implementation):** COSMOS-INT-01 (with COSMOS-FINAL-01 and E-2) is **ACCEPTED / MERGED / CLOSED**: PR #402 → `90819192`; [COSMOS contract](docs/e2e/QANDEEL_COSMOS_INT_01_PRODUCTION_INTEGRATION_CONTRACT_v1.md) §31.11.
+> - **The next planned product task is S8B-07 Replay**, resumed on its approved and frozen scope ([S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §14, CP2-A WP0 v0.3.1). It is not started; its planning is not reopened; its execution needs the Product Owner's authorization.
+> - Still separately controlled: hosted application of migrations 0197 – 0200 and the release / deployment work (HOSTED-DEPLOY-01).
+
 > **MAP-CLOSE-01 STEP 2 — LIVING ANALYSIS MAP VISUAL SOURCE OF TRUTH — 2026-11-10 (current task; status only, documentation only, no new task authority):** a Draft PR on the clean branch `map/map-close-01-visual-registry-clean`, from `main` at `bd80c755`, where MAP-CLOSE-01 Step 1 is merged through PR #388. It replaces Draft PR #389 under the PO's decision B-3. **Not merged; merge only on «ادمج».**
 > - **`MAP-CLOSE-01 STEP 2 — VISUAL SOURCE REGISTRY — APPROVED IN PRINCIPLE BY THE PO (2026-11-10) — AD-4 NOT FINAL — DOCUMENTATION ONLY`** ([Visual Source Registry](docs/design/canonical-artifacts/living-analysis/VISUAL-SOURCE-REGISTRY.md)). It places every map reference in exactly one of four categories:
 >   - **CURRENT PRODUCTION:** I-08B1 → VPORT-01 → LA-VIS-01 → SHARED-VIS-01 → S8B-06 F-G. It is in force, and it is not the art target.

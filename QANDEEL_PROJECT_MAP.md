@@ -1,6 +1,40 @@
 # QANDEEL — Project Map
 
-> **COSMOS-INT-01 — COSMOS V5 PRODUCTION INTEGRATION — SLICES B AND C ACCEPTED, PERSONAL TARGET CENTRING ACCEPTED, SLICE D CP1 – CP3 ACCEPTED FOR ROADMAP CONTINUATION, CP4 (THREE-WORLD CLOSURE) DELIVERED: SLICE D CLOSED / READY FOR PO REVIEW — SLICE E ACCEPTANCE REGISTER: F-1, E-1, E-2 RECORDED, NOT IMPLEMENTED — SLICE E REMEDIATION AUTHORISED (2026-11-18): D-1 TECHNICALLY CLOSED (DRAFT PR #399); D-3 CLOSED — ADMINISTRATIVE, COMPLETED SCOPE (PO, 2026-11-19; DRAFT PR #400); COSMOS-FINAL-01 (DRAFT PR #401): O-1, O-2 AND F-1 ACCEPTED; SE-FU-1 DEFERRED — ACCEPTED V1 LIMITATION, NON-BLOCKING FOR V1 BY EXPLICIT PO EXCEPTION (FUTURE IMPROVEMENTS ITEM 022; NOT PASS, NOT FIXED); E-1 SPEAKER BADGE ACCEPTED (PO, 2026-11-20; PERSONAL + SHARED; PUBLIC VERIFIED, UNCHANGED); E-1 PARTICIPANT ORDINAL NOT PURSUED (PO, 2026-11-20); IMPLEMENTATION CLOSED, FINAL STATUS IN CONTRACT §30.10 — E-2 RUN BY THE PO ON THE HONOR (SYNTHETIC BUILD 92dc31bb): NOT ACCEPTED, COSMOS NOT CLOSED — E-2 CORRECTIONS (CONTRACT §31, 2026-11-20): AUDIT DELIVERED; SLICE E (SHEET TABS) AND SLICE D-1 (LABELS) DELIVERED LOCALLY, iOS NOT TESTED; SLICES A / B / C / D-2 STOPPED FOR THE PO DECISIONS D-1 – D-5 — BG-10 MANDATORY iOS SIMULATOR VALIDATION (2026-11-18; current task; status only, no new task authority):** the accepted COSMOS stage draws the Personal, Shared and Public worlds in the product over the real runtime and controllers.
+> **COSMOS-INT-01 — COSMOS V5 PRODUCTION INTEGRATION (WITH COSMOS-FINAL-01 AND E-2) — ACCEPTED / MERGED / CLOSED — 2026-11-21 (status only; documentation-only closure; no new task authority):**
+> - **Integration:** PR #402 merged into `main` as `90819192` (parents `5a21971d` and `f478204b`). The accepted source is `f478204b`, and the merged tree is identical to it (0 files differ). The stack #394 – #402 is in `main` (151 commits). #394 is marked merged by GitHub; #395 – #401 are closed as superseded by #402. No COSMOS PR remains open. Record: [COSMOS contract](docs/e2e/QANDEEL_COSMOS_INT_01_PRODUCTION_INTEGRATION_CONTRACT_v1.md) v1.24, §31.11.
+> - **Accepted by the PO** after a personal physical test on the HONOR ALI-NX1. The acceptance covers:
+>   - the S3-R2 cosmic visual system across Personal, Shared and Public;
+>   - FAR → MID → NEAR → ANALYTICAL;
+>   - the timeline, camera, gestures, zoom, pan and touch;
+>   - the detail sheets, inspection and navigation controls;
+>   - the E-2 Personal World and conversation corrections;
+>   - the Public Information / Discussion integration;
+>   - Arabic / RTL and the approved UI corrections.
+> - **Build:** `qandeel-e2-synthetic-f478204b.apk` (`com.qandeel.mobile.e2`, arm64 Release, source `f478204b`).
+>   - **It is a synthetic-data build.** Hosted backend connectivity, real persistence and a production deployment are **not** proven by it.
+> - **Tests, as run (none rewritten as PASS):**
+>   - API CI 44934797719 PASS; Mobile CI 44934797722 PASS.
+>   - iOS World gate 44934797727 **FAILED / INCOMPLETE, accepted by explicit PO exception:**
+>     - iPhone 17 ar: PASS;
+>     - iPhone 17 en: U-EMPTY NOT TESTED;
+>     - iPhone SE: U-TAP FAIL and several cases NOT TESTED; the job was cancelled before the native suite.
+>   - SE-FU-1: accepted V1 limitation (Future Improvements item 022).
+>   - DIAG-SE-DOOR 44928574802: 10 / 10, **NOT REPRODUCED — not FIXED**.
+> - **Database:** migrations 0197 – 0200 are merged into the source and are **NOT applied to hosted Supabase**. The next migration is **0201**. Hosted application, API or mobile release, and hosted verification of the E-2 backend stay separately controlled work (HOSTED-DEPLOY-01). They are open, not closed by COSMOS.
+> - **Backlog (BG-08), all `MEDIUM`, `OPEN — UNASSIGNED`:**
+>   - admitted `QAN-BL-VIS-02` (REPLAY-COSMOS-01: Replay still draws its Personal map with the pre-COSMOS renderer, G-5);
+>   - admitted `QAN-BL-NAV-04` (PERSONAL-DETAIL-01: no full Personal detail surface beyond the PEEK);
+>   - admitted `QAN-BL-CI-04` (the iOS World gate's Maestro hangs, evidence lost on a cancelled job, the SE time budget);
+>   - `QAN-BL-CW-08` is unchanged.
+>   - 112 items; 54 / 4 / 17 / 37 by status.
+> - **Unchanged:**
+>   - the frozen S3-R2 visual authority and every approved COSMOS decision;
+>   - the privacy, consent, retention and Public World publication restrictions;
+>   - Replay V1 and its old renderer;
+>   - the RN Skia 2.7.0 `QAN-INF-03` exception (contract §11).
+> - **Next planned product task: S8B-07 Replay**, on its approved and frozen scope ([S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §14, CP2-A WP0 v0.3.1, `FINAL APPROVED — NOT APPROVED FOR EXECUTION`). **Not started.** Its planning is not reopened, and its execution needs the Product Owner's authorization.
+
+> *(Pre-merge snapshot, superseded by the closure above: COSMOS-INT-01 merged through PR #402 as `90819192` and closed on 2026-11-21. Its "E-2 NOT ACCEPTED", "NOT CLOSED" and "Draft PR" statements are history:)* **COSMOS-INT-01 — COSMOS V5 PRODUCTION INTEGRATION — SLICES B AND C ACCEPTED, PERSONAL TARGET CENTRING ACCEPTED, SLICE D CP1 – CP3 ACCEPTED FOR ROADMAP CONTINUATION, CP4 (THREE-WORLD CLOSURE) DELIVERED: SLICE D CLOSED / READY FOR PO REVIEW — SLICE E ACCEPTANCE REGISTER: F-1, E-1, E-2 RECORDED, NOT IMPLEMENTED — SLICE E REMEDIATION AUTHORISED (2026-11-18): D-1 TECHNICALLY CLOSED (DRAFT PR #399); D-3 CLOSED — ADMINISTRATIVE, COMPLETED SCOPE (PO, 2026-11-19; DRAFT PR #400); COSMOS-FINAL-01 (DRAFT PR #401): O-1, O-2 AND F-1 ACCEPTED; SE-FU-1 DEFERRED — ACCEPTED V1 LIMITATION, NON-BLOCKING FOR V1 BY EXPLICIT PO EXCEPTION (FUTURE IMPROVEMENTS ITEM 022; NOT PASS, NOT FIXED); E-1 SPEAKER BADGE ACCEPTED (PO, 2026-11-20; PERSONAL + SHARED; PUBLIC VERIFIED, UNCHANGED); E-1 PARTICIPANT ORDINAL NOT PURSUED (PO, 2026-11-20); IMPLEMENTATION CLOSED, FINAL STATUS IN CONTRACT §30.10 — E-2 RUN BY THE PO ON THE HONOR (SYNTHETIC BUILD 92dc31bb): NOT ACCEPTED, COSMOS NOT CLOSED — E-2 CORRECTIONS (CONTRACT §31, 2026-11-20): AUDIT DELIVERED; SLICE E (SHEET TABS) AND SLICE D-1 (LABELS) DELIVERED LOCALLY, iOS NOT TESTED; SLICES A / B / C / D-2 STOPPED FOR THE PO DECISIONS D-1 – D-5 — BG-10 MANDATORY iOS SIMULATOR VALIDATION (2026-11-18; current task; status only, no new task authority):** the accepted COSMOS stage draws the Personal, Shared and Public worlds in the product over the real runtime and controllers.
 > - **PRs.** All are accepted by the PO; none is merged.
 >   - Slice B: Draft PR #394 (`cosmos/cosmos-production-integration`, from `main` 5a21971d).
 >   - Slice C: dependent Draft PR #395.
