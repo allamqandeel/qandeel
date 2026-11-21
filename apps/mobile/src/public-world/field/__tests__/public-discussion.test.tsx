@@ -17,12 +17,12 @@ import { resize, subtree } from '../../../responsive/__fixtures__/composition';
 import { getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 import { COSMOS_SHEET_BODY_GESTURE_TEST_ID, COSMOS_SHEET_HANDLE_GESTURE_TEST_ID, COSMOS_SHEET_HANDLE_TEST_ID, COSMOS_SHEET_TEST_ID } from '../../../cosmos/product';
 import { canonicalWorldAddress } from '../../../map/world';
-import { typeStyle } from '../../../conversation';
 import type { PublicAuthoringAnswer, PublicDiscussionPage, PublicDiscussionPost, PublicFieldEntry, PublicFieldPanel } from '../../../runtime-entry';
 import { ActivityApiClient, PublicWorldApiClient } from '../../../runtime-entry';
 import { createPublicWorldController } from '../../public-world-controller';
 import { PublicWorldArea } from '../../PublicWorldArea';
 import { PUBLIC_DISCUSSION_COPY_GATE, publicDiscussionCopy } from '../discussion-copy';
+import { PUBLIC_SHEET_TABS_COPY_GATE, publicSheetTabsCopy } from '../sheet-tabs-copy';
 import { createPublicDiscussionController, threadsOf, type PublicDiscussionTransport } from '../public-discussion-controller';
 import { createPublicFieldController, type PublicFieldTransport } from '../public-field-controller';
 import { PUBLIC_DISCUSSION_TEST_ID } from '../PublicDiscussion';
@@ -241,13 +241,20 @@ describe('S5-04 — the panel entry and the discussion surface', () => {
     return { view, field, d };
   }
 
-  it.each(['ar', 'en'] as const)('the panel shows the publication date and «Discussion · n» — the human count only (%s)', async (language) => {
-    const copy = publicDiscussionCopy(language);
+  // COSMOS E-2 corrections, Slice E (PO, 2026-11-20 §8): the Discussion entry is the sheet's second tab, beside Back, not a
+  // control inside the Information content. Its name still carries the human count only.
+  it.each(['ar', 'en'] as const)('the panel shows the publication date; the Discussion tab says «Discussion · n» — the human count only (%s)', async (language) => {
+    const copy = publicSheetTabsCopy(language);
     const { view } = await mount(language);
     expect(view.getByTestId('qandeel-public-panel-published').props.children).toMatch(language === 'ar' ? /^نُشرت في / : /^Published /u);
-    const entry = view.getByTestId('qandeel-public-panel-discussion');
+    expect(view.queryByTestId('qandeel-public-panel-discussion')).toBeNull();
+    const entry = view.getByTestId('qandeel-public-sheet-tab-discussion');
     expect(entry.props.accessibilityLabel).toBe(copy.discussionWithCount.replace('{0}', '3'));
-    expect(entry.props.accessibilityRole).toBe('button');
+    expect(entry.props.accessibilityRole).toBe('radio');
+    expect(entry.props.accessibilityState).toMatchObject({ checked: false });
+    const information = view.getByTestId('qandeel-public-sheet-tab-information');
+    expect(information.props.accessibilityLabel).toBe(copy.information);
+    expect(information.props.accessibilityState).toMatchObject({ checked: true });
     // Slice D RE-ANCHOR: the laid-out stage and sheet carry React Native's `importantForAccessibility` PROP NAME (the
     // stage hidden while the sheet is expanded); only that platform key is left out, every word and value is still read.
     const tree = JSON.stringify(view.toJSON(), (key, value: unknown) => (key === 'importantForAccessibility' ? undefined : value));
@@ -257,7 +264,7 @@ describe('S5-04 — the panel entry and the discussion surface', () => {
   it('the discussion: Public display, QANDEEL attributed truthfully and distinctly, Back returns to the same panel', async () => {
     const copy = publicDiscussionCopy('en');
     const { view, field } = await mount('en');
-    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-panel-discussion')); });
+    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-sheet-tab-discussion')); });
     for (let n = 0; n < 3; n += 1) await flush();
     expect(view.getByTestId('qandeel-public-discussion')).toBeTruthy();
     expect(view.getByTestId(`qandeel-public-post-${ROOT.id}`)).toBeTruthy();
@@ -268,7 +275,9 @@ describe('S5-04 — the panel entry and the discussion surface', () => {
     expect(view.queryByText(/like|follow|message privately/iu)).toBeNull();
     await act(async () => { fireEvent.press(view.getByTestId(`qandeel-public-reply-${ROOT.id}`)); });
     expect(view.getByTestId('qandeel-public-replying-to').props.children).toBe(copy.replyingTo.replace('{0}', 'walker1'));
-    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-discussion-back')); });
+    // Slice E: the sheet's ONE Back (the same order as the hardware Back, §19.6.4) leaves the discussion for Information.
+    expect(view.queryByTestId('qandeel-public-discussion-back')).toBeNull();
+    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-panel-back')); });
     expect(field.getState().focus).toMatchObject({ id: E1.id, discussion: false });
     expect(view.getByTestId('qandeel-public-panel')).toBeTruthy();
   });
@@ -276,7 +285,7 @@ describe('S5-04 — the panel entry and the discussion surface', () => {
   it('no composer and no Reply where the reader may not contribute; an empty discussion says so', async () => {
     const copy = publicDiscussionCopy('ar');
     const { view } = await mount('ar', page([], false));
-    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-panel-discussion')); });
+    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-sheet-tab-discussion')); });
     for (let n = 0; n < 3; n += 1) await flush();
     expect(view.queryByTestId('qandeel-public-composer')).toBeNull();
     expect(view.getByTestId('qandeel-public-discussion-empty').props.children).toBe(copy.noPosts);
@@ -287,7 +296,7 @@ describe('S5-04 — the panel entry and the discussion surface', () => {
   it('Slice D: the discussion opens the sheet EXPANDED; only the handle drags; collapsing keeps the discussion, its posts and the composer', async () => {
     const hidden = { includeHiddenElements: true } as const;
     const { view, field, d } = await mount('en');
-    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-panel-discussion')); });
+    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-sheet-tab-discussion')); });
     for (let n = 0; n < 3; n += 1) await flush();
     const sheet = () => view.getByTestId(COSMOS_SHEET_TEST_ID, hidden);
     expect(sheet().props.accessibilityViewIsModal).toBe(true);
@@ -320,7 +329,7 @@ describe('S5-04 — the panel entry and the discussion surface', () => {
   // its own; anywhere else it keeps its card exactly. Its posts, attribution and composer gating are untouched.
   it.each(['ar', 'en'] as const)('Slice D: in the sheet the discussion is no card inside a card; its posts and composer stay (%s)', async (language) => {
     const { view } = await mount(language);
-    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-panel-discussion')); });
+    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-sheet-tab-discussion')); });
     for (let n = 0; n < 3; n += 1) await flush();
     const hosted = flat(view.getByTestId(PUBLIC_DISCUSSION_TEST_ID).props.style);
     expect(hosted.backgroundColor).toBeUndefined();
@@ -330,18 +339,94 @@ describe('S5-04 — the panel entry and the discussion surface', () => {
     // Its card outside the sheet: `public-discussion-threads.test.tsx`.
   });
 
-  // UI-POLISH-01 closure pass (PO, 2026-11-16): in the sheet «النقاش» / Discussion is a SECTION heading (20 / 32, Medium),
-  // not the 26 / 41 screen title. It is still the one header, in the same words.
-  it.each(['ar', 'en'] as const)('in the sheet «النقاش» uses the section-heading role (%s)', async (language) => {
+  // COSMOS E-2 corrections, Slice E (PO, 2026-11-20 §8), superseding the UI-POLISH-01 section heading: in the sheet the
+  // discussion's name is its TAB, beside Back, in the sheet's one header row; the discussion draws no header of its own
+  // there (`header="host"`, the second narrow §19.13 exception). Its own Back + «النقاش» header stays everywhere else
+  // (`public-discussion-threads.test.tsx`).
+  it.each(['ar', 'en'] as const)('Slice E: in the sheet the discussion is named by its tab and draws no second header (%s)', async (language) => {
+    const tabs = publicSheetTabsCopy(language);
     const { view } = await mount(language);
-    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-panel-discussion')); });
+    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-sheet-tab-discussion')); });
     for (let n = 0; n < 3; n += 1) await flush();
-    const heading = view.getByTestId('qandeel-public-discussion-heading');
-    expect(heading.props.children).toBe(publicDiscussionCopy(language).discussion);
-    expect(heading.props.accessibilityRole).toBe('header');
-    expect(flat(heading.props.style)).toMatchObject({ ...typeStyle('section'), fontFamily: 'Estedad-Medium', fontSize: 20, lineHeight: 32 });
+    expect(view.queryByTestId('qandeel-public-discussion-heading')).toBeNull();
+    expect(view.queryByTestId('qandeel-public-discussion-back')).toBeNull();
+    const chosen = view.getByTestId('qandeel-public-sheet-tab-discussion');
+    expect(chosen.props.accessibilityState).toMatchObject({ checked: true });
+    expect(chosen.props.accessibilityLabel).toBe(tabs.discussionWithCount.replace('{0}', '3'));
+    expect(view.getByTestId('qandeel-public-sheet-tab-information').props.accessibilityState).toMatchObject({ checked: false });
+    expect(view.getByTestId('qandeel-public-sheet-tabs').props.accessibilityRole).toBe('radiogroup');
+    expect(view.getByTestId('qandeel-public-panel-back')).toBeTruthy();
+  });
+
+  // Slice E: Information ↔ Discussion is a tab switch inside the SAME sheet for the SAME Experience: the focus id, the
+  // camera and the sheet stay; the tab is the controller's `focus.discussion`; the chosen tab is never re-pressed.
+  it('Slice E: switching Information ↔ Discussion keeps the Experience, the camera and the sheet', async () => {
+    const hidden = { includeHiddenElements: true } as const;
+    const { view, field } = await mount('en');
+    const camera = field.getState().camera;
+    const sheet = () => view.getByTestId(COSMOS_SHEET_TEST_ID, hidden);
+    expect(sheet().props.pointerEvents).not.toBe('none');
+    // Pressing the chosen tab again does nothing.
+    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-sheet-tab-information')); });
+    expect(field.getState().focus).toMatchObject({ id: E1.id, discussion: false });
+    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-sheet-tab-discussion')); });
+    for (let n = 0; n < 3; n += 1) await flush();
+    expect(field.getState().focus).toMatchObject({ id: E1.id, discussion: true });
+    expect(field.getState().camera).toBe(camera);
+    expect(sheet().props.accessibilityViewIsModal).toBe(true);
+    expect(view.getByTestId(`qandeel-public-post-${ROOT.id}`)).toBeTruthy();
+    expect(view.queryByTestId('qandeel-public-panel')).toBeNull();
+    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-sheet-tab-information')); });
+    for (let n = 0; n < 3; n += 1) await flush();
+    expect(field.getState().focus).toMatchObject({ id: E1.id, discussion: false });
+    expect(field.getState().camera).toBe(camera);
+    expect(view.getByTestId('qandeel-public-panel')).toBeTruthy();
+    expect(view.queryByTestId(PUBLIC_DISCUSSION_TEST_ID)).toBeNull();
+    expect(sheet().props.pointerEvents).not.toBe('none');
+    // The Experience is still the sheet's subject: Back from Information releases the focus (§19.6.4).
+    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-panel-back')); });
+    expect(field.getState().focus).toBeNull();
+  });
+
+  it('Slice E: a host without a discussion shows Information alone — no tab row', async () => {
+    const field = createPublicFieldController({ transport: fieldTransport() as unknown as PublicFieldTransport, isCurrent: () => true, discussion: null });
+    const controller = createPublicWorldController({ transport: { entry: jest.fn(async () => ({ kind: 'ALLOW' as const })) }, isCurrent: () => true, field });
+    const view = await render(<AppearanceProvider authority={appearance()}><PublicWorldArea controller={controller} language="en" insets={INSETS} /></AppearanceProvider>);
+    for (let n = 0; n < 4; n += 1) await flush();
+    await resize(view, 400, 800, { mapHeight: 800 });
+    field.setEnvelope(viewportEnvelope(400, 800)!);
+    await act(async () => { field.focus(E1.id); });
+    for (let n = 0; n < 3; n += 1) await flush();
+    expect(view.getByTestId('qandeel-public-panel')).toBeTruthy();
+    expect(view.getByTestId('qandeel-public-panel-back')).toBeTruthy();
+    expect(view.queryByTestId('qandeel-public-sheet-tabs')).toBeNull();
+    expect(view.queryByTestId('qandeel-public-sheet-tab-discussion')).toBeNull();
   });
 });
+
+describe('COSMOS E-2 Slice E — the sheet tabs Product Copy Gate', () => {
+  it('ONE bounded gate, CLOSED: three rows APPROVED by the Product Owner (2026-11-20) in both languages; «النقاش» kept on the S5-04 surfaces; no rank, feed or badge', () => {
+    expect(PUBLIC_SHEET_TABS_COPY_GATE.approved).toEqual(['information', 'discussion', 'discussionWithCount']);
+    expect(PUBLIC_SHEET_TABS_COPY_GATE.proposed).toEqual([]);
+    expect(PUBLIC_SHEET_TABS_COPY_GATE.status).toMatch(/CLOSED/u);
+    for (const language of ['ar', 'en'] as const) {
+      const copy = publicSheetTabsCopy(language) as unknown as Record<string, unknown>;
+      for (const key of PUBLIC_SHEET_TABS_COPY_GATE.approved) expect(typeof copy[key]).toBe('string');
+      expect(publicSheetTabsCopy(language).discussionWithCount).toContain('{0}');
+    }
+    expect(publicSheetTabsCopy('ar')).toEqual({ information: 'المعلومات', discussion: 'المناقشة', discussionWithCount: 'المناقشة · {0}' });
+    expect(publicSheetTabsCopy('en')).toEqual({ information: 'Information', discussion: 'Discussion', discussionWithCount: 'Discussion · {0}' });
+    const source = readFileSync(join(__dirname, '..', 'sheet-tabs-copy.ts'), 'utf8');
+    expect(source.match(/\/\/ APPROVED — COSMOS E-2 Product Copy Gate/gu)).toHaveLength(6);
+    expect(source).not.toMatch(/PROPOSED/u);
+    // The approval is for the tab presentation only: the S5-04 discussion surface keeps its approved «النقاش» byte-exact.
+    expect(publicDiscussionCopy('ar').discussion).toBe('النقاش');
+    for (const language of ['ar', 'en'] as const) {
+      for (const word of Object.values(publicSheetTabsCopy(language))) expect(word).not.toMatch(/rank|feed|badge|popular|notification|like|follow/iu);
+    }
+  });
+});
+
 
 const flat = (style: unknown): Record<string, unknown> => StyleSheet.flatten(style as StyleProp<ViewStyle>) as Record<string, unknown>;
 
@@ -425,8 +510,9 @@ describe('S5-04 — returning from the discussion reads the same panel again', (
     expect(failing.field.discussion?.getState().status).toBe('CLOSED');
   });
 
-  it.each(['ar', 'en'] as const)('the surface: Back from the discussion shows «Discussion · n» with the new count (%s)', async (language) => {
-    const copy = publicDiscussionCopy(language);
+  // Slice E: the same read-again happens when the reader returns to the Information tab; the Discussion TAB then says the count.
+  it.each(['ar', 'en'] as const)('the surface: returning to Information shows «Discussion · n» with the new count on the tab (%s)', async (language) => {
+    const copy = publicSheetTabsCopy(language);
     let count = 0;
     const d = discussionOf();
     const field = createPublicFieldController({ transport: fieldTransport(() => served(count)) as unknown as PublicFieldTransport, isCurrent: () => true, discussion: d });
@@ -440,13 +526,13 @@ describe('S5-04 — returning from the discussion reads the same panel again', (
     field.setEnvelope(viewportEnvelope(400, 800)!);
     await act(async () => { field.focus(E1.id); });
     for (let n = 0; n < 3; n += 1) await flush();
-    expect(view.getByTestId('qandeel-public-panel-discussion').props.accessibilityLabel).toBe(copy.discussion);
-    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-panel-discussion')); });
+    expect(view.getByTestId('qandeel-public-sheet-tab-discussion').props.accessibilityLabel).toBe(copy.discussion);
+    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-sheet-tab-discussion')); });
     for (let n = 0; n < 3; n += 1) await flush();
     count = 2;
-    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-discussion-back')); });
+    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-sheet-tab-information')); });
     for (let n = 0; n < 3; n += 1) await flush();
-    expect(view.getByTestId('qandeel-public-panel-discussion').props.accessibilityLabel).toBe(copy.discussionWithCount.replace('{0}', '2'));
+    expect(view.getByTestId('qandeel-public-sheet-tab-discussion').props.accessibilityLabel).toBe(copy.discussionWithCount.replace('{0}', '2'));
   });
 });
 

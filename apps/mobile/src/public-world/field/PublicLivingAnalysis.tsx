@@ -36,6 +36,11 @@
  * content, in the stage, under the top band (D-11). The sheet's PEEK / EXPANDED / CLOSED is presentation only (D-12):
  * collapsing or closing it releases no focus, writes no camera and reads nothing. The ONE hardware Back handler asks
  * the sheet first (EXPANDED → PEEK → CLOSED), then the controller's local Back, unchanged.
+ *
+ * COSMOS E-2 corrections, Slice E (PO directive 2026-11-20 §8): for a focused Experience the sheet's content is ONE header
+ * row — Back, then the sibling tabs «المعلومات» | «المناقشة» — over the chosen tab (`FocusSheet`). The S5-04 Discussion
+ * entry no longer sits inside the Information content; the tab is the controller's `focus.discussion`, so Direct Entry,
+ * Back order, entitlement and the EXPANDED discussion are exactly as before.
  */
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { BackHandler, Keyboard, Pressable, Text, TextInput, View, useWindowDimensions } from 'react-native';
@@ -55,6 +60,7 @@ import { fillCompose, publicComposeCopy } from '../../public-compose/copy';
 import { nearestOf, type PublicFieldCamera } from './public-field-camera';
 import { fillDiscussionCopy, publicDiscussionCopy } from './discussion-copy';
 import { fillPublicFieldCopy, publicFieldCopy, type PublicFieldCopy } from './field-copy';
+import { fillSheetTabsCopy, publicSheetTabsCopy } from './sheet-tabs-copy';
 import { PublicDiscussion } from './PublicDiscussion';
 import { PublicTopicContent } from './PublicTopicContent';
 import { PUBLIC_SEARCH_QUERY_MAX, type PublicFieldController, type PublicFieldPanelState, type PublicFieldState } from './public-field-controller';
@@ -293,12 +299,10 @@ function FieldChrome({ controller, state, copy, language, bottomInset }: {
   let content: ReactNode = null;
   if (state.section.choosing) {
     content = <SectionList controller={controller} state={state} copy={copy} language={language} />;
-  } else if (state.focus !== null && state.focus.discussion === true && controller.discussion !== null) {
-    content = <PublicDiscussion controller={controller.discussion} language={language} onBack={() => controller.closeDiscussion()} surface="sheet" />;
   } else if (state.focus !== null) {
-    content = <Panel copy={copy} palette={palette} language={language} panel={state.focus.panel} onBack={() => controller.back()} onFocus={(id) => controller.focus(id)}
-      onDiscussion={controller.discussion !== null ? () => controller.openDiscussion() : null}
-      readPage={controller.contentPage} />;
+    // COSMOS E-2 corrections, Slice E: the focused Experience's sheet is ONE header (Back, then the Information | Discussion
+    // tabs) over the chosen tab's content. The tab IS the controller's `focus.discussion` (open / close discussion).
+    content = <FocusSheet controller={controller} focus={state.focus} copy={copy} palette={palette} language={language} />;
   } else if (resultsShown) {
     content = (
       <View testID="qandeel-public-search-results" style={{ paddingVertical: 4 }}>
@@ -400,25 +404,81 @@ function SectionNear({ controller, state, language }: { readonly controller: Pub
   );
 }
 
-function Panel({ copy, palette, language, panel, onBack, onFocus, onDiscussion, readPage }: {
+/** The sheet's tabs for one focused Experience: Information, and (where the host provides a discussion) Discussion. */
+type FocusTab = 'INFORMATION' | 'DISCUSSION';
+
+/**
+ * COSMOS E-2 corrections, Slice E (PO directive 2026-11-20 §8): the focused Experience's Detail Sheet is ONE header row —
+ * Back, then the sibling tabs «المعلومات» | «المناقشة» — over the chosen tab's content:
+ *
+ *   Information — the Experience's served panel (its title, section, publisher, date, themes, content and nearby context);
+ *   Discussion  — the same S5-04 `PublicDiscussion`, hosted on the sheet without a header of its own (`header="host"`).
+ *
+ * The tab IS the controller's `focus.discussion`: choosing Discussion is `openDiscussion()`, choosing Information is
+ * `closeDiscussion()` (the same panel, read again, as S5-04 R1 decided). Switching never leaves the sheet, never releases
+ * the focus and never moves the camera; the discussion tab opens the sheet EXPANDED (`sheetContentOf`). Back is the
+ * controller's local Back in both tabs, the same order the hardware Back takes (§19.6.4: discussion › focus): from the
+ * Discussion tab it returns to Information, from Information it releases the focus. No feed, no badge, no count other
+ * than the S5-04 human discussion count in the tab's name.
+ */
+function FocusSheet({ controller, focus, copy, palette, language }: {
+  readonly controller: PublicFieldController; readonly focus: NonNullable<PublicFieldState['focus']>; readonly copy: PublicFieldCopy;
+  readonly palette: ConversationPalette; readonly language: ChromeLanguage;
+}) {
+  const tabs = publicSheetTabsCopy(language);
+  const writing = language === 'ar' ? 'rtl' : 'ltr';
+  const discussion = controller.discussion;
+  const chosen: FocusTab = focus.discussion === true && discussion !== null ? 'DISCUSSION' : 'INFORMATION';
+  // The S5-04 human discussion count only, and only once it is known and above zero (the S5-04 root contract pins this form).
+  const experience = focus.panel.status === 'SERVED' ? focus.panel.experience : null;
+  const discussionLabel = experience !== null && experience.discussionCount > 0
+    ? fillSheetTabsCopy(tabs.discussionWithCount, String(experience.discussionCount)) : tabs.discussion;
+  const tab = (key: FocusTab, label: string, testID: string, choose: () => void) => {
+    const selected = key === chosen;
+    return (
+      <Control palette={palette} language={language} accessibilityRole="radio" accessibilityLabel={label} accessibilityState={{ checked: selected, selected }}
+        onPress={() => { if (!selected) choose(); }} testID={testID} style={{ paddingHorizontal: 12 }}>
+        <Text style={{ ...typeStyle('action'), color: selected ? palette.primary : palette.restInk, writingDirection: writing }}>{label}</Text>
+        {/* The chosen tab is said in words (checked) and shown by its ink and one hairline under it; never colour alone. */}
+        <View pointerEvents="none" style={{ height: 2, borderRadius: 1, marginTop: 2, backgroundColor: selected ? palette.primary : 'transparent' }} />
+      </Control>
+    );
+  };
+  return (
+    <View testID="qandeel-public-focus-sheet" accessibilityLanguage={language} style={{ paddingBottom: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingTop: 6 }}>
+        <Control palette={palette} language={language} accessibilityLabel={copy.back} onPress={() => controller.back()} testID="qandeel-public-panel-back">
+          <Text style={{ ...typeStyle('action'), color: palette.restInk, writingDirection: writing }}>{copy.back}</Text>
+        </Control>
+        {discussion !== null ? (
+          <View testID="qandeel-public-sheet-tabs" accessibilityRole="radiogroup" style={{ flexDirection: 'row', alignItems: 'center', columnGap: 4, marginHorizontal: 4 }}>
+            {tab('INFORMATION', tabs.information, 'qandeel-public-sheet-tab-information', () => controller.closeDiscussion())}
+            {tab('DISCUSSION', discussionLabel, 'qandeel-public-sheet-tab-discussion', () => controller.openDiscussion())}
+          </View>
+        ) : null}
+      </View>
+      {chosen === 'DISCUSSION' && discussion !== null ? (
+        <PublicDiscussion controller={discussion} language={language} onBack={() => controller.closeDiscussion()} surface="sheet" header="host" />
+      ) : (
+        <Panel copy={copy} palette={palette} language={language} panel={focus.panel} onFocus={(id) => controller.focus(id)} readPage={controller.contentPage} />
+      )}
+    </View>
+  );
+}
+
+/** The Information tab: the focused Experience's panel (S5-03B), under the sheet's one header row. */
+function Panel({ copy, palette, language, panel, onFocus, readPage }: {
   readonly copy: PublicFieldCopy; readonly palette: ConversationPalette; readonly language: ChromeLanguage;
-  readonly panel: PublicFieldPanelState; readonly onBack: () => void; readonly onFocus: (id: string) => void;
-  readonly onDiscussion: (() => void) | null;
+  readonly panel: PublicFieldPanelState; readonly onFocus: (id: string) => void;
   readonly readPage: PublicFieldController['contentPage'] | null;
 }) {
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const text = (role: 'body' | 'supporting' | 'metadata' | 'statement' | 'action', color: string) => ({ ...typeStyle(role), color, writingDirection: writing as 'rtl' | 'ltr' });
   return (
     <View testID="qandeel-public-panel" accessibilityLanguage={language} style={{ paddingBottom: 12 }}>
-      <View style={{ flexDirection: 'row', paddingHorizontal: 8, paddingTop: 6 }}>
-        <Control palette={palette} language={language} accessibilityLabel={copy.back} onPress={onBack} testID="qandeel-public-panel-back">
-          <Text style={text('action', palette.restInk)}>{copy.back}</Text>
-        </Control>
-      </View>
-      <View style={{ paddingHorizontal: 20, rowGap: 10 }}>
+      <View style={{ paddingHorizontal: 20, rowGap: 10, paddingTop: 6 }}>
         {panel.status === 'SERVED' ? (
-          <ServedPanel experience={panel.experience} copy={copy} palette={palette} language={language} onFocus={onFocus} onDiscussion={onDiscussion}
-            readPage={readPage} />
+          <ServedPanel experience={panel.experience} copy={copy} palette={palette} language={language} onFocus={onFocus} readPage={readPage} />
         ) : panel.status === 'LOADING' ? (
           <View accessible accessibilityState={{ busy: true }} style={{ minHeight: 48 }} />
         ) : (
@@ -431,14 +491,12 @@ function Panel({ copy, palette, language, panel, onBack, onFocus, onDiscussion, 
   );
 }
 
-function ServedPanel({ experience, copy, palette, language, onFocus, onDiscussion, readPage }: {
+function ServedPanel({ experience, copy, palette, language, onFocus, readPage }: {
   readonly experience: PublicFieldExperience; readonly copy: PublicFieldCopy; readonly palette: ConversationPalette;
-  readonly language: ChromeLanguage; readonly onFocus: (id: string) => void; readonly onDiscussion: (() => void) | null;
+  readonly language: ChromeLanguage; readonly onFocus: (id: string) => void;
   readonly readPage: PublicFieldController['contentPage'] | null;
 }) {
   const discussionCopy = publicDiscussionCopy(language);
-  const discussionLabel = experience.discussionCount > 0
-    ? fillDiscussionCopy(discussionCopy.discussionWithCount, String(experience.discussionCount)) : discussionCopy.discussion;
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const text = (role: 'body' | 'supporting' | 'metadata' | 'statement', color: string) => ({ ...typeStyle(role), color, writingDirection: writing as 'rtl' | 'ltr' });
   return (
@@ -454,12 +512,7 @@ function ServedPanel({ experience, copy, palette, language, onFocus, onDiscussio
       <Text testID="qandeel-public-panel-published" style={text('metadata', palette.tertiary)}>
         {fillDiscussionCopy(discussionCopy.publishedOn, formatDay(experience.publishedAt, language))}
       </Text>
-      {onDiscussion !== null ? (
-        <Control palette={palette} language={language} accessibilityLabel={discussionLabel} onPress={onDiscussion} testID="qandeel-public-panel-discussion"
-          style={{ alignSelf: 'flex-start' }}>
-          <Text style={{ ...typeStyle('action'), color: palette.primary, writingDirection: writing }}>{discussionLabel}</Text>
-        </Control>
-      ) : null}
+      {/* Slice E (2026-11-20): the Discussion entry left the panel for the sheet's tab row (`FocusSheet`); the count lives there. */}
       <Themes heading={copy.primaryHeading} themes={experience.primaryThemes} palette={palette} language={language} />
       <Themes heading={copy.secondaryHeading} themes={experience.secondaryThemes} palette={palette} language={language} />
       {/* S8A-05 CP2: a topic made from a conversation (or longer than one page) is read page by page, with its speakers. */}

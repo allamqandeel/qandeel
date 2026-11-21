@@ -181,8 +181,15 @@ test('no B3 lifecycle, no LF, no T-03C, no Reading / Neighborhood / merge, no mo
   // contract; no Thread, Home or Origin field reached the wire.)
   // (T-03C re-exported its historical disclosure types from the index ADDITIVELY;
   // the T-03A2 / T-03D exports are unchanged and the index is re-pinned at its T-03C shape.)
+  // (COSMOS E-2 corrections, Slice A, 2026-11-20 — D-3 / D-4: the index re-exports the ADDITIVE Thread name and origin
+  // types (DisclosedThreadName, DisclosedThreadOrigin, ThreadNameSource); every earlier export is unchanged and the index
+  // is re-pinned at that shape. Previous blob b6bd6c3b.)
   for (const [file, blob] of [
-    ['packages/runtime/src/index.d.ts', 'b6bd6c3b0b7df94445db64a6af501ae8213324ef'],
+    // RE-ANCHORED by COSMOS E-2 Slice C (PO D-5, Option U): index.d.ts gains the additive `CurrentPersonalThread` /
+    // `CurrentPersonalWorld` export (current-personal-world.d.ts); the Thread lifecycle wire it re-exports is unchanged.
+    // RE-ANCHORED by the COSMOS E-2 Reading correction (PO directive 2026-11-21; migration 0200): index.d.ts re-exports the
+    // ADDITIVE `DisclosedReadingEvidenceChange`; the Thread lifecycle wire it re-exports is unchanged. Previous blob 92d13ffa.
+    ['packages/runtime/src/index.d.ts', '0a703a95a7f03643baafbf16695739e7dfbf5117'],
     ['packages/runtime/src/temporal.d.ts', '9d945e6f2d65bdefbc334b0bc5ac884789f21a89'],
     ['packages/runtime/package.json', '932b837629f23b5cb765eda196fb659418d07916'],
   ]) {

@@ -12,6 +12,7 @@ import type {
   DisclosedEmergingFocus,
   DisclosedMoment,
   DisclosedReading,
+  DisclosedReadingEvidenceChange,
   DisclosedSessionRung,
   DisclosedSourceProvenanceRung,
   DisclosedThread,
@@ -32,6 +33,11 @@ export interface ThreadFixture {
   readonly y: string;
   readonly state?: ThreadStateAtTc;
   readonly establishedSp?: number | null;
+  /** COSMOS E-2 Slice A: the served name (absent or null = NONE) and its source (default GROUNDING_WORDING). */
+  readonly name?: string | null;
+  readonly nameSource?: 'USER_ALIAS' | 'GROUNDING_WORDING';
+  /** Where the Thread was established; defaults to this Session at the establishing SP (else SP 1). */
+  readonly origin?: { readonly sessionId: string; readonly sp: number };
 }
 
 export interface AppearanceFixture {
@@ -51,6 +57,8 @@ export interface FocusFixture {
 export interface ReadingFixture {
   readonly id: string;
   readonly versionAtTc?: number;
+  /** COSMOS E-2 (0200): the served reliance; a withheld Reading carries no words of its own (as the server sends it). */
+  readonly evidenceChange?: DisclosedReadingEvidenceChange;
 }
 
 export interface MaterialFixture {
@@ -153,7 +161,7 @@ function reading(fixture: ReadingFixture): DisclosedReading {
   const versionAtTc = fixture.versionAtTc ?? 1;
   return {
     id: fixture.id,
-    statement: `statement of ${fixture.id}`,
+    statement: (fixture.evidenceChange ?? 'NONE') === 'NONE' ? `statement of ${fixture.id}` : null,
     type: 'HYPOTHESIS',
     domain: 'GENERAL',
     scope: 'SESSION',
@@ -168,6 +176,7 @@ function reading(fixture: ReadingFixture): DisclosedReading {
         : { kind: 'VERSION_ADVANCED' as const, fromStatus: 'ACTIVE', toStatus: 'ACTIVE', fromVersion: index, toVersion: index + 1 },
     ),
     subjectGroundings: [],
+    evidenceChange: fixture.evidenceChange ?? 'NONE',
   };
 }
 
@@ -185,6 +194,8 @@ export function disclosureFixture(fixture: DisclosureFixture): HistoricalDisclos
     groundingEmergingFocusId: null,
     home: { x: thread.x, y: thread.y },
     state: thread.state ?? 'ESTABLISHED_ACTIVE',
+    name: thread.name === undefined || thread.name === null ? { text: null, source: 'NONE' } : { text: thread.name, source: thread.nameSource ?? 'GROUNDING_WORDING' },
+    origin: thread.origin ?? { sessionId, sp: thread.establishedSp ?? 1 },
   }));
 
   const appearances: readonly DisclosedThreadReadingAppearance[] = (fixture.appearances ?? []).map((appearance) => ({

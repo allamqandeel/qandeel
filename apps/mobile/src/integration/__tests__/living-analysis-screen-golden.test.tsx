@@ -64,6 +64,31 @@
  *     - 13 OVERVIEW: the Overview chip's style gains `flexShrink: 0`;
  *   - every bead's touch follows whether it acts (65 beads, 0 inconsistent).
  * Handlers, testIDs, roles, labels, states, the artwork and every other value are unchanged.
+ *
+ * COSMOS E-2 corrections, Slice A — CONTROLLED RE-ANCHOR (Product Owner decisions D-3 / D-4 of 2026-11-20; Contract §31):
+ * the Personal PEEK names the inspected Thread (the user's alias over the grounding wording, else "Unnamed topic") beneath the
+ * family word, and offers Open where it began (and Name this topic where the composition can rename; this recording cannot,
+ * so that chip is absent). The golden was regenerated ONCE for that intended change (old sha256 ddf12cfa…, new 136bc101…).
+ * Before it was rewritten, a per-case comparison of the two recordings proved: 12 of the 13 cases are byte-identical; in
+ * `inspection` the PEEK sits at the same path, everything outside the PEEK is byte-identical, and the PEEK gains exactly the
+ * name line (`qandeel-personal-peek:name`) and the acts row (`:name-acts` holding `:source`): 7 → 12 host elements, the
+ * three previous texts and testIDs unchanged and in the same order. The structural-diff script (which forbids added
+ * elements by design) is therefore not the proof here; the added elements ARE the change.
+ *
+ * COSMOS E-2 corrections, Slice C — CONTROLLED RE-ANCHOR (Product Owner decision D-5, Option U, of 2026-11-20; Contract §31):
+ * the Personal map gained its two mode chips ("This conversation" / "All my topics now") at the start of the rail; the map
+ * opens in the Session-bound mode, so every recorded case is that mode with the chips added and nothing else. The golden was
+ * regenerated ONCE for that intended change (old sha256 136bc101…, new 733a298f…). Before it was rewritten, a per-case
+ * comparison proved: in EVERY one of the 13 cases the new tree equals the old one exactly once the ONE chips subtree
+ * (`qandeel-personal-world-mode`, 7 host elements: two buttons, the Session one selected) is taken out; keys, order, texts,
+ * testIDs, handlers and accessibility of everything else are byte-identical. The CURRENT mode is not recorded here (it is
+ * proven by personal-current-world.test.tsx), so the Session-bound screen stays the one this golden protects.
+ *
+ * COSMOS E-2 HONOR acceptance DEFECT-4 — CONTROLLED RE-ANCHOR (Product Owner decision of 2026-11-20): the Personal PEEK's
+ * scroller keeps handled taps, so Save in the topic-name editor works while the keyboard is open. The golden was
+ * regenerated ONCE for that intended change (old sha256 733a298f…, new 626e6bce…). Before it was committed, the diff of the
+ * two recordings was exactly ONE added line, `"keyboardShouldPersistTaps": "handled"` on the PEEK's scroller in the
+ * `inspection` case; every other case and value is byte-identical.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

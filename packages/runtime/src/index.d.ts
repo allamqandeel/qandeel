@@ -37,12 +37,15 @@ export type {
   DisclosedQuestion,
   DisclosedQuestionAppearance,
   DisclosedReading,
+  DisclosedReadingEvidenceChange,
   DisclosedReadingLineageStep,
   DisclosedReadingRelation,
   DisclosedSessionRung,
   DisclosedSourceProvenanceRung,
   DisclosedSubjectGrounding,
   DisclosedThread,
+  DisclosedThreadName,
+  DisclosedThreadOrigin,
   DisclosedThreadReadingAppearance,
   DisclosedThreadRung,
   DisclosedWorldRung,
@@ -58,5 +61,9 @@ export type {
   HistoricalRung,
   HistoricalSemanticDepth,
   ReadingLineageStepKind,
+  ThreadNameSource,
   ThreadStateAtTc,
 } from './historical-projection';
+// COSMOS E-2 corrections, Slice C (PO D-5, Option U): the user-level CURRENT Personal World, beside the Session-bound
+// historical projection (migration 0199).
+export type { CurrentPersonalThread, CurrentPersonalWorld } from './current-personal-world';

@@ -39,9 +39,18 @@ export interface PublicDiscussionProps {
    * discussion is hosted visually; its data, scrolling, replies, retry, entitlement and composer are unchanged.
    */
   readonly surface?: 'card' | 'sheet';
+  /**
+   * Who draws the discussion's header. `own` (the default) is this component's Back + «النقاش» row, exactly as before.
+   * `host` draws none: the host already carries Back and the discussion's name — the Public Detail Sheet's
+   * Information | Discussion tab row (COSMOS E-2 corrections, Slice E; PO directive 2026-11-20 §8).
+   *
+   * This is the second narrow §19.13 exception, of the same kind as `surface`: how the discussion is hosted visually,
+   * nothing of its data, scrolling, replies, retry, entitlement or composer.
+   */
+  readonly header?: 'own' | 'host';
 }
 
-export function PublicDiscussion({ controller, language, onBack, surface = 'card' }: PublicDiscussionProps) {
+export function PublicDiscussion({ controller, language, onBack, surface = 'card', header = 'own' }: PublicDiscussionProps) {
   const copy = publicDiscussionCopy(language);
   const authorship = publicAuthorshipCopy(language);
   const palette = usePalette();
@@ -68,13 +77,15 @@ export function PublicDiscussion({ controller, language, onBack, surface = 'card
   return (
     <View testID={PUBLIC_DISCUSSION_TEST_ID} accessibilityLanguage={language}
       style={{ ...(surface === 'card' ? { backgroundColor: palette.field, borderRadius: 20 } : null), paddingBottom: 12, maxHeight: Math.round(screen.height * 0.72) }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', columnGap: 8, paddingHorizontal: 8, paddingTop: 6 }}>
-        <Control palette={palette} language={language} accessibilityLabel={copy.back} onPress={onBack} testID="qandeel-public-discussion-back">
-          <Text style={style('action', palette.restInk)}>{copy.back}</Text>
-        </Control>
-        {/* In the Detail Sheet the heading is a section of the sheet, not a screen title (the PO's section role, 2026-11-16). */}
-        <Text testID="qandeel-public-discussion-heading" accessibilityRole="header" style={style(surface === 'sheet' ? 'section' : 'statement', palette.primary)}>{copy.discussion}</Text>
-      </View>
+      {header === 'own' ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', columnGap: 8, paddingHorizontal: 8, paddingTop: 6 }}>
+          <Control palette={palette} language={language} accessibilityLabel={copy.back} onPress={onBack} testID="qandeel-public-discussion-back">
+            <Text style={style('action', palette.restInk)}>{copy.back}</Text>
+          </Control>
+          {/* In the Detail Sheet the heading is a section of the sheet, not a screen title (the PO's section role, 2026-11-16). */}
+          <Text testID="qandeel-public-discussion-heading" accessibilityRole="header" style={style(surface === 'sheet' ? 'section' : 'statement', palette.primary)}>{copy.discussion}</Text>
+        </View>
+      ) : null}
       <ScrollView ref={scroll} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 20, rowGap: 12, paddingBottom: 8 }} keyboardShouldPersistTaps="handled">
         {state.status === 'LOADING' ? (
           <View accessible accessibilityState={{ busy: true }} style={{ minHeight: 48, justifyContent: 'center' }}>

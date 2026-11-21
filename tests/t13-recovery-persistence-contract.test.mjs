@@ -320,7 +320,12 @@ test('§15 — the durable snapshot advances from the ONE store on effective act
   assert.match(store, /if \(options\.admit !== undefined && !options\.admit\(\)\) return \{ kind: 'SKIPPED' \};/u, 'admission is re-asked inside the chain');
   // Retired with the generation, like every other coordinator.
   assert.match(runtime, /session\.recovery\.writer\.retire\(\);/u);
-  assert.match(runtime, /startSequence: decision\.kind === 'RESUME' \? decision\.record\.sequence : 0,/u, 'writes continue above the resumed sequence');
+  // RE-ANCHORED by COSMOS E-2 corrections, Slice B (Product Owner D-2, 2026-11-20): a conversation switch inside one
+  // authentication generation continues above the retired writer's last sequence, so the new Session's locator can never be
+  // superseded by a late write of the old one; a launch still starts at 0 and a RESUME above the recovered sequence.
+  assert.match(runtime, /startSequence: decision\.kind === 'RESUME' \? decision\.record\.sequence : startSequence,/u, 'writes continue above the resumed sequence');
+  assert.match(runtime, /await activate\(authGeneration, decision, 0\);/u, 'a launch starts the sequence at 0');
+  assert.match(runtime, /const startSequence = session\.recovery\.writer\.status\(\)\.lastSequence;/u, 'a switch continues above the retired writer');
 });
 
 test('the integration owner holds no recovery mechanism: it loads, decides and writes through the barrel only', () => {

@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import type { ConversationExchange, ConversationSession, ConversationTurn } from './conversation.types';
+import type {
+  ConversationExchange, ConversationSession, ConversationSessionCatalogEntry, ConversationSessionTitle,
+  ConversationThreadAlias, ConversationTurn,
+} from './conversation.types';
 import { SupabaseDataApiService } from './supabase-data-api.service';
 import { SupabaseServiceRoleApiService } from './supabase-service-role-api.service';
 import { CorrelationService } from '../observability/correlation.service';
@@ -30,6 +33,44 @@ export class ConversationRepository {
     const rows = await this.dataApi.request<ConversationSession[]>(accessToken, 'rpc/create_conversation_session_v1', {
       method: 'POST',
       body: JSON.stringify({ p_id: id }),
+    });
+    return rows[0];
+  }
+
+  // COSMOS E-2 corrections, Slice B (the Product Owner's D-2, 2026-11-20; migration 0197): the IDEMPOTENT creation. The
+  // same caller and the same client request identity answer the EARLIER Session, never a second one. The body carries
+  // the minted id and the request identity and nothing else; owner, status, channel and timestamps stay server-derived.
+  async createSessionForRequest(accessToken: string, id: string, clientRequestId: string): Promise<ConversationSession> {
+    const rows = await this.dataApi.request<ConversationSession[]>(accessToken, 'rpc/create_conversation_session_v2', {
+      method: 'POST',
+      body: JSON.stringify({ p_id: id, p_client_request_id: clientRequestId }),
+    });
+    return rows[0];
+  }
+
+  // Slice B: the caller's own catalog, newest activity first (0197). Owner scope is auth.uid() inside the definer.
+  async listSessions(accessToken: string, limit: number): Promise<ConversationSessionCatalogEntry[]> {
+    return this.dataApi.request<ConversationSessionCatalogEntry[]>(accessToken, 'rpc/list_conversation_sessions_v1', {
+      method: 'POST',
+      body: JSON.stringify({ p_limit: limit }),
+    });
+  }
+
+  // Slice B: append a manual title to an owned Session (0197). Another person's Session is refused by the database
+  // (42501), which the service answers as not found; the ledger is append-only.
+  async setSessionTitle(accessToken: string, sessionId: string, title: string): Promise<ConversationSessionTitle> {
+    const rows = await this.dataApi.request<ConversationSessionTitle[]>(accessToken, 'rpc/set_conversation_session_title_v1', {
+      method: 'POST',
+      body: JSON.stringify({ p_session_id: sessionId, p_title: title }),
+    });
+    return rows[0];
+  }
+
+  /** Slice A: append the caller's alias for one owned Thread (0198 definer; 42501 for a Thread the caller does not own). */
+  async setThreadAlias(accessToken: string, threadId: string, alias: string): Promise<ConversationThreadAlias> {
+    const rows = await this.dataApi.request<ConversationThreadAlias[]>(accessToken, 'rpc/set_conversation_thread_alias_v1', {
+      method: 'POST',
+      body: JSON.stringify({ p_thread_id: threadId, p_alias: alias }),
     });
     return rows[0];
   }

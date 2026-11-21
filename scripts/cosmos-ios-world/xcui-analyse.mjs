@@ -13,8 +13,10 @@
 //     must be a node core of at least 12 pixels (twice the detector's 6-pixel floor: recorded static specks and stars
 //     are 6 px, node cores 15-140 px, the zoomed mark core 20 px), and its size must agree between the frames (0.5x-2x).
 //     No core inside a fixed overlay counts: the test records the overlays' frames next to each screenshot
-//     (`pan-z-overlays-before` / `-after`), and without them the case is NOT TESTED. Otherwise NOT TESTED. Same
-//     tolerance as X-PAN.
+//     (`pan-z-overlays-before` / `-after`), and without them the case is NOT TESTED. Same tolerance as X-PAN.
+//     PO decision 2026-11-21 (option 1): when no unambiguous core exists (one mark whose beads share a hue, iPhone SE), a
+//     constellation of at least three node cores that move by ONE rigid shift, found without the expected drag and
+//     unique, is measured instead (`constellation` below). Otherwise NOT TESTED.
 //   - D-3 (PO 2026-11-18, contract §24): the values the D-3 tests measure (`sefu1-timing`, `sefu2-card`,
 //     `layout-gate`) are appended to their test's row as recorded evidence; they are not judged here.
 //   - D-3 CP4 (PO review 2026-11-19, contract §26), two demonstrated harness faults:
@@ -115,7 +117,39 @@ const pairs = (A, B) => A.flatMap((a) => {
   return back === a ? [{ a, b, dx: b.x - a.x, dy: b.y - a.y }] : [];
 });
 const median = (v) => { const s = [...v].sort((p, q) => p - q); return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2; };
-const shiftCase = (id, before, after, expected, tolerance, { minPairs = 2, unambiguous = false, overlays = null } = {}) => {
+// X-PAN-ZOOMED's second identity (PO decision 2026-11-21, option 1), used only when no unambiguous core exists — a mark
+// whose beads share one hue (iPhone SE: one Thread, five green beads). A CONSTELLATION of at least three distinct node
+// cores that move together by ONE rigid shift. The shift is found from the frames alone; the expected drag never chooses
+// a core or a shift: every pair of hue-compatible (≤15°), same-size (0.5x-2x), node (≥12 px) cores proposes a shift, each
+// proposal is supported by the cores that land within EPS points of it one-to-one, and the best-supported proposal must be
+// unique (no rival shift more than 2·EPS away is supported by three cores, or by as many as the best). Fewer than three cores, or a tie: NOT TESTED. Only then
+// is the measured shift judged against the drag, with the case's own tolerance (unchanged).
+const EPS = 6;
+const constellation = (A, B) => {
+  const fits = (a, b) => hueDiff(a.h, b.h) <= 15 && a.n >= 12 && b.n >= 12 && b.n >= 0.5 * a.n && b.n <= 2 * a.n;
+  const support = (s) => {
+    const used = new Set(), P = [];
+    for (const a of A) {
+      const b = B.filter((c) => !used.has(c) && fits(a, c) && Math.hypot(c.x - a.x - s.dx, c.y - a.y - s.dy) <= EPS)
+        .sort((p, q) => Math.hypot(p.x - a.x - s.dx, p.y - a.y - s.dy) - Math.hypot(q.x - a.x - s.dx, q.y - a.y - s.dy))[0];
+      if (b) { used.add(b); P.push({ a, b, dx: b.x - a.x, dy: b.y - a.y }); }
+    }
+    return P;
+  };
+  const proposals = A.flatMap((a) => B.filter((b) => fits(a, b)).map((b) => ({ dx: b.x - a.x, dy: b.y - a.y })));
+  const scored = proposals.map((s) => {
+    const first = support(s);
+    const refined = first.length ? { dx: median(first.map((p) => p.dx)), dy: median(first.map((p) => p.dy)) } : s;
+    return { s: refined, P: support(refined) };
+  }).sort((p, q) => q.P.length - p.P.length);
+  const best = scored[0];
+  if (!best) return { P: [], why: 'no hue-compatible node cores in both frames' };
+  const rival = scored.find((r) => Math.hypot(r.s.dx - best.s.dx, r.s.dy - best.s.dy) > 2 * EPS && r.P.length >= Math.min(3, best.P.length));
+  if (rival) return { P: [], why: `a second rigid shift is also supported (${best.P.length} cores at ${best.s.dx.toFixed(0)},${best.s.dy.toFixed(0)} and at ${rival.s.dx.toFixed(0)},${rival.s.dy.toFixed(0)})` };
+  return { P: best.P, why: '' };
+};
+
+const shiftCase = (id, before, after, expected, tolerance, { minPairs = 2, unambiguous = false, overlays = null, constellationFallback = false } = {}) => {
   const OA = overlays?.before ?? [], OB = overlays?.after ?? [];
   const A = cores(before, OA), B = cores(after, OB);
   if (A === null || B === null) return result(id, 'NOT TESTED', `no ${A === null ? before : after} screenshot`);
@@ -133,12 +167,20 @@ const shiftCase = (id, before, after, expected, tolerance, { minPairs = 2, unamb
   const P = all.filter((p) => !mismatch(p));
   const dropped = all.filter(mismatch).map((p) => `${p.a.h}@${p.a.x},${p.a.y}->${p.b.x},${p.b.y}`).join(' ');
   const seen = P.map((p) => `${p.a.h}@${p.a.x},${p.a.y}->${p.b.x},${p.b.y}`).join(' ') + (dropped ? `; excluded as hue mismatches: ${dropped}` : '');
-  if (P.length < minPairs) return result(id, 'NOT TESTED', `fewer than ${minPairs === 1 ? 'one' : 'two'} ${unambiguous ? 'unambiguous ' : ''}node cores matched by hue (${P.length}: ${seen || 'none'})`);
-  const m = { dx: median(P.map((p) => p.dx)), dy: median(P.map((p) => p.dy)) };
-  const off = (p) => Math.hypot(p.dx - expected.dx, p.dy - expected.dy);
-  const worst = Math.max(...P.map(off));
-  const detail = `expected shift ${expected.dx.toFixed(0)},${expected.dy.toFixed(0)}; measured median ${m.dx.toFixed(0)},${m.dy.toFixed(0)}; worst pair off by ${worst.toFixed(0)} pt; ${P.length} pairs: ${seen}`;
-  result(id, off(m) <= tolerance && worst <= tolerance * 1.5 ? 'PASS' : 'FAIL', detail);
+  const judge = (Q, how, list) => {
+    const m = { dx: median(Q.map((p) => p.dx)), dy: median(Q.map((p) => p.dy)) };
+    const off = (p) => Math.hypot(p.dx - expected.dx, p.dy - expected.dy);
+    const worst = Math.max(...Q.map(off));
+    const detail = `expected shift ${expected.dx.toFixed(0)},${expected.dy.toFixed(0)}; measured median ${m.dx.toFixed(0)},${m.dy.toFixed(0)}; worst pair off by ${worst.toFixed(0)} pt; ${how}${Q.length} pairs: ${list}`;
+    result(id, off(m) <= tolerance && worst <= tolerance * 1.5 ? 'PASS' : 'FAIL', detail);
+  };
+  if (P.length >= minPairs) return judge(P, '', seen);
+  const short = `fewer than ${minPairs === 1 ? 'one' : 'two'} ${unambiguous ? 'unambiguous ' : ''}node cores matched by hue (${P.length}: ${seen || 'none'})`;
+  if (!constellationFallback) return result(id, 'NOT TESTED', short);
+  const C = constellation(RA ?? rawCores(before, OA), RB ?? rawCores(after, OB));
+  const list = C.P.map((p) => `${p.a.h}@${p.a.x},${p.a.y}->${p.b.x},${p.b.y}`).join(' ');
+  if (C.P.length < 3) return result(id, 'NOT TESTED', `${short}; no constellation of three node cores moving by one rigid shift (${C.why || `${C.P.length}: ${list || 'none'}`})`);
+  judge(C.P, 'a constellation of ', list);
 };
 
 const trip = text('trip-p-spec');
@@ -159,7 +201,7 @@ else {
   const [dx, dy] = zoomed.split(',').map(Number);
   const ob = overlaysOf('pan-z-overlays-before'), oa = overlaysOf('pan-z-overlays-after');
   if (ob === null || oa === null) result('X-PAN-ZOOMED', 'NOT TESTED', "the fixed overlays' frames were not recorded, so no feature can be trusted as the world's");
-  else shiftCase('X-PAN-ZOOMED', 'pan-z-before', 'pan-z-after', { dx, dy }, Math.max(20, 0.25 * Math.hypot(dx, dy)), { minPairs: 1, unambiguous: true, overlays: { before: ob, after: oa } });
+  else shiftCase('X-PAN-ZOOMED', 'pan-z-before', 'pan-z-after', { dx, dy }, Math.max(20, 0.25 * Math.hypot(dx, dy)), { minPairs: 1, unambiguous: true, overlays: { before: ob, after: oa }, constellationFallback: true });
 }
 
 fs.appendFileSync(resultsFile, `${rows.join('\n')}\n`);

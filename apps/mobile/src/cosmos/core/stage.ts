@@ -149,7 +149,10 @@ function buildLayer(input: SceneInput, rung: number): StageLayer {
       node(e.x, e.y, rung === 0 ? 13 : 15, e.dye);
       if (selected) instrument(e.x, e.y, 24, undefined);
       hits.push({ id: e.id, x: e.x, y: e.y, r: 26 });
-      if (e.label !== null) labels.push({ id: e.id, text: e.label, x: e.x, y: e.y + 20 * k, emphasis: selected, major: true, tint: -1 });
+      // AMENDED (PO directive 'COSMOS E-2 Final Corrections', 2026-11-21, §2): a topic's name speaks Public's label language —
+      // an ordinary label in its own body's hue, and the selected subject's bright title — instead of a hub title for every
+      // topic. Sizes, colours and the contrast treatment are the canvas's, shared with Public; nothing else here changes.
+      if (e.label !== null) labels.push({ id: e.id, text: e.label, x: e.x, y: e.y + 20 * k, emphasis: selected, major: selected, tint: selected ? -1 : e.dye });
       continue;
     }
     const receded = input.receded?.has(e.id) === true;

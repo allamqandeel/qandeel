@@ -78,6 +78,7 @@ None of it is product code.
    - **Maximal cliques** stay out of the production path unless an independent benefit is proven.
    - **K / S are not approved.** CAL-1's Q1 failure stands as recorded.
 6. **Only L2 topics are the understood topics visible on the map.**
+   *Controlled amendment (COSMOS E-2 corrections, Slice A; PO decisions D-3 / D-4 of 2026-11-20; COSMOS contract §31, `docs/historical-projection-v1.md` D-12 / D-13 amendment):* independently of L2 and before any N4, each Thread already shows the name the person gave it (a separate append-only alias ledger, migration 0198) or, failing that, the grounding wording of their own words. This is identity, not a topic proposal: N4 remains unbuilt and unauthorised, and nothing here merges, groups or proposes.
    - Sources: the user, or a Qandeel proposal (N4).
    - Proposals are visible as `PROPOSED` with a non-colour marker.
    - A meaningful map must not depend on the user approving every proposal.

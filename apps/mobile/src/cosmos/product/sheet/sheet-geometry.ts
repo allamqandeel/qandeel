@@ -124,6 +124,21 @@ export function keyboardOverlap(sheetBottom: number, keyboardTop: number | null)
 }
 
 /**
+ * COSMOS E-2 HONOR acceptance (PO decision 2026-11-20, DEFECT-4): how far the open keyboard lifts a PEEK. A PEEK shows
+ * only the sheet's top strip, at the bottom of the glass, so the content's keyboard spacer (EXPANDED's answer) never
+ * reaches it: on the HONOR the whole strip — a topic-name field and its Save — sat under the keyboard. The PEEK rises by
+ * the WHOLE overlap, and never above the top band. EXPANDED and CLOSED: 0.
+ * AMENDED (PO directive 'COSMOS E-2 Final Corrections', 2026-11-21, §7, the Android Emulator pass): the lift no longer
+ * subtracts the bottom inset. The PEEK's scroller shows content down to the sheet's bottom edge, so a field scrolled
+ * there (the name row under "Go to this place") kept exactly the inset (24 dp on Android 16) under the keyboard; a log of
+ * the run showed the keyboard's reported top was exact and the shortfall was this subtraction.
+ */
+export function keyboardLift(phase: SheetPhase, overlap: number, geometry: SheetGeometry): number {
+  if (phase !== 'PEEK' || !Number.isFinite(overlap) || overlap <= 0) return 0;
+  return Math.max(0, Math.min(Math.round(overlap), sheetOffset('PEEK', geometry)));
+}
+
+/**
  * Resistance past an edge (the expo-animation skill's rubber band): the further the finger goes beyond the highest stop,
  * the less the sheet follows, so a boundary gives instead of stopping dead. `overshoot` ≥ 0 in points.
  */

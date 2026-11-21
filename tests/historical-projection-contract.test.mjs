@@ -140,8 +140,15 @@ test('the Stage 6.6 v3 matrix reconciles to 31 FULL AFTER BUILD / 4 NOT EXPOSED 
 });
 
 test('Layer A is ONE owner-scoped read and Layer B is a pure server function: no write, no Product action, no RH, no kernel write, no ranking', () => {
-  assert.match(repository, /'rpc\/get_session_historical_projection_v1'/u);
-  assert.equal((repository.match(/'rpc\//gu) ?? []).length, 1, 'exactly ONE RPC');
+  // RE-ANCHORED by COSMOS E-2 corrections, Slice A (Product Owner decisions D-3 / D-4, 2026-11-20): the ONE read is the
+  // ADDITIVE Controlled Personal Projection V2 (migration 0198), which wraps the byte-identical V1 and adds each Thread's
+  // name {text, source} and origin {sessionId, sp}. Still exactly ONE RPC; V1 still decides visibility, coverage and TC.
+  assert.match(repository, /'rpc\/get_session_historical_projection_v2'/u);
+  // RE-ANCHORED by COSMOS E-2 Slice C (PO D-5, Option U, 2026-11-20; migration 0199): the repository now reads TWO owner-scoped
+  // RPCs — the Session-bound V2 projection (the ONE historical read, pinned above and below) and the user-level CURRENT
+  // Personal World (get_user_current_personal_world_v1; no TC, no Live Head). Each is read-only; there is no third RPC.
+  assert.equal((repository.match(/'rpc\//gu) ?? []).length, 2, 'exactly the V2 projection RPC and the 0199 current-world RPC');
+  assert.match(repository, /'rpc\/get_user_current_personal_world_v1'/u, 'the second RPC is the 0199 current-world read');
   assert.match(repository, /body: JSON\.stringify\(\{ p_session_id: sessionId, p_tc: tc \}\)/u, 'the caller supplies a Session and a TC, never a user id, an SP anchor or a version');
   assert.match(repository, /import \{ DataApiError, readDataApiUpstreamIdentity, type SupabaseDataApiService \} from '\.\.\/conversation\/supabase-data-api\.service';/u, 'the AUTHENTICATED channel with the caller\'s own token');
   assert.doesNotMatch(productionCode, /SupabaseServiceRoleApiService|service_role|serviceApi/u, 'no service-role read: the database derives the owner from auth.uid()');
@@ -175,7 +182,11 @@ test('the controller is the ONE authenticated historical read: typed refusals, n
   assert.match(controller, /@Controller\('conversation'\)/u);
   assert.match(controller, /@UseGuards\(SupabaseAuthGuard\)/u);
   assert.match(controller, /@Get\('sessions\/:sessionId\/historical-projection'\)/u);
-  assert.equal((controller.match(/@(?:Get|Post|Put|Patch|Delete)\(/gu) ?? []).length, 1, 'exactly one route');
+  // RE-ANCHORED by COSMOS E-2 Slice C: the controller carries a second GET — the user-level current Personal World
+  // (GET /conversation/personal-world, 0199). Both are reads; there is still no write route here.
+  assert.equal((controller.match(/@(?:Get|Post|Put|Patch|Delete)\(/gu) ?? []).length, 2, 'exactly the historical-projection GET and the current-world GET');
+  assert.equal((controller.match(/@Get\(/gu) ?? []).length, 2, 'both routes are reads');
+  assert.match(controller, /@Get\('personal-world'\)/u, 'the second route is the current-world read');
   assert.doesNotMatch(controller, /@Post|@Put|@Patch|@Delete|WebSocket|Sse|@Sse|EventEmitter|observable/u);
   assert.match(controller, /return disclose\(knowledge, semanticDepth, inspection\);/u, 'Layer B runs on the server; K\(TC\) never leaves it');
   assert.match(controller, /case 'SESSION_NOT_VISIBLE': return new NotFoundException/u);

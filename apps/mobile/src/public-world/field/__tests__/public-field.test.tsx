@@ -16,7 +16,7 @@ import { AccessibilityInfo, BackHandler } from 'react-native';
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../../appearance';
 import { analysisCopy } from '../../../analysis-language';
 import { typeStyle } from '../../../conversation';
-import { DEFAULT_MAP_SCALE, envelopeCenter, projectAddress, viewportEnvelope, type ViewportEnvelope } from '../../../map/camera';
+import { DEFAULT_MAP_SCALE, envelopeCenter, projectAddress, viewportEnvelope, visibleFootprint, type ViewportEnvelope } from '../../../map/camera';
 import { COSMOS_MARK_TEST_ID_INFIX, COSMOS_RAIL_TEST_ID, COSMOS_SHEET_TEST_ID, COSMOS_STEP_TEST_ID_SUFFIX } from '../../../cosmos/product';
 import { LIVING_ANALYSIS_STAGE_TEST_ID } from '../../../living-analysis';
 import {
@@ -43,7 +43,7 @@ import { createPublicWorldController } from '../../public-world-controller';
 import { PublicWorldArea } from '../../PublicWorldArea';
 import { focusField, panField, wholeWorldCamera, zoomField, type PublicFieldCamera } from '../public-field-camera';
 import { placePublicField } from '../public-field-projection';
-import { createPublicFieldController, type PublicFieldTransport } from '../public-field-controller';
+import { PUBLIC_FIELD_READ_BOUND, PUBLIC_FIELD_RETAINED_MAX, createPublicFieldController, type PublicFieldTransport } from '../public-field-controller';
 
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 
@@ -481,7 +481,17 @@ describe('S5-03B R2 — every navigation asks again for everything on display: t
     await flush();
     expect(server.t.search.mock.calls.length).toBe(searches + 1);
     expect(ids(c.getState().search.results)).toEqual([E2.id]);
-    expect(ids(c.getState().entries)).not.toContain(E3.id);
+    // COSMOS E-2 corrections, Slice D-2 (PO D-1 = Option K): the glass read is authoritative INSIDE its rectangle. After a
+    // pan at FAR the glass still covers E3, so it is gone; after the zoom IN to MID the glass no longer covers E3, so the
+    // field keeps it outside the glass (it is not drawn there) until a read covering it answers — the step OUT below.
+    const footprint = visibleFootprint(c.getState().camera!, GLASS);
+    const covered = E3.address.x >= footprint.minX && E3.address.x <= footprint.maxX && E3.address.y >= footprint.minY && E3.address.y <= footprint.maxY;
+    expect(ids(c.getState().entries).includes(E3.id)).toBe(!covered);
+    if (!covered) {
+      c.step('OUT');
+      await flush();
+      expect(ids(c.getState().entries)).not.toContain(E3.id);
+    }
   });
 
   it('a focused panel whose Experience is withdrawn becomes ABSENT on the next navigation, and is not redrawn', async () => {
@@ -565,6 +575,105 @@ async function mountArea(language: 'ar' | 'en', entries: PublicFieldEntry[], for
   fieldGlass = seen.mock.calls[seen.mock.calls.length - 1][0];
   return { view, field, t, glass: (): ViewportEnvelope => seen.mock.calls[seen.mock.calls.length - 1][0] };
 }
+
+describe('COSMOS E-2 corrections, Slice D-2 (PO D-1 = Option K) — a read is authoritative inside its rectangle; outside, the field of this visit stays until a read covers it', () => {
+  /** Two Experiences close to the origin (inside the MID glass) and four far from it (outside it, inside the FAR glass). */
+  const SPREAD = [E1, E2, E3, entry(4, 50_000n, 80_000n, 'hope.waiting'), entry(5, -60_000n, -100_000n), entry(6, 2_000_000n, -2_000_000n)];
+  const start = async () => {
+    const server = liveServer(SPREAD);
+    const c = createPublicFieldController({ transport: server.t as unknown as PublicFieldTransport, isCurrent: () => true });
+    c.setEnvelope(GLASS);
+    c.enter();
+    await flush();
+    expect(ids(c.getState().entries)).toEqual(ids(SPREAD));
+    c.step('IN');
+    await flush();
+    expect(c.getState().camera?.depth).toBe('MID');
+    return { c, server };
+  };
+  const covers = (c: ReturnType<typeof createPublicFieldController>, e: PublicFieldEntry) => {
+    const r = visibleFootprint(c.getState().camera!, GLASS);
+    return e.address.x >= r.minX && e.address.x <= r.maxX && e.address.y >= r.minY && e.address.y <= r.maxY;
+  };
+
+  it('a MID glass covers only part of the World, and the whole World stays on the field after the glass read answers', async () => {
+    const { c } = await start();
+    const outside = SPREAD.filter((e) => !covers(c, e));
+    expect(outside.length).toBeGreaterThan(0);
+    expect(outside.length).toBeLessThan(SPREAD.length);
+    // Before Slice D-2 the glass read replaced the field with what it served: everything outside the glass vanished.
+    expect(ids(c.getState().entries).sort()).toEqual(ids(SPREAD).sort());
+  });
+
+  it('a pan shows no blank region: what lies in the newly uncovered glass is already on the field, in flight and after the read', async () => {
+    const { c, server } = await start();
+    const before = ids(c.getState().entries);
+    const reads = server.t.field.mock.calls.length;
+    c.pan(-SIZE.width * 2, SIZE.height);
+    // In flight: nothing left the field.
+    expect(ids(c.getState().entries).sort()).toEqual(before.slice().sort());
+    await flush();
+    expect(server.t.field.mock.calls.length).toBe(reads + 1);
+    expect(ids(c.getState().entries).sort()).toEqual(before.slice().sort());
+  });
+
+  it('a zoom out shows no blank region: the wider glass finds its Experiences already on the field', async () => {
+    const { c, server } = await start();
+    const reads = server.t.field.mock.calls.length;
+    c.step('OUT');
+    expect(ids(c.getState().entries).sort()).toEqual(ids(SPREAD).sort());
+    await flush();
+    expect(server.t.field.mock.calls.length).toBe(reads + 1);
+    expect(ids(c.getState().entries).sort()).toEqual(ids(SPREAD).sort());
+  });
+
+  it('authoritative removal is unchanged: an Experience withdrawn inside the glass leaves at once on the read; one outside leaves when a read covers it', async () => {
+    const { c, server } = await start();
+    const inside = SPREAD.find((e) => covers(c, e))!;
+    const outside = SPREAD.find((e) => !covers(c, e))!;
+    server.stop(inside);
+    server.stop(outside);
+    c.pan(1, 0); c.pan(-1, 0);
+    c.revalidate();
+    await flush();
+    expect(ids(c.getState().entries)).not.toContain(inside.id);
+    expect(ids(c.getState().entries)).toContain(outside.id);
+    c.step('OUT');
+    await flush();
+    expect(ids(c.getState().entries)).not.toContain(outside.id);
+  });
+
+  it('what stays is bounded, nearest the glass first, and never a second source: entry and a failed read hold nothing', async () => {
+    const many = Array.from({ length: PUBLIC_FIELD_RETAINED_MAX + 50 }, (_, i) => entry(100 + i, BigInt(3_000_000 + i * 1_000), BigInt(-3_000_000 - i * 1_000)));
+    const server = liveServer([E1, ...many]);
+    server.t.field.mockImplementation(async (r: { minX: bigint; minY: bigint; maxX: bigint; maxY: bigint }) =>
+      yes([E1, ...many].filter((e) => e.address.x >= r.minX && e.address.x <= r.maxX && e.address.y >= r.minY && e.address.y <= r.maxY).slice(0, PUBLIC_FIELD_READ_BOUND - 1)));
+    const c = createPublicFieldController({ transport: server.t as unknown as PublicFieldTransport, isCurrent: () => true });
+    c.setEnvelope(GLASS);
+    c.enter();
+    await flush();
+    const entered = c.getState().entries.length;
+    expect(entered).toBe(PUBLIC_FIELD_READ_BOUND - 1);
+    // Grow the field past the bound through panel reads (their nearby context is served too), then read a small glass.
+    c.focus(E1.id);
+    await flush();
+    c.step('OUT');
+    await flush();
+    expect(c.getState().entries.length).toBeLessThanOrEqual(PUBLIC_FIELD_READ_BOUND + PUBLIC_FIELD_RETAINED_MAX);
+    // Nearest first: the Experience nearest the origin among the far ones outranks the farthest.
+    const kept = ids(c.getState().entries);
+    if (kept.length > PUBLIC_FIELD_RETAINED_MAX) expect(kept).toContain(many[0].id);
+    server.fail();
+    c.revalidate();
+    await flush();
+    expect(c.getState()).toMatchObject({ status: 'UNAVAILABLE', entries: [] });
+    server.t.field.mockImplementation(async () => yes([E1]));
+    c.enter();
+    expect(c.getState().entries).toEqual([]);
+    await flush();
+    expect(ids(c.getState().entries)).toEqual([E1.id]);
+  });
+});
 
 describe('S5-03B — the Public field surface', () => {
   it.each(['ar', 'en'] as const)('an empty World is shown as empty, with nothing standing in for it (%s)', async (language) => {
@@ -928,13 +1037,14 @@ describe('S5-03B — isolation and the Product Copy Gate', () => {
     expect(code('PublicLivingAnalysis.tsx')).toContain('timeline={null}');
     for (const file of files) {
       // S5-04 (controlled re-anchor, validation only): a TextInput's `multiline` prop is not a drawn line, and the S5-04
-      // discussion copy module is, like field-copy.ts, the one place its own Arabic words live.
+      // discussion copy module is, like field-copy.ts, the one place its own Arabic words live. COSMOS E-2 Slice E: the
+      // sheet-tabs copy module («المعلومات» | «المناقشة») is a copy module of the same kind.
       const text = code(file).replace('timeline={null}', '').replace(/\bmultiline\b/gu, '');
       expect(text).not.toMatch(/from '\.\.\/\.\.\/state'|CanonicalStore|SemanticDepth|Session|Thread|EMERGING_FOCUS|READING|temporal|shared-world\/(?!copy)|useMapPanGesture|useMapSemanticZoomGesture/u);
       expect(text).not.toMatch(/edge|Line\b|<Path|Svg|viewCount|rank|popular|trending|similar|proxim/iu);
       if (!EXPLICIT_RELATION_FILES.includes(file)) expect(text).not.toMatch(/relation/iu);
       expect(text).not.toMatch(/withTiming|withSpring|Animated\./u);
-      if (file !== 'field-copy.ts' && file !== 'discussion-copy.ts') expect(text).not.toMatch(/['"`][^'"`\n]*[؀-ۿ][^'"`\n]*['"`]/u);
+      if (file !== 'field-copy.ts' && file !== 'discussion-copy.ts' && file !== 'sheet-tabs-copy.ts') expect(text).not.toMatch(/['"`][^'"`\n]*[؀-ۿ][^'"`\n]*['"`]/u);
       expect(text).not.toMatch(/publish_|'PUBLISHED'|s5-03a\.private|S5-03A_PRIVATE/u);
     }
   });

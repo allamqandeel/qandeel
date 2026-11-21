@@ -32,7 +32,7 @@ import Animated, {
 import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 
 import type { NasijCamera } from '../core/camera';
-import { rungScale, type Stage, type StageLabel, type WorldKind } from '../core/stage';
+import { rungScale, type Stage, type StageHit, type StageLabel, type WorldKind } from '../core/stage';
 import { Lens, PlateFill, RungDraws, VOID, type OverdrawMode } from './parts';
 import { disposePrepared, lightRgbOf, prepareStage, type PreparedRung, type PreparedStage } from './prepare';
 import {
@@ -118,6 +118,8 @@ export interface CosmosCanvasProps {
   readonly accessibleMarks?: boolean;
   /** COSMOS-INT-01: the host's test id; the accessible gesture surface is `${testID}:semantic-step`, a mark `${testID}:mark:${id}`. */
   readonly testID?: string;
+  /** COSMOS E-2 final corrections (PO, 2026-11-21, §6): the glass y of the host's bottom rail's top; no label reaches it. */
+  readonly labelFloor?: number | null;
 }
 
 const FRAME_RING = 600;
@@ -125,6 +127,14 @@ const INPUT_RING = 256;
 const LABEL_WIDTH = 240;
 const LABEL_MAX_CHARS = 34;
 const MAX_LABELS_PER_RUNG = 60;
+/**
+ * COSMOS E-2 corrections, Slice D-1 (PO directive 2026-11-20 §7): how far an ordinary label may be moved inward from
+ * its body so that it is drawn whole near a side of the glass. Beyond this it is left out (whole or not at all), never
+ * displaced: a name must stay on its body through a pan, so it is never pushed into another region.
+ */
+const LABEL_EDGE_SHIFT_MAX = 16;
+/** The shortest name an edge fit may draw (its own first characters and an ellipsis); shorter room leaves it out. */
+const LABEL_FIT_MIN_CHARS = 10;
 const MAX_ACCESSIBLE_MARKS = 60;
 const SHADOW = 'rgba(2, 3, 10, 0.95)';
 
@@ -177,19 +187,27 @@ const RungLayer = memo(function RungLayer({ layer, atlas, mode, ls, rungs, unhel
 
 // ── labels (React Native text, moved on the UI thread) ────────────────────────────────────────────────────────────
 
-interface PlacedLabel { readonly id: string; readonly text: string; readonly left: number; readonly top: number; readonly size: number; readonly major: boolean; readonly color: string }
-interface LabelLayout { readonly rung: number; /** The scale this rung's labels were laid out at. */ readonly scale: number; readonly labels: readonly PlacedLabel[] }
+/** `box`: the glass rectangle the overlap gate kept for this label ([left, top, right, bottom], at the layout's camera). */
+export interface PlacedLabel { readonly id: string; readonly text: string; readonly left: number; readonly top: number; readonly size: number; readonly major: boolean; readonly color: string; readonly box: readonly [number, number, number, number] }
+/** COSMOS E-2 final corrections (PO, 2026-11-21): `floor`, the glass y no label may reach (a host rail's top); `fit`, shorten an edge name instead of leaving it out (Personal). */
+export interface LabelPlacementOptions { readonly floor?: number; readonly fit?: boolean }
+export interface LabelLayout { readonly rung: number; /** The scale this rung's labels were laid out at. */ readonly scale: number; readonly labels: readonly PlacedLabel[] }
 
 const ARABIC = /[\u0600-\u06FF]/u;
 const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
 
 /**
- * The labels of one rung around the settled camera, as they sit on the glass when that rung rests at `scale`.
+ * The labels of one rung around the anchor camera (the camera the current settle is aimed at), as they sit on the glass
+ * when that rung rests at `scale`.
  * The gate's rules: a hub's title first, then the selection; a label is drawn whole or not at all (one whose entity is
  * within 24 pt of an edge is left out); overlaps are rejected greedily. Labels up to 1.5 screens away are kept, so a
  * pan brings them in; one that would be cut by the edge at rest is not.
+ *
+ * Slice D-1 (2026-11-20): an ordinary label is moved inward by at most `LABEL_EDGE_SHIFT_MAX` to be drawn whole;
+ * one that would need more is left out rather than drawn away from its body (the hub's title keeps the full inward
+ * move: it is the selected subject, and it is drawn whole wherever its body is in view). Exported for its tests only.
  */
-function placeLabels(labels: readonly StageLabel[], rung: number, scale: number, camera: Camera3, width: number, height: number, focusY: number, fontScale: number, rtl: boolean): PlacedLabel[] {
+export function placeLabels(labels: readonly StageLabel[], rung: number, scale: number, camera: Camera3, width: number, height: number, focusY: number, fontScale: number, rtl: boolean, options: LabelPlacementOptions = {}): PlacedLabel[] {
   const k = scale / rungScale(rung);
   const out: PlacedLabel[] = [];
   const taken: [number, number, number, number][] = [];
@@ -198,22 +216,50 @@ function placeLabels(labels: readonly StageLabel[], rung: number, scale: number,
   for (const label of [...labels].sort((a, b) => weight(b) - weight(a))) {
     if (out.length >= MAX_LABELS_PER_RUNG) break;
     let px = (label.x - camera.cx) * scale + width / 2;
-    const py = (label.y - camera.cy) * scale + focusY;
+    let py = (label.y - camera.cy) * scale + focusY;
     if (px < -1.5 * width || px > 2.5 * width || py < -1.5 * height || py > 2.5 * height) continue;
     const size = label.major ? clamp(23 * Math.pow(k, 0.6), 15, 30) : clamp(12.5 * Math.pow(k, 0.6), 10.5, 17);
-    const text = label.text.length > LABEL_MAX_CHARS ? `${label.text.slice(0, LABEL_MAX_CHARS - 1)}…` : label.text;
+    let text = label.text.length > LABEL_MAX_CHARS ? `${label.text.slice(0, LABEL_MAX_CHARS - 1)}…` : label.text;
     // No text measurement off the UI: an estimate of the drawn width, generous enough to keep neighbours apart.
-    const w = Math.min(LABEL_WIDTH, text.length * size * fontScale * 0.58 + 8);
+    const widthOf = (t: string) => Math.min(LABEL_WIDTH, t.length * size * fontScale * 0.58 + 8);
+    let w = widthOf(text);
     const inView = px >= 0 && px <= width && py >= 0 && py <= height;
     if (inView) {
-      if (px < 24 || px > width - 24 || py < 96 || py > height - 40) continue;
-      px = clamp(px, Math.min(w / 2 + railLeft, width / 2), Math.max(width - w / 2 - railRight, width / 2));
+      if (px < 24 || px > width - 24 || py < 96) continue;
+      // AMENDED (PO directive "COSMOS E-2 Final Corrections", 2026-11-21, §6): no label is laid out over the host's bottom
+      // rail (the Personal timeline and its chips). `floor` is that rail's measured top; a world without a rail has none.
+      const lowest = Math.min(height - 40, options.floor === undefined ? Infinity : options.floor - size * fontScale - 5);
+      if (py > lowest) {
+        // AMENDED (PO directive "COMPLETE ALL CORRECTIONS BEFORE FINAL CI", 2026-11-21, narrow-screen selected title; `fit`
+        // is the Personal world only): the SELECTED topic stays identifiable by its title. Where its title would reach the
+        // floor (on a 360 dp phone a body low beside the depth rail), it is lifted by exactly the shortfall — the smallest
+        // inward move — and by no more than two of its own heights, so it stays on its body; a body lower than that keeps
+        // the frozen rule. Every other label, and Shared and Public, are unchanged: left out at the floor.
+        const lift = py - lowest;
+        if (!(label.major && options.fit === true) || lift > 2 * (size * fontScale + 5)) continue;
+        py = lowest;
+      }
+      let whole = clamp(px, Math.min(w / 2 + railLeft, width / 2), Math.max(width - w / 2 - railRight, width / 2));
+      if (!label.major && Math.abs(whole - px) > LABEL_EDGE_SHIFT_MAX) {
+        // AMENDED (same directive, §3; `fit` is passed for the Personal world only): a topic name near an edge is shortened
+        // to the room it has within the bounded shift — still on its body, still its own words — instead of being left
+        // out. Too little room for a readable name (LABEL_FIT_MIN_CHARS) still leaves it out, exactly as before.
+        if (options.fit !== true) continue;
+        const room = px < width / 2 ? 2 * (px + LABEL_EDGE_SHIFT_MAX - railLeft) : 2 * (width - railRight - px + LABEL_EDGE_SHIFT_MAX);
+        const chars = Math.floor((room - 8) / (size * fontScale * 0.58));
+        if (chars < LABEL_FIT_MIN_CHARS || chars >= text.length) continue;
+        text = `${label.text.slice(0, chars - 1).trimEnd()}…`;
+        w = widthOf(text);
+        whole = clamp(px, Math.min(w / 2 + railLeft, width / 2), Math.max(width - w / 2 - railRight, width / 2));
+        if (Math.abs(whole - px) > LABEL_EDGE_SHIFT_MAX) continue;
+      }
+      px = whole;
     }
     const box: [number, number, number, number] = [px - w / 2 - 5, py - 2, px + w / 2 + 5, py + size * fontScale + 5];
     if (!inView && box[0] < width && box[2] > 0 && box[1] < height && box[3] > 0) continue;
     if (!label.emphasis && !label.major && taken.some((q) => box[0] < q[2] && box[2] > q[0] && box[1] < q[3] && box[3] > q[1])) continue;
     taken.push(box);
-    out.push({ id: label.id, text, left: px - LABEL_WIDTH / 2, top: py, size, major: label.major, color: label.tint < 0 ? '#FFFFFF' : lightRgbOf(label.tint) });
+    out.push({ id: label.id, text, left: px - LABEL_WIDTH / 2, top: py, size, major: label.major, color: label.tint < 0 ? '#FFFFFF' : lightRgbOf(label.tint), box });
   }
   return out;
 }
@@ -222,6 +268,23 @@ function placeLabels(labels: readonly StageLabel[], rung: number, scale: number,
  * One rung's labels: ONE animated view. Its children sit where they are at rest; the view is moved and scaled about its
  * centre on the UI thread so that every label follows its world point exactly.
  */
+/**
+ * COSMOS E-2 final corrections (§4): the topic whose DRAWN name holds the world point (tx, ty), or null. A tap within a
+ * body's own reach is the body's (null here), so a name never takes a tap from a body. The layout's boxes are glass
+ * rectangles at its own camera (`origin`, its scale, `focusY`); they are taken back to the world to meet the tap.
+ * Exported for its tests only.
+ */
+export function labelBodyAt(layout: LabelLayout, origin: Camera3, focusY: number, width: number, hits: readonly StageHit[], scale: number, tx: number, ty: number): string | null {
+  if (hits.some((h) => Math.hypot(h.x - tx, h.y - ty) * scale <= h.r)) return null;
+  const gx = (tx - origin.cx) * layout.scale + width / 2;
+  const gy = (ty - origin.cy) * layout.scale + focusY;
+  for (const label of layout.labels) {
+    const [l, t, r, b] = label.box;
+    if (gx >= l && gx <= r && gy >= t && gy <= b && hits.some((h) => h.id === label.id)) return label.id;
+  }
+  return null;
+}
+
 const LabelLayer = memo(function LabelLayer({ layout, origin, focusY, width, height, wx, wy, sx, sy, ls, rungs, unheld }: {
   readonly layout: LabelLayout; readonly origin: Camera3; readonly focusY: number; readonly width: number; readonly height: number;
 } & CameraValues & RungValues) {
@@ -282,15 +345,21 @@ function useOwned<T extends object>(value: T | null, release: (value: T) => void
 }
 
 /** The host's call-time state: the latest props and the settle's target and sequence. */
+interface TapRoute { readonly layout: LabelLayout | undefined; readonly origin: Camera3; readonly focusY: number; readonly width: number }
+
 function createHost(initial: CosmosCanvasProps) {
   let props = initial;
   let target: { camera: Camera3; focusY: number | null } = { camera: initial.initialCamera, focusY: null };
   let settling = false;
   let seq = 0;
   let firstFrame = false;
+  let route: TapRoute | null = null;
   return {
     bind(next: CosmosCanvasProps) { props = next; },
     props: () => props,
+    /** COSMOS E-2 final corrections (§4): the labels as last laid out at rest, for re-aiming a tap on a drawn name. */
+    routeTo(next: TapRoute | null) { route = next; },
+    route: () => route,
     target: () => target,
     settling: () => settling,
     /** A new target: returns the sequence number its completion must present. */
@@ -364,7 +433,16 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
   useEffect(() => { driftOn.set(drift && !reduceMotion ? 1 : 0); }, [drift, reduceMotion, driftOn]);
 
   const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+  /**
+   * The anchor the labels and the accessible marks are laid out around: the camera the current settle is AIMED at (and
+   * the glass's focus line there). Slice D-1 (2026-11-20): it is set when a settle or a jump is aimed, not when the
+   * settle completes, so a label never waits for an uninterrupted 320 ms rest to be laid out where its body now is;
+   * the UI-thread transform keeps every laid-out label on its world point in between, exactly as before.
+   */
   const [settled, setSettled] = useState<{ camera: Camera3; focusY: number }>({ camera: initialCamera, focusY: 0 });
+  const anchorTo = useCallback((camera: Camera3, focusY: number) => {
+    setSettled((previous) => (previous.focusY === focusY && previous.camera.cx === camera.cx && previous.camera.cy === camera.cy && previous.camera.scale === camera.scale ? previous : { camera, focusY }));
+  }, []);
   // What the callbacks reach at call time (never during render): the latest props and the settle's bookkeeping.
   const [host] = useState(() => createHost(props));
   useLayoutEffect(() => { host.bind(props); }, [host, props]);
@@ -408,7 +486,19 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
   const emitPanEnd = useCallback((cx: number, cy: number, scale: number) => host.props().onPanEnd({ cx, cy, scale }), [host]);
   const emitPinchEnd = useCallback((step: number, fx: number, fyAt: number, cx: number, cy: number, scale: number) =>
     host.props().onPinchEnd(step > 0 ? 'IN' : step < 0 ? 'OUT' : null, fx, fyAt, { cx, cy, scale }), [host]);
-  const emitTap = useCallback((x: number, y: number, cx: number, cy: number, scale: number) => host.props().onTap(x, y, { cx, cy, scale }), [host]);
+  // COSMOS E-2 final corrections (PO directive 2026-11-21, §4): in the Personal world a tap that meets no body but lands
+  // inside a drawn topic name is the same tap on that name's own body — the owner's ONE hit test then inspects it, exactly
+  // as a tap on the body does. No second selection path: the tap is only re-aimed. Shared and Public are unchanged.
+  const emitTap = useCallback((x: number, y: number, cx: number, cy: number, scale: number, tx: number, ty: number) => {
+    const props = host.props();
+    const route = host.route();
+    const hits = props.stage.layers[props.rung]?.hits ?? [];
+    const id = props.world === 'PERSONAL' && route !== null && route.layout !== undefined
+      ? labelBodyAt(route.layout, route.origin, route.focusY, route.width, hits, scale, tx, ty) : null;
+    const body = id === null ? undefined : hits.find((h) => h.id === id);
+    if (body === undefined) { props.onTap(x, y, { cx, cy, scale }); return; }
+    props.onTap(x + (body.x - tx) * scale, y + (body.y - ty) * scale, { cx, cy, scale });
+  }, [host]);
   const emitProbe = useCallback((kind: number, count: number, mean: number, p50: number, p95: number, max: number, stalls: number, freezes: number, inputN: number, inputP50: number, inputP95: number) => {
     const now = host.props();
     now.onProbe?.({
@@ -419,14 +509,14 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
   const emitSettled = useCallback((seq: number) => {
     if (!host.finish(seq)) return;
     const at = host.target();
-    const done = { camera: at.camera, focusY: at.focusY ?? 0 };
-    setSettled((previous) => (previous.focusY === done.focusY && previous.camera.cx === done.camera.cx && previous.camera.cy === done.camera.cy && previous.camera.scale === done.camera.scale ? previous : done));
-    host.props().onSettled?.(done.camera);
+    // The anchor was taken when this settle was aimed; completion only reports it (Slice D-1).
+    host.props().onSettled?.(at.camera);
   }, [host]);
 
   // ── settle and jump ─────────────────────────────────────────────────────────────────────────────────────────────
   const jump = useCallback((to: Camera3, focusY: number) => {
     const seq = host.aim(to, focusY, false);
+    anchorTo(to, focusY);
     scheduleOnUI((cx: number, cy: number, scale: number, fyTo: number, n: number) => {
       'worklet';
       cancelAnimation(sx); cancelAnimation(sy); cancelAnimation(ls); cancelAnimation(fy); cancelAnimation(settleT);
@@ -435,13 +525,14 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
       probing.set(0); probeKind.set(0);
       scheduleOnRN(emitSettled, n);
     }, to.cx, to.cy, to.scale, focusY, seq);
-  }, [emitSettled, fy, fyTarget, host, ls, probeKind, probing, settleT, sx, sy, vw, wx, wy]);
+  }, [anchorTo, emitSettled, fy, fyTarget, host, ls, probeKind, probing, settleT, sx, sy, vw, wx, wy]);
 
   const settle = useCallback((to: Camera3, focusY: number, options?: CosmosSettleOptions) => {
     const now = host.target();
     // The same target while its settle is still running: let the one animation finish rather than restart its curve.
     if (host.settling() && now.focusY === focusY && now.camera.cx === to.cx && now.camera.cy === to.cy && now.camera.scale === to.scale) return;
     const seq = host.aim(to, focusY, true);
+    anchorTo(to, focusY);
     const duration = reduceMotion ? 0 : SETTLE_MS;
     scheduleOnUI((cx: number, cy: number, scale: number, fyTo: number, n: number, ms: number, keepAnchor: boolean) => {
       'worklet';
@@ -505,7 +596,7 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
         if (finished === true) finish();
       }));
     }, to.cx, to.cy, to.scale, focusY, seq, duration, options?.keepAnchor === true);
-  }, [active, emitProbe, emitSettled, frameCount, frames, fy, fyTarget, host, inputCount, inputs, interrupt, ls, probeKind, probeSkip, probing, reduceMotion, settleT, sx, sy, vw, wx, wy]);
+  }, [active, anchorTo, emitProbe, emitSettled, frameCount, frames, fy, fyTarget, host, inputCount, inputs, interrupt, ls, probeKind, probeSkip, probing, reduceMotion, settleT, sx, sy, vw, wx, wy]);
 
   useImperativeHandle(ref, () => ({ settleTo: settle, jumpTo: jump }), [settle, jump]);
 
@@ -594,14 +685,20 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
         'worklet';
         if (!success) return;
         const s = Math.exp(ls.get());
-        scheduleOnRN(emitTap, event.x, event.y, wx.get() + (vw.get() / 2 - sx.get()) / s, wy.get() + (fyTarget.get() - sy.get()) / s, s);
+        scheduleOnRN(emitTap, event.x, event.y, wx.get() + (vw.get() / 2 - sx.get()) / s, wy.get() + (fyTarget.get() - sy.get()) / s, s,
+          wx.get() + (event.x - sx.get()) / s, wy.get() + (event.y - sy.get()) / s);
       });
     // The first to activate wins: a drag or a pinch cancels the tap, and a completed tap never becomes a drag.
     return Gesture.Race(Gesture.Simultaneous(pan, pinch), tap);
   }, [active, emitPanEnd, emitPinchEnd, emitTap, focalLastX, focalLastY, frameCount, fy, fyTarget, inputCount, interrupt, ls, lsAtGestureStart, lsAtPinchStart, pendingInput, pinched, pinching, probeKind, probeSkip, probing, rungs, settleT, sx, sy, vw, wx, wy]);
 
   // ── owned Skia resources ────────────────────────────────────────────────────────────────────────────────────────
-  const prepared: PreparedStage = useMemo(() => prepareStage(stage), [stage]);
+  // Slice D-1 (2026-11-20): a stage object that compiles to the SAME content (its digest, over sprites, hairlines and
+  // label texts) keeps its prepared Skia natives; a Public read that serves the same field again (a focus, a foreground
+  // return) no longer rebuilds the atlas instances and re-commits the tree during its settle.
+  // The memo is keyed on the digest on purpose: two stage objects with one digest draw the same instances.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const prepared: PreparedStage = useMemo(() => prepareStage(stage), [stage.digest, stage.layers.length]);
   useOwned(prepared, disposePrepared);
 
   // The first frame after a non-empty stage and its images reached the canvas (a proxy for "first drawn": the canvas
@@ -618,8 +715,10 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
     return [s, 0, sx.get() - wx.get() * s, 0, s, sy.get() - wy.get() * s, 0, 0, 1];
   });
 
-  // ── labels and the accessible marks: recomputed on settle (and when the stage changes), never per frame ─────────
+  // ── labels and the accessible marks: recomputed when a settle is aimed (and when the stage changes), never per frame ──
   const fontScale = PixelRatio.getFontScale();
+  const labelFloor = props.labelFloor ?? undefined;
+  const placement = useMemo((): LabelPlacementOptions => ({ floor: labelFloor, fit: world === 'PERSONAL' }), [labelFloor, world]);
   const labelLayouts = useMemo((): LabelLayout[] => {
     if (size === null || mode === 'PLATES_ONLY') return [];
     const resting = clamp(Math.round(Math.log(settled.camera.scale) / Math.log(8)), 0, stage.layers.length - 1);
@@ -627,9 +726,12 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
       // The rung at rest is laid out at the settled camera's own scale (which differs from the rung's only in the
       // presentation-only overview); the others at their own rung's scale, where they are seen in a cross-fade.
       const scale = layer.rung === resting ? settled.camera.scale : rungScale(layer.rung);
-      return { rung: layer.rung, scale, labels: placeLabels(layer.labels, layer.rung, scale, settled.camera, size.width, size.height, settled.focusY, fontScale, rtl) };
+      return { rung: layer.rung, scale, labels: placeLabels(layer.labels, layer.rung, scale, settled.camera, size.width, size.height, settled.focusY, fontScale, rtl, placement) };
     }).filter((layout) => layout.labels.length > 0);
-  }, [stage, settled, size, fontScale, rtl, mode]);
+  }, [stage, settled, size, fontScale, rtl, mode, placement]);
+  useLayoutEffect(() => {
+    host.routeTo(size === null ? null : { layout: labelLayouts.find((layout) => layout.rung === rung), origin: settled.camera, focusY: settled.focusY, width: size.width });
+  }, [host, labelLayouts, rung, settled, size]);
 
   // The accessible marks would take touches from the gesture surface, so they exist only while a screen reader is on.
   const [screenReader, setScreenReader] = useState(false);

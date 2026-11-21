@@ -54,6 +54,11 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
 
   // Conversation and its projections: the foreground poll lives here. AI cost is the database's (PROD-SEC-02, 0131).
   'POST /conversation/sessions': 'CONVERSATION',
+  // COSMOS E-2 corrections, Slice B (PO D-2, 2026-11-20): the Personal conversation catalog and the durable manual rename.
+  'GET /conversation/sessions': 'CONVERSATION',
+  'PATCH /conversation/sessions/:sessionId/title': 'CONVERSATION',
+  // COSMOS E-2 corrections, Slice A (PO D-3 / D-4, 2026-11-20): the person's own name for a Personal topic.
+  'PATCH /conversation/threads/:threadId/alias': 'CONVERSATION',
   'GET /conversation/sessions/:sessionId': 'CONVERSATION',
   'GET /conversation/sessions/:sessionId/turns': 'CONVERSATION',
   'POST /conversation/sessions/:sessionId/turns': 'CONVERSATION',
@@ -62,6 +67,8 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'GET /conversation/sessions/:sessionId/temporal/events': 'CONVERSATION',
   'GET /conversation/sessions/:sessionId/temporal/live-focus-events': 'CONVERSATION',
   'GET /conversation/sessions/:sessionId/historical-projection': 'CONVERSATION',
+  // COSMOS E-2 corrections, Slice C (PO D-5, Option U): the user-level CURRENT Personal World, owner-scoped (0199).
+  'GET /conversation/personal-world': 'CONVERSATION',
   'PUT /conversation/sessions/:sessionId/context-bindings/:contextKind': 'CONVERSATION',
   'DELETE /conversation/sessions/:sessionId/context-bindings/:contextKind': 'CONVERSATION',
   'GET /conversation/sessions/:sessionId/context-bindings': 'CONVERSATION',

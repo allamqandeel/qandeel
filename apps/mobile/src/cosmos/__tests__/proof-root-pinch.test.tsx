@@ -8,7 +8,7 @@ import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-lib
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
-import { settle as flush } from '../../runtime-entry/__fixtures__/runtime-entry';
+import { settleLong } from '../../runtime-entry/__fixtures__/runtime-entry';
 import { project, unproject, type NasijCamera, type NasijView } from '../core/camera';
 import { COSMOS_COPY } from '../__validation__/copy';
 import { COSMOS_HUD_TEST_ID, CosmosProofRoot } from '../__validation__/CosmosProofRoot';
@@ -79,7 +79,7 @@ const W = 390; const H = 844;
 const VIEW: NasijView = { width: W, height: H, focusX: W / 2, focusY: H / 2 };
 const near = (a: { x: number; y: number }, b: { x: number; y: number }, tol: number) => Math.hypot(a.x - b.x, a.y - b.y) <= tol;
 let view: RenderResult | null = null;
-const settle = async () => { await act(async () => { for (let i = 0; i < 8; i += 1) await flush(); }); };
+const settle = async () => { await act(async () => { await settleLong(); }); };
 const sky = (v: RenderResult) => v.getByLabelText(new RegExp(`^(${copy.sky}|${COSMOS_COPY.ar.sky}) ·`, 'u'));
 const layout = async (v: RenderResult) => { await act(async () => { fireEvent(sky(v), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: W, height: H } } }); }); await settle(); };
 const current = () => mockOwners[mockOwners.length - 1];

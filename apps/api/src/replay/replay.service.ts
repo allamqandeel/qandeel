@@ -161,8 +161,11 @@ function momentOf(row: unknown, index: number): ReplayMoment {
  * refused whole as UNAVAILABLE, never repaired and never passed on. 0169 has already re-digested the analysis to the
  * version's frozen point before this, so the narrowing reaches neither the digest nor the historical truth it guards.
  */
-function readingOf(reading: DisclosedReading): ReplayReading {
+function readingOf({ evidenceChange, ...reading }: DisclosedReading): ReplayReading {
   if (!CANONICAL_READING_SCOPE.test(reading.scope)) return unavailable();
+  // A Replay moment reads the frozen V1 projection, which carries no reliance (COSMOS E-2 0200 gates V2 only): the key
+  // never crosses, and a Reading the mapper did not take from V1 is refused whole.
+  if (evidenceChange !== null || reading.statement === null) return unavailable();
   return { ...reading, scope: REPLAY_READING_SCOPE_CLASS };
 }
 
@@ -335,7 +338,10 @@ export class ReplayService {
     const analyticalObject: ReplayMomentAnalysisObject = rungs.analyticalObject.status === 'DISCLOSED'
       ? { status: 'DISCLOSED', value: { ...rungs.analyticalObject.value, readings: rungs.analyticalObject.value.readings.map(readingOf) } }
       : { status: 'DEPTH_WITHHELD' };
-    return { outcome: 'AVAILABLE', ordinal, tc, depth, world: rungs.world, thread: rungs.thread, session,
+    // Nor does a Thread (COSMOS E-2 Slice A added `name` and `origin` to the projection's Threads): the World leaves in the
+    // frozen V1 Thread shape, so no Session identity and no private name crosses a Replay.
+    const world = { ...rungs.world, threads: rungs.world.threads.map(({ name: _name, origin: _origin, ...thread }) => thread) };
+    return { outcome: 'AVAILABLE', ordinal, tc, depth, world, thread: rungs.thread, session,
       analyticalObject, sourceProvenance: rungs.sourceProvenance };
   }
 

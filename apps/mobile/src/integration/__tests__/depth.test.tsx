@@ -25,6 +25,15 @@ import { NOMINAL_FRAME_MS, fadeStep } from '../composition/DepthComposition';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { SESSION_A, harness, settle, type IntegrationHarness } from '../__fixtures__/integration';
 
+// The device's Product language is an input of this suite, pinned here: `deviceProductLanguage` reads the HOST's `Intl`
+// locale, so without the pin every English expectation below silently depended on the machine running Jest (an Arabic
+// host rendered the Arabic chrome and failed). Direction stays the platform's own, exactly as in the Product.
+jest.mock('../locale/device-locale', () => {
+  const actual = jest.requireActual<typeof import('../locale/device-locale')>('../locale/device-locale');
+  const { productLocale } = jest.requireActual<typeof import('../locale/product-locale')>('../locale/product-locale');
+  return { ...actual, deviceProductLanguage: () => 'en', deviceProductLocale: () => productLocale('en', actual.deviceLayoutDirection()) };
+});
+
 const METRICS: Metrics = { frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 44, left: 0, right: 0, bottom: 34 } };
 
 async function onRoute(h: IntegrationHarness): Promise<RenderResult> {

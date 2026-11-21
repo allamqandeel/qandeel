@@ -59,7 +59,12 @@ final class CosmosWorldGestureUITests: XCTestCase {
   /// targeted run 44314026822) for the world.
   private func overlayFrames() -> String {
     let ids = ["qandeel-cosmos-nearest", "qandeel-cosmos-back", "qandeel-cosmos-overview", "qandeel-cosmos-overview-companion",
-               "qandeel-cosmos-rail", "qandeel-cosmos-register", "qandeel-cosmos-timeline-rail"]
+               "qandeel-cosmos-rail", "qandeel-cosmos-register", "qandeel-cosmos-timeline-rail",
+               // PO decision 2026-11-21: the Personal world-mode buttons (This conversation / All my topics now) and their
+               // note, and the contextual acts (Previous step, …), are fixed overlays too.
+               "qandeel-personal-world-mode:session", "qandeel-personal-world-mode:current", "qandeel-personal-world-mode:note",
+               "qandeel-cosmos-acts:BACK_ONE_STEP", "qandeel-cosmos-acts:EXACT_RETURN", "qandeel-cosmos-acts:RETURN_LIVE_FOCUS",
+               "qandeel-cosmos-acts:GO_LIVE_AND_LOCATE", "qandeel-cosmos-acts:note"]
     return ids.flatMap { id in
       app.descendants(matching: .any).matching(identifier: id).allElementsBoundByIndex.compactMap { e -> String? in
         let f = e.frame
@@ -297,7 +302,8 @@ final class CosmosWorldGestureUITests: XCTestCase {
   /// returns to the first depth; Back returns home; and a pan AFTER the round trip still moves the world by the drag,
   /// measured separately at the first depth (`pan-p-before` / `pan-p-after`, X-PAN-AFTER-PINCH, where five or six node
   /// cores show). A step IN magnifies eight times, so at the deeper depth one mark is in view by construction (targeted
-  /// run 44297426329: one core, moved -106 for a -120 drag); X-PAN-ZOOMED measures that one core.
+  /// run 44297426329: one core, moved -106 for a -120 drag); X-PAN-ZOOMED measures that one core, or, when one mark's beads
+  /// share a hue (iPhone SE), a constellation of at least three cores moving by one rigid shift (PO decision 2026-11-21).
   func testPersonalPinchStepsInAndThePanStillMovesTheWorld() throws {
     _ = enterPersonal()
     let first = depth(personalStage)
@@ -322,11 +328,20 @@ final class CosmosWorldGestureUITests: XCTestCase {
     } else {
       note("pan-z-path", "the step landed on content at \(second)")
     }
-    // A drag on open stage while the stage is zoomed in: it moves the world (measured) and keeps the depth.
-    note("pan-z-spec", "\(Int(to.x - from.x)),\(Int(to.y - from.y))")
+    // A drag on open stage while the stage is zoomed in: it moves the world (measured) and keeps the depth. It is UPWARD
+    // (implementing the PO's option-1 decision of 2026-11-21, contract §31.10.7): a leftward drag carries most of a narrow
+    // screen's beads out of view (iPhone SE: 2 of 5 left), so the three-core constellation X-PAN-ZOOMED needs when one
+    // mark's beads share a hue could not be shown. It is 120 pt on a regular screen (unchanged, PASS on iPhone 17) and
+    // 60 pt on a narrow one (PO, 2026-11-21: fix the path, not the limits). On iPhone SE an upward 120 pt carried the top
+    // bead to the stage band's edge and moved the background layers 105 pt against the beads, so a bead's halo hue drifted
+    // 16° (gate 44899406521). Half the drag keeps every bead well inside the stage and halves that relative shift. The
+    // tolerance stays max(20 pt, 25 %), so 20 pt here. The drag never chooses what the analyser measures.
+    let zoomedDrag: CGFloat = screen.width < 390 ? 60 : 120
+    let zTo = CGPoint(x: from.x, y: from.y - zoomedDrag)
+    note("pan-z-spec", "\(Int(zTo.x - from.x)),\(Int(zTo.y - from.y))")
     note("pan-z-overlays-before", overlayFrames())
     shot("pan-z-before")
-    at(from.x, from.y).press(forDuration: 0.05, thenDragTo: at(to.x, to.y))
+    at(from.x, from.y).press(forDuration: 0.05, thenDragTo: at(zTo.x, zTo.y))
     settle()
     shot("pan-z-after")
     note("pan-z-overlays-after", overlayFrames())

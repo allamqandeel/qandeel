@@ -19,7 +19,7 @@ import {
 import { project, type NasijCamera } from '../../cosmos/core/camera';
 import { CosmosCanvas } from '../../cosmos/skia/CosmosCanvas';
 import { MAP_ACCESSIBILITY_TEST_ID, inspectObject, mapInspectionContext, mapProjectionRequest, zoomSemanticStep, type MapInspectionContext } from '../../map';
-import { disclosureFixture, inspectionFromQuery } from '../../map/__fixtures__/disclosure';
+import { disclosureFixture, inspectionFromQuery, type ReadingFixture } from '../../map/__fixtures__/disclosure';
 import { chromeProjection, contextPathSentence, inspectionSentence, orientationModel } from '../../orientation-chrome';
 import { unknownAtTc, withInspection } from '../../orientation-chrome/__fixtures__/chrome';
 import type { HistoricalSemanticDepth } from '../../projection';
@@ -32,6 +32,7 @@ import {
 } from '../composition/LivingAnalysisMap';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { productLocale } from '../locale/product-locale';
+import { understandingCopy } from '../../understanding';
 import { heldContextEntry, inspectionRequestOf } from '../projection/projection-coordinator';
 import { harness, settle, SESSION_A, type IntegrationHarness } from '../__fixtures__/integration';
 
@@ -56,7 +57,7 @@ const FOCUSES = [{ id: 'focus-1', startedSp: 3 }];
  * `unknown` is answered UNKNOWN_AT_TC (an identity K(TC) does not hold), the one branch that may never name it.
  */
 interface Answering { readonly inspected?: 'ANSWER' | 'HOLD'; readonly unknown?: readonly string[] }
-const projection = (withhold: readonly HistoricalSemanticDepth[] = [], answering: Answering = {}): Responder => (request) => {
+const projection = (withhold: readonly HistoricalSemanticDepth[] = [], answering: Answering = {}, readings: readonly ReadingFixture[] = READINGS): Responder => (request) => {
   const params = new URL(request.url).searchParams;
   const depth = (params.get('depth') ?? 'WORLD') as HistoricalSemanticDepth;
   if (withhold.includes(depth)) return new Promise(() => undefined);
@@ -64,7 +65,7 @@ const projection = (withhold: readonly HistoricalSemanticDepth[] = [], answering
   if (inspection !== undefined && answering.inspected === 'HOLD') return new Promise(() => undefined);
   const disclosure = disclosureFixture({
     depth, sessionId: SESSION_A, tc: Number(params.get('tc') ?? LIVE_HEAD), liveHead: LIVE_HEAD,
-    threads: THREADS, appearances: APPEARANCES, readings: READINGS, focuses: FOCUSES, inspection,
+    threads: THREADS, appearances: APPEARANCES, readings, focuses: FOCUSES, inspection,
   });
   return { status: 200, body: inspection !== undefined && (answering.unknown ?? []).includes(inspection.id) ? withInspection(disclosure, unknownAtTc()) : disclosure };
 };
@@ -95,8 +96,8 @@ interface Mounted {
   readonly language: 'en' | 'ar';
 }
 
-async function mount(language: 'en' | 'ar' = 'en', withhold: readonly HistoricalSemanticDepth[] = [], answering: Answering = { inspected: 'HOLD' }): Promise<Mounted> {
-  const h = await harness({ liveHead: LIVE_HEAD, projection: projection(withhold, answering) });
+async function mount(language: 'en' | 'ar' = 'en', withhold: readonly HistoricalSemanticDepth[] = [], answering: Answering = { inspected: 'HOLD' }, readings: readonly ReadingFixture[] = READINGS): Promise<Mounted> {
+  const h = await harness({ liveHead: LIVE_HEAD, projection: projection(withhold, answering, readings) });
   harnesses.push(h);
   const register = jest.fn();
   const view = await render(
@@ -223,7 +224,10 @@ describe('CP3 (2) — the PEEK holds only the existing words and acts', () => {
     expect(view.queryByTestId('qandeel-depth-to-conversation', hidden)).toBeNull();
     expect(view.queryByTestId('qandeel-replay-analysis-entry', hidden)).toBeNull();
     const peekTexts = view.getByTestId(PERSONAL_PEEK_TEST_ID).queryAll((node) => node.type === 'Text').map((node) => words(node));
-    expect(peekTexts).toEqual([copy.family.THREAD, inspectionSentence(language, render_), copy.goToPlace]);
+    // RE-ANCHORED by COSMOS E-2 corrections, Slice A (PO decisions D-3 / D-4, 2026-11-20): the PEEK also names the Thread
+    // (here unnamed: the fixture discloses no wording) and offers Open where it began; Name this topic appears only when the
+    // composition can rename (no `onAlias` here).
+    expect(peekTexts).toEqual([copy.family.THREAD, copy.topicUnnamed, inspectionSentence(language, render_), copy.goToPlace, copy.openSource]);
   });
 
   it.each(['en', 'ar'] as const)('%s, with a held resolution: a Thread — T-08\'s RENDERABLE statement, no lineage, Go to this place', async (language) => {
@@ -233,7 +237,8 @@ describe('CP3 (2) — the PEEK holds only the existing words and acts', () => {
     const render_ = model(h).inspection.render;
     expect(render_.kind).toBe('RENDERABLE');
     const peekTexts = view.getByTestId(PERSONAL_PEEK_TEST_ID).queryAll((node) => node.type === 'Text').map((node) => words(node));
-    expect(peekTexts).toEqual([copy.family.THREAD, inspectionSentence(language, render_), copy.goToPlace]);
+    // RE-ANCHORED by COSMOS E-2 corrections, Slice A (D-3 / D-4, 2026-11-20): see the previous case.
+    expect(peekTexts).toEqual([copy.family.THREAD, copy.topicUnnamed, inspectionSentence(language, render_), copy.goToPlace, copy.openSource]);
   });
 
   it.each(['en', 'ar'] as const)('%s, with a held resolution: a Reading in two contexts — its lineage, and T-04\'s context choice in the PEEK (its ONE home), never in the rail', async (language) => {
@@ -324,6 +329,46 @@ describe('CP3 (2) — the PEEK holds only the existing words and acts', () => {
     expect(words(view.getByTestId(PERSONAL_PEEK_STATEMENT_TEST_ID))).toBe(inspectionSentence('en', render_));
     await sheetAction(view, 'close');
     expect(words(view.getByTestId('qandeel-cosmos-acts:note'))).toBe(inspectionSentence('en', render_));
+  });
+});
+
+// COSMOS E-2 (SD-3 item 6, §31.10; migration 0200, PG-02 / INTEL-TM-01): the Reading statement, exactly as served.
+describe('COSMOS E-2 — the Reading PEEK shows its statement only when QANDEEL may rely on it', () => {
+  const READING_PEEK = `${PERSONAL_PEEK_TEST_ID}:reading`;
+  const allTexts = (view: RenderResult) => (view.root?.queryAll((node) => node.type === 'Text') ?? []).map((node) => words(node)).join(' | ');
+
+  it.each(['en', 'ar'] as const)('%s: relied on (NONE), at the analytical depth — the statement under the family word and the T-08 sentence', async (language) => {
+    const { h, view } = await mount(language, [], { inspected: 'ANSWER' });
+    for (let n = 0; n < 3; n += 1) await stepIn(h);
+    await inspectResolved(h, 'READING', 'reading-1', 'binding-1');
+    expect(model(h).inspection.render.kind).toBe('RENDERABLE');
+    expect(words(view.getByTestId(PERSONAL_PEEK_FAMILY_TEST_ID))).toBe(analysisCopy(language).family.READING);
+    expect(words(view.getByTestId(READING_PEEK))).toBe('statement of reading-1');
+  });
+
+  it.each([['en', 'REVIEW_PENDING'], ['ar', 'REVIEW_PENDING'], ['en', 'NO_REMAINING_SUPPORT'], ['ar', 'NO_REMAINING_SUPPORT']] as const)(
+    '%s, %s: withheld — the approved INTEL-TM-01 line in its place, and no statement anywhere', async (language, kind) => {
+      const { h, view } = await mount(language, [], { inspected: 'ANSWER' }, [{ id: 'reading-1', evidenceChange: kind }, { id: 'reading-2' }]);
+      for (let n = 0; n < 3; n += 1) await stepIn(h);
+      await inspectResolved(h, 'READING', 'reading-1', 'binding-1');
+      expect(words(view.getByTestId(READING_PEEK))).toBe(understandingCopy(language).evidenceChange[kind]);
+      expect(allTexts(view)).not.toContain('statement of reading-1');
+    });
+
+  it('above the analytical depth nothing of the Reading is shown (the rung is withheld, never inferred)', async () => {
+    const { h, view } = await mount('en', [], { inspected: 'ANSWER' });
+    await stepIn(h);
+    await inspectResolved(h, 'READING', 'reading-2', 'binding-3');
+    expect(context(h).disclosure.analyticalObject.status).toBe('DEPTH_WITHHELD');
+    expect(view.queryByTestId(READING_PEEK)).toBeNull();
+    expect(allTexts(view)).not.toContain('statement of reading-2');
+  });
+
+  it('the PEEK of a Thread never carries a Reading line', async () => {
+    const { h, view } = await mount('en', [], { inspected: 'ANSWER' });
+    for (let n = 0; n < 3; n += 1) await stepIn(h);
+    await inspectResolved(h, 'THREAD', 'thread-a');
+    expect(view.queryByTestId(READING_PEEK)).toBeNull();
   });
 });
 

@@ -8,6 +8,9 @@ import type {
   ConversationHistoryFinishedCall,
   ConversationHistoryPage,
   ConversationSession,
+  ConversationSessionCatalogEntry,
+  ConversationSessionTitle,
+  ConversationThreadAlias,
   ConversationTurn,
   OrchestratedTurnResult,
 } from './conversation.types';
@@ -48,6 +51,18 @@ const HISTORY_MAX_LIMIT = 100;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
 /**
+ * COSMOS E-2 corrections, Slice B (the Product Owner's D-2, 2026-11-20): the bounds of the conversation catalog. The
+ * client request identity and the manual title are validated here exactly as migration 0197 validates them, so a refused
+ * request never reaches the database; the catalog page is bounded like the history page.
+ */
+const CLIENT_REQUEST_ID_MAX = 128;
+const SESSION_TITLE_MAX = 80;
+const CATALOG_DEFAULT_LIMIT = 50;
+const CATALOG_MAX_LIMIT = 100;
+// COSMOS E-2 Slice A (D-3 / D-4): the person's own name for a Personal topic (0198 alias ledger).
+const THREAD_ALIAS_MAX = 60;
+
+/**
  * PROD-SEC-02: the one machine-readable refusal of a NEW turn admission (HTTP 429). It names the condition and
  * nothing else - no counter, window, limit, other session or other user - and it is only ever answered when the
  * database committed nothing, so the client may offer the same words again later as a new command.
@@ -68,10 +83,95 @@ export class ConversationService {
   // userId stays in the signature for the authenticated controller contract,
   // but it is never serialized as mutation authority: the database derives the
   // session owner from auth.uid() on the caller token (migration 0030).
-  async createSession(_userId: string, accessToken: string): Promise<ConversationSession> {
-    const session=await this.repository.createSession(accessToken, randomUUID());
+  async createSession(_userId: string, accessToken: string, body: unknown = undefined): Promise<ConversationSession> {
+    const clientRequestId = this.validateClientRequestId(body);
+    // Slice B: with a client request identity the creation is idempotent (0197 v2); without one it is exactly the
+    // 0030 creation, unchanged, for every client that predates the catalog.
+    const session = clientRequestId === null
+      ? await this.repository.createSession(accessToken, randomUUID())
+      : await this.repository.createSessionForRequest(accessToken, randomUUID(), clientRequestId);
     this.correlation.bindCanonical(session.id);
     return session;
+  }
+
+  /** Slice B: the caller's own conversation catalog, newest activity first; a pure read of owned rows. */
+  async listSessions(_userId: string, accessToken: string, query: unknown): Promise<ConversationSessionCatalogEntry[]> {
+    return this.repository.listSessions(accessToken, this.validateCatalogLimit(query));
+  }
+
+  /** Slice B: append a manual title to one owned Session. A Session the caller does not own is not found. */
+  async renameSession(_userId: string, accessToken: string, sessionId: string, body: unknown): Promise<ConversationSessionTitle> {
+    if (!UUID_PATTERN.test(sessionId)) throw new NotFoundException('Conversation session was not found.');
+    const title = this.validateSessionTitle(body);
+    try {
+      const row = await this.repository.setSessionTitle(accessToken, sessionId, title);
+      this.correlation.bindCanonical(row.session_id);
+      return row;
+    } catch (error) {
+      if (error instanceof DataApiError && (error.status === 403 || error.status === 401)) {
+        throw new NotFoundException('Conversation session was not found.');
+      }
+      throw error;
+    }
+  }
+
+  /** Slice A: append the caller's alias for one owned Thread. A Thread the caller does not own is not found. */
+  async renameThread(_userId: string, accessToken: string, threadId: string, body: unknown): Promise<ConversationThreadAlias> {
+    if (!UUID_PATTERN.test(threadId)) throw new NotFoundException('Thread was not found.');
+    const alias = this.validateThreadAlias(body);
+    try {
+      return await this.repository.setThreadAlias(accessToken, threadId, alias);
+    } catch (error) {
+      if (error instanceof DataApiError && (error.status === 403 || error.status === 401)) {
+        throw new NotFoundException('Thread was not found.');
+      }
+      throw error;
+    }
+  }
+
+  private validateThreadAlias(body: unknown): string {
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) throw new BadRequestException('Request body must be an object.');
+    const value = (body as { alias?: unknown }).alias;
+    if (typeof value !== 'string') throw new BadRequestException('alias must be a string.');
+    const normalized = value.replace(/\s+/gu, ' ').trim();
+    if (normalized.length < 1 || normalized.length > THREAD_ALIAS_MAX) {
+      throw new BadRequestException(`alias must be 1-${THREAD_ALIAS_MAX} characters.`);
+    }
+    return normalized;
+  }
+
+  private validateClientRequestId(body: unknown): string | null {
+    if (body === undefined || body === null) return null;
+    if (typeof body !== 'object' || Array.isArray(body)) throw new BadRequestException('Request body must be an object.');
+    const value = (body as { clientRequestId?: unknown }).clientRequestId;
+    if (value === undefined || value === null) return null;
+    if (typeof value !== 'string' || value.length < 1 || value.length > CLIENT_REQUEST_ID_MAX) {
+      throw new BadRequestException(`clientRequestId must be a string of 1-${CLIENT_REQUEST_ID_MAX} characters.`);
+    }
+    return value;
+  }
+
+  private validateSessionTitle(body: unknown): string {
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) throw new BadRequestException('Request body must be an object.');
+    const value = (body as { title?: unknown }).title;
+    if (typeof value !== 'string') throw new BadRequestException('title must be a string.');
+    const normalized = value.replace(/\s+/gu, ' ').trim();
+    if (normalized.length < 1 || normalized.length > SESSION_TITLE_MAX) {
+      throw new BadRequestException(`title must be 1-${SESSION_TITLE_MAX} characters.`);
+    }
+    return normalized;
+  }
+
+  private validateCatalogLimit(query: unknown): number {
+    if (query === undefined || query === null) return CATALOG_DEFAULT_LIMIT;
+    if (typeof query !== 'object' || Array.isArray(query)) throw new BadRequestException('Query must be an object.');
+    const raw = (query as { limit?: unknown }).limit;
+    if (raw === undefined) return CATALOG_DEFAULT_LIMIT;
+    const limit = typeof raw === 'string' && /^\d+$/u.test(raw) ? Number(raw) : Number.NaN;
+    if (!Number.isInteger(limit) || limit < 1 || limit > CATALOG_MAX_LIMIT) {
+      throw new BadRequestException(`limit must be an integer between 1 and ${CATALOG_MAX_LIMIT}.`);
+    }
+    return limit;
   }
 
   async resumeSession(userId: string, accessToken: string, sessionId: string): Promise<ConversationSession> {

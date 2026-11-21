@@ -46,6 +46,7 @@ jobs:
   world-gate:
     name: iOS World gate — ${{ matrix.device }} ${{ matrix.lang }}
     runs-on: macos-26
+    # 120 holds the World gate's 60 minutes (run 44707574152: setup <= 38.5, clean native 14.4, fresh install 3.7 minutes).
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -114,7 +115,8 @@ jobs:
         env: {LANGTAG: '${{ matrix.langtag }}', LANGLOC: '${{ matrix.langloc }}'}
         run: bash scripts/cosmos-ios-world/setup.sh "$IOS_SIM_UDID" "$RUNNER_TEMP/evidence"
       - name: World gate (Personal, Shared, Public; real touch; assertions)
-        timeout-minutes: 40
+        # 60 (was 40): run 44707574152 took 38.5 min in i17-ar and was cut at 40 in i17-en (contract §30).
+        timeout-minutes: 60
         run: bash scripts/cosmos-ios-world/run-world-gate.sh "$RUNNER_TEMP/evidence/gate" "$IOS_SIM_UDID"
       - name: Native gestures (XCUITest; double tap, pinch, the current depth bead, focal anchoring, pan; D-3 overlays and layout)
         # Runs even when a World gate case failed, so every case is classified. The same build's runner, no rebuild.
@@ -122,6 +124,19 @@ jobs:
         timeout-minutes: 40
         run: |
           E="$RUNNER_TEMP/evidence"; X="$E/xcui"; mkdir -p "$X" "$E/gate"
+          # A World gate that outlived its step's timeout is stopped first, with every process under it: in run 44707574152
+          # (i17-en) it went on relaunching and tapping the app for 20 minutes alongside this run. The gate is frozen before
+          # its tree is read, so it starts nothing new. Its cut is a NOT TESTED row, so the job stays red.
+          tree() { echo "$1"; for c in $(pgrep -P "$1"); do tree "$c"; done; }
+          gate="$(pgrep -f 'cosmos-ios-world/run-world-gate\.sh' || true)"
+          if [ -n "$gate" ]; then
+            kill -STOP $gate 2>/dev/null || true
+            pids="$(for p in $gate; do tree "$p"; done)"
+            kill -STOP $pids 2>/dev/null || true; kill -KILL $pids 2>/dev/null || true
+            printf 'GATE-DEADLINE\tNOT TESTED\tthe World gate outlived its step timeout and was stopped; its later cases did not run\n' >> "$E/gate/results.tsv"
+          fi
+          # A Maestro CLI left without its parent (re-parented when its step was cancelled) is stopped too.
+          pkill -KILL -f "$HOME/.maestro/" || true
           # The Maestro driver is an XCTest runner too; it is stopped so that one runner drives the simulator.
           xcrun simctl terminate "$IOS_SIM_UDID" dev.mobile.maestro-driver-iosUITests.xctrunner 2>/dev/null || true
           # D-3: the fresh-install case runs on its own, last (below), so that this run and the World gate keep the D-1 conditions.

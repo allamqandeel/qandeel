@@ -61,6 +61,13 @@ export function inspectionRequestOf(markId: string): { family: 'THREAD' | 'EMERG
   return null;
 }
 
+/** The names the server disclosed for this context's Threads (COSMOS E-2 Slice A): alias or grounding wording, never invented. */
+function threadNames(context: MapInspectionContext): ReadonlyMap<string, string> {
+  const names = new Map<string, string>();
+  for (const thread of context.disclosure.world.threads) if (thread.name.text !== null) names.set(thread.id, thread.name.text);
+  return names;
+}
+
 export function createPersonalCosmosOwner({ runtime, language, onOutcome, spatialCause }: PersonalCosmosOwnerOptions): CosmosWorldOwner {
   const copy = analysisCopy(language);
   const rtl = language === 'ar';
@@ -118,7 +125,7 @@ export function createPersonalCosmosOwner({ runtime, language, onOutcome, spatia
     const { request, byRung } = contexts();
     const ref = decodeInspectionRef(store.getState().inspection);
     const inspected = ref === null ? null : `${ref.family}:${ref.id}${ref.appearance === null ? '' : `@${ref.appearance.bindingId}`}`;
-    const inputs = byRung.map((context) => (context === null ? null : personalScene(context.scene, inspected, rtl, ORIGIN)));
+    const inputs = byRung.map((context) => (context === null ? null : personalScene(context.scene, inspected, rtl, ORIGIN, threadNames(context))));
     const here = request === null ? null : byRung[PERSONAL_DEPTHS.indexOf(request.depth)];
     const unplaced: CosmosUnplaced[] = here === null ? [] : here.scene.objects.filter((object) => object.loci.length === 0).map((object) => ({ id: object.key, family: object.family }));
     return { ...personalDrawList(inputs), inputs, unplaced };
@@ -220,10 +227,16 @@ export function createPersonalCosmosOwner({ runtime, language, onOutcome, spatia
       const scale = rungScale(s.rung);
       return report(panByTranslation(store, (s.camera.cx - x) * scale, (s.camera.cy - y) * scale));
     },
-    // The Personal map names nothing (N4 is not authorised): the accessible label is the T-08 family word alone.
+    // The accessible label is the T-08 family word; a Thread the SERVER named (COSMOS E-2 Slice A, D-3 / D-4: the person's
+    // alias, else their grounding wording) carries that name after it. Nothing is invented here (N4 is not authorised).
     labelOf: (id) => {
       const family = id.split(':')[0];
-      return family === 'THREAD' || family === 'READING' || family === 'EMERGING_FOCUS' ? copy.family[family] : '';
+      if (family !== 'THREAD' && family !== 'READING' && family !== 'EMERGING_FOCUS') return '';
+      if (family !== 'THREAD') return copy.family[family];
+      const { request, byRung } = contexts();
+      const here = request === null ? null : byRung[PERSONAL_DEPTHS.indexOf(request.depth)];
+      const name = here === null ? undefined : threadNames(here).get(id.slice('THREAD:'.length));
+      return name === undefined ? copy.family.THREAD : `${copy.family.THREAD} · ${name}`;
     },
     dispose() {
       for (const off of detach) off();
