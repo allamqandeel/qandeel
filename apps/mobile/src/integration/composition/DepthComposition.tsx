@@ -76,6 +76,8 @@
  *     never silently returns to the Personal world.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+// DIAG-SE-DOOR (diagnostic branch only): the crossing's request and the depth's state are observed; nothing else is.
+import { qdiag } from '../../diag/se-door-diag';
 import { BackHandler, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useFrameCallback, useSharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -197,7 +199,10 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   const incoming = useSharedValue(1);
   const incomingStyle = useAnimatedStyle(() => ({ opacity: incoming.get() }));
 
-  const settle = useCallback(() => setLeaving(null), []);
+  const settle = useCallback(() => {
+    qdiag('fade.settle');
+    setLeaving(null);
+  }, []);
 
   // The incoming depth is mounted by the switch itself, and mounting it (the whole Analysis world, or
   // the Conversation's history) can take longer than the fade. Started at the press, the fade's clock
@@ -212,6 +217,9 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   // takes no touch and is hidden from assistive technology until its fade begins: nothing the reader cannot see answers
   // a tap, and no tap lands on a control drawn somewhere else (found on HONOR: the call rail answered 400 px below).
   const [awaitingDraw, setAwaitingDraw] = useState(false);
+  useEffect(() => {
+    qdiag('depth.state', `depth=${depth} leaving=${String(leaving)} awaitingDraw=${String(awaitingDraw)}`);
+  }, [depth, leaving, awaitingDraw]);
   // The running fade's duration; zero when no fade is running. Read on the UI runtime per frame.
   const fading = useSharedValue(0);
   // Symmetric and linear: an appearance change is not a meaning event, so it has no rise and no settle.
@@ -233,6 +241,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   }, [fadeFrames, leaving]);
   const beginFade = useCallback(() => {
     const duration = pendingFade.current;
+    qdiag('fade.begin', `pending=${String(duration)}`);
     if (duration === null) return;
     pendingFade.current = null;
     setAwaitingDraw(false);
@@ -242,6 +251,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
 
   const cross = useCallback(
     (to: WorldDepth) => {
+      qdiag('cross.request', `from=${depth} to=${to} leaving=${String(leaving)} reduceMotion=${String(reduceMotion)}`);
       if (to === depth) return;
       setCrossed(true);
       setReturnedFromSettings(false);
@@ -706,7 +716,10 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         controller={runtime.conversation}
         language={locale.language}
         insets={conversationInsets}
-        onOpenAnalysis={() => cross('ANALYSIS')}
+        onOpenAnalysis={() => {
+          qdiag('app.onOpenAnalysis');
+          cross('ANALYSIS');
+        }}
         focusDepthControl={crossed && current}
         opening={<ConversationOpening account={runtime.account} language={locale.language} />}
         readerName={readerName}

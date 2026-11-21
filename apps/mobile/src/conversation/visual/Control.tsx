@@ -8,10 +8,14 @@
  *     companion ring between it and the control, so it reads against any ground;
  *   - the accessible name is the control's own; its glyph is decorative.
  */
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Pressable, View, type AccessibilityState, type StyleProp, type ViewStyle } from 'react-native';
 
+import { qdiag } from '../../diag/se-door-diag';
 import { withAlpha, type ConversationPalette } from './theme';
+
+// DIAG-SE-DOOR (diagnostic branch only): the Analysis door's press interaction is observed; nothing else is.
+const DIAG_DOOR = 'qandeel-depth-to-analysis';
 
 export const MIN_TARGET = 44;
 const CONTROL_RADIUS = 12;
@@ -38,14 +42,27 @@ export interface ControlProps {
 export function Control({ palette, accessibilityLabel, onPress, children, style, testID, language, controlRef, accessibilityState, accessibilityRole = 'button' }: ControlProps) {
   const [focused, setFocused] = useState(false);
   const outer = palette.focusOffset + palette.focusThickness;
+  const diag = testID === DIAG_DOOR;
+  const node = useRef<View | null>(null);
+  useEffect(() => {
+    if (!diag) return undefined;
+    qdiag('door.mount');
+    return () => qdiag('door.unmount');
+  }, [diag]);
   return (
     <Pressable
-      ref={controlRef}
+      ref={diag ? (n: View | null) => {
+        node.current = n;
+        controlRef?.(n);
+      } : controlRef}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       accessibilityLanguage={language}
       accessibilityState={accessibilityState}
-      onPress={onPress}
+      onPress={diag ? () => { qdiag('door.onPress'); onPress(); } : onPress}
+      onPressIn={diag ? (e) => qdiag('door.pressIn', `x=${e.nativeEvent.pageX.toFixed(1)} y=${e.nativeEvent.pageY.toFixed(1)} ts=${e.nativeEvent.timestamp}`) : undefined}
+      onPressOut={diag ? (e) => qdiag('door.pressOut', `ts=${e.nativeEvent.timestamp}`) : undefined}
+      onLayout={diag ? () => node.current?.measureInWindow((x, y, w, h) => qdiag('door.layout', `${x.toFixed(1)},${y.toFixed(1)},${w.toFixed(1)},${h.toFixed(1)}`)) : undefined}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       testID={testID}

@@ -1,0 +1,92 @@
+name: DIAG-SE-DOOR (iPhone SE Personal entry; diagnostic branch only)
+# PO, 2026-11-21: one bounded diagnostic campaign for the intermittent iPhone SE Personal Analysis entry (gate run
+# 44908792454). Diagnostic branch `diag/se-door` only; never merged; gives no gate verdict. The build and the simulator
+# setup are the iOS World gate's own steps, unchanged, over the instrumented proof build (QDIAG markers); then
+# scripts/cosmos-ios-world/diag-door.sh runs up to 10 entry cycles and stops at the first failed door.
+on:
+  push:
+    branches: ['diag/se-door']
+concurrency:
+  group: diag-se-door-${{ github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+  MAESTRO_CLI_NO_ANALYTICS: 1
+  MAESTRO_VERSION: 2.10.0
+  MAESTRO_ZIP_SHA256: 29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991
+  IOS_RUNTIME_SUFFIX: iOS-26-5
+jobs:
+  diag:
+    name: DIAG-SE-DOOR — ${{ matrix.device }} ${{ matrix.lang }}
+    runs-on: macos-26
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        include:
+          - {cell: small-en, device: 'iPhone SE (3rd generation)|iPhone 16e', lang: en, langtag: en-US, langloc: en_US}
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
+      MAESTRO_IOS_DRIVER_PORT: 22087
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Select Xcode 26.6 explicitly
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - {name: Install dependencies from the root lockfile, run: npm ci}
+      - name: Select the S401 proof entry (this ephemeral checkout only; recorded)
+        env: {S401_SHARED_PROOF: '1'}
+        run: |
+          mkdir -p "$RUNNER_TEMP/evidence"
+          node apps/mobile/scripts/select-s401-proof-entry.mjs --apply
+          git diff -- apps/mobile/package.json | tee "$RUNNER_TEMP/evidence/entry-diff.txt"
+      - {name: Generate the iOS project (CNG), run: npm run prebuild:ios --workspace @qandeel/mobile}
+      - name: Install CocoaPods dependencies
+        working-directory: apps/mobile/ios
+        run: pod install
+      - name: Add the native UI-test target (this ephemeral checkout only)
+        # One XCUITest target and its shared scheme, added to the generated project (scripts/cosmos-ios-world/xcuitest).
+        # The xcodeproj gem ships with CocoaPods; it is installed for the user only if this Ruby cannot load it.
+        run: |
+          ruby -rxcodeproj -e 1 2>/dev/null || gem install --user-install --no-document xcodeproj
+          ruby scripts/cosmos-ios-world/xcuitest/add-uitest-target.rb apps/mobile/ios scripts/cosmos-ios-world/xcuitest/CosmosWorldGestureUITests.swift
+      - name: Build the proof Release simulator app and its native UI tests (one build)
+        run: |
+          set -o pipefail
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          xcodebuild -quiet -workspace "$workspace" -scheme QandeelWorldUITests -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build-for-testing
+          app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' ! -name '*-Runner.app' | head -n 1)"
+          xctestrun="$(find apps/mobile/ios/build/Build/Products -maxdepth 1 -name '*.xctestrun' | head -n 1)"
+          test -n "$app"; test -n "$xctestrun"; echo "APP=$app" >> "$GITHUB_ENV"; echo "XCTESTRUN=$xctestrun" >> "$GITHUB_ENV"
+          { echo "head=$(git rev-parse HEAD)"; echo "entry=src/integration/__validation__/s401-proof-entry.tsx"; echo "app=$(basename "$app")"; echo "xctestrun=$(basename "$xctestrun")"; xcodebuild -version; } > "$RUNNER_TEMP/evidence/identity.txt"
+      - name: Setup Temurin JDK 17 (Maestro)
+        uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: '17'}
+      - name: Boot the simulator
+        env: {CANDIDATES: '${{ matrix.device }}'}
+        run: bash scripts/cosmos-ios-world/sim.sh "$CANDIDATES" "$RUNNER_TEMP/evidence"
+      - name: Install the proof app
+        run: xcrun simctl install "$IOS_SIM_UDID" "$APP"
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | shasum -a 256 --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro" && cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Set the simulator language and prove the driver
+        env: {LANGTAG: '${{ matrix.langtag }}', LANGLOC: '${{ matrix.langloc }}'}
+        run: bash scripts/cosmos-ios-world/setup.sh "$IOS_SIM_UDID" "$RUNNER_TEMP/evidence"
+      - name: DIAG-SE-DOOR cycles (the gate's entry, up to 10 times; stops at the first failed door)
+        timeout-minutes: 60
+        run: bash scripts/cosmos-ios-world/diag-door.sh "$RUNNER_TEMP/evidence/diag" "$IOS_SIM_UDID" "$APP"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with: {name: 'diag-se-door-${{ matrix.cell }}', path: '${{ runner.temp }}/evidence', if-no-files-found: warn}
