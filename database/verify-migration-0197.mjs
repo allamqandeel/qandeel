@@ -15,7 +15,8 @@
 //        clamped to [1, 100]
 //   T4   the title: a rename appends (two ledger rows, the newest shown); whitespace is normalised; empty, blank and
 //        81-character titles are INVALID_TITLE (22023); no ledger row is ever rewritten (55000, even by the owner role)
-//   T5   a Session's deletion (the 0130 account-deletion path) takes its titles with it and nothing else
+//   T5   a Session's deletion (the governed 0130 account erasure, run for a third person) takes its titles with it;
+//        another person's Sessions, titles and catalog are untouched
 //   T6   two connections, committed fixtures removed afterwards: a creation of the same request that waits on an
 //        uncommitted one answers the EARLIER Session once it commits (one row, no 40001), and a creation that waits on
 //        an uncommitted one that rolls back creates its own Session
@@ -98,9 +99,16 @@ async function verifyConcurrentCreation() {
     assert.equal((await client.query("SELECT count(*)::int n FROM public.conversation_sessions WHERE user_id = $1 AND client_request_id = 'race-2'", [person])).rows[0].n, 1);
   } finally {
     for (const c of [first, second]) { try { await c.query('ROLLBACK'); } catch { /* none open */ } await c.end(); }
-    await client.query('DELETE FROM public.session_semantic_clocks WHERE user_id = $1', [person]);
-    await client.query('DELETE FROM public.conversation_sessions WHERE user_id = $1', [person]);
-    await client.query('DELETE FROM public.users WHERE id = $1', [person]);
+    // The committed person and Sessions leave through the governed 0130 erasure, the one path that may delete them.
+    await client.query('BEGIN');
+    const deletionId = randomUUID();
+    await client.query(`INSERT INTO personal_data_private.account_deletions (id, user_id, command_id, status, requested_at, final_at)
+      VALUES ($1, $2, $3, 'SCHEDULED', now() - interval '8 days', now() - interval '1 day')`, [deletionId, person, randomUUID()]);
+    await client.query('SET LOCAL ROLE service_role');
+    const { rows: [{ outcome }] } = await client.query('SELECT public.server_erase_personal_account_v1($1) AS outcome', [deletionId]);
+    await client.query('RESET ROLE');
+    await client.query('COMMIT');
+    assert.equal(outcome, 'ERASED', 'the race fixtures are erased');
     await client.query('DELETE FROM auth.users WHERE id = $1', [person]);
     assert.equal((await client.query('SELECT count(*)::int n FROM public.conversation_sessions WHERE user_id = $1', [person])).rows[0].n, 0,
       'the race fixtures are removed');
@@ -276,18 +284,30 @@ try {
 
   // ---------------------------------------------------------------------------------------------------------- T5
   stage = 'T5 deletion';
+  // The one path that deletes a Session is the governed 0130 account erasure (Session history is append-only otherwise),
+  // so T5 runs it, for a third person with two titled Sessions, beside this person's untouched catalog.
   await identity('authenticated', a);
   await title(secondId, 'Second');
+  const catalogBefore = (await list()).map((s) => s.id);
+  const c = await human();
+  await identity('authenticated', c);
+  const doomed = [await create(c, randomUUID(), 'request-c1'), await create(c, randomUUID(), 'request-c2')].map((s) => s.id);
+  await title(doomed[0], 'Mine'); await title(doomed[1], 'Also mine'); await title(doomed[1], 'Renamed');
   await identity('postgres');
-  // In the 0130 order: the Session's semantic clock (0065, a restricting foreign key) leaves first, then the Session.
-  await q('DELETE FROM public.session_semantic_clocks WHERE session_id = $1', [secondId]);
-  await q('DELETE FROM public.conversation_sessions WHERE id = $1', [secondId]);
-  assert.equal((await rows('SELECT count(*)::int n FROM public.conversation_session_titles WHERE session_id = $1', [secondId]))[0].n, 0,
-    'the deleted Session took its titles with it');
+  const deletionId = randomUUID();
+  await q(`INSERT INTO personal_data_private.account_deletions (id, user_id, command_id, status, requested_at, final_at)
+    VALUES ($1, $2, $3, 'SCHEDULED', now() - interval '8 days', now() - interval '1 day')`, [deletionId, c, randomUUID()]);
+  await identity('service_role');
+  assert.equal((await rows('SELECT public.server_erase_personal_account_v1($1) AS outcome', [deletionId]))[0].outcome, 'ERASED');
+  await identity('postgres');
+  assert.equal((await rows('SELECT count(*)::int n FROM public.conversation_sessions WHERE user_id = $1', [c]))[0].n, 0, 'the erasure removed the Sessions');
+  assert.equal((await rows('SELECT count(*)::int n FROM public.conversation_session_titles WHERE session_id = ANY($1::uuid[])', [doomed]))[0].n, 0,
+    'the deleted Sessions took their titles with them');
   assert.equal((await rows('SELECT count(*)::int n FROM public.conversation_session_titles WHERE session_id = $1', [firstId]))[0].n, 3,
-    'the other Session kept every title row');
+    'another person’s Session kept every title row');
+  assert.equal((await rows('SELECT count(*)::int n FROM public.conversation_session_titles WHERE session_id = $1', [secondId]))[0].n, 1);
   await identity('authenticated', a);
-  assert.deepEqual((await list()).map((s) => s.id), [firstId, legacyId]);
+  assert.deepEqual((await list()).map((s) => s.id), catalogBefore, 'another person’s catalog is unchanged');
 
   await identity('postgres');
   await q('ROLLBACK');

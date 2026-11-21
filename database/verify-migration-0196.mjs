@@ -427,8 +427,12 @@ async function verifyCatalogue(report) {
                               VALUES ($1, clock_timestamp())`, [`voice-transient/${randomUUID()}`]), ['23514']);
     } finally { await q('ROLLBACK'); }
     const files = readdirSync(new URL('./migrations/', import.meta.url)).filter((f) => f.endsWith('.sql')).sort();
-    assert.equal(files.at(-1), M0196, '0196 is the last migration');
-    assert.equal(files.at(-2), M0195, 'exactly 0196 follows 0195');
+    // RE-ANCHORED by the COSMOS E-2 corrections (PO D-2 / D-4 / D-5, 2026-11-20, and the PO directive "COMPLETE ALL
+    // CORRECTIONS BEFORE FINAL CI", 2026-11-21; a declared re-anchor): after 0196 come exactly 0197, 0198, 0199 and 0200
+    // (verify-migration-0197 … 0200), and nothing else. The order 0194 → 0195 → 0196 is unchanged.
+    const at0196 = files.indexOf(M0196);
+    assert.equal(files[at0196 - 1], M0195, 'exactly 0196 follows 0195');
+    assert.deepEqual(files.slice(at0196 + 1), ['0197_cosmos_e2_conversation_catalog_v1.sql', '0198_cosmos_e2_thread_names_v1.sql', '0199_cosmos_e2_current_personal_world_v1.sql', '0200_cosmos_e2_reading_reliance_gate_v1.sql'], 'after 0196 exactly the four COSMOS E-2 migrations');
     const sql = readFileSync(new URL(`./migrations/${M0196}`, import.meta.url), 'utf8').replace(/\r\n/gu, '\n');
     const code = sql.replace(/^\s*--.*$/gmu, '').replace(/\$\$[\s\S]*?\$\$/gu, '$$$$');
     assert.equal((code.match(/^BEGIN;$/gmu) ?? []).length, 1);

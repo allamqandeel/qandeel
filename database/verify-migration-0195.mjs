@@ -396,8 +396,12 @@ async function verifyCatalogue(report) {
     const files = readdirSync(new URL('./migrations/', import.meta.url)).filter((f) => f.endsWith('.sql')).sort();
     // RE-ANCHORED by S8B-07 CP1-B (was: 0195 is the last migration; the Product Owner's CP1-B execution authorization, a
     // declared re-anchor): exactly 0196, the transient media authority, follows 0195 and nothing else does (verify-migration-0196).
-    assert.equal(files.at(-2), M0195, '0195 is followed only by 0196');
-    assert.equal(files.at(-1), '0196_s8b_07_transient_media_v1.sql', 'exactly 0196 follows 0195');
+    // RE-ANCHORED by the COSMOS E-2 corrections (PO D-2 / D-4 / D-5, 2026-11-20, and the PO directive "COMPLETE ALL
+    // CORRECTIONS BEFORE FINAL CI", 2026-11-21; a declared re-anchor): after 0196 come exactly 0197, 0198, 0199 and 0200
+    // (verify-migration-0197 … 0200), and nothing else. The order 0194 → 0195 → 0196 is unchanged.
+    const at0195 = files.indexOf(M0195);
+    assert.equal(files[at0195 + 1], '0196_s8b_07_transient_media_v1.sql', '0195 is followed only by 0196');
+    assert.deepEqual(files.slice(at0195 + 2), ['0197_cosmos_e2_conversation_catalog_v1.sql', '0198_cosmos_e2_thread_names_v1.sql', '0199_cosmos_e2_current_personal_world_v1.sql', '0200_cosmos_e2_reading_reliance_gate_v1.sql'], 'after 0196 exactly the four COSMOS E-2 migrations');
     const sql = readFileSync(new URL(`./migrations/${M0195}`, import.meta.url), 'utf8').replace(/\r\n/gu, '\n');
     const code = sql.replace(/^\s*--.*$/gmu, '').replace(/\$\$[\s\S]*?\$\$/gu, '$$$$');
     assert.equal((code.match(/^BEGIN;$/gmu) ?? []).length, 1);
