@@ -4,7 +4,7 @@
  * never changes the phase, a slow deliberate drag does, velocity only assists, and a long drag continues.
  */
 import {
-  SHEET_ASSIST_MAX_SHARE, SHEET_DELIBERATE_MIN, SHEET_HANDLE_HEIGHT, SHEET_PEEK_MAX, clampOffset, dragOffset, keyboardLift, keyboardOverlap, rubberband, sheetGeometry, sheetOffset, sheetStops, snapPhase,
+  SHEET_ASSIST_MAX_SHARE, SHEET_DELIBERATE_MIN, SHEET_HANDLE_HEIGHT, SHEET_PEEK_MAX, clampOffset, dragOffset, keyboardLift, keyboardOverlap, keyboardTopOf, rubberband, sheetGeometry, sheetOffset, sheetStops, snapPhase,
   type SheetGeometry, type SheetPhase,
 } from '../sheet/sheet-geometry';
 
@@ -119,6 +119,24 @@ describe('the snap decision — the edges', () => {
     expect(keyboardOverlap(800, 500)).toBe(300);
     expect(keyboardOverlap(400, 500)).toBe(0);
     expect(keyboardOverlap(800, null)).toBe(0);
+  });
+
+  // COSMOS E-2 final corrections (PO 2026-11-21 §7): on the Android 16 emulator (1080 x 2400 px at 2.625, gesture
+  // navigation 63 px = 24 dp) React Native reported the keyboard's top at 1582 px while the keyboard began at 1518 px; the
+  // PEEK lifted to 1582 kept its topic-name field and Save under the keyboard. The top is derived from the reported height.
+  it("the keyboard's top is the higher of the reported top and the window bottom less the keyboard and the inset", () => {
+    const dp = (px: number) => px / 2.625;
+    // Emulator: screenY 1582 px, height = IME 882 px less the 63 px bar = 819 px, window bottom 2400 px, inset 24 dp.
+    expect(keyboardTopOf(dp(1582), dp(819), dp(2400), 24)).toBeCloseTo(dp(1518), 6);
+    // A device whose reported top is already exact keeps it.
+    expect(keyboardTopOf(500, 276, 800, 24)).toBe(500);
+    expect(keyboardTopOf(Number.NaN, 276, 800, 24)).toBe(500);
+    expect(keyboardTopOf(500, 0, 800, 24)).toBe(500);
+    expect(keyboardTopOf(Number.NaN, 0, 800, 24)).toBeNull();
+    // End to end on the emulator: the field row's bottom (1582 px) now clears the keyboard (1518 px).
+    const overlap = keyboardOverlap(dp(2400), keyboardTopOf(dp(1582), dp(819), dp(2400), 24));
+    expect(overlap - 24).toBeCloseTo(dp(2400 - 1518) - 24, 6);
+    expect(keyboardOverlap(dp(2400), dp(1582)) - 24).toBeLessThan(overlap - 24);
   });
 
   // COSMOS E-2 HONOR acceptance (PO decision 2026-11-20, DEFECT-4): the keyboard lifts a PEEK, and only a PEEK.

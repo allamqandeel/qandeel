@@ -124,6 +124,21 @@ export function keyboardOverlap(sheetBottom: number, keyboardTop: number | null)
 }
 
 /**
+ * COSMOS E-2 final corrections (PO 2026-11-21 §7, the Android Emulator pass): where the keyboard's top really is. React
+ * Native reports `screenY` as the window's visible-frame bottom, and `height` as the IME inset LESS the system-bar inset.
+ * On Android 16 (edge-to-edge, gesture navigation) the visible frame ends a navigation-bar inset BELOW the keyboard's top,
+ * so a PEEK lifted to `screenY` kept its topic-name field under the keyboard. `windowBottom - height - bottomInset` is the
+ * keyboard's top on every platform; the higher (smaller) of the two is used, so a device where `screenY` is exact keeps it.
+ */
+export function keyboardTopOf(screenY: number, height: number, windowBottom: number, bottomInset: number): number | null {
+  const reported = Number.isFinite(screenY) ? screenY : null;
+  const inset = Number.isFinite(bottomInset) ? Math.max(0, bottomInset) : 0;
+  const derived = Number.isFinite(height) && height > 0 && Number.isFinite(windowBottom) ? windowBottom - height - inset : null;
+  if (reported === null) return derived;
+  return derived === null ? reported : Math.min(reported, derived);
+}
+
+/**
  * COSMOS E-2 HONOR acceptance (PO decision 2026-11-20, DEFECT-4): how far the open keyboard lifts a PEEK. A PEEK shows
  * only the sheet's top strip, at the bottom of the glass, so the content's keyboard spacer (EXPANDED's answer) never
  * reaches it: on the HONOR the whole strip — a topic-name field and its Save — sat under the keyboard. The PEEK rises by

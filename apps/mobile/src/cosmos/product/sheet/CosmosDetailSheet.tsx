@@ -40,7 +40,7 @@ import type { ViewportEnvelope } from '../../../map/camera';
 import type { ChromeLanguage } from '../../../orientation-chrome';
 import { cosmosProductCopy } from '../copy';
 import type { CosmosWorldOwner } from '../owner-core';
-import { SHEET_HANDLE_HEIGHT, dragOffset, keyboardLift, keyboardOverlap, sheetGeometry, sheetOffset, sheetStops, snapPhase, type SheetGeometry, type SheetPhase } from './sheet-geometry';
+import { SHEET_HANDLE_HEIGHT, dragOffset, keyboardLift, keyboardOverlap, keyboardTopOf, sheetGeometry, sheetOffset, sheetStops, snapPhase, type SheetGeometry, type SheetPhase } from './sheet-geometry';
 
 export const COSMOS_SHEET_TEST_ID = 'cosmos-detail-sheet';
 export const COSMOS_SHEET_HANDLE_TEST_ID = 'cosmos-detail-sheet-handle';
@@ -213,17 +213,18 @@ export function CosmosDetailSheet({
 
   // The keyboard covers the sheet's bottom only where the window did not already resize above it.
   const frame = useRef<View>(null);
-  const [overlap, setOverlap] = useState(0);
+  const [keyboard, setKeyboard] = useState<{ readonly bottom: number; readonly screenY: number; readonly height: number } | null>(null);
   useEffect(() => {
     const shownSub = Keyboard.addListener('keyboardDidShow', (event) => {
-      const top = event.endCoordinates.screenY;
+      const { screenY, height } = event.endCoordinates;
       const node = frame.current;
       if (node === null) return;
-      node.measureInWindow((_x, y, _w, h) => setOverlap(keyboardOverlap(y + h, top)));
+      node.measureInWindow((_x, y, _w, h) => setKeyboard({ bottom: y + h, screenY, height }));
     });
-    const hiddenSub = Keyboard.addListener('keyboardDidHide', () => setOverlap(0));
+    const hiddenSub = Keyboard.addListener('keyboardDidHide', () => setKeyboard(null));
     return () => { shownSub.remove(); hiddenSub.remove(); };
   }, []);
+  const overlap = keyboard === null ? 0 : keyboardOverlap(keyboard.bottom, keyboardTopOf(keyboard.screenY, keyboard.height, keyboard.bottom, glass.insetBottom));
   const lifted = keyboardLift(shown, overlap, glass.insetBottom, geometry);
   useEffect(() => {
     cancelAnimation(lift);
