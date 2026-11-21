@@ -191,7 +191,10 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
     const end = Math.ceil(y + height);
     setControlsEnd((current) => (current === end ? current : end));
   }, []);
-  const onRailLayout = useCallback((event: LayoutChangeEvent) => { railTop.current = event.nativeEvent.layout.y; }, []);
+  // COSMOS E-2 final corrections (§6): the rail's top is also the floor the stage lays no label across (state, not only a
+  // ref, so the labels are laid out again when it is measured).
+  const [labelFloor, setLabelFloor] = useState<number | null>(null);
+  const onRailLayout = useCallback((event: LayoutChangeEvent) => { railTop.current = event.nativeEvent.layout.y; setLabelFloor(event.nativeEvent.layout.y); }, []);
   useEffect(() => { if (rail === null) railTop.current = null; }, [rail]);
   const onPinchEnd = useCallback((direction: 'IN' | 'OUT' | null, fx: number, fy: number, released: NasijCamera) => {
     if (leaveOverview()) return;
@@ -282,6 +285,7 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
         labelOf={labelOf}
         onActivate={activate}
         accessibleMarks={accessibleMarks}
+        labelFloor={rail === null ? null : labelFloor}
         testID={testID}
       />
       {children}
