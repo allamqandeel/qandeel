@@ -2130,7 +2130,7 @@ Each failed with its fix reverted in place (for example "Expected 'none', Receiv
 | X-ANCHOR | analyser | That round trip keeps the world point under the fingers. Every first-depth node moves by (7/8)(c − f), within 20 pt. |
 | X:testPersonalDoubleTapOnTheCurrentDepthWordStepsInAndBackReturns | XCUITest | A native double tap on the current depth's word reaches the stage and steps IN. Back returns to the first depth. |
 | X:testPersonalPinchStepsInAndThePanStillMovesTheWorld | XCUITest | A native pinch-in steps IN. If it lands in an empty region, the product's own "Go to the nearest" brings a mark into view at the same depth, and the path is recorded. A drag while the stage is still zoomed in keeps the depth. A pinch-out returns to the first depth, Back returns home, and a pan there moves the world (R4–R7, §21.13). |
-| X-PAN-ZOOMED | analyser | The drag while zoomed in (one step IN) moves the world by the drag, within max(20 pt, 25 %). One mark is in view at that depth by construction (×8), so one matched core suffices. Its identity is checked on the cores found **before** the one-per-hue reduction: in each frame it must be the only in-band core within 20° of its hue (the reduction's own satellite radius); it must be a node core of at least 12 pixels (twice the detector's 6-pixel floor); its size must agree between the frames (0.5×–2× pixels); and it must lie outside every fixed overlay. The test records the overlays' frames next to each screenshot; without them the case is NOT TESTED. Otherwise the case is NOT TESTED (R6; identity corrected in R7; overlay exclusion added in R8; PO reviews 2026-11-18). |
+| X-PAN-ZOOMED | analyser | The drag while zoomed in (one step IN) moves the world by the drag, within max(20 pt, 25 %). One mark is in view at that depth by construction (×8), so one matched core suffices. Its identity is checked on the cores found **before** the one-per-hue reduction: in each frame it must be the only in-band core within 20° of its hue (the reduction's own satellite radius); it must be a node core of at least 12 pixels (twice the detector's 6-pixel floor); its size must agree between the frames (0.5×–2× pixels); and it must lie outside every fixed overlay. The test records the overlays' frames next to each screenshot; without them the case is NOT TESTED. **AMENDED (PO decision 2026-11-21, option 1; §31.10.7):** when no such unambiguous core exists (one mark whose beads share a hue, as on iPhone SE), a *constellation* is measured instead: at least three distinct node cores (hue-compatible ≤ 15°, ≥ 12 px, size 0.5×–2×, outside every fixed overlay) that move together by one rigid shift within 6 pt. The shift is found from the frames alone, never from the expected drag, and it must be unique: a second shift supported by three cores makes the case NOT TESTED. The tolerance is unchanged. The world-mode buttons and their note, and the contextual acts, are fixed overlays. The zoomed drag is 120 pt upward. Otherwise the case is NOT TESTED (R6; identity corrected in R7; overlay exclusion added in R8; PO reviews 2026-11-18). |
 | X-PAN-AFTER-PINCH | analyser | The pan after the round trip, at the first depth, moves the nodes by the drag, within max(20 pt, 25 %), on at least two cores. Unchanged. |
 | X:testSharedTapOnTheCurrentDepthWordReachesTheStage | XCUITest | A tap on Shared's current depth word reaches the stage (Far → Mid), and Back returns. |
 | X:testPublicTapOnTheCurrentDepthWordReachesTheStage | XCUITest | The same for Public. |
@@ -3977,6 +3977,22 @@ The baseline was `d8c7b39c`: §31.9 plus the two PR #402 CI fixes, `891b757f` (R
   - **Stale order pins.** The real-PostgreSQL verifiers of 0194, 0195 and 0196 still pinned "0196 is the last migration". They are re-anchored by index: after 0196 come exactly 0197–0200. This is a declared re-anchor, done the same way as the root pins in `43b14861`.
   - **verify-0197 T5** deleted a Session directly. Session history is append-only, so the one deletion path is the governed 0130 erasure. T5 now runs that erasure for a third person. The titles leave with their Sessions, and another person's titles and catalog stay untouched.
 - verify-0197 gains T6, a real two-connection race that converges on the earlier Session without 40001. Its committed fixtures leave through the same erasure.
+
+**iOS World gate on iPhone SE: X-PAN-ZOOMED (PO decision 2026-11-21, option 1).**
+- **Finding.** X-PAN-ZOOMED was NOT TESTED on the SE leg at every head since the leg was added (`14965963`, #401), with every other SE case PASS.
+  - Cause: on a 375 pt screen the step IN lands in an empty region. "Go to the nearest" then shows one Thread whose five beads share one green hue, so no core is the only one of its hue.
+  - The world did move rigidly: −106 against −120 on the frames.
+- **Decision and change.** §21.6 is amended (see the row).
+  - The single unambiguous-core rule stays first and unchanged. The constellation applies only when no such core exists.
+  - The world-mode buttons and their note, and the contextual acts (Previous step, …), join the fixed overlays.
+  - The zoomed drag is 120 pt upward instead of leftward, because a leftward drag leaves only 2 of the SE's 5 beads in view. X-PAN-AFTER-PINCH is unchanged.
+- **Offline proof on the real SE simulator frames of run 44891141364:**
+  - **As captured:** NOT TESTED. Only 2 cores remain, and it is not turned into a PASS.
+  - **The real before-frame translated by 0,−106 pt:** PASS from a constellation of 5 cores.
+  - **Translated by 0,−60 pt:** FAIL. The shift is measured −60, so the expected drag chose nothing.
+  - **Drawn twice at two shifts:** NOT TESTED, a second rigid shift is supported.
+  - **iPhone 17 ar frames of #401:** X-PAN-ZOOMED still PASS on its single core, and X-ANCHOR and X-PAN-AFTER-PINCH are unchanged.
+- **Live check.** The iOS simulator cannot run on this Windows machine. The live SE result is the iOS World gate's SE leg on this head.
 
 **31.10.8 Open obligations.**
 - **The physical HONOR acceptance** of the final build (the arm64 E-2 build is handed over with this record).
