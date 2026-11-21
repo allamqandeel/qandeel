@@ -335,7 +335,10 @@ export class ReplayService {
     const analyticalObject: ReplayMomentAnalysisObject = rungs.analyticalObject.status === 'DISCLOSED'
       ? { status: 'DISCLOSED', value: { ...rungs.analyticalObject.value, readings: rungs.analyticalObject.value.readings.map(readingOf) } }
       : { status: 'DEPTH_WITHHELD' };
-    return { outcome: 'AVAILABLE', ordinal, tc, depth, world: rungs.world, thread: rungs.thread, session,
+    // Nor does a Thread (COSMOS E-2 Slice A added `name` and `origin` to the projection's Threads): the World leaves in the
+    // frozen V1 Thread shape, so no Session identity and no private name crosses a Replay.
+    const world = { ...rungs.world, threads: rungs.world.threads.map(({ name: _name, origin: _origin, ...thread }) => thread) };
+    return { outcome: 'AVAILABLE', ordinal, tc, depth, world, thread: rungs.thread, session,
       analyticalObject, sourceProvenance: rungs.sourceProvenance };
   }
 

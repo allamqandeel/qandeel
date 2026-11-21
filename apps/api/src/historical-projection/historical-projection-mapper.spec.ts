@@ -115,14 +115,27 @@ describe('the Layer-A row becomes typed knowledge (cases 1-9)', () => {
 describe('S7-01: the analytical families of one Replay moment are mapped by the same checks', () => {
   const familiesOf = (row: Record<string, unknown>): Record<string, unknown> => {
     const { session_id: _s, live_head: _l, tc: _t, sealed: _x, revision: _r, moments: _m, ...families } = row;
-    return { ...families, materials: (families.materials as Record<string, unknown>[]).map(({ expiry: _e, ...material }) => material) };
+    // 0169 reads the frozen V1 projection: its Threads carry no `name` / `origin` (those are the Personal V2 row's only).
+    const threads = (families.threads as Record<string, unknown>[]).map(({ name: _n, origin: _o, ...thread }) => thread);
+    return { ...families, threads, materials: (families.materials as Record<string, unknown>[]).map(({ expiry: _e, ...material }) => material) };
   };
 
   it('maps exactly the canonical families, without the header, the Moments or a Material expiry', () => {
     const { sessionId: _s, liveHead: _l, tc: _t, sealed: _x, revision: _r, moments: _m, materials, ...canonical } = mapHistoricalProjectionRow(projectionRow());
     const families = mapHistoricalAnalyticalFamilies(familiesOf(projectionRow()), 2);
-    expect(families).toEqual({ ...canonical, materials: materials.map(({ expiry: _e, ...material }) => material) });
-    expect(JSON.stringify(families)).not.toMatch(/expiry|committedText|liveHead/u);
+    // Identical to the canonical families except that a V1 Thread is not named and names no Session.
+    const threads = canonical.threads.map((thread) => ({ ...thread, name: { text: null, source: 'NONE' }, origin: null }));
+    expect(families).toEqual({ ...canonical, threads, materials: materials.map(({ expiry: _e, ...material }) => material) });
+    expect(JSON.stringify(families)).not.toMatch(/expiry|committedText|liveHead|sessionId|GROUNDING_WORDING/u);
+  });
+
+  // PR #402 CI (COSMOS E-2 Slice A had made this path require V2's keys): a Replay analysis is V1 exactly. A Thread that
+  // carries a name or an origin — a Session identity — is refused, never passed on.
+  it('refuses a Replay Thread that carries a V2 name or origin', () => {
+    const v1 = familiesOf(projectionRow());
+    const [thread] = v1.threads as Record<string, unknown>[];
+    expect(() => mapHistoricalAnalyticalFamilies({ ...v1, threads: [{ ...thread, origin: { sessionId: 'x', sp: 1 } }] }, 2)).toThrow(/unknown key origin/u);
+    expect(() => mapHistoricalAnalyticalFamilies({ ...v1, threads: [{ ...thread, name: { text: 'n', source: 'USER_ALIAS' } }] }, 2)).toThrow(/unknown key name/u);
   });
 
   it('fails closed on a header, a Material expiry, a missing family, a coherence defect or a TC that is not a Session Position', () => {

@@ -107,6 +107,12 @@ const FOCUS_KEYS = ['id', 'startedSp', 'lastAttentionSp', 'promotedThreadId'] as
 const LIVE_FOCUS_KEYS = ['kind', 'ref', 'atSp', 'reasonCode'] as const;
 // COSMOS E-2 Slice A (D-3 / D-4): V2 adds `name` and `origin` per Thread; everything else is V1's.
 const THREAD_KEYS = ['id', 'establishmentPath', 'establishedInSession', 'establishedSp', 'groundingEmergingFocusId', 'home', 'sessionLifecycle', 'name', 'origin'] as const;
+// The frozen V1 Thread (0072): what `get_session_historical_projection_v1` returns, and so what a Replay moment's analysis
+// carries (0169 reads V1, never V2). PR #402 CI: requiring V2's keys here refused every real Replay analysis.
+const THREAD_KEYS_V1 = ['id', 'establishmentPath', 'establishedInSession', 'establishedSp', 'groundingEmergingFocusId', 'home', 'sessionLifecycle'] as const;
+/** A V1 Thread has no name and no origin: it is NOT named (never a fabricated name) and names no Session. */
+const NO_THREAD_NAME: DisclosedThreadName = Object.freeze({ text: null, source: 'NONE' });
+type ThreadVersion = 'V1' | 'V2';
 const THREAD_NAME_KEYS = ['text', 'source'] as const;
 const THREAD_ORIGIN_KEYS = ['sessionId', 'sp'] as const;
 const THREAD_NAME_SOURCES = ['USER_ALIAS', 'GROUNDING_WORDING', 'NONE'] as const;
@@ -153,9 +159,9 @@ function mapThreadState(raw: unknown): ThreadStateAtTc {
   }
 }
 
-function mapThread(raw: unknown, index: number, tc: number): DisclosedThread {
+function mapThread(raw: unknown, index: number, tc: number, version: ThreadVersion): DisclosedThread {
   const path = `threads[${index}]`;
-  const row = record(raw, path, THREAD_KEYS);
+  const row = record(raw, path, version === 'V2' ? THREAD_KEYS : THREAD_KEYS_V1);
   const home = record(row.home, `${path}.home`, ['x', 'y']);
   const establishedInSession = boolean(row.establishedInSession, `${path}.establishedInSession`);
   const establishedSp = sessionPositionOrNull(row.establishedSp, `${path}.establishedSp`);
@@ -169,8 +175,8 @@ function mapThread(raw: unknown, index: number, tc: number): DisclosedThread {
     groundingEmergingFocusId: textOrNull(row.groundingEmergingFocusId, `${path}.groundingEmergingFocusId`),
     home: { x: integerText(home.x, `${path}.home.x`), y: integerText(home.y, `${path}.home.y`) },
     state: mapThreadState(row.sessionLifecycle),
-    name: mapThreadName(row.name, `${path}.name`),
-    origin: mapThreadOrigin(row.origin, `${path}.origin`, establishedInSession, establishedSp),
+    name: version === 'V2' ? mapThreadName(row.name, `${path}.name`) : NO_THREAD_NAME,
+    origin: version === 'V2' ? mapThreadOrigin(row.origin, `${path}.origin`, establishedInSession, establishedSp) : null,
   };
 }
 
@@ -307,7 +313,7 @@ export function mapHistoricalProjectionRow(raw: unknown): HistoricalKnowledge {
   // Every Session Position <= TC is exactly one committed Moment: gapless, in order.
   if (moments.length !== tc || moments.some((moment, index) => moment.sp !== index + 1)) return incoherent('moments: not exactly SP(1) .. SP(TC) in order');
 
-  return { sessionId, liveHead, tc, sealed, revision, moments, ...mapFamilies(row, tc, mapMaterial) };
+  return { sessionId, liveHead, tc, sealed, revision, moments, ...mapFamilies(row, tc, mapMaterial, 'V2') };
 }
 
 /**
@@ -317,10 +323,10 @@ export function mapHistoricalProjectionRow(raw: unknown): HistoricalKnowledge {
  */
 export function mapHistoricalAnalyticalFamilies(raw: unknown, tc: number): HistoricalAnalyticalFamilies<DisclosedMaterialAtTc> {
   if (!Number.isSafeInteger(tc) || tc < 1) return fail('analysis: TC is a Session Position >= 1');
-  return mapFamilies(record(raw, 'analysis', FAMILY_KEYS), tc, mapMaterialAtTc);
+  return mapFamilies(record(raw, 'analysis', FAMILY_KEYS), tc, mapMaterialAtTc, 'V1');
 }
 
-function mapFamilies<M extends DisclosedMaterialAtTc>(row: Row, tc: number, mapMaterialOf: (raw: unknown, index: number, tc: number) => M): HistoricalAnalyticalFamilies<M> {
+function mapFamilies<M extends DisclosedMaterialAtTc>(row: Row, tc: number, mapMaterialOf: (raw: unknown, index: number, tc: number) => M, threadVersion: ThreadVersion): HistoricalAnalyticalFamilies<M> {
 
   const emergingFocuses: DisclosedEmergingFocus[] = list(row.emerging_focuses, 'emerging_focuses').map((entry, index) => {
     const path = `emerging_focuses[${index}]`;
@@ -332,7 +338,7 @@ function mapFamilies<M extends DisclosedMaterialAtTc>(row: Row, tc: number, mapM
   });
 
   const liveFocus = mapLiveFocus(row.live_focus, tc);
-  const threads = list(row.threads, 'threads').map((entry, index) => mapThread(entry, index, tc));
+  const threads = list(row.threads, 'threads').map((entry, index) => mapThread(entry, index, tc, threadVersion));
   const threadIds = new Set(threads.map((thread) => thread.id));
   if (threadIds.size !== threads.length) return incoherent('threads: a Thread appears twice');
   for (const focus of emergingFocuses) {
