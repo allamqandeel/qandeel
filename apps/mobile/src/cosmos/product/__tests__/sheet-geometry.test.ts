@@ -122,18 +122,21 @@ describe('the snap decision — the edges', () => {
   });
 
   // COSMOS E-2 HONOR acceptance (PO decision 2026-11-20, DEFECT-4): the keyboard lifts a PEEK, and only a PEEK.
-  it('the keyboard lifts a PEEK by its overlap less the bottom inset, never above the top band', () => {
+  // AMENDED (PO 2026-11-21 §7, Android Emulator): the WHOLE overlap. Measured on Android 16 (dp): keyboard top 577.9, sheet
+  // bottom 913.9, overlap 336, inset 24; the old lift (312) left the name row's last 24 dp under the keyboard.
+  it('the keyboard lifts a PEEK by its whole overlap, never above the top band', () => {
     const peek = sheetGeometry(ROOM, 120, INSET);
-    expect(keyboardLift('PEEK', 300, INSET, peek)).toBe(300 - INSET);
-    expect(keyboardLift('PEEK', 20, INSET, peek)).toBe(0);
-    expect(keyboardLift('PEEK', 0, INSET, peek)).toBe(0);
+    expect(keyboardLift('PEEK', 300, peek)).toBe(300);
+    expect(keyboardLift('PEEK', 20, peek)).toBe(20);
+    expect(keyboardLift('PEEK', 0, peek)).toBe(0);
+    expect(keyboardLift('PEEK', 336, sheetGeometry(814, 120, 24))).toBe(336);
     // A keyboard taller than the room beneath the PEEK stops the PEEK at the band.
-    expect(keyboardLift('PEEK', ROOM * 2, INSET, peek)).toBe(sheetOffset('PEEK', peek));
+    expect(keyboardLift('PEEK', ROOM * 2, peek)).toBe(sheetOffset('PEEK', peek));
   });
 
   it('an EXPANDED or CLOSED sheet is not lifted (EXPANDED keeps its keyboard spacer)', () => {
-    expect(keyboardLift('EXPANDED', 300, INSET, LONG)).toBe(0);
-    expect(keyboardLift('CLOSED', 300, INSET, LONG)).toBe(0);
+    expect(keyboardLift('EXPANDED', 300, LONG)).toBe(0);
+    expect(keyboardLift('CLOSED', 300, LONG)).toBe(0);
   });
 });
 

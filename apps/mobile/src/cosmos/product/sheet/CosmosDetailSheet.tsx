@@ -224,7 +224,7 @@ export function CosmosDetailSheet({
     const hiddenSub = Keyboard.addListener('keyboardDidHide', () => setOverlap(0));
     return () => { shownSub.remove(); hiddenSub.remove(); };
   }, []);
-  const lifted = keyboardLift(shown, overlap, glass.insetBottom, geometry);
+  const lifted = keyboardLift(shown, overlap, geometry);
   useEffect(() => {
     cancelAnimation(lift);
     lift.set(reduced ? lifted : withTiming(lifted, { duration: SHEET_SETTLE.duration, easing: EASE_OUT }));
