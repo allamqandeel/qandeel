@@ -573,3 +573,19 @@ export const settle = async (): Promise<void> => {
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
 };
+
+/**
+ * Drain a LONG chain of async work (the COSMOS proof roots: a world's whole mount, fetch, compile and settle): `turns`
+ * full event-loop turns, then one `settle`, so that any zero-delay timer queued during them still fires.
+ *
+ * A turn here is `setImmediate`, not a timer: on Windows every real `setTimeout` waits for the host's timer tick
+ * (about 15.6 ms by default, against about 1 ms on Linux). Draining 96 timer turns therefore cost about 1.5 s per drain
+ * on a Windows machine, which put whole proof-root tests past Jest's 5 s timeout there while CI on Linux passed. The
+ * work drained is the same on every host; only the wall-clock price of each turn is no longer the host's.
+ */
+export const settleLong = async (turns = 96): Promise<void> => {
+  for (let index = 0; index < turns; index += 1) {
+    await new Promise<void>((resolve) => { setImmediate(resolve); });
+  }
+  await settle();
+};

@@ -6,7 +6,7 @@
 
 import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-library/react-native';
 
-import { settle as flush } from '../../runtime-entry/__fixtures__/runtime-entry';
+import { settleLong } from '../../runtime-entry/__fixtures__/runtime-entry';
 import { COSMOS_COPY } from '../__validation__/copy';
 import { COSMOS_FIXTURE_LABEL_TEST_ID, COSMOS_HUD_TEST_ID, COSMOS_OVERVIEW_TAG_TEST_ID, COSMOS_PROOF_ROOT_TEST_ID, CosmosProofRoot } from '../__validation__/CosmosProofRoot';
 
@@ -61,7 +61,7 @@ beforeAll(() => {
 
 const copy = COSMOS_COPY.en;
 let view: RenderResult | null = null;
-const settle = async () => { await act(async () => { for (let i = 0; i < 8; i += 1) await flush(); }); };
+const settle = async () => { await act(async () => { await settleLong(); }); };
 const sky = (v: RenderResult) => v.getByLabelText(new RegExp(`^(${copy.sky}|${COSMOS_COPY.ar.sky}) ·`, 'u'));
 const layout = async (v: RenderResult) => {
   // The gesture surface is the stage's accessible container; the test renderer fires no layout, so one is given.

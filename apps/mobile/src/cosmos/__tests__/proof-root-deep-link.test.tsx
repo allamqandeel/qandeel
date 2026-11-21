@@ -10,7 +10,7 @@
 import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-library/react-native';
 import { Linking } from 'react-native';
 
-import { settle as flush } from '../../runtime-entry/__fixtures__/runtime-entry';
+import { settleLong } from '../../runtime-entry/__fixtures__/runtime-entry';
 import { COSMOS_COPY } from '../__validation__/copy';
 import { COSMOS_FIXTURE_LABEL_TEST_ID, COSMOS_HUD_TEST_ID, CosmosProofRoot } from '../__validation__/CosmosProofRoot';
 
@@ -75,7 +75,7 @@ const copy = COSMOS_COPY.en;
 const SCHEME = 'qandeel-cosmos-proof://';
 let view: RenderResult | null = null;
 let urlHandler: ((event: { url: string }) => void) | null = null;
-const settle = async () => { await act(async () => { for (let i = 0; i < 8; i += 1) await flush(); }); };
+const settle = async () => { await act(async () => { await settleLong(); }); };
 const sky = (v: RenderResult) => v.getByLabelText(new RegExp(`^(${copy.sky}|${COSMOS_COPY.ar.sky}) ·`, 'u'));
 const layout = async (v: RenderResult) => {
   await act(async () => { fireEvent(sky(v), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } } }); });

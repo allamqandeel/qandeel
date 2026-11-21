@@ -80,7 +80,7 @@ test('E — the API and the client refuse a withheld Reading that carries words,
   assert.match(mapper, /a withheld Reading carries words of its own/u);
   assert.match(mapper, /the Confidence of a withheld Reading carries its assumptions/u);
   const replay = api('replay/replay.service.ts');
-  assert.match(replay, /if \(evidenceChange !== null \|\| statement === null\) return unavailable\(\);/u, 'a Replay Reading carries no reliance key');
+  assert.match(replay, /if \(evidenceChange !== null \|\| reading\.statement === null\) return unavailable\(\);/u, 'a Replay Reading carries no reliance key');
   const wire = mobile('projection/historical-projection-wire.ts');
   assert.match(wire, /a withheld Reading carries words of its own/u);
   const peek = mobile('integration/composition/LivingAnalysisMap.tsx');
