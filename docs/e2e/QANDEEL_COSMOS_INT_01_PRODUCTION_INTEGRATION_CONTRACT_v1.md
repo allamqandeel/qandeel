@@ -3966,6 +3966,18 @@ The baseline was `d8c7b39c`: §31.9 plus the two PR #402 CI fixes, `891b757f` (R
 
 **31.10.7 Push and CI.** The four commits (`43b14861`, `f4c449cb`, `d5239caf`, `900511be`) and this record are pushed to Draft PR #402 without force. It stays Draft and stacked on #401. The CI results on that head are recorded with the delivery report.
 
+**CI round 1 on `5f7cb00c`.**
+- Mobile CI passed: all jobs green.
+- API CI failed at the real-PostgreSQL 0150 verifier (PROD-RETRY-01), 26 of 28 scenarios passed. Both GUARD scenarios found a fourth Data API entry point that lets SQLSTATE 40001 escape: `create_conversation_session_v2` (0197, Slice B).
+  - It is not new behaviour that needs classifying, and it is not a gap in the guard. It is a defect in 0197: the "earlier Session vanished" branch raised `SESSION_CREATION_RACE` as 40001.
+  - That branch is reachable only when the 0130 account deletion removes the person in between. The answer there is FORBIDDEN (42501), as for a caller with no person row.
+  - The fix is `651033ef`. It changes that branch only. 0197 is unmerged and never hosted.
+  - The guard, its three retained classifications and PT409 are unchanged. Locally, 0150 passes 28 / 28.
+- Because the run stopped at 0150, the later verifiers never ran on that head. Running all of them locally, in CI order on a fresh database, found two latent defects in verifiers:
+  - **Stale order pins.** The real-PostgreSQL verifiers of 0194, 0195 and 0196 still pinned "0196 is the last migration". They are re-anchored by index: after 0196 come exactly 0197–0200. This is a declared re-anchor, done the same way as the root pins in `43b14861`.
+  - **verify-0197 T5** deleted a Session directly. Session history is append-only, so the one deletion path is the governed 0130 erasure. T5 now runs that erasure for a third person. The titles leave with their Sessions, and another person's titles and catalog stay untouched.
+- verify-0197 gains T6, a real two-connection race that converges on the earlier Session without 40001. Its committed fixtures leave through the same erasure.
+
 **31.10.8 Open obligations.**
 - **The physical HONOR acceptance** of the final build (the arm64 E-2 build is handed over with this record).
 - **Merge.** E-2 is **NOT ACCEPTED** and COSMOS is **NOT CLOSED**. Merging needs the PO's personal acceptance and the separate instruction «ادمج».
