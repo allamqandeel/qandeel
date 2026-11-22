@@ -462,7 +462,7 @@ const PLANTED = [
   ['a Replay map', 'graphicsViolations', add('player', 'ReplayMap.tsx', "import { MapSurface } from '../map';")],
   ['a share sheet', 'graphicsViolations', add('player', 'share.ts', "import { Share } from 'react-native';\nShare.share({ message: '' });")],
   ['the composite replaced', 'graphicsViolations', edit('player', 'ReplayPlayer.tsx', '<ReplayMomentComposite ', '<View ')],
-  ['the transport back in the temporal slot', 'graphicsViolations', edit('player', 'ReplayPlayer.tsx', 'top={top} controls={controls} />', 'top={top} controls={controls} timeline={rail} />')],
+  ['the transport back in the temporal slot', 'graphicsViolations', edit('player', 'ReplayPlayer.tsx', 'top={top} controls={controls}\n', 'top={top} controls={controls} timeline={rail}\n')],
   ['the composite given a Timeline', 'graphicsViolations', edit('composite', '', 'timeline={null}', 'timeline={controls}')],
   ['the Call Rail as the transport', 'graphicsViolations', edit('player', 'ReplayPlayer.tsx', "import { replayPlayerCopy } from './copy';", "import { replayPlayerCopy } from './copy';\nimport { CallRail } from '../iconography';")],
   ['a generic play glyph', 'graphicsViolations', edit('glyphs', '', '"d": "M8.4 6.6v10.8', '"d": "M8 5v14')],

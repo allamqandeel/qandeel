@@ -195,6 +195,11 @@ jest.mock('@shopify/react-native-skia', () => {
     FractalNoise: element('FractalNoise'),
     RuntimeShader: element('RuntimeShader'),
     createPicture: () => picture,
+    // REPLAY-COSMOS-01 — the Replay stage's labels are Skia paragraphs. The stand-in paragraph keeps its text (and
+    // draws nothing), so a component test can read which label the stage asked for.
+    Paragraph: element('Paragraph'),
+    TextAlign: { Left: 0, Right: 1, Center: 2, Justify: 3, Start: 4, End: 5 },
+    TextDirection: { RTL: 0, LTR: 1 },
     Skia: {
       XYWHRect: (x, y, width, height) => ({ x, y, width, height }),
       // The tone curve's effect: an inert handle, so the element tree carrying it can be asserted.
@@ -203,6 +208,15 @@ jest.mock('@shopify/react-native-skia', () => {
       Surface: { Make: () => null, MakeOffscreen: () => null },
       RSXform: disposable,
       PathBuilder: { Make: pathBuilder },
+      Color: () => [1, 1, 1, 1],
+      Paint: () => ({ setAlphaf: () => undefined, dispose: () => undefined }),
+      ParagraphBuilder: {
+        Make: () => {
+          let text = '';
+          const b = { pushStyle: () => b, addText: (t) => { text += t; return b; }, build: () => ({ text, layout: () => undefined, dispose: () => undefined }) };
+          return b;
+        },
+      },
     },
     ClipOp: { Difference: 0, Intersect: 1 },
     PointMode: { Points: 0, Lines: 1, Polygon: 2 },

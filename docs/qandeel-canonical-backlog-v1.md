@@ -3933,6 +3933,13 @@ canonical document: the Product Owner's SD-2 / G-3). Nothing here authorizes imp
 Admitted by `COSMOS-INT-01` at its closure (2026-11-21) under BG-06's second route (explicitly deferred by a canonical
 document: the contract's §12 / G-5). Nothing here authorizes implementation (BG-07).
 
+Progress note (2026-11-22, not a disposition): the Product Owner's REPLAY-LOCAL-02 scope amendment directed this work. Branch
+`replay/replay-cosmos-01` draws the Replay passage's Personal map with the production COSMOS parts (`src/replay-cosmos`), and
+the S7-03 contract test's G-5 assertion is re-anchored to COSMOS. The item stays `OPEN — UNASSIGNED`. It is not closed until
+that branch is merged and the in-app Replay is verified against the exported video on a real device (CA-RL-01 v1.1 row N).
+The open decisions it raises (historical availability, call-end cut, historical Thread names, exact range clip) are with
+the Product Owner, and none is admitted here before that decision.
+
 ### `QAN-BL-NAV-04` — No Full Personal Detail Surface Beyond the PEEK (PERSONAL-DETAIL-01)
 
 - **Title / Finding:** the Personal Detail Sheet is PEEK-only (G-7, V1). There is no full Personal detail surface for a

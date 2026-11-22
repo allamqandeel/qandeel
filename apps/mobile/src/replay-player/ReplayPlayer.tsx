@@ -30,8 +30,9 @@ import { LivingAnalysisSurface, type LivingAnalysisTopBand } from '../living-ana
 import type { ChromeLanguage } from '../orientation-chrome';
 import { ReplayMomentComposite, ReplayPreviewLimit, replayCompositeCopy, type ReplayCompositeController, type ReplayMomentControls } from '../replay-composite';
 import { replayEntryCopy, type ReplayEntryController } from '../replay-entry';
+import type { ReplayHistoryMoment } from '../runtime-entry';
 import { replayPlayerCopy } from './copy';
-import type { ReplayPlayerController, ReplayPlayerTransportView, ReplayPlayerView } from './player-controller';
+import { readingPaceMs, type ReplayPlayerController, type ReplayPlayerTransportView, type ReplayPlayerView } from './player-controller';
 import { ReplaySpine } from './ReplaySpine';
 
 export const REPLAY_PLAYER_TEST_ID = 'qandeel-replay-player';
@@ -66,6 +67,13 @@ export interface ReplayPlayerSurfaceControls {
 }
 
 const NO_SURFACE: ReplayPlayerSurface = { useControls: () => null };
+
+/**
+ * REPLAY-COSMOS-01: each moment's presentation window for the COSMOS stage — the declared reading pace the player times
+ * a paced moment with. (A clock-presented V2 moment's window is its audio window; handing the clock's windows to the
+ * stage is the named next slice, REPLAY-COSMOS-01 residue R-3.)
+ */
+const momentPaceMs = (moment: ReplayHistoryMoment): number => readingPaceMs(moment.text ?? '');
 
 const noSubscription = () => () => undefined;
 const noRevision = () => 0;
@@ -106,7 +114,8 @@ export function ReplayPlayer({ controller, language, insets, surface = NO_SURFAC
 
   let body: ReactNode;
   if (open.composite !== null) {
-    body = <ReplayMomentComposite controller={open.composite} ordinal={open.ordinal} language={language} insets={insets} top={top} controls={controls} />;
+    body = <ReplayMomentComposite controller={open.composite} ordinal={open.ordinal} language={language} insets={insets} top={top} controls={controls}
+      playing={open.playing} windowMs={momentPaceMs} />;
   } else if (open.problem === 'MOMENT_NOT_SEALED' || open.problem === 'ANALYSIS_UNAVAILABLE') {
     body = <ReplayPreviewLimit outcome={open.problem} language={language} insets={insets} top={top} />;
   } else {

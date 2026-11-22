@@ -179,10 +179,14 @@ const FROZEN = [
   ['apps/mobile/src/replay-entry/copy.ts', 'e3afc223476941ce0e7d060947a3138da2a2eefee1d0ebfb31b7773f88d6aeaa'],
 ];
 
+// REPLAY-COSMOS-01: the Replay's COSMOS stage.
+const COSMOS_STAGE = 'apps/mobile/src/replay-cosmos';
+
 const shipped = () => {
   const composite = files(COMPOSITE).filter((path) => /\.(ts|tsx)$/u.test(path) && !/\/__(tests|fixtures)__\//u.test(path));
   return {
     composite: Object.fromEntries(composite.map((path) => [path.slice(COMPOSITE.length + 1), read(path)])),
+    cosmos: Object.fromEntries(files(COSMOS_STAGE).filter((path) => /\.(ts|tsx)$/u.test(path) && !/\/__(tests|fixtures)__\//u.test(path)).map((path) => [path.slice(COSMOS_STAGE.length + 1), read(path)])),
     client: read(CLIENT),
     fixture: read(`${COMPOSITE}/__fixtures__/replay-wire.ts`),
     mobile: files('apps/mobile/src').filter((path) => /\.(ts|tsx)$/u.test(path) && !/\/__(tests|fixtures|validation)__\//u.test(path)).map((path) => [path, read(path)]),
@@ -205,8 +209,14 @@ const DETECTORS = {
     const out = [];
     const view = tsCode(w.composite['ReplayMomentComposite.tsx'] ?? '');
     if (!/import \{ LivingAnalysisSurface \} from '\.\.\/living-analysis';/u.test(view)) out.push('the screen is the ONE LivingAnalysisSurface');
-    if (!/import \{ MapSurface, mapInspectionContext, mapProjectionRequest \} from '\.\.\/map';/u.test(view)) out.push('the world is T-04 MapSurface over T-04 context');
-    if (!/<MapSurface store=\{store\} context=\{context\.context\}/u.test(view)) out.push('MapSurface is given the viewpoint store and T-04 context');
+    // REPLAY-COSMOS-01 RE-ANCHOR (PO directive "REPLAY-LOCAL-02 Mandatory Scope Amendment", 2026-11-22; the G-5 graphics
+    // assertion is replaced, not deleted): the world was T-04's MapSurface; it is now the production COSMOS stage of the
+    // Replay, drawn only when T-04's own context for the viewpoint's moment is ok, and fed the SAME controller, version,
+    // moments and viewpoint Session as the chrome (source truth). The COSMOS stage's own rules are `cosmosViolations`.
+    if (!/import \{ mapInspectionContext, mapProjectionRequest \} from '\.\.\/map';/u.test(view)) out.push('the world is gated on T-04 context for the viewpoint');
+    if (!/import \{ ReplayCosmosWorld \} from '\.\.\/replay-cosmos';/u.test(view)) out.push('the world is the Replay COSMOS stage');
+    if (!/context === null \|\| !context\.ok \|\| request === null \? null : \(\s*<ReplayCosmosWorld controller=\{controller\} version=\{version\} moments=\{moments\} sessionId=\{request\.sessionId\}/u.test(view)) out.push('the COSMOS stage is given the composite controller, version, moments and viewpoint, only over T-04 context');
+    if (/MapSurface/u.test(view)) out.push('no second world beside the COSMOS stage');
     if (!/import \{ commitMoment \} from '\.\.\/temporal-navigation';/u.test(view)) out.push('a moment change is T-06 commitMoment');
     if ((view.match(/timeline=\{null\}/gu) ?? []).length < 1) out.push('no Timeline: the player is S7-04');
     for (const [name, text] of Object.entries(w.composite)) {
@@ -214,6 +224,31 @@ const DETECTORS = {
       if (/@shopify\/react-native-skia|react-native-reanimated|\bAnimated\b|LayoutAnimation|\bCanvas\b/u.test(code)) out.push(`${name}: no drawing or motion of its own`);
       if (/integration\/composition|LivingAnalysisMap|WorldCanvas|MapCanvas|placeScene|world-chroma|world-visual/u.test(code)) out.push(`${name}: no copy or reach into the Map's graphics`);
       if (/function\s+\w*Map\w*\s*\(|const\s+\w*Map\w*\s*=\s*\(/u.test(code)) out.push(`${name}: no Replay map`);
+    }
+    return out;
+  },
+
+  // REPLAY-COSMOS-01: the Replay's COSMOS stage. The production engine only, no gesture, no wall clock, nothing live,
+  // and every disclosure behind the S7-03 adapter and the no-future guards.
+  cosmosViolations(w) {
+    const out = [];
+    const c = (name) => tsCode(w.cosmos[name] ?? '');
+    const frame = c('frame.tsx');
+    if (!/import \{ Lens, PlateFill, RungDraws, VOID \} from '\.\.\/cosmos\/skia\/parts';/u.test(frame)) out.push('the frame is drawn by the production COSMOS parts');
+    if (!/import \{ placeLabels, type PlacedLabel \} from '\.\.\/cosmos\/skia\/CosmosCanvas';/u.test(frame)) out.push('labels are laid out by the production placeLabels');
+    if (!/knowledgeAt\(scene\.timeline, t\)/u.test(frame)) out.push('the knowledge drawn at t is the timeline knowledge');
+    const history = c('history.ts');
+    if (!/discloseReplayMoment\(version, moment, analysis\.analysis\)/u.test(history) || !/mapInspectionContext\(disclosed\.entry,/u.test(history)) out.push('every stage passes the S7-03 adapter and the T-04 scene derivation');
+    if (!/personalScene\(scene, null, rtl, ORIGIN, names\)/u.test(c('stages.ts'))) out.push('the production Personal chain, with no inspection focus');
+    if (!/Math\.max\(available, m\.windowStartMs, previous\)/u.test(c('timeline.ts'))) out.push('a disclosure never precedes its availability, its moment, or the knowledge it contains');
+    if (!/const t0 = Math\.max\(atMs, free\);/u.test(c('camera-plan.ts'))) out.push('a camera segment never starts before its disclosure');
+    for (const [name, text] of Object.entries(w.cosmos)) {
+      const code = tsCode(text);
+      if (/drawAtlas|drawPath|drawPaint|drawRect|MakeRadialGradient|MakeLinearGradient|makeShader/u.test(code)) out.push(name + ': no drawing code of its own (no second engine)');
+      if (/GestureDetector|Gesture\.|react-native-gesture-handler|react-native-reanimated|useFrameCallback/u.test(code)) out.push(name + ': no gesture and no UI-thread camera, the guided camera is the plan');
+      if (name !== 'ReplayCosmosWorld.tsx' && /Date\.now|performance\.now|requestAnimationFrame/u.test(code)) out.push(name + ': nothing drawn reads a clock but presentation time');
+      if (/integration\/runtime|IntegrationRuntime|createHistoricalProjectionCache|projection\.ensure|\.ingest\(|LIVE_HEAD_ADVANCED|commitLiveEdge|conversation-session|owners\/personal|createPersonalCosmosOwner|viewpoint-store|liveFocus/u.test(code)) out.push(name + ': nothing live enters');
+      if (/map\/renderer|MapSurface|LivingAnalysisMap|integration\/composition/u.test(code)) out.push(name + ': no reach into the T-04 graphics');
     }
     return out;
   },
@@ -387,7 +422,17 @@ const PLANTED = [
   ['a Skia canvas in the composite', 'rendererViolations', add('composite', 'Glow.tsx', "import { Canvas } from '@shopify/react-native-skia';")],
   ['a copy of LivingAnalysisMap', 'rendererViolations', add('composite', 'Copied.tsx', "import { LivingAnalysisMap } from '../integration/composition/LivingAnalysisMap';")],
   ['an animation of its own', 'rendererViolations', add('composite', 'Fade.tsx', "import Animated from 'react-native-reanimated';")],
-  ['MapSurface replaced', 'rendererViolations', edit('composite', 'ReplayMomentComposite.tsx', '<MapSurface store={store} context={context.context}', '<View store={store} context={context.context}')],
+  ['the COSMOS stage replaced', 'rendererViolations', edit('composite', 'ReplayMomentComposite.tsx', '<ReplayCosmosWorld controller={controller}', '<View controller={controller}')],
+  ['MapSurface back beside the stage', 'rendererViolations', edit('composite', 'ReplayMomentComposite.tsx', '<ReplayCosmosWorld controller={controller}', '<MapSurface store={store} /><ReplayCosmosWorld controller={controller}')],
+  ['a stage drawn without T-04 context', 'rendererViolations', edit('composite', 'ReplayMomentComposite.tsx', 'context === null || !context.ok || request === null ? null', 'request === null ? null')],
+  ['a painter of its own', 'cosmosViolations', add('cosmos', 'painter.ts', 'export const p = (canvas) => canvas.drawAtlas(a, b, c, d);')],
+  ['a gesture on the Replay camera', 'cosmosViolations', add('cosmos', 'pan.tsx', "import { Gesture, GestureDetector } from 'react-native-gesture-handler';")],
+  ['a frame reading the wall clock', 'cosmosViolations', edit('cosmos', 'frame.tsx', 'const clock = t / 1000;', 'const clock = Date.now() / 1000;')],
+  ['the live Personal owner in the Replay', 'cosmosViolations', add('cosmos', 'owner.ts', "import { createPersonalCosmosOwner } from '../cosmos/product/owners/personal';")],
+  ['a disclosure at its moment, not its availability', 'cosmosViolations', edit('cosmos', 'timeline.ts', 'Math.max(available, m.windowStartMs, previous)', 'Math.max(m.windowStartMs, previous)')],
+  ['a camera ahead of its disclosure', 'cosmosViolations', edit('cosmos', 'camera-plan.ts', 'const t0 = Math.max(atMs, free);', 'const t0 = free;')],
+  ['a stage around the adapter', 'cosmosViolations', edit('cosmos', 'history.ts', 'discloseReplayMoment(version, moment, analysis.analysis)', "({ status: 'DISCLOSED', entry: analysis.analysis })")],
+  ['an inspection focus drawn', 'cosmosViolations', edit('cosmos', 'stages.ts', 'personalScene(scene, null, rtl, ORIGIN, names)', 'personalScene(scene, focus, rtl, ORIGIN, names)')],
   ['the live runtime in the composite', 'liveStateViolations', add('composite', 'live.ts', "import type { IntegrationRuntime } from '../integration/runtime/integration-runtime';")],
   ['an authorised Map act on the viewpoint', 'liveStateViolations', edit('composite', 'viewpoint-store.ts', '    camera: initialCameraIntent(WORLD_ORIGIN, undefined, depth),\n  });', '    camera: initialCameraIntent(WORLD_ORIGIN, undefined, depth),\n  }, { mapActionAuthority: MAP_ACTION_AUTHORITY });')],
   ['the conversation Session as the viewpoint', 'liveStateViolations', edit('composite', 'viewpoint-store.ts', 'session: { id: replayViewpointKey(version) }', 'session: { id: sessionId }')],
