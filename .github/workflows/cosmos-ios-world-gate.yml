@@ -73,6 +73,7 @@ jobs:
       # PO, 2026-11-23: the mandatory gate carries no case of the deferred first-tap limitation, and P-TAP-RAIL / P-LAND
       # are never a stage's first touch. Checked before anything is built, so a reintroduction fails at once.
       - {name: Gate composition contract (no deferred first-tap case), run: npm run test:cosmos-ios-world-gate-composition-contract}
+      - {name: Maestro evidence contract (QAN-BL-CI-04), run: npm run test:ci-04-maestro-evidence-contract}
       - {name: Install dependencies from the root lockfile, run: npm ci}
       - name: Select the S401 proof entry (this ephemeral checkout only; recorded)
         env: {S401_SHARED_PROOF: '1'}
@@ -167,6 +168,9 @@ jobs:
           else echo 'no results.tsv: every case NOT TESTED' | tee -a "$GITHUB_STEP_SUMMARY"; fi
           # The job passes only when every case, the World gate's and the native ones, is PASS.
           [ -f "$f" ] && ! tail -n +2 "$f" | awk -F'\t' '$2 != "PASS"' | grep -q .
+      # QAN-BL-CI-04: the upload is ATTEMPTED also when the job is cancelled or stopped at its timeout, the runs a hang is
+      # most likely to end. Best-effort only: a runner that is lost, or a cancellation that ends the job before this step
+      # runs, still leaves no artifact, so an absent artifact is never read as "nothing went wrong".
       - uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
+        if: ${{ always() }}
         with: {name: 'ios-world-gate-${{ matrix.cell }}', path: '${{ runner.temp }}/evidence', if-no-files-found: warn}

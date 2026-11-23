@@ -28,14 +28,67 @@ set -u
 OUT="$1"; UDID="$2"; HERE="$(cd "$(dirname "$0")" && pwd)"; F="$HERE/flows"; ROOT="$(cd "$HERE/../.." && pwd)"
 PORT="${MAESTRO_IOS_DRIVER_PORT:-22087}"; FIX='.*(Fixture Map World|عالم الخريطة الاختباري).*'
 mkdir -p "$OUT"; LOG="$OUT/gate.log"; RES="$OUT/results.tsv"; printf 'case\tresult\tdetail\n' > "$RES"
+# QAN-BL-CI-04: every Maestro step's own outcome, recorded APART from the case verdicts in results.tsv — the process's exit
+# status, whether its log proves its flow ran (acted), and its timeline. A row here never decides a case.
+STEPS="$OUT/steps.tsv"; printf 'step\tflow\texit\tacted\tdebug_log\ttimeline\n' > "$STEPS"
 say() { echo "[$(date -u +%H:%M:%S)] $*" | tee -a "$LOG"; }
 result() { printf '%s\t%s\t%s\n' "$1" "$2" "$3" >> "$RES"; say "RESULT $1 $2 — $3"; }
 # Maestro's own step output is kept in <OUT>/<name>.log (R9: with --quiet it was discarded, so gate 44321160183's failed
 # p-door left an empty log and could not show whether its tap or its wait failed).
+# QAN-BL-CI-04 (PO, 2026-11-23; PR #405 gate 45183916103, i17-ar): every call also writes Maestro's debug folder to a
+# known place, <OUT>/maestro/<name> (maestro.log carries each command's own timestamps), and its timeline is logged after
+# the exit line: where the time went (maestro-phases.mjs) and whether the step did its part (acted=). The bound is
+# unchanged and nothing is retried. After ANY non-zero exit, not only a door, the same evidence is kept (abnormal).
+# MT_RC / MT_ACTED / MT_PHASES / MT_NAME describe the last call, for the case that judges it.
+now_ms() { perl -MTime::HiRes=time -e 'printf("%d\n", time() * 1000)' 2>/dev/null || echo "$(date +%s)000"; }
 mt() { local n="$1" f="$2"; shift 2; local a=(); for kv in "$@"; do a+=(-e "$kv"); done
+  local d="$OUT/maestro/$n" t0 t1; rm -rf "$d"; mkdir -p "$d"; : > "$d/started.marker"; t0="$(now_ms)"
   node "$ROOT/scripts/validation/bounded-run.mjs" --seconds 150 --label "$n" -- \
-    maestro --device "$UDID" test ${a[@]+"${a[@]}"} "$F/$f" --no-reinstall-driver --driver-host-port "$PORT" > "$OUT/$n.log" 2>&1; local rc=$?
-  say "  maestro $n ($f) exit $rc"; return $rc; }
+    maestro --device "$UDID" test ${a[@]+"${a[@]}"} "$F/$f" --no-reinstall-driver --driver-host-port "$PORT" \
+    --debug-output "$d" --flatten-debug-output > "$OUT/$n.log" 2>&1; local rc=$?
+  t1="$(now_ms)"; MT_NAME="$n"; MT_RC=$rc
+  MT_PHASES="$(node "$HERE/maestro-phases.mjs" "$d/maestro.log" "$t0" "$t1" 150 "$F/$f")"
+  MT_ACTED="$(printf '%s' "$MT_PHASES" | sed -n 's/.* acted=\([a-z]*\).*/\1/p')"
+  printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$n" "$f" "$rc" "${MT_ACTED:-none}" "$([ -s "$d/maestro.log" ] && echo present || echo absent)" "$MT_PHASES" >> "$STEPS"
+  say "  maestro $n ($f) exit $rc"; say "    timeline $n: $MT_PHASES"
+  [ "$rc" = 0 ] || abnormal "$n" "$f" "$rc"
+  return $rc; }
+# abnormal <name> <flow> <exit>: after a Maestro call that did not exit 0 — what tells a slow or stuck driver from an
+# application failure (QAN-BL-CI-04 "a hang can be told from an application failure by the evidence it keeps"): the screen
+# and hierarchy now, whether the XCTest driver still answers, which Maestro processes outlived the watchdog (they are
+# stopped, so that no dying CLI drives the simulator under the next case), and the simulator's log of the Maestro driver
+# and of the app's JavaScript for the last 5 minutes. Nothing is retried and no verdict is taken here. When the step wrote
+# no maestro.log of its own (a CLI that died before installing its logger, or wrote elsewhere), the fallback is any Maestro
+# session folder created after this step started (~/.maestro/tests, Maestro's default), copied beside it; the record says
+# which one was kept, or that none exists. Every part is best-effort: one that fails is recorded, the others still run.
+abnormal() {
+  local n="$1" d="$OUT/maestro/$1" st left fb=none; mkdir -p "$d"; shot "$n-abnormal" || true; dump "$n-abnormal" || true
+  if [ ! -s "$d/maestro.log" ]; then
+    fb="$(find "$HOME/.maestro/tests" -mindepth 1 -maxdepth 1 -type d -newer "$d/started.marker" 2>/dev/null | sort | tail -n 1)"
+    if [ -n "$fb" ]; then cp -R "$fb" "$d/fallback-session" 2>/dev/null || fb="$fb (copy failed)"; else fb=none; fi
+  fi
+  st="$(curl --silent --max-time 10 -o /dev/null -w 'HTTP %{http_code} in %{time_total} s' "http://127.0.0.1:$PORT/status" 2>/dev/null || echo 'no answer within 10 s')"
+  left="$(pgrep -fl "$HOME/.maestro/" 2>/dev/null || true)"
+  [ -n "$left" ] && { pkill -KILL -f "$HOME/.maestro/" 2>/dev/null || true; }
+  { echo "taken-at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"; echo "step=$n flow=$2 exit=$3"; echo "timeline=$MT_PHASES"
+    echo "driver-status=$st"; echo "survivors=${left:-none}"
+    echo "debug-log=$([ -s "$d/maestro.log" ] && echo present || echo absent)"; echo "fallback-session=$fb"
+    echo "screenshot=$([ -s "$OUT/$n-abnormal.png" ] && echo kept || echo missing)"; echo "hierarchy=$([ -s "$OUT/$n-abnormal.json" ] && echo kept || echo missing)"; } > "$d/abnormal.txt"
+  node "$ROOT/scripts/validation/bounded-run.mjs" --seconds 90 --label "$n-simlog" -- xcrun simctl spawn "$UDID" log show --last 5m \
+    --style ndjson --predicate 'process CONTAINS "maestro-driver" OR subsystem == "com.facebook.react.log"' > "$d/simulator-log.ndjson" 2> "$d/simulator-log.err"
+  say "  $n abnormal (exit $3, acted=${MT_ACTED:-none}): driver $st; survivors ${left:+stopped}${left:-none}; evidence in maestro/$n"
+}
+# answered: whether the last Maestro step's outcome is known, so that the case may judge what the screen shows — it exited
+# 0 (it did its part), it exited 1 (Maestro ran the flow and reported its own failed command: the application's answer,
+# judged exactly as before QAN-BL-CI-04), or its own log proves every command of its flow COMPLETED (acted=yes: a process
+# that did its part and then failed to exit, the P-DOOR shape of gate 45183916103). Any other exit — the watchdog's 124,
+# the /deviceInfo fail-fast 125, a crash — is not an answer: the case is NOT TESTED, never FAIL and never PASS.
+answered() { [ "$MT_RC" = 0 ] || [ "$MT_RC" = 1 ] || [ "${MT_ACTED:-}" = yes ]; }
+# infra <what>: why <what> is NOT TESTED when the step that should have done it gave no answer
+infra() { echo "INFRASTRUCTURE: Maestro step $MT_NAME exited $MT_RC and its log does not prove its flow ran (acted=${MT_ACTED:-none}); $1 is not evidence either way"; }
+# step_why <default>: the reason an entry chain stopped. A FAILED Maestro assertion (exit 1) is the application's answer and
+# keeps <default>; a stopped or crashed step is not, and says so instead of claiming what the screen did.
+step_why() { case "$MT_RC" in 0|1) echo "$1";; *) echo "$1 — not established: $(infra 'the entry')";; esac; }
 shot() { xcrun simctl io "$UDID" screenshot "$OUT/$1.png" >/dev/null 2>&1; }
 dump() { curl --silent --max-time 30 -X POST -H 'Content-Type: application/json' \
   --data '{"appIds":["com.qandeel.mobile"],"excludeKeyboardElements":false}' "http://127.0.0.1:$PORT/viewHierarchy" > "$OUT/$1.json"; }
@@ -54,25 +107,21 @@ say "device widthPoints=${wpt:-UNKNOWN}"
 # p-door, tapped as soon as the thread appeared, did not reach the Analysis. It lets the gate measure what it is for, the
 # stage's gestures. It is NOT evidence that an early tap works: that cold-launch observation stays open as SE-FU-1,
 # owned by D-3 (contract §21.14). The tap is never retried; a failed door is recorded (screenshot and hierarchy).
+# ENTER_WHY: why it did not enter. A door step stopped at its bound is not reported as "did not open" (gate 45183916103:
+# every command of p-door COMPLETED, the rail was visible, and the CLI was still running at 150 s): the reason names the
+# stop, what the step's own log shows, and whether the Analysis rail is on screen afterwards. The verdict stays NOT TESTED.
 enter() {
-  mt "$1-launch" launch.yaml "NAME=gate-$1-launch" || return 1
+  ENTER_WHY='the Personal Analysis did not open'
+  mt "$1-launch" launch.yaml "NAME=gate-$1-launch" || { ENTER_WHY="$(step_why 'the Personal Conversation did not open')"; return 1; }
   sleep 8
   mt "$1-door" timed-id.yaml "NAME=gate-$1-door" TAP=qandeel-depth-to-analysis WAIT=qandeel-cosmos-timeline-rail ||
-    { shot "$1-door-failed"; dump "$1-door-failed"; door_evidence "$1"; return 1; }
+    { shot "$1-door-failed"; dump "$1-door-failed"
+      if [ "$MT_RC" != 1 ]; then
+        ENTER_WHY="INFRASTRUCTURE: the door step $MT_NAME exited $MT_RC (acted=${MT_ACTED:-none}); after the stop the Analysis rail is $([ "$(q "$1-door-failed" id qandeel-cosmos-timeline-rail)" != none ] && echo visible || echo 'not visible'); the cases were not run"
+      fi; return 1; }
 }
-# door_evidence <name>: AFTER a failed door only (PO, 2026-11-21; DIAG-SE-DOOR run 44928574802 did not reproduce the SE
-# failure of gate 44908792454 in 10 cycles), what tells a lost tap from a driver failure: Maestro's debug folder for that
-# step (its command records carry each command's own timestamps and durations), the simulator's log of the Maestro XCTest
-# driver and of the app's JavaScript for the last 5 minutes, and the wall-clock time this was taken. Nothing is recorded
-# while a case runs (no video, no log stream), so the tap sequence, its waits and its timing are those of every other run.
-door_evidence() {
-  local d="$OUT/$1-door-evidence" m; mkdir -p "$d"; date -u +%Y-%m-%dT%H:%M:%SZ > "$d/taken-at.txt"
-  m="$(sed -n '/==== Debug output/{n;p;}' "$OUT/$1-door.log" | tr -d '[:space:]')"
-  [ -n "$m" ] && [ -d "$m" ] || m="$(ls -td "$HOME"/.maestro/tests/*/ 2>/dev/null | head -n 1)"
-  [ -n "$m" ] && cp -R "$m" "$d/maestro" 2>/dev/null; echo "maestro debug folder: ${m:-none}" >> "$d/taken-at.txt"
-  node "$ROOT/scripts/validation/bounded-run.mjs" --seconds 90 --label "$1-door-log" -- xcrun simctl spawn "$UDID" log show --last 5m     --style ndjson --predicate 'process CONTAINS "maestro-driver" OR subsystem == "com.facebook.react.log"' > "$d/simulator-log.ndjson" 2> "$d/simulator-log.err"
-  say "  $1-door evidence kept in $(basename "$d") (maestro: ${m:+kept})"
-}
+# (door_evidence, PO 2026-11-21, kept evidence after a failed door only; since QAN-BL-CI-04 the same evidence is kept after
+# every abnormal Maestro step by abnormal(), and the debug folder is the step's own, never "the newest folder".)
 # tapcase <case> <name> <point> [f1]: one tap, then the PEEK within 6 s; the PEEK is closed by its handle afterwards.
 # With f1 (COSMOS-FINAL-01 F-1): the PEEK's statement is the server's answer about the inspected object, read within 6 s
 # of the PEEK opening. T-08's technical sentences for "no answer held" / "cannot be described" (either language) FAIL it.
@@ -89,6 +138,7 @@ tapcase() {
       else result F1-RESOLVED PASS "the PEEK states the resolved inspection: $s"; fi
     fi
     mt "$2-close" tap.yaml ID=cosmos-detail-sheet-handle IDX=0; sleep 2
+  elif ! answered; then result "$1" 'NOT TESTED' "tap at $3: $(infra 'the missing PEEK')"; [ "${4:-}" = f1 ] && result F1-RESOLVED 'NOT TESTED' 'the PEEK did not open'
   else result "$1" FAIL "tap at $3: no qandeel-personal-peek within 6 s"; [ "${4:-}" = f1 ] && result F1-RESOLVED 'NOT TESTED' 'the PEEK did not open'; fi
 }
 # initstage <name>: NOT A CASE, and it writes no row to results.tsv (PO directive, 2026-11-23). The first touch a freshly
@@ -103,7 +153,7 @@ initstage() {
   local n="$1" pt a; shot "$n-init-0"; pt="$(node_at "$n-init-0")"
   if [ "$pt" = none ]; then printf '%s\tno node core for the initialization tap\n' "$n" >> "$OUT/init.tsv"; say "  $n init: no node core"; INIT_WHY="no node core for the initialization tap"; return 1; fi
   mt "$n-init" tap-point.yaml "P=$pt"; a="$(poll "$n-init" 6 id qandeel-personal-peek)"
-  printf '%s\tinitialization tap at %s: %s\n' "$n" "$pt" "$([ "$a" != none ] && echo 'the PEEK opened' || echo 'no PEEK within 6 s (not judged)')" >> "$OUT/init.tsv"
+  printf '%s\tinitialization tap at %s: %s\n' "$n" "$pt" "$([ "$a" != none ] && echo 'the PEEK opened' || { answered && echo 'no PEEK within 6 s (not judged)' || echo "no PEEK within 6 s; $(infra 'it')"; })" >> "$OUT/init.tsv"
   say "  $n init: tap at $pt ($(tail -n 1 "$OUT/init.tsv" | cut -f2))"
   # restoration: a PEEK (also one that answered late) is closed, and a camera off its home position is brought back
   sleep 2; dump "$n-init-1"
@@ -120,14 +170,16 @@ initstage() {
 }
 # pancase <case> <name> <flow>: from a fresh home stage, one pan, then Back available
 pancase() {
-  enter "$2" || { result "$1" 'NOT TESTED' 'the Personal Analysis did not open'; return; }
+  enter "$2" || { result "$1" 'NOT TESTED' "$ENTER_WHY"; return; }
   sleep 4; dump "$2-0"
   if backOn "$2-0"; then result "$1" 'NOT TESTED' 'the stage was not at home before the pan'; return; fi
   mt "$2" "$3"; sleep 2; dump "$2"; shot "$2"
-  if backOn "$2"; then result "$1" PASS "the pan ($3) moved the camera off the centre (Back available)"; else result "$1" FAIL "after the pan ($3), Back is not available"; fi
+  if backOn "$2"; then result "$1" PASS "the pan ($3) moved the camera off the centre (Back available)"
+  elif ! answered; then result "$1" 'NOT TESTED' "the pan ($3): $(infra 'the unmoved camera')"
+  else result "$1" FAIL "after the pan ($3), Back is not available"; fi
 }
 if ! enter p; then
-  for c in P-TAP-RAIL P-TAP F1-RESOLVED P-PAN P-PAN-RAIL; do result "$c" 'NOT TESTED' 'the Personal Analysis did not open'; done
+  for c in P-TAP-RAIL P-TAP F1-RESOLVED P-PAN P-PAN-RAIL; do result "$c" 'NOT TESTED' "$ENTER_WHY"; done
 elif sleep 5; ! initstage p; then
   for c in P-TAP-RAIL P-TAP F1-RESOLVED; do result "$c" 'NOT TESTED' "the stage's initialization: $INIT_WHY"; done
   pancase P-PAN p-pan swipe-pan-open.yaml
@@ -168,6 +220,7 @@ nodetap() {
     mt "$n-$i" tap-point.yaml "P=$pt"; a="$(poll "$n-$i" 5 "$@")"; shot "$n-$i"; now="$(q "$n-$i" id-label "$sid")"
     path="$path -> tap $i at $pt -> $now"
     if [ "$a" != none ]; then nt_result "$c" PASS "$what opened after $i node tap(s) ($path)"; return; fi
+    if { [ "$now" = "$was" ] || [ "$now" = none ]; } && ! answered; then nt_result "$c" 'NOT TESTED' "tap $i: $(infra "a depth that did not change") ($path)"; return; fi
     if [ "$now" = "$was" ] || [ "$now" = none ]; then nt_result "$c" FAIL "tap $i neither opened $what nor disclosed a deeper depth ($path)"; return; fi
     was="$now"
   done
@@ -186,11 +239,12 @@ if shared_enter s; then
   mt s-far tap-point.yaml "P=50%,24%"; sleep 2; dump s-far; shot s-far; w1="$(q s-far id-label qandeel-shared-field-world:semantic-step)"
   # The intended transition and its final state: the depth leaves FAR, and the stage's Back is there to return.
   if [ "$w0" != none ] && [ "$w1" != none ] && [ "$w1" != "$w0" ] && backOn s-far; then result S-FAR-TAP PASS "'$w0' -> '$w1'; Back available"
+  elif ! answered; then result S-FAR-TAP 'NOT TESTED' "'$w0' -> '$w1': $(infra 'the unchanged depth')"
   else result S-FAR-TAP FAIL "'$w0' -> '$w1'$(backOn s-far || echo '; Back not available')"; fi
-else result S-FAR-TAP 'NOT TESTED' 'the Shared Fixture Map World did not open'; fi
+else result S-FAR-TAP 'NOT TESTED' "$(step_why 'the Shared Fixture Map World did not open')"; fi
 # S-TAP on a fresh entry: the FAR tap above may leave the stage over an empty region
 if shared_enter st; then sleep 5; dump st-0; nodetap S-TAP st qandeel-shared-field-world:semantic-step 'the detail sheet' id cosmos-detail-sheet-handle
-else result S-TAP 'NOT TESTED' 'the Shared Fixture Map World did not open again'; fi
+else result S-TAP 'NOT TESTED' "$(step_why 'the Shared Fixture Map World did not open again')"; fi
 
 # ── COSMOS-FINAL-01 coverage (PO decision 2026-11-20; contract §21.1 "Coverage") ─────────────────────────────────────
 # S-EXPANDED    the Shared sheet S-TAP opened: its handle (offering "Show full details" because the content overflows
@@ -216,6 +270,7 @@ if grep -q $'^S-TAP\tPASS' "$RES"; then
     h1="$(q sx-1 id-label cosmos-detail-sheet-handle)"; t1="$(y_of sx-1 cosmos-detail-sheet)"
     if printf '%s' "$h1" | grep -Eq "$SHEET_COLLAPSE" && [ -n "$t0" ] && [ -n "$t1" ] && [ "$t1" != none ] && [ $((t0 - t1)) -ge 40 ]; then
       result S-EXPANDED PASS "sheet top $t0 -> $t1 pt; handle '$h0' -> '$h1'"; sd=sx-1
+    elif ! answered; then result S-EXPANDED 'NOT TESTED' "sheet top $t0 -> $t1 pt: $(infra 'the unexpanded sheet')"
     else result S-EXPANDED FAIL "sheet top $t0 -> $t1 pt; handle '$h0' -> '$h1'"; fi
   fi
   src="$(q "$sd" id-prefix qandeel-shared-source-)"
@@ -230,44 +285,49 @@ if grep -q $'^S-TAP\tPASS' "$RES"; then
   else
     mt sx-conv scroll-to-id.yaml ID=qandeel-shared-panel-conversation; a="$(poll sx-conv 10 id qandeel-shared-thread)"; shot sx-conv
     if [ "$a" != none ]; then result S-CONV-ENTRY PASS "the panel's Conversation act opened the World's conversation"
+    elif ! answered; then result S-CONV-ENTRY 'NOT TESTED' "$(infra 'the missing conversation')"
     else result S-CONV-ENTRY FAIL "no qandeel-shared-thread within 10 s of the panel's Conversation act"; fi
   fi
-else for c in S-EXPANDED S-SOURCES S-CONV-ENTRY; do result "$c" 'NOT TESTED' 'the Shared sheet did not open (S-TAP)'; done; fi
+else for c in S-EXPANDED S-SOURCES S-CONV-ENTRY; do result "$c" 'NOT TESTED' 'S-TAP did not pass, so no Shared sheet was open'; done; fi
 
 # landcase <case> <name> <expand?>: the sheet is open in portrait; turn to landscape and back.
 landcase() {
-  local c="$1" n="$2" r w h hin back ok=1 x="" xl xin
+  local c="$1" n="$2" r w h hin back ok=1 x="" xl xin proven=1 why=""
   if ! mt "$n-l" orient.yaml O=LANDSCAPE_LEFT; then result "$c" 'NOT TESTED' 'the simulator could not be turned (Maestro setOrientation)'; return; fi
   sleep 3; dump "$n-l"; shot "$n-l"; r="$(q "$n-l" root)"; w="$(echo "$r" | cut -d, -f3)"; h="$(echo "$r" | cut -d, -f4)"
   hin="$(q "$n-l" inside cosmos-detail-sheet-handle | head -1)"; [ "$hin" = inside ] || ok=0
   if [ "${3:-}" = expand ] && q "$n-l" id-label cosmos-detail-sheet-handle | grep -Eq "$SHEET_EXPAND"; then
-    mt "$n-lx" tap.yaml ID=cosmos-detail-sheet-handle IDX=0; sleep 2; dump "$n-lx"; shot "$n-lx"
+    mt "$n-lx" tap.yaml ID=cosmos-detail-sheet-handle IDX=0; local lxwhy=""; answered || lxwhy="$(infra 'the landscape expansion')"; sleep 2; dump "$n-lx"; shot "$n-lx"
     xl="$(q "$n-lx" id-label cosmos-detail-sheet-handle | head -1)"; xin="$(q "$n-lx" inside cosmos-detail-sheet-handle | head -1)"
     x="expanded in landscape: handle '$xl' $xin; "
-    { printf '%s' "$xl" | grep -Eq "$SHEET_COLLAPSE" && [ "$xin" = inside ]; } || ok=0
+    { printf '%s' "$xl" | grep -Eq "$SHEET_COLLAPSE" && [ "$xin" = inside ]; } || { ok=0; [ -n "$lxwhy" ] && why="$lxwhy" || proven=0; }
   fi
-  mt "$n-p" orient.yaml O=PORTRAIT; sleep 3; dump "$n-p"; shot "$n-p"; back="$(q "$n-p" inside cosmos-detail-sheet-handle | head -1)"
+  mt "$n-p" orient.yaml O=PORTRAIT; local pwhy=""; answered || pwhy="$(infra 'the portrait handle')"; sleep 3; dump "$n-p"; shot "$n-p"; back="$(q "$n-p" inside cosmos-detail-sheet-handle | head -1)"
   # Gate 44694686720: a return to portrait that did not take left every later case on a landscape screen. One more
   # attempt when the window is still wider than tall; the case's own verdict is unchanged by it.
   local pr; pr="$(q "$n-p" root)"
   if [ "$pr" != none ] && [ "$(echo "$pr" | cut -d, -f3)" -gt "$(echo "$pr" | cut -d, -f4)" ]; then say "  $n: still landscape ($pr); turning upright again"; mt "$n-p2" orient.yaml O=PORTRAIT; sleep 3; fi
-  [ "$back" = inside ] || ok=0
+  [ "$back" = inside ] || { ok=0; [ -n "$pwhy" ] && why="${why:+$why; }$pwhy" || proven=0; }
+  [ "$hin" = inside ] || proven=0
   if [ "$r" = none ] || [ -z "$w" ] || [ -z "$h" ] || [ "$w" -le "$h" ]; then result "$c" FAIL "the app did not turn to landscape (window $r)"
+  elif [ "$ok" = 0 ] && [ "$proven" = 1 ]; then result "$c" 'NOT TESTED' "landscape window $r: handle inside; ${x}portrait again: handle $back — $why"
   elif [ "$ok" = 1 ]; then result "$c" PASS "landscape window $r: handle inside; ${x}portrait again: handle inside"
   else result "$c" FAIL "landscape window $r: handle $hin; ${x}portrait again: handle $back"; fi
 }
 NT_QUIET=1
 if shared_enter sl; then sleep 5; dump sl-0; nodetap S-LAND sl qandeel-shared-field-world:semantic-step 'the detail sheet' id cosmos-detail-sheet-handle
-  if [ "$NT_LAST" = PASS ]; then landcase S-LAND sl expand; else result S-LAND 'NOT TESTED' "the Shared sheet did not open: $NT_DETAIL"; fi
-else result S-LAND 'NOT TESTED' 'the Shared Fixture Map World did not open'; fi
+  if [ "$NT_LAST" = PASS ]; then landcase S-LAND sl expand
+  elif [ "$NT_LAST" = 'NOT TESTED' ]; then result S-LAND 'NOT TESTED' "the Shared sheet was not opened: $NT_DETAIL"
+  else result S-LAND 'NOT TESTED' "the Shared sheet did not open: $NT_DETAIL"; fi
+else result S-LAND 'NOT TESTED' "$(step_why 'the Shared Fixture Map World did not open')"; fi
 unset NT_QUIET
 
 if mt u-launch launch.yaml NAME=gate-u-launch && mt u-seed link.yaml URL=qandeel://s401-proof/public/seed \
   && mt u-enter tap.yaml ID=qandeel-switcher-public_world IDX=0 && mt u-allow link.yaml URL=qandeel://s401-proof/public/allow \
   && mt u-field wait-id.yaml ID=qandeel-public-search T=30000; then
   sleep 5; dump u-0; nodetap U-TAP u qandeel-public-field-world:semantic-step 'the Public panel' id-prefix qandeel-public-panel
-  if grep -q $'^U-TAP\tPASS' "$RES"; then landcase U-LAND u; else result U-LAND 'NOT TESTED' 'the Public panel did not open (U-TAP)'; fi
-else result U-TAP 'NOT TESTED' 'the Public field did not open'; result U-LAND 'NOT TESTED' 'the Public field did not open'; fi
+  if grep -q $'^U-TAP\tPASS' "$RES"; then landcase U-LAND u; else result U-LAND 'NOT TESTED' 'U-TAP did not pass, so no Public panel was open'; fi
+else why="$(step_why 'the Public field did not open')"; result U-TAP 'NOT TESTED' "$why"; result U-LAND 'NOT TESTED' "$why"; fi
 
 if mt se-launch launch.yaml NAME=gate-se-launch && mt se-seed link.yaml URL=qandeel://s401-proof/knowledge/seed \
   && mt se-worlds timed-text.yaml NAME=gate-se-shared TAP=qandeel-switcher-shared_world "WAIT=$SUMMER" \
@@ -275,14 +335,14 @@ if mt se-launch launch.yaml NAME=gate-se-launch && mt se-seed link.yaml URL=qand
   a="$(poll se 15 id qandeel-shared-field-empty)"; shot se
   if [ "$a" != none ]; then result S-EMPTY PASS "a Shared World with no places shows its empty field: '$(q se id-label qandeel-shared-field-empty | head -1)'"
   else result S-EMPTY FAIL "no qandeel-shared-field-empty within 15 s in a World with no places"; fi
-else result S-EMPTY 'NOT TESTED' 'the World with no places did not open'; fi
+else result S-EMPTY 'NOT TESTED' "$(step_why 'the World with no places did not open')"; fi
 if mt ue-launch launch.yaml NAME=gate-ue-launch && mt ue-seed link.yaml URL=qandeel://s401-proof/public/seed-empty \
   && mt ue-enter tap.yaml ID=qandeel-switcher-public_world IDX=0 && mt ue-allow link.yaml URL=qandeel://s401-proof/public/allow \
   && mt ue-field wait-id.yaml ID=qandeel-public-search T=30000; then
   a="$(poll ue 15 id qandeel-public-field-empty)"; shot ue
   if [ "$a" != none ]; then result U-EMPTY PASS "a served Public field with no Experience shows its empty field: '$(q ue id-label qandeel-public-field-empty | head -1)'"
   else result U-EMPTY FAIL "no qandeel-public-field-empty within 15 s of a served field with no Experience"; fi
-else result U-EMPTY 'NOT TESTED' 'the Public World did not open'; fi
+else result U-EMPTY 'NOT TESTED' "$(step_why 'the Public World did not open')"; fi
 # P-LAND's PEEK is opened by a tap that is not the stage's first touch either (gate 45072277036, small-en: the first
 # tap after the entry opened no PEEK), so the same non-gating initialization comes first.
 if enter pl; then
@@ -293,10 +353,10 @@ if enter pl; then
     if [ "$pt" = none ]; then result P-LAND 'NOT TESTED' 'no node core visible on the Personal stage'
     else
       mt pl-tap tap-point.yaml "P=$pt"; a="$(poll pl-tap 6 id qandeel-personal-peek)"
-      if [ "$a" = none ]; then result P-LAND 'NOT TESTED' "tap at $pt opened no PEEK"; else landcase P-LAND pl; fi
+      if [ "$a" = none ]; then result P-LAND 'NOT TESTED' "tap at $pt opened no PEEK$(answered || echo "; $(infra 'it')")"; else landcase P-LAND pl; fi
     fi
   fi
-else result P-LAND 'NOT TESTED' 'the Personal Analysis did not open'; fi
+else result P-LAND 'NOT TESTED' "$ENTER_WHY"; fi
 
 say "done"; cat "$RES" | tee -a "$LOG"
 ! grep -qv -e $'\tPASS\t' -e '^case' "$RES"

@@ -206,6 +206,7 @@ jobs:
       - {name: Verify Connected Worlds I-03 authority / consent / EffectiveContext phase closure contract (I-03G), run: npm run test:connected-worlds-i03-authority-closure-contract}
       - {name: Verify task closure governance contract (BG-08 reconciliation + BG-09 status synchronization), run: npm run test:task-closure-governance-contract}
       - {name: Verify the iOS World gate composition (no deferred first-tap case in the mandatory gate), run: npm run test:cosmos-ios-world-gate-composition-contract}
+      - {name: Verify the iOS World gate Maestro evidence (QAN-BL-CI-04; no-answer steps are never FAIL), run: npm run test:ci-04-maestro-evidence-contract}
       - {name: Verify W3-MEGA-U U1 QANDEEL Understanding projection authority static contract, run: npm run test:w3-mega-u1-understanding-projection-contract}
       - {name: Verify W3-MEGA-U U2 exact-revision discussion focus (API side of the U2 surface contract), run: npm run test:w3-mega-u2-understanding-surface-contract}
       - {name: Verify W3-MEGA-U U3 Contested / Under Review runtime static contract, run: npm run test:w3-mega-u3-contested-runtime-contract}
