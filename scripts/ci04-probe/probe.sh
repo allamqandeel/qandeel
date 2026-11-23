@@ -47,6 +47,6 @@ env -u ANDROID_HOME -u ANDROID_SDK_ROOT -u ANDROID_SDK_HOME -u ANDROID_SDK -u AN
 say "cds archive: $(ls -la "$CDS" 2>&1)"
 for rep in 1 2 3 4 5 6; do for v in A B C D; do call idle "$v" "$rep"; done; done
 n="$(sysctl -n hw.ncpu)"; pids=""; for i in $(seq 1 "$n"); do yes > /dev/null & pids="$pids $!"; done; say "load: $n busy loops ($pids)"
-for rep in 1 2 3; do for v in A B C D; do call busy "$v" "$rep"; done; done
+for rep in 1 2 3 4 5; do for v in A B C D; do call busy "$v" "$rep"; done; done
 kill $pids 2>/dev/null || true
 node "$HERE/summarise.mjs" "$TSV" | tee "$OUT/summary.txt"
