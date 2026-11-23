@@ -1,0 +1,57 @@
+name: CI-04 Maestro startup probe (measurement only, NOT FOR MERGE)
+# QAN-BL-CI-04 (PO, 2026-11-23): measures where a Maestro cli-2.10.0 call spends its time before the first flow command,
+# on the iOS World gate's runner image, Xcode, simulator runtime, JDK and pinned Maestro build. It builds no app, runs no
+# gate case and asserts nothing about the product. It runs only on a push to its own throwaway branch.
+on:
+  push:
+    branches: ['ci/ci-04-maestro-probe']
+concurrency:
+  group: ci04-maestro-startup-probe-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+env:
+  CI: 1
+  MAESTRO_CLI_NO_ANALYTICS: 1
+  MAESTRO_VERSION: 2.10.0
+  MAESTRO_ZIP_SHA256: 29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991
+  IOS_RUNTIME_SUFFIX: iOS-26-5
+jobs:
+  probe:
+    name: Maestro startup phases — iPhone 17 en
+    runs-on: macos-26
+    timeout-minutes: 75
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
+      MAESTRO_IOS_DRIVER_PORT: 22087
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Select Xcode 26.6 explicitly
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+      - {name: Setup Node.js 22, uses: actions/setup-node@v4, with: {node-version: '22'}}
+      - name: Setup Temurin JDK 17 (Maestro)
+        uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: '17'}
+      - name: Boot the simulator
+        run: |
+          mkdir -p "$RUNNER_TEMP/evidence"
+          bash scripts/cosmos-ios-world/sim.sh "iPhone 17" "$RUNNER_TEMP/evidence"
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | shasum -a 256 --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro" && cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Set the simulator language and prove the driver (the gate's own setup)
+        env: {LANGTAG: en-US, LANGLOC: en_US}
+        run: bash scripts/cosmos-ios-world/setup.sh "$IOS_SIM_UDID" "$RUNNER_TEMP/evidence"
+      - name: Probe
+        timeout-minutes: 55
+        run: bash scripts/ci04-probe/probe.sh "$IOS_SIM_UDID" "$RUNNER_TEMP/evidence/probe"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with: {name: ci04-maestro-startup-probe, path: '${{ runner.temp }}/evidence', if-no-files-found: warn}

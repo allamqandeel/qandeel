@@ -1,0 +1,9 @@
+# CI-04 probe (measurement only, never merged): one harmless tap on the status bar of the Home screen.
+appId: com.apple.Preferences
+---
+- evalScript: ${output.t0 = Date.now()}
+- tapOn:
+    retryTapIfNoChange: false
+    waitToSettleTimeoutMs: 1500
+    point: "50%,3%"
+- evalScript: ${console.log('PROBE ' + (Date.now() - output.t0))}
