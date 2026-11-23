@@ -10,4 +10,4 @@ for (const [load, v, , rc, wall, ph] of rows) {
 const med = (a) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.floor((s.length - 1) / 2)] : NaN; };
 const keys = ['jvm', 'enumerate', 'session', 'deviceinfo', 'engine', 'commands', 'after', 'total'];
 console.log(['load variant', 'n', 'nonzero', ...keys.map((k) => `${k}(med)`)].join('\t'));
-for (const [k, g] of [...groups].sort()) console.log([k, g.n, g.fail, ...keys.map((x) => (g.ph[x] ? med(g.ph[x]).toFixed(1) : ''))].join('\t'));
+for (const [k, g] of [...groups].sort()) console.log([k, g.n, g.fail, med(g.wall), `${Math.min(...g.wall)}..${Math.max(...g.wall)}`, ...keys.map((x) => (g.ph[x] ? med(g.ph[x]).toFixed(1) : ''))].join('\t'));

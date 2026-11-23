@@ -36,16 +36,16 @@ call() { local load="$1" v="$2" rep="$3" d="$OUT/calls/$1-$2-$3" a b rc
   mkdir -p "$d"; a=$(now)
   # shellcheck disable=SC2046
   env $(envfor "$v") node "$ROOT/scripts/validation/bounded-run.mjs" --seconds 300 --label "probe-$load-$v-$rep" -- \
-    maestro --device "$UDID" test "$HERE/probe.yaml" --no-reinstall-driver --driver-host-port "$PORT" --debug-output "$d" > "$d/stdout.log" 2>&1; rc=$?
+    maestro --device "$UDID" test "$HERE/probe.yaml" --no-reinstall-driver --driver-host-port "$PORT" --debug-output "$d" --flatten-debug-output > "$d/stdout.log" 2>&1; rc=$?
   b=$(now)
   local ph; ph="$(node "$HERE/maestro-phases.mjs" "$d/maestro.log" "$a" "$b")"
   printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$load" "$v" "$rep" "$rc" "$(( (b - a) / 1000 ))" "$ph" >> "$TSV"; say "$load $v $rep exit $rc: $ph"; }
 # the AppCDS archive: one excluded warm-up call writes it
 env -u ANDROID_HOME -u ANDROID_SDK_ROOT -u ANDROID_SDK_HOME -u ANDROID_SDK -u ANDROID MAESTRO_OPTS="-XX:ArchiveClassesAtExit=$CDS" \
   node "$ROOT/scripts/validation/bounded-run.mjs" --seconds 300 --label probe-cds-create -- \
-  maestro --device "$UDID" test "$HERE/probe.yaml" --no-reinstall-driver --driver-host-port "$PORT" --debug-output "$OUT/calls/cds-create" > "$OUT/cds-create.log" 2>&1
+  maestro --device "$UDID" test "$HERE/probe.yaml" --no-reinstall-driver --driver-host-port "$PORT" --debug-output "$OUT/calls/cds-create" --flatten-debug-output > "$OUT/cds-create.log" 2>&1
 say "cds archive: $(ls -la "$CDS" 2>&1)"
-for rep in 1 2 3 4; do for v in A B C D; do call idle "$v" "$rep"; done; done
+for rep in 1 2 3 4 5 6; do for v in A B C D; do call idle "$v" "$rep"; done; done
 n="$(sysctl -n hw.ncpu)"; pids=""; for i in $(seq 1 "$n"); do yes > /dev/null & pids="$pids $!"; done; say "load: $n busy loops ($pids)"
 for rep in 1 2 3; do for v in A B C D; do call busy "$v" "$rep"; done; done
 kill $pids 2>/dev/null || true
