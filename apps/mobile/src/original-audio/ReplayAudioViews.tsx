@@ -235,6 +235,8 @@ function useReplayAudioControls(audio: ReplayAudio, controller: ReplayPlayerCont
   return {
     note,
     withheld: clock.getState().phase === 'ENDED',
+    // PR #404 RB-1: the Replay's stage follows this clock's place (it reads; it never drives the clock).
+    stageClock: clock,
     moment: (moment: ReplayHistoryMoment) => (moment.originalMedium !== 'ORIGINAL_AUDIO' ? null : {
       caption: originalAudioText('RA-03', language),
       before: <Before clock={clock} ordinal={moment.ordinal} language={language} />,

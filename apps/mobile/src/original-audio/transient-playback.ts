@@ -149,6 +149,11 @@ export interface TransientPlayback {
   seek(runIndex: number, positionMs: number): void;
   /** A Replay boundary: the next run's player is created paused, so it starts on time. */
   prepare(runIndex: number): void;
+  /**
+   * PR #404 RB-1: the played position read NOW from the playing player (never below its floor, CA-07B-2), between two
+   * status reports; otherwise the state's. A read only, in memory: it changes nothing and is never stored or logged.
+   */
+  positionNow?(): number;
   /** The owner's own deletion: stopped BEFORE the deletion is sent; nothing more is fetched. */
   stop(): void;
   /** Leaving the record or the player: everything is released and the sets are let go (DELETE). */
@@ -856,6 +861,10 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
       void openRun(runIndex, 0, false).then(() => {
         if (current !== null && current.runIndex === runIndex && state.phase !== 'ENDED') set({ phase: 'BETWEEN' });
       });
+    },
+    positionNow() {
+      if (state.phase !== 'PLAYING' || current === null || current.runIndex !== state.runIndex || current.seeking > 0) return state.positionMs;
+      return Math.max(state.positionMs, readPosition(current));
     },
     stop() {
       if (retired) return;

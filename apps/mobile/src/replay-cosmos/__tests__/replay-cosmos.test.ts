@@ -6,56 +6,25 @@
  * frames; a range that opens on the knowledge authorised at its start and keeps every millisecond; a camera that never
  * aims at, or moves before, a disclosure; and a frame that is a pure function of presentation time (seek = play).
  */
-import type { MapScene } from '../../map';
-import { canonicalWorldAddress } from '../../map/world';
 import { buildReplayCameraPlan, cameraAt, planFutureViolations } from '../camera-plan';
-import { replayFrameFacts, REVEAL_MS, type ReplayCosmosScene } from '../frame';
-import { emptyReplayStage, marksOf, replayMomentStage, type ReplayMomentStage } from '../stages';
+import { replayFrameFacts, REVEAL_MS } from '../frame';
+import { marksOf } from '../stages';
 import { buildReplayCosmosTimeline, frameTimeMs, knowledgeAt, knowledgeOnFrame, type ReplayCosmosMomentInput, type ReplayCosmosTimeline } from '../timeline';
+import { KNOWLEDGE, STAGES, VIEW, sceneOf, stageOf } from '../__fixtures__/synthetic-history';
 
-const FAR = 8192;
-// A disclosed Home, decoded through the governed world-address reader (as the COSMOS core tests do); never placed here.
-const addr = (x: number, y: number) => { const a = canonicalWorldAddress(BigInt(Math.round(x * FAR)), BigInt(Math.round(-y * FAR))); if (!a.ok) throw new Error('not canonical'); return a.address; };
-const DEPTHS = ['WORLD', 'THREAD', 'SESSION', 'ANALYTICAL_OBJECT', 'SOURCE_PROVENANCE'] as const;
-
-interface Knowledge { readonly threads: readonly { id: string; x: number; y: number }[]; readonly readings: readonly { id: string; threadId: string; bindingId: string; boundSp: number }[] }
-
-function sceneAt(k: Knowledge, rung: number, tc: number): MapScene {
-  const homes = new Map(k.threads.map((t) => [t.id, addr(t.x, t.y)] as const));
-  const objects: unknown[] = k.threads.map((t) => ({ family: 'THREAD', id: t.id, key: `THREAD:${t.id}`, disclosedAtDepth: 'WORLD', loci: [{ kind: 'THREAD_HOME', threadId: t.id, address: homes.get(t.id) }] }));
-  if (rung >= 1) for (const r of k.readings) {
-    objects.push({ family: 'READING', id: r.id, key: `READING:${r.id}`, disclosedAtDepth: 'THREAD', loci: [{ kind: 'CONTEXTUAL_APPEARANCE', bindingId: r.bindingId, threadId: r.threadId, hostAddress: homes.get(r.threadId), boundSp: r.boundSp, current: true, ordinal: 0 }] });
-  }
-  return { sessionId: 'SYNTHETIC', tc, liveHead: tc, sealed: true, depth: DEPTHS[rung], objects, homes: [], ungeographic: [] } as unknown as MapScene;
-}
-const stageOf = (ordinal: number, k: Knowledge, names: Record<string, string> = {}): ReplayMomentStage =>
-  replayMomentStage(ordinal, DEPTHS.map((_, rung) => sceneAt(k, rung, ordinal)), new Map(Object.entries(names)), false);
-
-// Six moments of 4 s; topics established at 1, 3 and 5; a Reading bound at 4.
-const T1 = { id: 'a1', x: -0.6, y: -0.4 }; const T2 = { id: 'b2', x: 0.7, y: 0.2 }; const T3 = { id: 'c3', x: -0.1, y: 0.8 };
-const R1 = { id: 'r1', threadId: 'a1', bindingId: 'g1', boundSp: 4 };
-const KNOWLEDGE: Record<number, Knowledge> = {
-  1: { threads: [T1], readings: [] }, 2: { threads: [T1], readings: [] }, 3: { threads: [T1, T2], readings: [] },
-  4: { threads: [T1, T2], readings: [R1] }, 5: { threads: [T1, T2, T3], readings: [R1] }, 6: { threads: [T1, T2, T3], readings: [R1] },
-};
+// Six text-presented moments of 4 s (each shown whole at its window's start, so the speech guard is that start; the
+// audio case — a window's END — is RB-1's own suite, rb1-audio-clock.test.ts).
 const moments = (available: (ordinal: number, start: number) => number | null): ReplayCosmosMomentInput[] =>
-  [1, 2, 3, 4, 5, 6].map((ordinal) => ({ ordinal, tc: ordinal, windowStartMs: (ordinal - 1) * 4000, windowEndMs: ordinal * 4000, availableAtMs: available(ordinal, (ordinal - 1) * 4000) }));
-const STAGES = new Map([1, 2, 3, 4, 5, 6].map((o) => [o, stageOf(o, KNOWLEDGE[o], { a1: 'العمل', b2: 'Family', c3: 'السفر 2026' })] as const));
+  [1, 2, 3, 4, 5, 6].map((ordinal) => ({ ordinal, tc: ordinal, windowStartMs: (ordinal - 1) * 4000, windowEndMs: ordinal * 4000, completeAtMs: (ordinal - 1) * 4000, availableAtMs: available(ordinal, (ordinal - 1) * 4000) }));
 const built = (input: ReplayCosmosMomentInput[], scope: Parameters<typeof buildReplayCosmosTimeline>[1] = { kind: 'FULL' }): ReplayCosmosTimeline => {
-  const r = buildReplayCosmosTimeline(input, scope, { fps: 30, unrecorded: 'LEGACY_WINDOW_START_PENDING_PO' });
+  const r = buildReplayCosmosTimeline(input, scope, { fps: 30, unrecorded: 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY' });
   if (!r.ok) throw new Error(r.reason);
   return r.timeline;
 };
-const VIEW = { width: 360, height: 640 };
-const sceneOf = (timeline: ReplayCosmosTimeline): ReplayCosmosScene => ({
-  timeline, plan: buildReplayCameraPlan(timeline, STAGES, VIEW),
-  stages: new Map([...STAGES].map(([o, stage]) => [o, { stage, prepared: null as never }])), empty: { stage: emptyReplayStage(), prepared: null as never },
-  rtl: false, fontScale: 1, typography: 'SYSTEM_LIVE_WEIGHTS', fonts: null,
-});
 
 describe('the timeline: availability is the authority, and the no-future guard stays independent', () => {
   it('discloses at the recorded availability, never before its own moment or the knowledge it contains', () => {
-    // Recorded: 1.5 s into each window (e.g. during QANDEEL's reply), except moment 3 (recorded BEFORE its window, which
+    // Recorded (synthetic, an RB-2 contract case): 1.5 s into each window, except moment 3 (recorded BEFORE its window, which
     // cannot be shown: the SP/TC guard holds it) and moment 5 (recorded later than moment 6: K(6) contains K(5)).
     const tl = built(moments((o, start) => (o === 3 ? start - 900 : o === 5 ? 23_500 : start + 1500)));
     const at = new Map(tl.steps.map((s) => [s.ordinal, s] as const));
@@ -69,10 +38,11 @@ describe('the timeline: availability is the authority, and the no-future guard s
     for (const s of tl.steps) expect(s.atMs).toBeGreaterThanOrEqual((s.ordinal - 1) * 4000);
   });
 
-  it('names an unrecorded availability as the pending legacy policy, and reports it — nothing is inferred', () => {
+  it('names an unrecorded availability as UNESTABLISHED, and reports it — nothing is inferred, no precision claimed', () => {
     const tl = built(moments((o, start) => (o === 2 ? null : start + 700)));
     expect(tl.unrecorded).toEqual([2]);
-    expect(tl.steps.find((s) => s.ordinal === 2)).toMatchObject({ availability: 'LEGACY_WINDOW_START_PENDING_PO', atMs: 4000 });
+    expect(tl.steps.find((s) => s.ordinal === 2)).toMatchObject({ availability: 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY', atMs: 4000, heldByGuardMs: null });
+    expect(tl.availabilityEstablished).toBe(false);
     expect(tl.steps.find((s) => s.ordinal === 1)).toMatchObject({ availability: 'RECORDED' });
   });
 
@@ -111,9 +81,9 @@ describe('the timeline: availability is the authority, and the no-future guard s
 
   it('refuses a scope outside the version, a reversed scope, and out-of-order moments', () => {
     const input = moments(() => null);
-    expect(buildReplayCosmosTimeline(input, { kind: 'RANGE', startMs: 0, endMs: 24_001 }, { fps: 30, unrecorded: 'LEGACY_WINDOW_START_PENDING_PO' }).ok).toBe(false);
-    expect(buildReplayCosmosTimeline(input, { kind: 'RANGE', startMs: 5000, endMs: 5000 }, { fps: 30, unrecorded: 'LEGACY_WINDOW_START_PENDING_PO' }).ok).toBe(false);
-    expect(buildReplayCosmosTimeline([input[1], input[0]], { kind: 'FULL' }, { fps: 30, unrecorded: 'LEGACY_WINDOW_START_PENDING_PO' }).ok).toBe(false);
+    expect(buildReplayCosmosTimeline(input, { kind: 'RANGE', startMs: 0, endMs: 24_001 }, { fps: 30, unrecorded: 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY' }).ok).toBe(false);
+    expect(buildReplayCosmosTimeline(input, { kind: 'RANGE', startMs: 5000, endMs: 5000 }, { fps: 30, unrecorded: 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY' }).ok).toBe(false);
+    expect(buildReplayCosmosTimeline([input[1], input[0]], { kind: 'FULL' }, { fps: 30, unrecorded: 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY' }).ok).toBe(false);
   });
 });
 

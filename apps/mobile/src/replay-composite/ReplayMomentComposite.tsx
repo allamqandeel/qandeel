@@ -31,6 +31,7 @@ import type { LivingAnalysisTopBand } from '../living-analysis';
 import { mapInspectionContext, mapProjectionRequest } from '../map';
 import { spatialSentence, temporalLineModel, temporalSentence, type ChromeLanguage } from '../orientation-chrome';
 import { ReplayCosmosWorld } from '../replay-cosmos';
+import type { ReplayStageClock } from '../replay-cosmos';
 import { replayEntryCopy } from '../replay-entry';
 import { presentationSurface, recompositionPlan } from '../responsive';
 import { returnAvailability } from '../return-navigation';
@@ -68,6 +69,8 @@ export interface ReplayMomentCompositeProps {
   readonly playing?: boolean;
   /** REPLAY-COSMOS-01: each moment's presentation window (the player's pace). Default: a still 6 s per moment. */
   readonly windowMs?: (moment: ReplayHistoryMoment) => number;
+  /** PR #404 RB-1: the version's audio clock, when the player has one: the COSMOS stage follows it. Default: none (text). */
+  readonly stageClock?: ReplayStageClock | null;
 }
 
 const STILL_WINDOW_MS = (): number => 6000;
@@ -99,7 +102,7 @@ export interface ReplayMomentPresentation {
   readonly beneath: ReactNode;
 }
 
-export function ReplayMomentComposite({ controller, ordinal, language, insets, initialDepth = 'WORLD', top = null, controls = null, playing = false, windowMs = STILL_WINDOW_MS }: ReplayMomentCompositeProps) {
+export function ReplayMomentComposite({ controller, ordinal, language, insets, initialDepth = 'WORLD', top = null, controls = null, playing = false, windowMs = STILL_WINDOW_MS, stageClock = null }: ReplayMomentCompositeProps) {
   useSyncExternalStore(controller.subscribe, controller.revision);
   const state = controller.state();
   useEffect(() => controller.open(), [controller]);
@@ -134,16 +137,16 @@ export function ReplayMomentComposite({ controller, ordinal, language, insets, i
   return (
     <ReadyComposite key={state.version.versionId} controller={controller} version={state.version} moments={state.moments} ordinal={ordinal}
       language={language} insets={insets} fontScale={screen.fontScale} envelope={presentedIn} initialDepth={initialDepth} top={top} controls={controls}
-      playing={playing} windowMs={windowMs} />
+      playing={playing} windowMs={windowMs} stageClock={stageClock} />
   );
 }
 
-function ReadyComposite({ controller, version, moments, ordinal, language, insets, fontScale, envelope, initialDepth, top, controls, playing, windowMs }: {
+function ReadyComposite({ controller, version, moments, ordinal, language, insets, fontScale, envelope, initialDepth, top, controls, playing, windowMs, stageClock }: {
   readonly controller: ReplayCompositeController; readonly version: ReplayHistoryVersion; readonly moments: readonly ReplayHistoryMoment[];
   readonly ordinal: number; readonly language: ChromeLanguage; readonly insets: ReplayMomentCompositeProps['insets'];
   readonly fontScale: number; readonly envelope: { readonly width: number; readonly height: number }; readonly initialDepth: SemanticDepth;
   readonly top: LivingAnalysisTopBand | null; readonly controls: ReplayMomentControls | null;
-  readonly playing: boolean; readonly windowMs: (moment: ReplayHistoryMoment) => number;
+  readonly playing: boolean; readonly windowMs: (moment: ReplayHistoryMoment) => number; readonly stageClock: ReplayStageClock | null;
 }) {
   const asked = moments.find((moment) => moment.ordinal === ordinal) ?? null;
   // One isolated viewpoint per version, opened on the moment first asked for.
@@ -196,7 +199,7 @@ function ReadyComposite({ controller, version, moments, ordinal, language, inset
         top={top}
         world={(frame) => (context === null || !context.ok || request === null ? null : (
           <ReplayCosmosWorld controller={controller} version={version} moments={moments} sessionId={request.sessionId} ordinal={moment?.ordinal ?? ordinal}
-            playing={playing} windowMs={windowMs} scope={FULL_SCOPE} rtl={language === 'ar'} typography="SYSTEM_LIVE_WEIGHTS"
+            playing={playing} windowMs={windowMs} stageClock={stageClock} scope={FULL_SCOPE} rtl={language === 'ar'} typography="SYSTEM_LIVE_WEIGHTS"
             width={frame.width} height={frame.height} />
         ))}
         timeline={null}

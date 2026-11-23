@@ -98,10 +98,21 @@ export type ReplayAudioAnnouncement =
   | { readonly kind: 'HELD'; readonly elapsedMs: number }
   | { readonly kind: 'BOUNDARY'; readonly boundary: PresentationBoundary };
 
+/**
+ * PR #404 RB-1: where the clock's presentation is now — a run's file position, or the boundary pause the phone times
+ * before a run (its elapsed part) — for the views that follow the audio (the Replay's COSMOS stage). Null while nothing is
+ * placed (idle, released, refused, ended, failed).
+ */
+export type ReplayAudioPlace =
+  | { readonly kind: 'RUN'; readonly runIndex: number; readonly positionMs: number }
+  | { readonly kind: 'BOUNDARY'; readonly runIndex: number; readonly elapsedMs: number };
+
 export interface ReplayAudioClock extends ReplayMomentClock {
   readonly versionId: string;
   readonly moments: readonly ReplayHistoryMoment[];
   detail(): ReplayAudioDetail;
+  /** RB-1: the place now, read at the moment of asking (the playing file's own position, or the pause's own timer). */
+  place(): ReplayAudioPlace | null;
   /** A change the views show (the position included): never the controller's concern. */
   revision(): number;
   /** B2S: a place inside the moment's own window, and nowhere else. */
@@ -337,6 +348,17 @@ export function createReplayAudioClock(options: ReplayAudioClockOptions): Replay
     detail() {
       const e = engine.getState();
       return { engine: e, plan, refused, between: boundary === null ? null : boundary.of, runIndex: e.runIndex, positionMs: e.positionMs };
+    },
+    place() {
+      if (retired || refused || plan === null) return null;
+      if (boundary !== null) {
+        const total = boundaryPauseMs(boundary.of);
+        const left = boundary.handle === null ? boundary.leftMs : Math.max(0, boundary.leftMs - (now() - boundary.startedAt));
+        return { kind: 'BOUNDARY', runIndex: boundary.runIndex, elapsedMs: Math.min(total, Math.max(0, total - left)) };
+      }
+      const e = engine.getState();
+      if (e.phase === 'IDLE' || e.phase === 'ENDED' || e.phase === 'FAILED') return null;
+      return { kind: 'RUN', runIndex: e.runIndex, positionMs: engine.positionNow?.() ?? e.positionMs };
     },
     revision: () => revision,
     seekWithin(ordinal, offsetMs) {

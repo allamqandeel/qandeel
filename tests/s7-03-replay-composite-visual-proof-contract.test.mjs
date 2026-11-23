@@ -240,8 +240,29 @@ const DETECTORS = {
     const history = c('history.ts');
     if (!/discloseReplayMoment\(version, moment, analysis\.analysis\)/u.test(history) || !/mapInspectionContext\(disclosed\.entry,/u.test(history)) out.push('every stage passes the S7-03 adapter and the T-04 scene derivation');
     if (!/personalScene\(scene, null, rtl, ORIGIN, names\)/u.test(c('stages.ts'))) out.push('the production Personal chain, with no inspection focus');
-    if (!/Math\.max\(available, m\.windowStartMs, previous\)/u.test(c('timeline.ts'))) out.push('a disclosure never precedes its availability, its moment, or the knowledge it contains');
+    // PR #404 RB-1 RE-ANCHOR (PO RB-1 S1–S3 authorisation, 2026-11-23: NO ANALYSIS BEFORE SPEECH): the guard gains the
+    // moment's completion (an audio window's END), and a missing availability is never filled in. Previous pin:
+    // Math.max(available, m.windowStartMs, previous) with `recorded ?? m.windowStartMs`.
+    const timeline = c('timeline.ts');
+    if (!/Math\.max\(available, m\.windowStartMs, m\.completeAtMs, previous\)/u.test(timeline)) out.push('a disclosure never precedes its availability, its moment, its speech, or the knowledge it contains');
+    if (!/const available = recorded \?\? -Infinity;/u.test(timeline)) out.push('a missing availability is never filled in with a time');
+    if (!/availability: d\.recorded === null \? options\.unrecorded : 'RECORDED'/u.test(timeline)) out.push('a missing availability is named, never RECORDED');
+    if (!/if \(d\.at >= endMs\) \{ afterEnd\.push\(d\.m\.ordinal\); continue; \}/u.test(timeline)) out.push('a disclosure at or after the end is listed, never pulled back into the last frame');
     if (!/const t0 = Math\.max\(atMs, free\);/u.test(c('camera-plan.ts'))) out.push('a camera segment never starts before its disclosure');
+    // RB-1 S1–S2: with an audio plan the stage's ONE time authority is the audio clock's place, through the presentation
+    // clock laid out from the map the clock holds — never the reading pace, never a wall clock.
+    const world = c('ReplayCosmosWorld.tsx');
+    if (!/replayPresentationClock\(audioPlan, moments, windowMs\)/u.test(world) || !/if \(presentation !== null\) return presentation\.inputs;/u.test(world)) out.push('with an audio plan, the timeline is the presentation clock\'s, not the reading pace');
+    const follow = /function useAudioStageTime\([\s\S]*?\n\}\n/u.exec(world)?.[0] ?? '';
+    if (follow === '' || !/replayStageTime\(presentation, ordinal, \{ phase: state\.phase, ordinal: state\.ordinal, place: stageClock\.place\(\) \}\)/u.test(follow)) out.push('the audio stage time is the clock\'s place');
+    if (/Date\.now|performance\.now|setTimeout|setInterval/u.test(follow)) out.push('the audio stage time reads no wall clock');
+    const clock = c('presentation-clock.ts');
+    if (!/import \{ boundaryPauseMs, type PresentationBoundary, type PresentationSpan, type PresentationTrack \} from '\.\.\/original-audio\/presentation-map';/u.test(clock)) out.push('the presentation clock reads the CP1-B map and the pause the clock holds, nothing of its own');
+    if (/Date\.now|performance\.now|requestAnimationFrame|readingPaceMs/u.test(clock)) out.push('the presentation clock times nothing itself');
+    // RB-1 (emulator proof): the stage runs behind what the player reports by the stated allowance — on the audio, and in a
+    // text block of an audio plan (the player shows it on the previous file's end report, which leads what is heard).
+    if (!/return \{ kind: 'AUDIO', t: Math\.max\(0, Math\.min\(t, end\) - REPLAY_STAGE_AUDIO_LAG_MS\) \};/u.test(clock)) out.push('the audio stage time runs the stated allowance behind the place');
+    if (!/return \{ kind: 'PACED', startMs: text\.startMs, endMs: text\.endMs, behindMs: REPLAY_STAGE_AUDIO_LAG_MS \};/u.test(clock) || !/pacedRange !== null \? Math\.max\(0, paced - behind\)/u.test(world)) out.push('a text block of an audio plan is drawn the same allowance behind');
     for (const [name, text] of Object.entries(w.cosmos)) {
       const code = tsCode(text);
       if (/drawAtlas|drawPath|drawPaint|drawRect|MakeRadialGradient|MakeLinearGradient|makeShader/u.test(code)) out.push(name + ': no drawing code of its own (no second engine)');
@@ -429,7 +450,17 @@ const PLANTED = [
   ['a gesture on the Replay camera', 'cosmosViolations', add('cosmos', 'pan.tsx', "import { Gesture, GestureDetector } from 'react-native-gesture-handler';")],
   ['a frame reading the wall clock', 'cosmosViolations', edit('cosmos', 'frame.tsx', 'const clock = t / 1000;', 'const clock = Date.now() / 1000;')],
   ['the live Personal owner in the Replay', 'cosmosViolations', add('cosmos', 'owner.ts', "import { createPersonalCosmosOwner } from '../cosmos/product/owners/personal';")],
-  ['a disclosure at its moment, not its availability', 'cosmosViolations', edit('cosmos', 'timeline.ts', 'Math.max(available, m.windowStartMs, previous)', 'Math.max(m.windowStartMs, previous)')],
+  ['a disclosure at its moment, not its availability', 'cosmosViolations', edit('cosmos', 'timeline.ts', 'Math.max(available, m.windowStartMs, m.completeAtMs, previous)', 'Math.max(m.windowStartMs, m.completeAtMs, previous)')],
+  // PR #404 RB-1 plants: each must be caught.
+  ['analysis before speech (the window start again)', 'cosmosViolations', edit('cosmos', 'timeline.ts', 'Math.max(available, m.windowStartMs, m.completeAtMs, previous)', 'Math.max(available, m.windowStartMs, previous)')],
+  ['a missing availability filled in with the window start', 'cosmosViolations', edit('cosmos', 'timeline.ts', 'const available = recorded ?? -Infinity;', 'const available = recorded ?? m.windowStartMs;')],
+  ['a missing availability passed off as RECORDED', 'cosmosViolations', edit('cosmos', 'timeline.ts', "availability: d.recorded === null ? options.unrecorded : 'RECORDED'", "availability: 'RECORDED'")],
+  ['a disclosure after the end pulled into the last frame', 'cosmosViolations', edit('cosmos', 'timeline.ts', 'if (d.at >= endMs) { afterEnd.push(d.m.ordinal); continue; }', 'if (d.at >= endMs) d.at = endMs - 1;')],
+  ['the reading pace while an audio plan exists', 'cosmosViolations', edit('cosmos', 'ReplayCosmosWorld.tsx', 'if (presentation !== null) return presentation.inputs;', 'if (presentation === undefined) return presentation.inputs;')],
+  ['the audio stage time on the wall clock', 'cosmosViolations', edit('cosmos', 'ReplayCosmosWorld.tsx', 'place: stageClock.place() });', 'place: { kind: \'RUN\', runIndex: 0, positionMs: Date.now() } });')],
+  ['a presentation clock that paces by reading', 'cosmosViolations', edit('cosmos', 'presentation-clock.ts', 'const length = Math.max(1, paceMs(moment));', 'const length = Math.max(1, readingPaceMs(moment.text ?? \'\'));')],
+  ['the audio stage time without its allowance', 'cosmosViolations', edit('cosmos', 'presentation-clock.ts', 'Math.min(t, end) - REPLAY_STAGE_AUDIO_LAG_MS)', 'Math.min(t, end))')],
+  ['a text block after a run drawn on the end report', 'cosmosViolations', edit('cosmos', 'ReplayCosmosWorld.tsx', 'Math.max(0, paced - behind)', 'paced')],
   ['a camera ahead of its disclosure', 'cosmosViolations', edit('cosmos', 'camera-plan.ts', 'const t0 = Math.max(atMs, free);', 'const t0 = free;')],
   ['a stage around the adapter', 'cosmosViolations', edit('cosmos', 'history.ts', 'discloseReplayMoment(version, moment, analysis.analysis)', "({ status: 'DISCLOSED', entry: analysis.analysis })")],
   ['an inspection focus drawn', 'cosmosViolations', edit('cosmos', 'stages.ts', 'personalScene(scene, null, rtl, ORIGIN, names)', 'personalScene(scene, focus, rtl, ORIGIN, names)')],

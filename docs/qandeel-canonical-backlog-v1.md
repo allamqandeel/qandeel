@@ -3940,6 +3940,14 @@ that branch is merged and the in-app Replay is verified against the exported vid
 The open decisions it raises (historical availability, call-end cut, historical Thread names, exact range clip) are with
 the Product Owner, and none is admitted here before that decision.
 
+Progress note (2026-11-23, not a disposition): the Product Owner authorised RB-1 S1–S3 only, on the same branch. When a
+version has an audio plan, the Replay's stage time now comes from the version's audio clock: `replayPresentationClock`
+lays out the CP1-B map, and the in-app stage follows the clock's own place. The export places the original audio by that
+same clock. A disclosure never comes before the speech that completes it. Overlapping windows are kept. With no recorded
+availability, the timeline is `UNESTABLISHED_PRESENTATION_GUARDS_ONLY`, and it never claims `RECORDED`. The item stays
+`OPEN — UNASSIGNED`. RB-2 (the recorded availability), RB-3, RB-4, RB-5, RS-7 and an end-of-Replay policy for a
+disclosure that falls at or after the last audio are not done. No migration.
+
 ### `QAN-BL-NAV-04` — No Full Personal Detail Surface Beyond the PEEK (PERSONAL-DETAIL-01)
 
 - **Title / Finding:** the Personal Detail Sheet is PEEK-only (G-7, V1). There is no full Personal detail surface for a
