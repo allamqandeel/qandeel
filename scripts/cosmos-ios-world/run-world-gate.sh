@@ -8,7 +8,8 @@
 #
 # Cases (BG-10: permanent iOS regression coverage for D-1, the Personal stage that took no tap on iOS):
 #   P-TAP-RAIL  Personal: one tap on a node core inside the depth rail's frame opens the PEEK. That is the region where
-#               the stretched rail beads used to stand over the stage and take the touch (diag run 44255421709).
+#               the stretched rail beads used to stand over the stage and take the touch (diag run 44255421709). It is
+#               never the stage's first touch: `initstage` (below) touches a freshly entered stage first (PO, 2026-11-23).
 #   P-TAP       Personal: one tap on the largest node core opens the PEEK (`qandeel-personal-peek`).
 #   F1-RESOLVED COSMOS-FINAL-01 F-1: that PEEK states the server's answer about the inspected object, not T-08's
 #               technical "this view does not cover what you are inspecting" (the inspection-aware read).
@@ -90,6 +91,33 @@ tapcase() {
     mt "$2-close" tap.yaml ID=cosmos-detail-sheet-handle IDX=0; sleep 2
   else result "$1" FAIL "tap at $3: no qandeel-personal-peek within 6 s"; [ "${4:-}" = f1 ] && result F1-RESOLVED 'NOT TESTED' 'the PEEK did not open'; fi
 }
+# initstage <name>: NOT A CASE, and it writes no row to results.tsv (PO directive, 2026-11-23). The first touch a freshly
+# entered Personal stage receives is the deferred first-tap limitation (SE-FU-1 class, Future Improvements item 022, not
+# reopened): run 45124305240 (i17-ar) lost exactly that touch in P-TAP-RAIL while the identical tap 14 s later passed as
+# P-TAP. So no required tap case is that touch. One initialization tap on the largest node core; its outcome goes to
+# init.tsv and the log only. Then the state is restored (a PEEK it opened closed by its handle, the camera returned home
+# by Back) and the preconditions the next case needs are verified on a fresh frame: no PEEK, Back absent (the home
+# position), the depth rail laid out. When they do not hold it returns non-zero and the caller's cases are NOT TESTED,
+# so the job stays red; after it, a tap the stage does not take still FAILs its case.
+initstage() {
+  local n="$1" pt a; shot "$n-init-0"; pt="$(node_at "$n-init-0")"
+  if [ "$pt" = none ]; then printf '%s\tno node core for the initialization tap\n' "$n" >> "$OUT/init.tsv"; say "  $n init: no node core"; INIT_WHY="no node core for the initialization tap"; return 1; fi
+  mt "$n-init" tap-point.yaml "P=$pt"; a="$(poll "$n-init" 6 id qandeel-personal-peek)"
+  printf '%s\tinitialization tap at %s: %s\n' "$n" "$pt" "$([ "$a" != none ] && echo 'the PEEK opened' || echo 'no PEEK within 6 s (not judged)')" >> "$OUT/init.tsv"
+  say "  $n init: tap at $pt ($(tail -n 1 "$OUT/init.tsv" | cut -f2))"
+  # restoration: a PEEK (also one that answered late) is closed, and a camera off its home position is brought back
+  sleep 2; dump "$n-init-1"
+  [ "$(q "$n-init-1" id qandeel-personal-peek)" != none ] && { mt "$n-init-close" tap.yaml ID=cosmos-detail-sheet-handle IDX=0; sleep 2; dump "$n-init-1"; }
+  backOn "$n-init-1" && { mt "$n-init-home" tap.yaml ID=qandeel-cosmos-back IDX=0; sleep 3; }
+  # the preconditions, on a fresh frame
+  dump "$n-init-2"; shot "$n-init-2"
+  local why=""
+  [ "$(q "$n-init-2" id qandeel-personal-peek)" = none ] || why="a PEEK is still open"
+  backOn "$n-init-2" && why="${why:+$why; }the stage is not at home (Back available)"
+  [ "$(q "$n-init-2" id qandeel-cosmos-rail)" != none ] || why="${why:+$why; }the depth rail is not laid out"
+  if [ -n "$why" ]; then printf '%s\tpreconditions NOT restored: %s\n' "$n" "$why" >> "$OUT/init.tsv"; say "  $n init: preconditions NOT restored: $why"; INIT_WHY="$why"; return 1; fi
+  printf '%s\tpreconditions restored: no PEEK, home, rail laid out\n' "$n" >> "$OUT/init.tsv"; return 0
+}
 # pancase <case> <name> <flow>: from a fresh home stage, one pan, then Back available
 pancase() {
   enter "$2" || { result "$1" 'NOT TESTED' 'the Personal Analysis did not open'; return; }
@@ -100,11 +128,15 @@ pancase() {
 }
 if ! enter p; then
   for c in P-TAP-RAIL P-TAP F1-RESOLVED P-PAN P-PAN-RAIL; do result "$c" 'NOT TESTED' 'the Personal Analysis did not open'; done
+elif sleep 5; ! initstage p; then
+  for c in P-TAP-RAIL P-TAP F1-RESOLVED; do result "$c" 'NOT TESTED' "the stage's initialization: $INIT_WHY"; done
+  pancase P-PAN p-pan swipe-pan-open.yaml
+  pancase P-PAN-RAIL p-panr swipe-pan-rail.yaml
 else
-  sleep 5; shot p-0; dump p-0
+  shot p-0; dump p-0
   rail="$(q p-0 id qandeel-cosmos-rail | head -1 | sed 's/.*frame=//')"; [ "$rail" = none ] && rail=
   say "  depth rail frame: ${rail:-none}"
-  # P-TAP-RAIL first, on the untouched stage: the regression's own region
+  # P-TAP-RAIL on the restored home stage, after the initialization touch: the regression's own region
   if [ -z "$rail" ]; then result P-TAP-RAIL 'NOT TESTED' 'the depth rail was not found'
   else
     pt="$(cd "$ROOT" && node "$HERE/nodes.mjs" --in "$rail" "$OUT/p-0.png" "$wpt")"
@@ -251,12 +283,18 @@ if mt ue-launch launch.yaml NAME=gate-ue-launch && mt ue-seed link.yaml URL=qand
   if [ "$a" != none ]; then result U-EMPTY PASS "a served Public field with no Experience shows its empty field: '$(q ue id-label qandeel-public-field-empty | head -1)'"
   else result U-EMPTY FAIL "no qandeel-public-field-empty within 15 s of a served field with no Experience"; fi
 else result U-EMPTY 'NOT TESTED' 'the Public World did not open'; fi
+# P-LAND's PEEK is opened by a tap that is not the stage's first touch either (gate 45072277036, small-en: the first
+# tap after the entry opened no PEEK), so the same non-gating initialization comes first.
 if enter pl; then
-  sleep 5; shot pl-0; dump pl-0; pt="$(node_at pl-0)"
-  if [ "$pt" = none ]; then result P-LAND 'NOT TESTED' 'no node core visible on the Personal stage'
+  sleep 5
+  if ! initstage pl; then result P-LAND 'NOT TESTED' "the stage's initialization: $INIT_WHY"
   else
-    mt pl-tap tap-point.yaml "P=$pt"; a="$(poll pl-tap 6 id qandeel-personal-peek)"
-    if [ "$a" = none ]; then result P-LAND 'NOT TESTED' "tap at $pt opened no PEEK"; else landcase P-LAND pl; fi
+    shot pl-0; dump pl-0; pt="$(node_at pl-0)"
+    if [ "$pt" = none ]; then result P-LAND 'NOT TESTED' 'no node core visible on the Personal stage'
+    else
+      mt pl-tap tap-point.yaml "P=$pt"; a="$(poll pl-tap 6 id qandeel-personal-peek)"
+      if [ "$a" = none ]; then result P-LAND 'NOT TESTED' "tap at $pt opened no PEEK"; else landcase P-LAND pl; fi
+    fi
   fi
 else result P-LAND 'NOT TESTED' 'the Personal Analysis did not open'; fi
 

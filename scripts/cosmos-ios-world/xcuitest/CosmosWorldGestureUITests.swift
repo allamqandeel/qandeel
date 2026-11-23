@@ -629,6 +629,8 @@ final class CosmosWorldGestureUITests: XCTestCase {
   /// the first launch's door is tapped once at its first visibly drawn frame — no settle, no retry — and must open the
   /// Analysis. Then the warm case: back to the Conversation, the door tapped once at once, timed the same way. The timings
   /// are recorded separately (`sefu1-timing`), never asserted here: 250 ms is judged on them in the report.
+  /// NOT part of the mandatory iOS World gate (PO, 2026-11-23): it targets the deferred first-tap limitation (SE-FU-1,
+  /// Future Improvements item 022). It runs only in the non-gating D-3 validation workflow (cosmos/validate/** pushes).
   func testFreshInstallFirstVisibleDoorTapOpensTheAnalysis() {
     let door = doorFrame
     let tLaunch = now()

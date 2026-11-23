@@ -4105,6 +4105,55 @@ hosted backend connectivity, real persistence, real model replies or a productio
   [S8B-07 record](QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §14, CP2-A WP0 v0.3.1). It is not started, and its
   execution needs the Product Owner's authorization.
 
+### 31.12 Post-closure test-governance maintenance: deferred first-tap coverage removed from the mandatory gate (PO directive, 2026-11-23)
+
+This section records only a change to the CI gate. COSMOS-INT-01 stays `ACCEPTED / MERGED / CLOSED`, and SE-FU-1 is
+not reopened: it stays the accepted V1 limitation (§30.6, Future Improvements item 022), with its history unchanged.
+The change touches no production COSMOS, gesture or Replay code. It was made on the REPLAY-COSMOS-01 branch (Draft PR
+#404) as a separate CI-maintenance commit.
+
+- **Removed from mandatory pre-launch execution:**
+  - `X:testFreshInstallFirstVisibleDoorTapOpensTheAnalysis`. This test does a fresh install and then taps the door once
+    at its first visible frame. It is the explicit SE-FU-1 test.
+  - The gate workflow's "SE-FU-1 fresh install" step is deleted. That step rebooted the simulator, reinstalled the app
+    and ran only this test.
+  - The native run skips the test, and `xcui-analyse.mjs` makes no `results.tsv` row for it (`NOT_IN_GATE`). It can
+    neither fail nor pass the gate.
+  - The test stays in the suite for the non-gating D-3 validation workflow (`cosmos/validate/**` pushes only).
+- **P-TAP-RAIL and P-LAND are no longer the first touch on a freshly entered Personal stage.**
+  - Why: gate 45124305240 (i17-ar) lost exactly that touch in P-TAP-RAIL, while the identical tap 14 s later passed as
+    P-TAP. Gate 45072277036 (small-en) lost P-LAND's first tap the same way.
+  - The fix is a non-gating initialization, `initstage`, run first:
+    1. It taps the largest node core once.
+    2. It writes the outcome to `init.tsv` and the log, never to `results.tsv`.
+    3. It restores the state: a PEEK is closed by its handle, and an off-home camera is brought back by Back.
+    4. It verifies the preconditions on a fresh frame: no PEEK, Back absent (home), the depth rail laid out.
+  - If the preconditions do not hold, the dependent cases are NOT TESTED, so the job stays red. After the
+    initialization, a tap the stage does not take still FAILs P-TAP-RAIL / P-TAP. Nothing is retried.
+- **Protections kept unchanged.** None of the following needs to be the first interaction after a launch:
+  - P-TAP-RAIL, with its assertion (the depth rail's overlap region);
+  - P-TAP and F1-RESOLVED;
+  - P-PAN and P-PAN-RAIL;
+  - every Shared and Public case;
+  - P-LAND;
+  - the twelve other native tests;
+  - X-ANCHOR, X-PAN-AFTER-PINCH and X-PAN-ZOOMED.
+
+  The door tap of every entry remains a precondition, tapped after the 8 s settle and waited for up to 60 s.
+- **Expected mandatory rows per cell: 31, previously 32.**
+  - 16 World gate cases.
+  - 12 native tests.
+  - 3 measured native cases.
+
+  Across the three cells (i17-en, i17-ar, small-en) that is 93, previously 96.
+- **Regression check:** `tests/cosmos-ios-world-gate-composition-contract.test.mjs`, run as
+  `npm run test:cosmos-ios-world-gate-composition-contract`.
+  - It runs as the World gate workflow's first step and in API CI.
+  - It fails if the deferred test is run or gets a row, or if a fresh-install step returns.
+  - It also fails if P-TAP-RAIL or P-LAND loses its initialization, if the initialization writes a row or skips its
+    precondition check, or if the 16 / 12 / 3 composition changes.
+  - Each of these is shown on a planted defect.
+
 ## Appendix A — files opened for this contract (main @ `5a21971d`, cosmos @ `d5c45571` + working tree)
 
 `integration/composition/{ProductRoot,DepthComposition,LivingAnalysisMap}.tsx`, `living-analysis/LivingAnalysisSurface.tsx`, `map/renderer/{MapSurface,WorldViewSurface,WorldCanvas,MapCanvas}.tsx`, `map/camera/*`, `map/inspection/map-actions.ts`, `map/accessibility/*`, `orientation-chrome/{index.ts,types.ts,InspectionOrientation.tsx,ReturnControls.tsx}`, `return-navigation/{return-actions,surface}.ts`, `temporal-navigation/timeline-integration/TemporalTargetLayer.tsx`, `temporal-navigation/accessibility/*`, `temporal-navigation/targeting/*`, `timeline/{window/controller.ts,virtualization/TimelinePresentation.tsx,accessibility/*}`, `shared-world/{SharedWorldArea,SharedWorldThread}.tsx`, `shared-world/shared-world-controller.ts`, `shared-world/field/*`, `runtime-entry/{shared-field-api,public-field-api,public-discussion-api}.ts`, `public-world/{PublicWorldArea.tsx,public-world-controller.ts}`, `public-world/field/*`, `replay-composite/ReplayMomentComposite.tsx`, `replay-player/ReplayPlayer.tsx`, `original-audio/index.ts`, `voice-note/index.ts`, `call/*`, `apps/mobile/package.json`, `app.json`, `tests/*.mjs` (grep); `cosmos/core/*`, `cosmos/skia/*`, `cosmos/__validation__/*`, `cosmos/__tests__/*`, `docs/experiments/living-world-cosmic-v5/*`; the PR branches' diffs; `QANDEEL_CURRENT_STATE.md`, `QANDEEL_PROJECT_MAP.md`, `docs/qandeel-canonical-backlog-v1.md` and the records cited in §4.

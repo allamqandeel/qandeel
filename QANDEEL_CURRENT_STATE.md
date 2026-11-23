@@ -19,6 +19,7 @@
 >     - iPhone 17 en: U-EMPTY NOT TESTED;
 >     - iPhone SE: U-TAP FAIL and several cases NOT TESTED; the job was cancelled before the native suite.
 >   - SE-FU-1: accepted V1 limitation (Future Improvements item 022).
+>     - Post-closure CI maintenance (PO, 2026-11-23; [COSMOS contract](docs/e2e/QANDEEL_COSMOS_INT_01_PRODUCTION_INTEGRATION_CONTRACT_v1.md) §31.12; Draft PR #404): the fresh-install first-tap test is no longer in the mandatory iOS World gate, and P-TAP-RAIL / P-LAND follow a non-gating stage initialization. Expected rows: 31 per cell (32 before). This is guarded by `test:cosmos-ios-world-gate-composition-contract`. SE-FU-1 is not reopened.
 >   - DIAG-SE-DOOR 44928574802: 10 / 10, **NOT REPRODUCED — not FIXED**.
 > - **Database:** migrations 0197 – 0200 are merged into the source and are **NOT applied to hosted Supabase**. The next migration is **0201**. Hosted application, API or mobile release, and hosted verification of the E-2 backend stay separately controlled work (HOSTED-DEPLOY-01). They are open, not closed by COSMOS.
 > - **Backlog (BG-08), all `MEDIUM`, `OPEN — UNASSIGNED`:**
