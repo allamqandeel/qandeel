@@ -1,7 +1,9 @@
 # QANDEEL S8B-07 — Original Audio Replay, Media Rendering & Distribution: Implementation Record v1
 
-**Slice (2026-11-23):** REPLAY-COSMOS-01 RB-2 / S1 — **DELIVERED / READY FOR PO REVIEW — NOT MERGED** (§15;
-Draft PR #405; migration `0201`, not hosted). RB-2 S2 – S5 are not authorized. S8B-07 is not closed.
+**Slice (2026-11-23):** REPLAY-COSMOS-01 RB-2 / S2 Alternative A — **DELIVERED SUBJECT TO VALIDATION / DRAFT PR — NOT
+MERGED** (§16; the bounded semantic commit sweeper, OFF by default, no migration; hosted activation BLOCKED on RF-1).
+RB-2 / S1 is **MERGED / CLOSED** (§15; PR #405 → `f45400a8`; migration `0201`, not hosted). RB-2 S3 – S5 and M-2 are not
+authorized. S8B-07 is not closed.
 
 **Checkpoint:** S8B-07 CP1-B — **MERGED — PR #385 — `a4b30517` — 2026-11-08** (§13). **S8B-07 is not closed.** S8B-07
 CP2-A WP0 v0.3.1 is **FINAL APPROVED — NOT APPROVED FOR EXECUTION** (2026-11-09, §14): CP2-A and CP2-B are not started,
@@ -1324,6 +1326,9 @@ it decided.
 S1 is a slice, not a phase or a task closure. S8B-07 stays open. RB-2's S2 – S5 are **not authorized**. Migration `0201` is
 **not hosted**. Every voice gate stays `DISABLED`.
 
+*(Post-merge, 2026-11-23: S1 is **MERGED / CLOSED** — PR #405 merged into `main` as
+`f45400a878d9e23951c300f074fbe7cf11b10201`. S2 Alternative A was then authorized and is recorded in §16.)*
+
 ### 15.1 Authority and baseline
 
 - **Baseline.** PR #404 (REPLAY-COSMOS-01 RB-1 + FC-0, with the Product Owner's scoped iOS CI exception) merged into
@@ -1438,5 +1443,133 @@ one-Session observer transaction, median / p95, ms: 1.30 / 1.66
   authorization.
 - **Planning.** The post-Replay gap register on the unmerged branch `docs/post-replay-gap-map-2026-11-23` lists full
   historical availability as open. S1 is only its database foundation, and the register is not duplicated here.
+- **Backlog (BG-08).** No item is admitted or closed. `QAN-BL-VIS-02` gets a progress note and stays
+  `OPEN — UNASSIGNED`.
+
+## 16. REPLAY-COSMOS-01 RB-2 / S2 Alternative A — Bounded Historical Observation Sweeper (DELIVERED, 2026-11-23)
+
+**Slice:** `RB-2 / S2 Alternative A — DELIVERED SUBJECT TO VALIDATION / DRAFT PR — NOT MERGED`. Branch
+`replay/rb2-s2-semantic-commit-sweeper`, from `main` at `f45400a8` (S1 merged, §15). **Merge only on the Product Owner's
+explicit «ادمج».** S2 is a slice, not a phase or a task closure. S8B-07 stays open. **The sweeper is OFF everywhere, and
+its hosted activation is BLOCKED (§16.6).** Every voice gate stays `DISABLED`.
+
+### 16.1 Authority
+
+- **PO, 2026-11-23: "RB-2/S2 FINAL EXECUTION TASK, Alternative A — Bounded Historical Observation Sweeper"**, on the RB-2 S2
+  Alternative A Execution Scope v1.2 (with S2 v1.1, the v1.1.1 addendum and the v1.1.2 C-1 safety note; Product Owner
+  review documents kept outside the repository, under `QANDEEL_REPORTS/S8B-07/CP2-A/REPLAY-LOCAL-02/amendment/rb2`).
+- **D-S2-12 = A, provisionally**, as an interim engineering path. It is not a final Replay product decision and not
+  production approval. D-RB2-4 (30 s provisional; ceilings 500 rows / 10 rounds), D-S2-5 (default OFF), D-S2-10 / D-S2-11.
+- **Not authorized:** RB-2 S3 – S5, M-2, RB-3 – RB-5, MP4, Alternative B, any migration, any hosted deployment, activation
+  or paid provider test.
+
+### 16.2 What S2 delivers (the files of scope v1.2 §1)
+
+- **`live-focus/conversation-semantic-runtime.repository.ts`:** one method, `sweepUnobservedSemanticCommits(limit,
+  timeoutMs)`, the only caller of `0201`'s `server_observe_unobserved_semantic_commits_v1(limit)`. It refuses a limit
+  `0201` would refuse (1 – 1000) and an answer that is not an integer in `0 .. limit`.
+- **`live-focus/semantic-commit-sweeper.worker.ts` (new),** registered in `conversation/conversation.module.ts`:
+  - **activation:** OFF unless `SEMANTIC_COMMIT_SWEEP_ENABLED` is exactly `true` (and never in a test process);
+    credentials alone never enable it; enabled without the server channel it stays OFF (`misconfigured`). A missing or
+    forbidden definer (`PGRST202` / `42883` / `42501`) turns it OFF for the life of the process, counted once, with no
+    further request;
+  - **bounds:** at most `rounds` statements of at most `batch` rows a tick (ceilings 500 / 10; shipped 500 / 10), no
+    statement after the 2 s tick budget, every 30 s after a start jitter, never overlapping. A failure is retried only by
+    the next tick. The batch bounds a statement's **rows, never its duration** (scope v1.2 §2.1);
+  - **Live Voice first:** before every statement the tick yields while this instance's background work was refused a
+    shared permit within the last 5 s (L2's critical window or capacity; a person's own limit does not count). The signal
+    is the existing `DatabaseBackgroundPermitGate`'s observer; nothing on the spoken path changes;
+  - **signals:** C-2 (`work_found`, `drained_visible`, `capacity_reached`, `yielded`, `unknown`) and the C-3.2 detectors
+    (`no_sweep_opportunity` 10 min, `ceiling_sustained` 5 ticks, `sweep_failing` 3 ticks), as closed names in the
+    `SEMANTIC_COMMIT_OBSERVATION` domain of `OPERATIONAL_OUTCOMES`. A full batch does not prove that more rows remain, and
+    `drained_visible` says nothing of rows another transaction holds (`SKIP LOCKED`) or has not committed. **No count or
+    age is stated (OR-1).**
+- **Not built:** an immediate observer, any call of the per-Session observer, the backlog gate, coalescing, a commit-site,
+  coordinator, `voice/**`, `replay-media/**`, mobile, COSMOS, RB-1 / FC-0 or live-call protocol change, and a migration.
+  **No migration number is reserved.**
+- **Gates:** the worker spec (Jest, 28 tests), the static contract `tests/rb2-s2-semantic-commit-sweeper-contract.test.mjs`
+  (A-02, 23 planted defects), the re-anchored S1 contract (only the repository and the worker name the sweeper definer;
+  nothing names the per-Session observer or the ledger), and the real-PostgreSQL proof
+  `apps/api/scripts/rb2-s2-semantic-commit-sweeper-proof.ts` (`npm run prove:rb2-s2-semantic-commit-sweeper:integration`),
+  all wired into API CI.
+
+### 16.3 The proof matrix (scope v1.2 §3; local PostgreSQL 17, 2026-11-23)
+
+S1's proofs (B-05 – B-08, L-01 – L-04, D-06 – D-11) are reused, not repeated. Every A-03 – A-14 proof runs in its own
+database cloned from a template built fresh from the bootstrap and every migration, and dropped afterwards; the job
+database is only read. **Full run: 8 PASS, 4 REPORTED, 0 FAIL (23.2 min).** Timings are diagnostics, not bounds.
+
+| ID | Result | Evidence (planted defect where the matrix has one) |
+|---|---|---|
+| A-01 | PASS (Jest) | default OFF, credentials alone OFF, only exact `true`; `PGRST202` / `42883` / `42501` → OFF, counted once. Planted enable-on-credentials caught |
+| A-02 | PASS (static) | one definer caller; no per-Session observer, ledger read, immediate path or commit-site call; `0201` sha256-pinned. 23 plants caught, among them a per-Session observer call and edited commit sites |
+| A-03 | PASS | 8 sweepers, 20 000 rows: each stamped once, 0 lock waits. Planted no-`SKIP LOCKED` copy: 924 row-lock waits |
+| A-04 | PASS | READ COMMITTED writer (`lock_timeout` 100 ms) commits while 50 ledger rows are sweeper-locked. Planted writer step on a locked row: `55P03` |
+| A-05 | REPORTED | 16 writers: commit p50 / p95 / p99.9 ms 0.9 – 1.1 / 1.7 – 1.8 / 6.4 – 7.2 (control) vs 1.0 / 1.8 – 2.3 / 43.5 – 48.5 (sweeping, 250 000 rows); 0 writer-on-sweeper row-lock waits |
+| A-06 | REPORTED | shared pool of 4: voice-class permit round trip p95 5.6 – 6.1 ms (control) vs 6.4 – 7.1 ms (sweeping); the sweeper never held more than 1 connection |
+| A-07 | REPORTED | 60 trials per cell: only SERIALIZABLE writer + SERIALIZABLE sweeper refuses (`40001`, 60 / 60, both orders); every other combination commits. **The sweep must run at READ COMMITTED (§16.6)** |
+| A-08 | PASS | erasure (638 ms) while a sweep holds 500 rows: the erased person has 0 rows, the kept one 3 000, all stamped |
+| A-09 | PASS | statements 500 / 500 / 200; `capacity_reached` with nothing left; `drained_visible` while 300 locked rows stay PENDING |
+| A-10 | PASS | 50 000 rows, one Session: S2-16c (held rows skipped, no wait); drained in 10 ticks, 100 statements ≤ 500 rows, statement p95 21 ms / max 60 ms, ≈ 311 KB WAL each. The per-Session observer on the same backlog, run once directly as the hazard: 50 000 rows, 805 ms, 31.2 MB WAL in one statement |
+| A-11 | PASS | batches 100 / 250 / 500, 3 interleaved passes: statement p95 10.7 / 18.1 / 26.7 ms, voice-class Δp95 +0.3 / +1.1 / +1.2 ms; all safe; **500 selected = shipped**. Yields under 16 / 16 held permits; planted pool-ignoring sweeper ran 5 statements |
+| A-12 | PASS | 15 s saturated load: every tick yielded, 0 rows stamped, `no_sweep_opportunity` fired; recovery of 310 rows in 6 ticks (bound 7). Plants: yield ignored (stamped under load), below arrival (backlog 0 → 150, `ceiling_sustained` ×6), failing (`sweep_failing`, 50 rows PENDING) |
+| A-13 | PASS | §16.4 |
+| A-14 | REPORTED | §16.5 |
+
+**A harness defect found and fixed during CP3:** one A-11 run under machine contention completed no statement, and the
+verdict read the missing p95 as 0 ms ("safe"). Failed statements are now counted, a run with none completed or any failed
+is never safe, and each verdict is the median of 3 interleaved passes. The A-11 row above is the rerun.
+
+### 16.4 First Audio and Live Focus (A-13, the S8B-05 CP3 harness; GCR-01 criteria pre-registered)
+
+Baseline and sweeper-beside runs interleaved, 3 repetitions each; the sweeper ran in its own process against a 60 000-row
+backlog (21 ticks, 129 statements, about 60 280 rows a run). Medians of the per-run P50 / P95, ms:
+
+| | Baseline | Sweeper beside | Δ | Criterion |
+|---|---|---|---|---|
+| First Audio M0 P50 / P95 | 526 / 663 | 527 / 664 | +1 / +1 | ≤ +50 / ≤ +100 |
+| First Audio M1_SHIPPED P50 / P95 | 599 / 806 | 600 / 805 | +1 / −1 | ≤ +50 / ≤ +100 |
+| Commit → Live Focus P95 | 4 420 | 4 472 | +52 | ≤ +100 |
+
+Live Focus P95 itself stays above its target with or without the sweeper (pre-existing, GCR-01-A / QAN-BL-VOICE-07); S2 does
+not change it and does not claim it.
+
+### 16.5 Timing fidelity and recovery capacity (A-14; RF-1 evidence, not a bound)
+
+`observed_at − trigger_at` of stamped rows (ms; rows still PENDING at the end are not in the distribution and are counted):
+
+| Scenario | P50 | P95 | Max | PENDING at end |
+|---|---|---|---|---|
+| idle, 30 s interval | 14 258 | 28 472 | 29 988 | 8 |
+| nominal (50 rows/s), 30 s | 13 834 | 28 249 | 29 353 | 104 |
+| nominal, 5 s | 2 309 | 4 811 | 5 018 | 104 |
+| voice load (yield half the ticks), 5 s | 4 300 | 13 641 | 14 679 | 832 |
+
+Every row keeps this lag forever (`observed_at` is immutable). **The 30-second sweep interval produces about 28 s of P95
+observation lag locally, and it is NOT approved as final Replay timing fidelity** (PO, 2026-11-23, S2 Final Closure
+Direction); RF-1 decides it. **Capacity at the shipped settings:** at most 5 000 rows a
+tick, so at most about 167 rows/s at 30 s while no tick yields (R-1). Measured drain rates (A-10 ≈ 33 000 rows/s unloaded,
+A-11 ≈ 5 800 rows/s under voice-class load) are diagnostics, not bounds (scope v1.2 §2.2): under sustained Live Voice load
+R-1 fails by design, and no recovery bound holds.
+
+### 16.6 Open, and blocking hosted activation (RF-1)
+
+The Product Owner accepted the A-03 – A-14 results for the current local validation checkpoint (8 PASS, 4 REPORTED, 0 FAIL;
+A-11 after its harness correction), 2026-11-23. That acceptance is not a merge, an activation or a Replay timing decision.
+
+- **RF-1 — OPEN.** Hosted activation stays **BLOCKED** until the Product Owner resolves:
+  1. **OR-1 — OPEN:** count and age monitoring of PENDING rows;
+  2. measured recovery capacity at the target load, with R-1 – R-5 shown to hold, or the shortfall accepted;
+  3. Replay timing fidelity: §16.5's lag accepted for the product, or bounded immediate observation (Alternative B)
+     required;
+  4. the hosted executing role's effective `statement_timeout` and isolation, verified. A-07 makes READ COMMITTED a
+     condition: a SERIALIZABLE sweeper refuses SERIALIZABLE writers.
+- Rows written once `0201` is hosted and before an observer runs are stamped late; the order of `0201`'s hosting and the
+  sweeper's activation is a HOSTED-DEPLOY-01 consideration.
+- **Alternative B** stays possible as a pre-launch requirement and is **NOT authorized**; its migration number is not
+  reserved.
+- **Not done:** S3 (`0202`, the availability read), S4 / S5 (transport, mobile), M-2, RB-3 – RB-5, RS-7, the end-of-Replay
+  policy. No Replay moment is yet `RECORDED`.
+- **Not tested:** hosted Supabase, any device, any provider. This is API-only work: no iOS or Android suite is repeated for it.
 - **Backlog (BG-08).** No item is admitted or closed. `QAN-BL-VIS-02` gets a progress note and stays
   `OPEN — UNASSIGNED`.

@@ -56,6 +56,14 @@ export interface ConversationSemanticRuntimeBoundary {
   commitCallHalfWithFullSemanticChain?(request: CommitCallHalfWithFullSemanticChainRequest): Promise<CallHalfWithFullSemanticChainResult>;
 }
 
+/** RB-2 / S2: the one observation the API makes - 0201's bounded sweeper. Its own boundary, so the worker sees nothing else. */
+export interface SemanticCommitSweepBoundary {
+  sweepUnobservedSemanticCommits(limit: number, timeoutMs: number): Promise<number>;
+}
+
+/** 0201's own bounds on `p_limit`; S2's ceiling (500) sits inside them. */
+const SWEEP_DEFINER_LIMIT = Object.freeze({ min: 1, max: 1000 });
+
 function wireUnits(units: readonly ProposedLifecycleUnit[]) {
   return units.map((unit) => ({ unit_id: unit.unitId, span_start: unit.spanStart, span_end: unit.spanEnd }));
 }
@@ -89,6 +97,19 @@ function typedStale(error: unknown): never {
 
 export class ConversationSemanticRuntimeRepository implements ConversationSemanticRuntimeBoundary {
   constructor(private readonly serviceApi: SupabaseServiceRoleApiService) {}
+
+  /**
+   * RB-2 / S2 (Alternative A): ONE statement of 0201's sweeper - at most `limit` of the oldest unobserved, visible,
+   * unlocked ledger rows, `FOR UPDATE SKIP LOCKED`, stamped with the database's own clock. Its answer is the number of
+   * rows it stamped and nothing else: no row, no Session, no count of what remains, no age. The client timeout bounds this
+   * call's wait, never the statement, which the database finishes or abandons on its own.
+   */
+  async sweepUnobservedSemanticCommits(limit: number, timeoutMs: number): Promise<number> {
+    if (!Number.isSafeInteger(limit) || limit < SWEEP_DEFINER_LIMIT.min || limit > SWEEP_DEFINER_LIMIT.max) throw new Error('SEMANTIC_COMMIT_SWEEP_LIMIT');
+    const stamped = await this.serviceApi.rpc<unknown>('server_observe_unobserved_semantic_commits_v1', { p_limit: limit }, { timeoutMs });
+    if (typeof stamped !== 'number' || !Number.isSafeInteger(stamped) || stamped < 0 || stamped > limit) throw new Error('SEMANTIC_COMMIT_SWEEP_INTEGRITY');
+    return stamped;
+  }
 
   async readIntegratedBatchSnapshot(request: { sessionId: string; userId: string; sourceTurnId: string; batchId: string }): Promise<IntegratedFullSemanticBatchSnapshot> {
     const rows = await this.serviceApi.rpc<unknown[]>('get_conversation_full_semantic_integrated_batch_snapshot_v1', {

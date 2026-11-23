@@ -3963,6 +3963,17 @@ nothing reads the ledger, and no Replay surface changes, so no Replay moment is 
 observer and sweeper, `0202`, the transport and the mobile wiring), the M-2 design review, RB-3 – RB-5, RS-7 and the
 end-of-Replay policy are not done. `0201` is not hosted. The item stays `OPEN — UNASSIGNED`.
 
+Progress note (2026-11-23, RB-2 / S2 Alternative A, not a disposition): RB-2 / S1 is MERGED / CLOSED (PR #405, `main`
+`f45400a8`). Under the Product Owner's provisional direction D-S2-12 = A, S2 delivers, subject to validation on its Draft
+PR, a bounded recovery sweeper that calls only `0201`'s sweeper definer (≤ 500 rows a statement, ≤ 10 statements a tick,
+every 30 s), yields to Live Voice through the existing permit gate, and is OFF unless `SEMANTIC_COMMIT_SWEEP_ENABLED=true`
+([S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §16). It adds no migration and reserves no number.
+Nothing reads the ledger yet, so no Replay moment is yet `RECORDED`. RF-1 (Replay timing fidelity and observation
+capacity) and OR-1 (count and age monitoring) are OPEN, and hosted activation is BLOCKED on them and on the hosted role's
+`statement_timeout` and READ COMMITTED isolation. Alternative B (bounded immediate observation) stays possible and is not
+authorized. RB-2 S3 – S5, M-2, RB-3 – RB-5, RS-7 and the end-of-Replay policy are not authorized. The item stays
+`OPEN — UNASSIGNED`.
+
 ### `QAN-BL-NAV-04` — No Full Personal Detail Surface Beyond the PEEK (PERSONAL-DETAIL-01)
 
 - **Title / Finding:** the Personal Detail Sheet is PEEK-only (G-7, V1). There is no full Personal detail surface for a

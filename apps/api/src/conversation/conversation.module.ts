@@ -42,6 +42,12 @@ import { ConversationSemanticEstablishmentService } from '../live-focus/conversa
 import { DatabaseBackgroundPermitGate, UNGATED_BACKGROUND_PERMITS, type BackgroundPermitGate } from '../live-analysis/background-permits';
 import { BACKGROUND_PERMIT_GATE, CallAnalysisWorkerHost } from '../live-analysis/call-analysis-worker.host';
 import { ConversationSemanticRuntimeRepository } from '../live-focus/conversation-semantic-runtime.repository';
+import {
+  BackgroundPermitPressure,
+  SEMANTIC_COMMIT_SWEEP_PRESSURE,
+  SemanticCommitSweeperWorker,
+  semanticCommitSweepConfig,
+} from '../live-focus/semantic-commit-sweeper.worker';
 import { ConversationHistoricalProjectionController } from './conversation-historical-projection.controller';
 import { HistoricalProjectionRepository } from '../historical-projection/historical-projection.repository';
 import { costLedgerDecorator } from '../ai-usage/production-ai-provider-call-accounting';
@@ -185,9 +191,18 @@ export const THREAD_CONTINUITY_BINDING_FACTORY = Symbol('THREAD_CONTINUITY_BINDI
     // establishment and post-response execution, across instances. A test process is ungated (no database there).
     {
       provide: BACKGROUND_PERMIT_GATE,
-      useFactory: (serviceApi: SupabaseServiceRoleApiService): BackgroundPermitGate =>
-        (process.env.NODE_ENV === 'test' ? UNGATED_BACKGROUND_PERMITS : new DatabaseBackgroundPermitGate(serviceApi)),
-      inject: [SupabaseServiceRoleApiService],
+      useFactory: (serviceApi: SupabaseServiceRoleApiService, pressure: BackgroundPermitPressure): BackgroundPermitGate =>
+        (process.env.NODE_ENV === 'test' ? UNGATED_BACKGROUND_PERMITS : new DatabaseBackgroundPermitGate(serviceApi, { observer: pressure })),
+      inject: [SupabaseServiceRoleApiService, SEMANTIC_COMMIT_SWEEP_PRESSURE],
+    },
+    // S8B-07 RB-2 / S2 (Alternative A): this instance's background demand, as the permit gate's existing observer reports
+    // it, and the bounded semantic commit sweeper that yields to it. OFF unless SEMANTIC_COMMIT_SWEEP_ENABLED=true.
+    { provide: SEMANTIC_COMMIT_SWEEP_PRESSURE, useFactory: (): BackgroundPermitPressure => new BackgroundPermitPressure() },
+    {
+      provide: SemanticCommitSweeperWorker,
+      useFactory: (repository: ConversationSemanticRuntimeRepository, telemetry: TelemetryService, pressure: BackgroundPermitPressure) =>
+        new SemanticCommitSweeperWorker(repository, telemetry, pressure, semanticCommitSweepConfig(process.env)),
+      inject: [ConversationSemanticRuntimeRepository, TelemetryService, SEMANTIC_COMMIT_SWEEP_PRESSURE],
     },
     ConversationService,
     // S8B-03: the one runner of a committed Voice Note turn - the same Orchestrator path as a typed turn.

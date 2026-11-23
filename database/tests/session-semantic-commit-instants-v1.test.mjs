@@ -91,7 +91,7 @@ test('C — the guard: identity, chain, one fold shape, one observation shape, a
   assert.match(GUARD, /\(NEW\.through_sp, NEW\.through_event_sequence\) > \(OLD\.through_sp, OLD\.through_event_sequence\)/u, 'forward only');
 });
 
-test('D — the observer and the sweeper: service_role only, see-then-stamp, skip the caller\'s own rows, idempotent, unwired', () => {
+test('D — the observer and the sweeper: service_role only, see-then-stamp, skip the caller\'s own rows, idempotent, wired only as S2 allows', () => {
   for (const fn of [OBSERVER, SWEEPER]) {
     assert.match(fn, /SET observed_at = GREATEST\(pg_catalog\.clock_timestamp\(\), l\.trigger_at\)/u);
     assert.match(fn, /l\.observed_at IS NULL/u, 'a stamped row is never stamped again');
@@ -102,12 +102,19 @@ test('D — the observer and the sweeper: service_role only, see-then-stamp, ski
   assert.match(code, /FOREACH fn IN ARRAY servers LOOP EXECUTE format\('GRANT EXECUTE ON FUNCTION %s TO service_role', fn\); END LOOP;/u);
   assert.doesNotMatch(code, /GRANT [^;]*TO (?:anon|authenticated)\b/u);
   const apiSources = readdirSync(new URL('../../apps/api/src/', import.meta.url), { recursive: true }).filter((p) => /\.ts$/u.test(p));
+  // RE-ANCHORED by RB-2 / S2 (Alternative A, PO direction D-S2-12; scope v1.2 §1): S1 wired nothing. S2 wires exactly one
+  // definer - the bounded sweeper - called from one place, the semantic runtime repository, by one worker.
+  // Nothing in the API reads the ledger, and nothing ever calls 0201's unbounded per-Session observer.
+  const sweepSites = [];
   for (const path of apiSources) {
-    const text = read(`../../apps/api/src/${path.replace(/\\/gu, '/')}`);
-    assert.doesNotMatch(text, /session_semantic_commit_instants|observe_session_semantic_commits|observe_unobserved_semantic_commits/u,
-      `S1 wires nothing: ${path}`);
+    const file = path.replace(/\\/gu, '/');
+    const text = read(`../../apps/api/src/${file}`);
+    assert.doesNotMatch(text, /session_semantic_commit_instants|observe_session_semantic_commits/u, `no ledger read and no per-Session observer: ${file}`);
+    if (/observe_unobserved_semantic_commits/u.test(text) && !/\.spec\.ts$/u.test(file)) sweepSites.push(file);
   }
-  assert.equal(readdirSync(new URL('../migrations/', import.meta.url)).some((name) => name.startsWith('0202_')), false, '0202 is not part of S1');
+  assert.deepEqual(sweepSites.sort(), ['live-focus/conversation-semantic-runtime.repository.ts', 'live-focus/semantic-commit-sweeper.worker.ts'],
+    'the sweeper definer is named only by its repository method and its worker');
+  assert.equal(readdirSync(new URL('../migrations/', import.meta.url)).some((name) => name.startsWith('0202_')), false, '0202 is neither S1 nor S2 (it stays with S3)');
 });
 
 test('E — no handler, no dynamic SQL, no retryable SQLSTATE in any body (PROD-RETRY-01); the failure of a recording is the failure of the commit', () => {

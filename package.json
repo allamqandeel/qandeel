@@ -323,6 +323,8 @@
     "test:cosmos-e2-current-personal-world-contract": "node --test database/tests/cosmos-e2-current-personal-world-v1.test.mjs",
     "test:cosmos-e2-reading-reliance-contract": "node --test database/tests/cosmos-e2-reading-reliance-gate-v1.test.mjs",
     "test:semantic-commit-instants-contract": "node --test database/tests/session-semantic-commit-instants-v1.test.mjs",
+    "test:rb2-s2-semantic-commit-sweeper-contract": "node --test tests/rb2-s2-semantic-commit-sweeper-contract.test.mjs",
+    "prove:rb2-s2-semantic-commit-sweeper:integration": "node node_modules/ts-node/dist/bin.js --transpile-only --project apps/api/tsconfig.scripts.json apps/api/scripts/rb2-s2-semantic-commit-sweeper-proof.ts",
     "test:cosmos-e2-conversation-catalog-contract": "node --test database/tests/cosmos-e2-conversation-catalog-v1.test.mjs",
     "prove:s8b-07-media-worker:integration": "node --env-file-if-exists=.env database/prove-0196-media-worker.mjs",
     "prove:s8b-07-media-service:integration": "node --env-file-if-exists=.env database/prove-0196-media-service.mjs",

@@ -129,6 +129,11 @@ const OPERATIONAL_OUTCOMES:ReadonlyMap<string,ReadonlyMap<string,ReadonlySet<str
    ['stream',new Set(['complete','source_end','recheck','lifetime','idle','client_gone','store_failed'])]])],
  ['REPLAY_WATCHDOG',new Map([['sweep',new Set(['success',...OPERATION_FAILURES])],['backstop',new Set(['success','deferred',...OPERATION_FAILURES])],['health',new Set(['success',...OPERATION_FAILURES])],['heartbeat',new Set(['success',...OPERATION_FAILURES])]])],
  ['TRANSIENT_ERASURE_LATE',new Map([['erasure',new Set(['late'])]])],
+ // S8B-07 RB-2 / S2 (Alternative A): the semantic commit sweeper. Its activation (enabled, misconfigured, unavailable: 0201
+ // absent or not executable), each round's C-2 signal (WORK_FOUND, DRAINED_VISIBLE, or its failure class), each tick's
+ // (DRAINED_VISIBLE, CAPACITY_REACHED, yielded to Live Voice, UNKNOWN) and the C-3.2 non-progress detectors. Signals by name
+ // only: never a Session, row, count of pending rows, oldest age (OR-1), duration or error.
+ ['SEMANTIC_COMMIT_OBSERVATION',new Map([['activation',new Set(['enabled','misconfigured','unavailable'])],['sweep_round',new Set(['work_found','drained_visible',...OPERATION_FAILURES])],['sweep_tick',new Set(['drained_visible','capacity_reached','yielded','unknown'])],['detector',new Set(['no_sweep_opportunity','ceiling_sustained','sweep_failing'])]])],
  ['PUSH_DELIVERY',new Map([
   ['plan',new Set(['success',...OPERATION_FAILURES])],
   ['claim',new Set(['success',...OPERATION_FAILURES])],

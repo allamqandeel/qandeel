@@ -266,6 +266,7 @@ jobs:
       - {name: "Verify S8B-07 CP1-B Replay Media Service contract (REPLAY_MEDIA on the Replay pool only, the five routes behind the shipped bearer guard, no-store on every answer, the 5 s / 2 s re-check, destroy never end, the 10 min cap, F-1 NOTE only, the proof wired with the in-memory store and with rclone S3)", run: npm run test:s8b-07-cp1b-media-service-contract}
       - {name: "Verify S8B-07 CP1-B V-24a First Audio isolation contract (D-06.7 +25 / +50 ms over medians of at least 3 interleaved repetitions for M0 and M1_SHIPPED, the S8B-05 CP3 harness unchanged, a separate Replay pool process as the Replay role at every bound, not a proof of pool separation, the 0196 admission lock, wired in the rclone step)", run: npm run test:s8b-07-cp1b-first-audio-isolation-contract}
       - {name: "Verify S8B-07 RB-2 S1 semantic commit instants contract (0201 forward-only, one table and four functions, nothing replaced; the deferred row constraint trigger reading the clock as it stands and folding by transaction identity; the guard; service_role observer and sweeper, unwired; no handler, no dynamic SQL, no retryable SQLSTATE; the verifier wired after 0200)", run: npm run test:semantic-commit-instants-contract}
+      - {name: "Verify S8B-07 RB-2 S2 Alternative A sweeper contract (the one bounded definer call, by the repository and the worker only; no per-Session observer, ledger read or immediate path; 0201 unchanged; ceilings 500 / 10; OFF unless SEMANTIC_COMMIT_SWEEP_ENABLED=true; no overlap, no retry, a yield before every statement through the permit gate observer; closed C-2 / C-3.2 telemetry with no count or age)", run: npm run test:rb2-s2-semantic-commit-sweeper-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1457,6 +1458,16 @@ jobs:
       # transaction, no-op, MVCC-ordered observation, isolation and erasure), the identity proofs and 13 planted defects.
       - name: Verify S8B-07 RB-2 S1 semantic commit instants (0201) against real PostgreSQL
         run: npm run verify:semantic-commit-instants:integration
+      # S8B-07 RB-2 / S2 Alternative A (execution scope v1.2 §3): the bounded recovery sweeper against real PostgreSQL -
+      # A-03 .. A-14 (multi-worker SKIP LOCKED, commits never blocked, concurrent Sessions, the shared pool, isolation levels,
+      # erasure, the C-2 signals, the 50 000-row backlog, the bounded load proof behind the shipped batch, prolonged load and
+      # recovery with the C-3.2 detectors, First Audio / Live Focus through the S8B-05 CP3 harness, and the timing lag), each
+      # with its planted defect. Every proof runs in its own throwaway database cloned from a template the proof builds from
+      # the bootstrap and every migration, dropped afterwards; the job database is only read. Free: no provider, no audio.
+      - name: Prove S8B-07 RB-2 S2 bounded semantic commit sweeper (A-03 .. A-14) against real PostgreSQL (free)
+        env:
+          RB2_S2_REPORT: ${{ runner.temp }}/rb2-s2-semantic-commit-sweeper-proof.json
+        run: npm run prove:rb2-s2-semantic-commit-sweeper:integration
       # S8B-07 CP1-B (D-06.6): the Replay pool's ffmpeg - BtbN's 9.0.2 LGPL build, from its own release asset at a pinned
       # autobuild tag, refused unless its sha256 is the one pinned here (the rclone and PostgREST pattern: no registry, no
       # image, no package manager). FFMPEG_BIN / FFPROBE_BIN name it for the media proofs; nothing else uses it.

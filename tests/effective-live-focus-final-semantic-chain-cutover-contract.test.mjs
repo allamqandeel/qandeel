@@ -190,7 +190,11 @@ test('migration 0071 remains frozen, 0064 - 0070 keep their exact pins, the deli
 
 test('the FINAL runtime exists as plain classes and pure modules; LF has NO provider, NO model and NO prompt (D-01)', () => {
   for (const name of [...LF_FILES, ...LF_SPECS]) assert.ok(existsSync(new URL(`${LF_DIR}/${name}`, root)), `${name} exists`);
-  assert.deepEqual(listFiles(join(rootPath, LF_DIR)).map(relative).map((file) => file.slice(LF_DIR.length + 1)).sort(), [...LF_FILES, ...LF_SPECS].sort(),
+  // RE-ANCHORED by S8B-07 RB-2 / S2 Alternative A: the directory also holds the bounded semantic commit sweeper and its spec
+  // (scope v1.2 §1). It is not part of the LF runtime: it reads no LF, Thread or analytical input and is guarded by its own
+  // static contract, tests/rb2-s2-semantic-commit-sweeper-contract.test.mjs. Any other file still fails here.
+  const S2_SWEEPER_FILES = ['semantic-commit-sweeper.worker.ts', 'semantic-commit-sweeper.worker.spec.ts'];
+  assert.deepEqual(listFiles(join(rootPath, LF_DIR)).map(relative).map((file) => file.slice(LF_DIR.length + 1)).sort(), [...LF_FILES, ...LF_SPECS, ...S2_SWEEPER_FILES].sort(),
     'the directory holds exactly the listed files: no index barrel, no provider adapter, no prompt, no config module');
   assert.match(service, /export class ConversationSemanticEstablishmentService \{/u);
   assert.match(repository, /export class ConversationSemanticRuntimeRepository implements ConversationSemanticRuntimeBoundary \{/u);
@@ -300,7 +304,11 @@ test('THE CUTOVER: ONLY the FINAL chain is wired, the temporary T-03A2-only writ
   // commit_conversation_units_call_half_v1, the call analysis worker's ONE commit of one half of a numbered call turn,
   // over the same FINAL chain and the same two exact stale tokens; the text path still has its one 0071 coordinator.
   assert.ok(repository.includes("'commit_conversation_units_call_half_v1'"), 'the repository calls the 0191 half coordinator');
-  assert.equal((repository.match(/this\.serviceApi\.rpc</gu) ?? []).length, 5, 'exactly five RPC call sites');
+  // RE-ANCHORED by S8B-07 RB-2 / S2 Alternative A (was: exactly five): the sixth call site is 0201's bounded sweeper definer,
+  // server_observe_unobserved_semantic_commits_v1(limit), the semantic commit sweeper's ONE call. It writes no semantic row
+  // and is not part of the chain; no commit path calls it.
+  assert.ok(repository.includes("'server_observe_unobserved_semantic_commits_v1'"), 'the repository calls 0201\'s sweeper definer');
+  assert.equal((repository.match(/this\.serviceApi\.rpc</gu) ?? []).length, 6, 'exactly six RPC call sites');
   assert.doesNotMatch(productionCode, /commit_conversation_units_v1|commit_finalized_exchange_conversation_units_v1|with_focus_v1|with_focus_and_thread_v1|with_focus_thread_lifecycle_v1|commit_conversation_units_with_full_semantic_chain_v1/u,
     'no legacy, predecessor or per-batch writer is ever called from the runtime');
   // The T-03A2 delivery reads: the snapshot now comes from the authenticated LF snapshot read; the LF catch-up read exists beside the committed-CU one.
