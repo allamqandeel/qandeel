@@ -399,9 +399,11 @@ async function verifyCatalogue(report) {
     // RE-ANCHORED by the COSMOS E-2 corrections (PO D-2 / D-4 / D-5, 2026-11-20, and the PO directive "COMPLETE ALL
     // CORRECTIONS BEFORE FINAL CI", 2026-11-21; a declared re-anchor): after 0196 come exactly 0197, 0198, 0199 and 0200
     // (verify-migration-0197 … 0200), and nothing else. The order 0194 → 0195 → 0196 is unchanged.
+    // RE-ANCHORED by S8B-07 RB-2 / S1 (the Product Owner's authorization "RB-2/S1 ONLY", 2026-11-23; a declared re-anchor):
+    // exactly 0201, the semantic commit instants, follows 0200 (verify-migration-0201), and nothing else.
     const at0195 = files.indexOf(M0195);
     assert.equal(files[at0195 + 1], '0196_s8b_07_transient_media_v1.sql', '0195 is followed only by 0196');
-    assert.deepEqual(files.slice(at0195 + 2), ['0197_cosmos_e2_conversation_catalog_v1.sql', '0198_cosmos_e2_thread_names_v1.sql', '0199_cosmos_e2_current_personal_world_v1.sql', '0200_cosmos_e2_reading_reliance_gate_v1.sql'], 'after 0196 exactly the four COSMOS E-2 migrations');
+    assert.deepEqual(files.slice(at0195 + 2), ['0197_cosmos_e2_conversation_catalog_v1.sql', '0198_cosmos_e2_thread_names_v1.sql', '0199_cosmos_e2_current_personal_world_v1.sql', '0200_cosmos_e2_reading_reliance_gate_v1.sql', '0201_s8b_07_semantic_commit_instants_v1.sql'], 'after 0196 exactly the four COSMOS E-2 migrations, then 0201');
     const sql = readFileSync(new URL(`./migrations/${M0195}`, import.meta.url), 'utf8').replace(/\r\n/gu, '\n');
     const code = sql.replace(/^\s*--.*$/gmu, '').replace(/\$\$[\s\S]*?\$\$/gu, '$$$$');
     assert.equal((code.match(/^BEGIN;$/gmu) ?? []).length, 1);

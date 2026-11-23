@@ -1,5 +1,8 @@
 # QANDEEL S8B-07 — Original Audio Replay, Media Rendering & Distribution: Implementation Record v1
 
+**Slice (2026-11-23):** REPLAY-COSMOS-01 RB-2 / S1 — **DELIVERED / READY FOR PO REVIEW — NOT MERGED** (§15;
+Draft PR #405; migration `0201`, not hosted). RB-2 S2 – S5 are not authorized. S8B-07 is not closed.
+
 **Checkpoint:** S8B-07 CP1-B — **MERGED — PR #385 — `a4b30517` — 2026-11-08** (§13). **S8B-07 is not closed.** S8B-07
 CP2-A WP0 v0.3.1 is **FINAL APPROVED — NOT APPROVED FOR EXECUTION** (2026-11-09, §14): CP2-A and CP2-B are not started,
 and the Technical Spike (R-6) is not authorized. Every voice gate stays `DISABLED`, and the Personal Replay gate has no
@@ -1313,3 +1316,127 @@ it decided.
 - `AUTH-SUBJ-01` or `HOSTED-DEPLOY-01`;
 - any hosted resource, download, install, paid service or gate change;
 - a merge without the Product Owner's «ادمج».
+
+## 15. REPLAY-COSMOS-01 RB-2 / S1 — Semantic Commit Instants (DELIVERED, 2026-11-23)
+
+**Slice:** `RB-2 / S1 — DELIVERED / READY FOR PO REVIEW — NOT MERGED`. Draft PR #405 on
+`replay/rb2-s1-semantic-commit-instants`, from `main` at `5ce3a70c`. **Merge only on the Product Owner's explicit «ادمج».**
+S1 is a slice, not a phase or a task closure. S8B-07 stays open. RB-2's S2 – S5 are **not authorized**. Migration `0201` is
+**not hosted**. Every voice gate stays `DISABLED`.
+
+### 15.1 Authority and baseline
+
+- **Baseline.** PR #404 (REPLAY-COSMOS-01 RB-1 + FC-0, with the Product Owner's scoped iOS CI exception) merged into
+  `main` as `5ce3a70c` on 2026-11-23. RB-1 is recorded in `QAN-BL-VIS-02`'s progress notes in the backlog.
+- **Contract.** The RB-2 Historical Analysis Availability Final Execution Contract v1.1 and its v1.1.1 addendum. They are
+  Product Owner review documents kept outside the repository, under `QANDEEL_REPORTS/S8B-07/CP2-A/REPLAY-LOCAL-02/amendment/rb2`.
+- **Authorization (Product Owner, 2026-11-23): "RB-2/S1 ONLY".** It approves for S1 only:
+  - **D-RB2-1:** the visibility-verified observation is the authority.
+  - **D-RB2-5a:** migration `0201` holds the semantic commit ledger and its observation functions.
+  - **D-RB2-7a:** a controlled trigger addition on the existing Session semantic clock, preserving its authority.
+  - **D-RB2-9:** a restricted ledger, governed deletion and a fail-closed commit, subject to the existing privacy and
+    export obligations.
+  - **D-RB2-11:** transaction identity and a fold-capable recorder, subject to a full atomicity proof.
+- **Not authorized:** S2 – S5, `0202`, Replay transport, mobile wiring, exports, live-call protocol changes, a hosted
+  deployment, a paid provider test, a gate opening.
+- **D-RB2-10:** M-2, the Snapshot-stamped Capture Echo, is the preferred direction for in-call reveals but needs its own
+  design review. M-0 is an interim fallback only. S8B-05 is not reopened.
+
+### 15.2 What S1 delivers
+
+- **Migration `0201_s8b_07_semantic_commit_instants_v1.sql`** ([database README](../../database/README.md), last section):
+  - the append-only ledger `session_semantic_commit_instants`: one row per committed transaction that moved a Session's
+    semantic clock, with the transaction identity (`xact_id xid8`) unique per Session;
+  - the recorder, a `DEFERRABLE INITIALLY DEFERRED` row constraint trigger on `session_semantic_clocks`. It folds every
+    firing of one transaction into that transaction's one row and writes nothing for a no-op. It aborts (`55000`) on a
+    backward move, or on a fold that does not touch exactly one row;
+  - the guard, which makes the ledger enforce its own identity and chain rather than trusting the order of `through`;
+  - the observer and the bounded sweeper, `service_role` only. They stamp `observed_at` once, and only on rows written by
+    another, committed transaction.
+- **Verifier** `database/verify-migration-0201.mjs` (`npm run verify:semantic-commit-instants:integration`) and the static
+  contract `database/tests/session-semantic-commit-instants-v1.test.mjs` (`npm run test:semantic-commit-instants-contract`).
+  Both are wired into API CI.
+- **No API, worker, scheduler, Replay read, transport or mobile code.** Nothing in `apps/api/src` calls the observers yet,
+  and the static contract asserts that.
+
+### 15.3 The Product Owner's ten proofs
+
+| Proof | Where |
+|---|---|
+| 1. Several clock UPDATE events in one transaction | B-01 (the real coordinator: 4 events in one exchange), B-02, B-03 |
+| 2. Deferred and IMMEDIATE timing | B-01 (nothing before COMMIT), B-02 (per-statement firings fold) |
+| 3. Savepoint and transaction rollback | B-03 |
+| 4. Concurrency, serialized Session updates | B-04 (two connections; REPEATABLE READ refuses a stale chain) |
+| 5. Exactly one ledger row per committed transaction | B-05, by each committed transaction's own xid |
+| 6. No misleading row, no needless abort on a no-op | B-06 |
+| 7. Immutable observation, idempotent observers | B-07 (an uncommitted row is never stamped) |
+| 8. Permission isolation and account erasure | B-08, and the fixture removal through the erasure |
+| 9. Every relevant planted defect fails | D-01 … D-11, each beside its canonical control |
+| 10. Regression of semantic commit and durability | B-01 / B-02, and the existing verifiers below |
+
+Transaction identity is proven by L-01 – L-04. Every numeric clock difference the verifier prints is labelled
+DIAGNOSTIC. No ordering claim rests on one.
+
+**Planted defects.** Each plant is applied in place inside a rolled-back transaction and must be caught by its proof:
+
+| Defect | Caught by |
+|---|---|
+| D-01 no fold | fold proof: `SEMANTIC_COMMIT_INSTANT_CHAIN` |
+| D-02 fold by `through` order, not identity | new-transaction proof: `SEMANTIC_COMMIT_INSTANT_IMMUTABLE` |
+| D-02b the same, guard identity check removed | new-transaction proof: the one-row-per-transaction count |
+| D-03 no no-op suppression | no-op proof: the range CHECK |
+| D-04 a handler swallows the ledger failure | failure-propagation proof |
+| D-05 recorder not deferred | deferred proof: a row before COMMIT |
+| D-06a observer stamps its own row | own-observation proof: the guard |
+| D-06b the same, guard visibility check removed | own-observation proof: the row count |
+| D-07 guard admits a re-observation | immutable-observation proof |
+| D-08 guard admits an ungoverned DELETE | governed-delete proof |
+| D-09 a client role granted the ledger | isolation proof |
+| D-10 guard drops the identity check | identity proof |
+| D-11 ledger stops cascading from its Session | erasure proof: the erasure answers `RETRY` |
+
+### 15.4 Verification (local, real PostgreSQL 17)
+
+- `verify-migration-0201`: **41 / 41 PASS**, and PASS again on an immediate rerun against the same database.
+- Regression on one database migrated through `0201`, run in sequence: `0065`, `0066`, `0068`, `0070`, `0071`, `0072`,
+  `0131`, `0135`, `0150`, `0164`, `0169`, `0183` and `0189` – `0201` **PASS**.
+  - `0130` **FAILED locally** on its grace-period assertion, which compares the database clock with Node's clock. It fails
+    identically on a baseline database without `0201`, and it passed in an earlier local run. It is a local clock issue,
+    not a `0201` effect. Its CI result is the authority.
+  - `0135` needs the built API (`npm run build:api`). With it, PASS.
+- Re-anchored pins, each declared in the PR body: the post-`0196` migration list in `verify-migration-0194/0195/0196`,
+  the S8B-05 live-call contract's migration tail, and the thread-establishment contract's database allowlist.
+- **Diagnostics (numeric, local, not proofs):**
+
+```
+clock UPDATE events in one exchange transaction: 4
+reserve + COMMIT median / p95, ms: without the recorder 1.43 / 2.00; with it 2.07 / 2.66
+one-Session observer transaction, median / p95, ms: 1.30 / 1.66
+```
+
+- **Not tested:** hosted Supabase, any device, any provider. HONOR FC-0, the COSMOS device proofs and the accepted iOS
+  first-tap tests are deliberately not repeated.
+- **CI:** the exact-head API CI result is recorded on the PR.
+
+### 15.5 Impact on the semantic commit
+
+- **Cost.** One deferred trigger pass per committing transaction that moved a clock: about +0.6 ms median locally.
+- **Fail-closed.** A ledger integrity failure aborts the whole semantic commit (`55000`). This is the intended posture
+  (D-RB2-9): a commit never lands without its instant. The abort carries no retryable SQLSTATE, so the PROD-RETRY-01 rule
+  is unchanged.
+- **Unchanged.** The clock's own authority, the coordinator's result, units, turns and durability.
+
+### 15.6 Residue and remaining dependencies
+
+- **Export (D-RB2-9).** The 0130 Personal export carries no engine internals, so the ledger is not added to it. Nothing
+  the export carries today is narrowed. Whether a future export must carry it is a Product Owner decision.
+- **Replica-mode cleanups in older verifiers** (`0065`, `0066`, `0068`, `0072` and others) disable triggers and cascades.
+  In a shared CI database they leave orphaned ledger rows. These are harmless test residue, and those verifiers are not
+  changed.
+- **Remaining for RB-2:** S2 (the API observer call and a sweeper worker), `0202` (the availability read), the Replay
+  transport, mobile wiring, the M-2 design review, and hosted application with HOSTED-DEPLOY-01. Each needs its own
+  authorization.
+- **Planning.** The post-Replay gap register on the unmerged branch `docs/post-replay-gap-map-2026-11-23` lists full
+  historical availability as open. S1 is only its database foundation, and the register is not duplicated here.
+- **Backlog (BG-08).** No item is admitted or closed. `QAN-BL-VIS-02` gets a progress note and stays
+  `OPEN — UNASSIGNED`.
