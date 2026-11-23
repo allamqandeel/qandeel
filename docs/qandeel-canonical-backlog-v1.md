@@ -3963,6 +3963,25 @@ nothing reads the ledger, and no Replay surface changes, so no Replay moment is 
 observer and sweeper, `0202`, the transport and the mobile wiring), the M-2 design review, RB-3 – RB-5, RS-7 and the
 end-of-Replay policy are not done. `0201` is not hosted. The item stays `OPEN — UNASSIGNED`.
 
+Progress note (2026-11-23, after PR #405, not a disposition): RB-2 / S1 merged into `main` as `f45400a8`. RB-2 / S2 (the
+API observer call and the recovery sweeper) is next, as contract preparation: contract v1.1 and its v1.1.1 addendum are PROPOSED with the Product
+Owner's provisional selections, adds no migration, and keeps `0202` for S3. Its open operational requirement OR-1 is
+recorded here so that it is not lost: oldest-pending-age and pending-count monitoring, which S2's telemetry cannot provide,
+must be resolved before either S2 path is activated on hosted Supabase. The Product Owner's provisional direction
+(D-S2-12) is Alternative A: a bounded recovery sweeper only, default OFF. It is an interim engineering path, not the final
+Replay decision.
+
+The open product gate **RF-1 (Replay timing fidelity and observation capacity)** is recorded here so that it is not lost.
+`observed_at` is immutable, so late observations are permanent. Hosted activation waits until the Product Owner resolves:
+- OR-1;
+- measured recovery capacity;
+- the accepted timing fidelity;
+- the hosted role's `statement_timeout` and isolation.
+
+Bounded immediate observation stays a possible pre-launch requirement, through a future migration whose number is not
+reserved. Nothing is implemented before execution authorization. S3 – S5 are not authorized, M-2 is preferred and not executed, and no Replay moment is yet `RECORDED`. The
+item stays `OPEN — UNASSIGNED`.
+
 ### `QAN-BL-NAV-04` — No Full Personal Detail Surface Beyond the PEEK (PERSONAL-DETAIL-01)
 
 - **Title / Finding:** the Personal Detail Sheet is PEEK-only (G-7, V1). There is no full Personal detail surface for a
@@ -4020,6 +4039,38 @@ document: the contract's §12 / G-7). Nothing here authorizes implementation (BG
 
 Admitted by `COSMOS-INT-01` at its closure (2026-11-21) under BG-08 (qualifying residue of the closing task, which must
 not survive only in a report). Nothing here authorizes implementation (BG-07).
+
+Progress note (2026-11-23, CI-04 preventive work, not a disposition). The Product Owner authorised a narrowly scoped CI
+maintenance change, on its own Draft PR, after PR #405's Arabic cell (run 45183916103).
+- **What that run showed.** P-DOOR's step was stopped at its 150 s bound although its own Maestro log shows every command
+  COMPLETED. About 118 s of that went to CLI start-up: device enumeration about 39 s, the flow's GraalJS engine about
+  71 s. The gate still reported "the Personal Analysis did not open". S-LAND's cause is unproven.
+- **What the change does:**
+  - Every Maestro call keeps its own debug folder and logs its timeline.
+  - Every abnormal exit, not only a door, keeps the screen, the hierarchy, the driver's answer, the surviving Maestro
+    processes (which are stopped) and the simulator log.
+  - A case whose step gave no answer is NOT TESTED (INFRASTRUCTURE), never FAIL.
+  - The evidence upload is attempted also on a cancelled or timed-out job. This is best-effort, not guaranteed collection.
+  - A static contract with planted defects pins this.
+- **What it does not do:** it changes no bound, adds no retry or wait, removes no assertion and touches no product code.
+- **What it does not claim:** it does **not** claim the hangs' root cause is fixed, and no startup reduction is claimed
+  without measurement.
+- **Properties advanced:**
+  - "evidence is uploaded even when the job is cancelled or times out": now attempted, best-effort only;
+  - "a hang can be told from an application failure by the evidence it keeps": for the Maestro steps. Each step's exit
+    status is recorded in `steps.tsv`, apart from the case verdicts.
+- **Startup measurement (throwaway probe run 45254105648, never merged).** The runner image, Xcode, simulator runtime, JDK and
+  pinned Maestro matched the gate's; no app was built. 44 calls, all exit 0:
+  - With the Android SDK variables set (the runner default), device enumeration took a median 11.4 s per call (6.7 – 24.8 s).
+  - With them unset it took 2.4 – 4.1 s typically (medians 2.7 – 3.2 s), so about 8 s less per call. Totals: median
+    30.5 s with the variables set, against 13.4 – 19.4 s with them unset.
+  - A C1-only JIT and an AppCDS archive showed no further proven gain.
+  - The engine phase never exceeded 0.7 s. The failing run's 71 s engine gap and 6.4 s device-info step did **not**
+    reproduce, so their cause is **unresolved**: the job's environment is suspected, not proven.
+  - Following the Product Owner's rule, no startup change is applied. Unsetting the Android variables for the gate's Maestro
+    calls is a measured candidate for a later decision.
+- **Still open:** the hangs themselves, the iPhone SE time budget, and gate 44908792454's unexplained SE entry. The item
+  stays `OPEN — UNASSIGNED`.
 
 ## 6. Tombstones
 

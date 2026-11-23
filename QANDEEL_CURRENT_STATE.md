@@ -1,6 +1,25 @@
 # QANDEEL — Current State
 
-> **S8B-07 REPLAY-COSMOS-01 — RB-2 / S1 SEMANTIC COMMIT INSTANTS — DELIVERED / READY FOR PO REVIEW — NOT MERGED — 2026-11-23 (status only; no new task authority):**
+> **S8B-07 REPLAY-COSMOS-01 — RB-2 / S1 MERGED / CLOSED — RB-2 / S2 NEXT: CONTRACT PREPARATION — CI-04 PREVENTIVE CI WORK ON ITS OWN DRAFT PR — 2026-11-23 (status only; no new task authority):**
+> - **RB-2 / S1: MERGED / CLOSED.** PR #405 merged into `main` as `f45400a878d9e23951c300f074fbe7cf11b10201` (S1 head `58829ca2`). API CI, Mobile CI and the three iOS World gate cells passed after the one rerun of the Arabic cell that the Product Owner authorized. That passing rerun proves no fix: the Arabic cell's earlier P-DOOR / S-LAND stops are `QAN-BL-CI-04` evidence. S1 is not repeated or redesigned. Record: [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §15.7.
+> - **Database:** `0201` is in source and **NOT applied to hosted Supabase** (with 0197 – 0200, under HOSTED-DEPLOY-01). The next migration is **0202**.
+> - **RB-2 / S2 (historical observation integration): NEXT — CONTRACT PREPARATION.**
+>   - Execution contract v1.1 and its v1.1.1 addendum are PROPOSED, after the Product Owner's reviews, and kept outside the repository. The addendum bounds the immediate observer's work with a backlog gate, limits what sweeper signals may claim, and states recovery only under stated capacity assumptions. A v1.1.2 safety note then withdraws the gate as a bound. Under SKIP LOCKED, the per-Session observer can still meet an unbounded backlog. The note recommends sweeper-only operation until a bounded observer exists, and leaves the choice (D-S2-12) with the Product Owner.
+>   - The Product Owner's provisional selections:
+>     - immediate, detached observation on every clock-moving path, plus a bounded recovery sweeper;
+>     - 30 s provisional interval; 500 rows / 10 rounds as ceilings only;
+>     - both paths opt-in and default OFF in every environment;
+>     - **no S2 migration**.
+>   - `0202` stays reserved for S3 historical availability.
+>   - Oldest-pending-age monitoring is an open operational requirement (OR-1), to be resolved before hosted activation.
+>   - **Product Owner direction (D-S2-12, provisional):** Alternative A — a bounded recovery sweeper over 0201's existing `LIMIT`ed definer, with no immediate observer and no call of 0201's unbounded per-Session observer. This is an **interim engineering path, not a final Replay product decision**. Its one flag is default OFF everywhere. Bounded immediate observation (B, a future separately authorized migration whose number is not reserved) stays a possible pre-launch requirement.
+>   - **Open product gate RF-1 (Replay timing fidelity and observation capacity).** `observed_at` is immutable, so a late observation can never be corrected. Hosted activation stays blocked until the Product Owner resolves OR-1 (count and age monitoring), measured recovery capacity, Replay timing fidelity, and the hosted role's `statement_timeout` and isolation. Rows that accrue once `0201` is hosted and before an observer runs will be stamped late, so the order of hosting and activation is a HOSTED-DEPLOY-01 consideration.
+>   - **S2 implementation is NOT authorized.**
+> - **RB-2 / S3 – S5: NOT AUTHORIZED** (`0202`, the Replay transport, the mobile wiring). M-2 (D-RB2-10) is the preferred direction and is **not executed**. It still needs its own design review. RB-3, RB-4 and RB-5 are not started.
+> - **CI-04 (`QAN-BL-CI-04`):** a separate, narrowly scoped preventive CI change on its own Draft PR. It keeps Maestro's evidence for every iOS World gate step, records each step's exit apart from the case verdicts, and makes a step stopped before it answered NOT TESTED (INFRASTRUCTURE), never FAIL or PASS. The upload on cancellation is attempted, best-effort only. It does **not** claim the hangs' root cause is fixed. It changes no product code, bound, retry or assertion. The item stays `OPEN — UNASSIGNED`.
+> - **Planning:** the post-Replay gap register stays on its unmerged branch `docs/post-replay-gap-map-2026-11-23` and is not duplicated here.
+
+> **S8B-07 REPLAY-COSMOS-01 — RB-2 / S1 SEMANTIC COMMIT INSTANTS — DELIVERED 2026-11-23; since MERGED via PR #405 as `f45400a8` (entry above) (status only; no new task authority):**
 > - **Baseline:** PR #404 (RB-1 + FC-0, with the Product Owner's scoped iOS CI exception) merged into `main` as `5ce3a70c`. RB-1 is recorded in `QAN-BL-VIS-02`'s progress notes.
 > - **Authorization (PO, 2026-11-23): "RB-2/S1 ONLY"** — D-RB2-1, D-RB2-5a, D-RB2-7a, D-RB2-9 and D-RB2-11, for S1 only. S2 – S5, `0202`, Replay transport, mobile wiring, exports and live-call protocol changes are **not authorized**. M-2 (D-RB2-10) needs its own design review. S8B-05 is not reopened.
 > - **Delivered:** migration `0201` adds an append-only ledger with one row per committed transaction that moved a Session's semantic clock. A deferred, fold-capable recorder on the clock writes it, a guard makes it enforce its own transaction identity and chain, and two `service_role` observers stamp each row once, after its commit is visible. No API caller, worker or schedule exists yet. Record: [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §15; [database README](database/README.md).

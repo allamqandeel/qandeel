@@ -1,7 +1,8 @@
 # QANDEEL S8B-07 — Original Audio Replay, Media Rendering & Distribution: Implementation Record v1
 
-**Slice (2026-11-23):** REPLAY-COSMOS-01 RB-2 / S1 — **DELIVERED / READY FOR PO REVIEW — NOT MERGED** (§15;
-Draft PR #405; migration `0201`, not hosted). RB-2 S2 – S5 are not authorized. S8B-07 is not closed.
+**Slice (2026-11-23):** REPLAY-COSMOS-01 RB-2 / S1 — **MERGED / CLOSED** — PR #405 — `f45400a8` (§15, §15.7; migration
+`0201`, not hosted). RB-2 / S2 is NEXT — CONTRACT PREPARATION, not authorized for implementation. S3 – S5 are not
+authorized. S8B-07 is not closed.
 
 **Checkpoint:** S8B-07 CP1-B — **MERGED — PR #385 — `a4b30517` — 2026-11-08** (§13). **S8B-07 is not closed.** S8B-07
 CP2-A WP0 v0.3.1 is **FINAL APPROVED — NOT APPROVED FOR EXECUTION** (2026-11-09, §14): CP2-A and CP2-B are not started,
@@ -1317,9 +1318,9 @@ it decided.
 - any hosted resource, download, install, paid service or gate change;
 - a merge without the Product Owner's «ادمج».
 
-## 15. REPLAY-COSMOS-01 RB-2 / S1 — Semantic Commit Instants (DELIVERED, 2026-11-23)
+## 15. REPLAY-COSMOS-01 RB-2 / S1 — Semantic Commit Instants (MERGED, 2026-11-23)
 
-**Slice:** `RB-2 / S1 — DELIVERED / READY FOR PO REVIEW — NOT MERGED`. Draft PR #405 on
+**Slice:** `RB-2 / S1 — MERGED / CLOSED` (§15.7). It was delivered as Draft PR #405 on
 `replay/rb2-s1-semantic-commit-instants`, from `main` at `5ce3a70c`. **Merge only on the Product Owner's explicit «ادمج».**
 S1 is a slice, not a phase or a task closure. S8B-07 stays open. RB-2's S2 – S5 are **not authorized**. Migration `0201` is
 **not hosted**. Every voice gate stays `DISABLED`.
@@ -1440,3 +1441,37 @@ one-Session observer transaction, median / p95, ms: 1.30 / 1.66
   historical availability as open. S1 is only its database foundation, and the register is not duplicated here.
 - **Backlog (BG-08).** No item is admitted or closed. `QAN-BL-VIS-02` gets a progress note and stays
   `OPEN — UNASSIGNED`.
+
+### 15.7 Post-merge status (2026-11-23; documentation only, no new authority)
+
+- **Merged.** PR #405 merged into `main` as `f45400a878d9e23951c300f074fbe7cf11b10201`; the S1 head was `58829ca2`.
+  RB-2 / S1 is **MERGED / CLOSED** as a slice. S8B-07 stays open. S1 is not repeated or redesigned.
+- **CI on the merged head.** API CI, Mobile CI and the three iOS World gate cells passed after the one rerun of the Arabic
+  cell that the Product Owner authorized. In the first Arabic run (45183916103), P-DOOR and S-LAND were stopped at
+  Maestro's 150 s bound:
+  - P-DOOR's own Maestro log shows every command COMPLETED, including the tap and the rail assertion. It shows about 118 s
+    of CLI start-up (device enumeration about 39 s, the flow's script engine about 71 s) before the first command.
+  - S-LAND's cause is unproven: no debug folder was kept for it.
+  - The passing rerun proves no fix. Both are `QAN-BL-CI-04` evidence.
+- **Database.** `0201` is in source and not hosted (HOSTED-DEPLOY-01). The next migration is `0202`.
+- **Next.** RB-2 / S2, the historical observation integration (the API observer call after each real semantic commit and a
+  bounded recovery sweeper), is **NEXT — CONTRACT PREPARATION**.
+  - Its execution contract v1.1, with its v1.1.1 addendum, is PROPOSED after the Product Owner's reviews. The addendum adds a backlog-gated immediate observer, sweeper signals that claim no count or age, and recovery bounded by stated assumptions. The v1.1 provisional selections are:
+    - detached immediate observation on every clock-moving path;
+    - a 30 s provisional sweep;
+    - ceilings rather than defaults;
+    - opt-in flags, default OFF everywhere;
+    - no S2 migration.
+  - `0202` stays with S3.
+  - Oldest-pending-age monitoring is operational requirement OR-1, open until before hosted activation.
+  - **Direction (D-S2-12, provisional):** Alternative A.
+    - A bounded recovery sweeper over 0201's `LIMIT`ed definer, with no immediate observer, default OFF. It is an
+      interim engineering path, not the final Replay decision.
+    - Open product gate RF-1 (timing fidelity, recovery capacity, OR-1, the hosted role's `statement_timeout` and
+      isolation) blocks hosted activation, because `observed_at` cannot be corrected later.
+    - Bounded immediate observation (B) stays a possible pre-launch requirement, through a future migration whose
+      number is not reserved.
+  - Nothing is implemented before execution authorization.
+  - S3 – S5 are not authorized.
+  - M-2 (D-RB2-10) is preferred and not executed.
+  - RB-3 – RB-5, MP4 export and HOSTED-DEPLOY-01 are outside RB-2 / S2.
