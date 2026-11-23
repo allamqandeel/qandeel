@@ -29,9 +29,11 @@ import { Control, Glyph, MIN_TARGET, conversationCopy, readerDirection, readerSi
 import { LivingAnalysisSurface, type LivingAnalysisTopBand } from '../living-analysis';
 import type { ChromeLanguage } from '../orientation-chrome';
 import { ReplayMomentComposite, ReplayPreviewLimit, replayCompositeCopy, type ReplayCompositeController, type ReplayMomentControls } from '../replay-composite';
+import type { ReplayStageClock } from '../replay-cosmos';
 import { replayEntryCopy, type ReplayEntryController } from '../replay-entry';
+import type { ReplayHistoryMoment } from '../runtime-entry';
 import { replayPlayerCopy } from './copy';
-import type { ReplayPlayerController, ReplayPlayerTransportView, ReplayPlayerView } from './player-controller';
+import { readingPaceMs, type ReplayPlayerController, type ReplayPlayerTransportView, type ReplayPlayerView } from './player-controller';
 import { ReplaySpine } from './ReplaySpine';
 
 export const REPLAY_PLAYER_TEST_ID = 'qandeel-replay-player';
@@ -63,9 +65,18 @@ export interface ReplayPlayerSurfaceControls {
   readonly moment: NonNullable<ReplayMomentControls['moment']>;
   /** The version can no longer play: no reading is shown in its place. */
   readonly withheld: boolean;
+  /** PR #404 RB-1: the version's clock, which the COSMOS stage follows (its place, never the reading pace). */
+  readonly stageClock?: ReplayStageClock;
 }
 
 const NO_SURFACE: ReplayPlayerSurface = { useControls: () => null };
+
+/**
+ * REPLAY-COSMOS-01: each paced moment's presentation window for the COSMOS stage — the declared reading pace the player
+ * times it with. A clock-presented V2 moment's window is its audio window, from the clock the surface hands the stage
+ * (PR #404 RB-1 S2: residue R-3).
+ */
+const momentPaceMs = (moment: ReplayHistoryMoment): number => readingPaceMs(moment.text ?? '');
 
 const noSubscription = () => () => undefined;
 const noRevision = () => 0;
@@ -106,7 +117,8 @@ export function ReplayPlayer({ controller, language, insets, surface = NO_SURFAC
 
   let body: ReactNode;
   if (open.composite !== null) {
-    body = <ReplayMomentComposite controller={open.composite} ordinal={open.ordinal} language={language} insets={insets} top={top} controls={controls} />;
+    body = <ReplayMomentComposite controller={open.composite} ordinal={open.ordinal} language={language} insets={insets} top={top} controls={controls}
+      playing={open.playing} windowMs={momentPaceMs} stageClock={added?.stageClock ?? null} />;
   } else if (open.problem === 'MOMENT_NOT_SEALED' || open.problem === 'ANALYSIS_UNAVAILABLE') {
     body = <ReplayPreviewLimit outcome={open.problem} language={language} insets={insets} top={top} />;
   } else {

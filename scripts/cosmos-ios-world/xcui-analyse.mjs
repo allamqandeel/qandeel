@@ -17,7 +17,7 @@
 //     PO decision 2026-11-21 (option 1): when no unambiguous core exists (one mark whose beads share a hue, iPhone SE), a
 //     constellation of at least three node cores that move by ONE rigid shift, found without the expected drag and
 //     unique, is measured instead (`constellation` below). Otherwise NOT TESTED.
-//   - D-3 (PO 2026-11-18, contract §24): the values the D-3 tests measure (`sefu1-timing`, `sefu2-card`,
+//   - D-3 (PO 2026-11-18, contract §24): the values the D-3 tests measure (`sefu2-card`,
 //     `layout-gate`) are appended to their test's row as recorded evidence; they are not judged here.
 //   - D-3 CP4 (PO review 2026-11-19, contract §26), two demonstrated harness faults:
 //       * the screen width (points) comes from the World gate's Maestro step. In gate 44430083077 the Maestro driver
@@ -42,7 +42,11 @@ const result = (c, r, d) => rows.push(`${c}\t${r}\t${d.replace(/[\t\n]+/g, ' ')}
 
 // ── the tests ─────────────────────────────────────────────────────────────────────────────────────────────────────
 const swift = fs.readFileSync(path.join(here, 'xcuitest', 'CosmosWorldGestureUITests.swift'), 'utf8');
-const tests = [...swift.matchAll(/func (test\w+)\(\)/g)].map((m) => m[1]);
+// NOT in the mandatory gate (PO, 2026-11-23): the fresh-install first-tap test targets the deferred first-tap limitation
+// (SE-FU-1, Future Improvements item 022). The gate workflow does not run it and no row is made for it here, so it can
+// neither fail nor pass the gate; it runs only in the non-gating D-3 validation workflow (cosmos-ios-d3-validation.yml).
+const NOT_IN_GATE = new Set(['testFreshInstallFirstVisibleDoorTapOpensTheAnalysis']);
+const tests = [...swift.matchAll(/func (test\w+)\(\)/g)].map((m) => m[1]).filter((t) => !NOT_IN_GATE.has(t));
 const log = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : '';
 // A targeted run (XCUI_SELECTED = space-separated test names) says which tests it left out on purpose.
 const selected = process.env.XCUI_SELECTED ? new Set(process.env.XCUI_SELECTED.split(/\s+/).filter(Boolean)) : null;
@@ -74,8 +78,7 @@ for (const d of String(dir).split(',').filter(Boolean)) {
 }
 const text = (name) => (files.has(name) ? fs.readFileSync(files.get(name), 'utf8').trim() : null);
 // D-3 (and COSMOS-FINAL-01 O-1, O-2): the measured values, appended to their test's row.
-for (const [t, name] of [['testFreshInstallFirstVisibleDoorTapOpensTheAnalysis', 'sefu1-timing'],
-  ['testPersonalDeeperBeadsTheRailLineAndTheCardPassTheirTouchToTheStage', 'sefu2-card'], ['testLayoutAtTheReadersTextSize', 'layout-gate'],
+for (const [t, name] of [['testPersonalDeeperBeadsTheRailLineAndTheCardPassTheirTouchToTheStage', 'sefu2-card'], ['testLayoutAtTheReadersTextSize', 'layout-gate'],
   ['testPublicSearchExecutedWhileTheSectionListIsOpenShowsItsAnswer', 'o1'],
   ['testPublicPendingEntryShowsALoadingIndicationAndKeepsTheWorldNavigation', 'o2']]) {
   const i = rows.findIndex((r) => r.startsWith(`X:${t}\t`));

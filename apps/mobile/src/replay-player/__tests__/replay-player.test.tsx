@@ -7,6 +7,7 @@ import { BackHandler } from 'react-native';
 
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../appearance';
 import { MAP_SURFACE_TEST_ID } from '../../map';
+import { REPLAY_COSMOS_TEST_ID } from '../../replay-cosmos';
 import { REPLAY_COMPOSITE_TEST_ID } from '../../replay-composite';
 import { replayEntryCopy } from '../../replay-entry';
 import { resize } from '../../responsive/__fixtures__/composition';
@@ -88,7 +89,9 @@ describe('S7-04 — the passage', () => {
     expect(passage.props.accessibilityViewIsModal).toBe(true);
     expect(view.getByTestId(REPLAY_COMPOSITE_TEST_ID)).toBeTruthy();
     expect(text(view, 'qandeel-replay-text')).toBe(MOMENTS[0].text);
-    expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).not.toBeNull();
+    // REPLAY-COSMOS-01 RE-ANCHOR: the moment's world is the Replay's COSMOS stage (it was T-04's MapSurface).
+    expect(view.queryByTestId(REPLAY_COSMOS_TEST_ID)).not.toBeNull();
+    expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
     // The top band: the way back (frozen W1A-01 label), the approved title, and the private lifecycle.
     expect(view.getByTestId('qandeel-replay-player-back').props.accessibilityLabel).toBe('المحادثة');
     expect(text(view, 'qandeel-replay-player-title')).toBe('إعادة عرض المحادثة');

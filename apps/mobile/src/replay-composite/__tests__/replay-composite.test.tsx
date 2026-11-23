@@ -1,6 +1,14 @@
 /**
  * S7-03 — the Historical Replay composite, over the REAL-PATH wire (PostgreSQL 0169 → ReplayService → the production
- * client → the governed adapter → the production LivingAnalysisSurface and T-04 MapSurface).
+ * client → the governed adapter → the production LivingAnalysisSurface and, since REPLAY-COSMOS-01 (PO directive,
+ * 2026-11-22), the production COSMOS stage of the Replay in place of T-04's MapSurface).
+ *
+ * REPLAY-COSMOS-01 RE-ANCHOR: every assertion that read T-04's MapSurface (its props, its accessible nodes, its pinch)
+ * reads the COSMOS stage instead: the stage the composite asked for, and the production marks it draws at its
+ * presentation time. The claims are unchanged: the same moment and TC, no future knowledge, a refused or failed read
+ * drawn around by nothing, NOT_VIEWABLE withdrawing everything. Two claims change, and say so where they are: the reader
+ * no longer pinches a Replay (the guided camera is the plan's), so every depth of every moment is read once up front; and
+ * the stage has no accessible marks yet (residue R-6), so the accessible truth is the chrome's sentences.
  *
  * The twelve acceptance criteria, each by name: exact text; the same ordinal and TC; no future knowledge; no live state;
  * the same Living Analysis components; available and withheld rungs; gaps and partial history; withholding when not
@@ -13,8 +21,9 @@ import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-lib
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../appearance';
 import { LivingAnalysisSurface } from '../../living-analysis';
 import { LivingAnalysisSurface as LivingAnalysisSurfaceActual } from '../../living-analysis/LivingAnalysisSurface';
-import { MAP_ACCESSIBILITY_TEST_ID, MAP_SURFACE_TEST_ID, MapSurface, deriveMapScene } from '../../map';
-import { MapSurface as MapSurfaceActual } from '../../map/renderer/MapSurface';
+import { MAP_SURFACE_TEST_ID, deriveMapScene } from '../../map';
+import { REPLAY_COSMOS_TEST_ID, marksOf, replayFrameFacts } from '../../replay-cosmos';
+import { ReplayCosmosStage } from '../../replay-cosmos/ReplayCosmosStage';
 import { RESPONSIVE_SURFACE_TEST_ID } from '../../responsive';
 import { sessionPosition } from '../../state';
 import { resize } from '../../responsive/__fixtures__/composition';
@@ -27,9 +36,9 @@ import { DERIVED_GAP, REPLAY_WIRE, replayScene, replayWireClient, type ReplayPro
 
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 // Criterion 5: the REAL components, observed — each spy calls the actual implementation and only records that it ran.
-jest.mock('../../map/renderer/MapSurface', () => {
-  const actual = jest.requireActual('../../map/renderer/MapSurface');
-  return { ...actual, MapSurface: jest.fn(actual.MapSurface) };
+jest.mock('../../replay-cosmos/ReplayCosmosStage', () => {
+  const actual = jest.requireActual('../../replay-cosmos/ReplayCosmosStage');
+  return { ...actual, ReplayCosmosStage: jest.fn(actual.ReplayCosmosStage) };
 });
 jest.mock('../../living-analysis/LivingAnalysisSurface', () => {
   const actual = jest.requireActual('../../living-analysis/LivingAnalysisSurface');
@@ -104,12 +113,19 @@ function readerFacing(root: unknown, out: string[] = []): string[] {
   readerFacing(node.children, out);
   return out;
 }
-const mapNodes = (view: RenderResult) => view.queryAllByTestId(new RegExp(`^${MAP_ACCESSIBILITY_TEST_ID}:`, 'u')).map((node) => String(node.props.testID).split(':')[1]);
-const zoom = async (view: RenderResult, direction: 'zoom-in' | 'zoom-out') => {
-  await act(async () => { fireEvent(view.getByTestId(MAP_ACCESSIBILITY_TEST_ID), 'accessibilityAction', { nativeEvent: { actionName: direction } }); });
-  await flush();
-  await resize(view, SIZE.width, SIZE.height, { mapHeight: 520 });
-  await flush();
+/** REPLAY-COSMOS-01: the stage the composite last asked for, and what it draws at its presentation time. */
+const drawn = () => {
+  const props = jest.mocked(ReplayCosmosStage).mock.calls.at(-1)?.[0];
+  if (props === undefined) return null;
+  const facts = replayFrameFacts(props.scene, props.t);
+  const stage = facts.knowledge === null ? props.scene.empty : props.scene.stages.get(facts.knowledge) ?? null;
+  return { props, facts, stage };
+};
+/** The Thread marks the COSMOS stage on screen draws (none when no stage is on screen). */
+const cosmosThreads = (view: RenderResult): string[] => {
+  if (view.queryByTestId(REPLAY_COSMOS_TEST_ID) === null) return [];
+  const stage = drawn()?.stage ?? null;
+  return stage === null ? [] : [...marksOf(stage.stage.list).threads];
 };
 
 let MAIN: { version: ReplayHistoryVersion; moments: readonly ReplayHistoryMoment[] };
@@ -129,27 +145,29 @@ afterEach(async () => {
 });
 
 describe('S7-03 — the composite on the real Living Analysis components', () => {
-  it('(1, 2, 5) shows the exact committed text with its source and role, at the same ordinal and TC, on LivingAnalysisSurface and MapSurface', async () => {
+  it('(1, 2, 5) shows the exact committed text with its source and role, at the same ordinal and TC, on LivingAnalysisSurface and the COSMOS stage', async () => {
     const { view } = await mount('main', 1);
     expect(view.getByTestId(REPLAY_COMPOSITE_TEST_ID)).toBeTruthy();
     expect(view.getByTestId(RESPONSIVE_SURFACE_TEST_ID)).toBeTruthy();
     // The barrels hand the composite the very functions the owners export, and those are what rendered.
     expect(LivingAnalysisSurface).toBe(LivingAnalysisSurfaceActual);
-    expect(MapSurface).toBe(MapSurfaceActual);
+    expect(jest.mocked(ReplayCosmosStage)).toHaveBeenCalled();
     expect(jest.mocked(LivingAnalysisSurface).mock.calls.at(-1)?.[0]).toMatchObject({ timeline: null });
-    const mapProps = jest.mocked(MapSurface).mock.calls.at(-1)?.[0];
-    expect(mapProps?.context.scene.tc).toBe(1);
-    expect(mapProps?.context.scene.sessionId).toBe(`replay:${REPLAY_WIRE.scenes.main.replayId}:${REPLAY_WIRE.scenes.main.versionId}`);
-    expect(mapProps?.store.getState().temporal).toEqual({ kind: 'PINNED', at: 1 });
-    expect(view.getByTestId(MAP_SURFACE_TEST_ID)).toBeTruthy();
+    // The stage draws the knowledge of THIS moment (ordinal 1, TC 1) at the moment's own presentation time; no MapSurface.
+    const shown = drawn();
+    expect(shown?.facts.knowledge).toBe(1);
+    // Moment 1 is disclosed at the start of the version, so the timeline OPENS on it (it is not a later step).
+    expect(shown?.props.scene.timeline.initialOrdinal).toBe(1);
+    expect(MAIN.moments[0].tc).toBe(1);
+    expect(view.getByTestId(REPLAY_COSMOS_TEST_ID)).toBeTruthy();
+    expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
     expect(text(view, 'qandeel-replay-text')).toBe(MAIN.moments[0].text);
     expect(text(view, 'qandeel-replay-speaker')).toBe('أنت');
     expect(view.getByTestId('qandeel-replay-source').props.accessibilityLabel).toBe(`كلامك: ${MAIN.moments[0].text}`);
     expect(text(view, 'qandeel-replay-position')).toBe('جزء من المحادثة · في إعادة العرض: 1 من 6.');
     expect(text(view, 'qandeel-replay-temporal')).toBe('أنت عند اللحظة 1.');
     expect(text(view, 'qandeel-replay-spatial')).toBe('المعروض الآن: العالم كله.');
-    expect(mapNodes(view)).toEqual(threadsAt(1).map((id) => `THREAD`));
-    expect(mapNodes(view)).toHaveLength(threadsAt(1).length);
+    expect(cosmosThreads(view)).toEqual(threadsAt(1).map((id) => `THREAD:${id}`));
   });
 
   it('(1) an assistant moment is QANDEEL\'s, with its own accessible name', async () => {
@@ -163,38 +181,44 @@ describe('S7-03 — the composite on the real Living Analysis components', () =>
     expect(threadsAt(2)).toHaveLength(1);
     expect(threadsAt(3)).toHaveLength(2);
     const { view, show } = await mount('main', 2);
-    expect(mapNodes(view)).toHaveLength(1);
+    expect(cosmosThreads(view)).toHaveLength(1);
     expect(text(view, 'qandeel-replay-temporal')).toBe('أنت عند اللحظة 2.');
     await show(3);
     expect(text(view, 'qandeel-replay-text')).toBe(MAIN.moments[2].text);
     expect(text(view, 'qandeel-replay-temporal')).toBe('أنت عند اللحظة 3.');
-    expect(mapNodes(view)).toHaveLength(2);
+    expect(cosmosThreads(view)).toHaveLength(2);
     await show(2);
     expect(text(view, 'qandeel-replay-text')).toBe(MAIN.moments[1].text);
-    expect(mapNodes(view)).toHaveLength(1);
+    expect(cosmosThreads(view)).toHaveLength(1);
   });
 
-  it('(6) a pinch through the rungs reads the next rung for the SAME moment; withheld rungs stay undrawn', async () => {
+  it('(6) REPLAY-COSMOS-01: every depth of every moment is read once, and the stage holds what each depth disclosed — withheld rungs stay undrawn', async () => {
+    // Re-anchored from "a pinch reads the next rung for the SAME moment": a Replay is no longer pinched (the guided camera
+    // is the plan's), so the stage reads each moment's five depths once, up front, and never twice.
     const { view, reads } = await mount('main', 4);
-    expect(mapNodes(view).every((key) => key.startsWith('THREAD'))).toBe(true);
-    await zoom(view, 'zoom-in');
-    expect(text(view, 'qandeel-replay-spatial')).toBe('المعروض الآن: الخيوط.');
-    await zoom(view, 'zoom-in');
-    await zoom(view, 'zoom-in');
-    expect(reads).toEqual(expect.arrayContaining(['analysis 4 WORLD', 'analysis 4 THREAD', 'analysis 4 SESSION', 'analysis 4 ANALYTICAL_OBJECT']));
-    expect(reads.filter((read) => read.startsWith('analysis') && !read.startsWith('analysis 4 '))).toEqual([]);
-    const families = mapNodes(view).map((key) => key.split(':')[0]);
-    // At ANALYTICAL_OBJECT the moment's two Readings and two Emerging Focuses are disclosed, beside its two Threads.
-    expect(families.filter((family) => family === 'READING')).toHaveLength(2);
-    expect(families.filter((family) => family === 'EMERGING_FOCUS')).toHaveLength(2);
-    expect(families.filter((family) => family === 'THREAD')).toHaveLength(2);
+    for (const moment of MAIN.moments) {
+      for (const depth of ['WORLD', 'THREAD', 'SESSION', 'ANALYTICAL_OBJECT', 'SOURCE_PROVENANCE']) {
+        expect(reads.filter((read) => read === `analysis ${moment.ordinal} ${depth}`)).toHaveLength(1);
+      }
+    }
+    const stage = drawn()?.stage ?? null;
+    expect(stage).not.toBeNull();
+    // At moment 4 the stage draws its two Threads and the two Readings bound to them (the Personal COSMOS draws no
+    // Emerging Focus; it never did in the live world either).
+    expect(cosmosThreads(view)).toHaveLength(2);
+    // The moment's Readings and Emerging Focuses reach the Replay without a Thread appearance, so the production stage
+    // holds them as its fringe, never as marks of their own (exactly as the live Personal stage does).
+    expect(marksOf(stage!.stage.list).readings).toEqual([]);
+    expect(stage!.stage.list.fringe).toBeGreaterThanOrEqual(2);
+    // A rung the Replay did not disclose is held as not held, and draws nothing.
+    stage!.stage.held.forEach((held, rung) => { if (!held) expect(stage!.stage.list.layers[rung].hits).toEqual([]); });
   });
 
   it('(2, 7) a part of the conversation keeps its own ordinals and the conversation\'s TCs', async () => {
     const { view } = await mount('part', 1);
     expect(text(view, 'qandeel-replay-position')).toBe('جزء من المحادثة · في إعادة العرض: 1 من 3.');
     expect(text(view, 'qandeel-replay-temporal')).toBe('أنت عند اللحظة 4.');
-    expect(mapNodes(view)).toHaveLength(threadsAt(4).length);
+    expect(cosmosThreads(view)).toHaveLength(threadsAt(4).length);
   });
 
   it('(7) DERIVED SPECIMEN — a discontinuity is perceptible where it is, and nothing omitted is shown', async () => {
@@ -214,23 +238,23 @@ describe('S7-03 — the composite on the real Living Analysis components', () =>
     expect(text(view, 'qandeel-replay-analytical-layer')).toBe('التحليل المحفوظ: محفوظ كما كان.');
     expect(text(view, 'qandeel-replay-no-analysis-without-text')).toBe('لا يُعرض التحليل من دون الرسائل التي يخصّها.');
     expect(view.queryByTestId('qandeel-replay-text')).toBeNull();
-    expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
+    expect(view.queryByTestId(REPLAY_COSMOS_TEST_ID)).toBeNull();
     expect(reads.filter((read) => read.startsWith('analysis'))).toEqual([]);
   });
 
   it('(8) ANALYSIS_NOT_CURRENTLY_AVAILABLE for one moment: said so, with no Map — while the moment before it is drawn', async () => {
     const { view, show } = await mount('analysisMoved', 1);
-    expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).not.toBeNull();
+    expect(view.queryByTestId(REPLAY_COSMOS_TEST_ID)).not.toBeNull();
     await show(2);
     expect(text(view, 'qandeel-replay-text')).toBe(MAIN.moments[1].text);
     expect(view.getByTestId('qandeel-replay-analysis-not-currently-available')).toBeTruthy();
-    expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
+    expect(view.queryByTestId(REPLAY_COSMOS_TEST_ID)).toBeNull();
   });
 
   it('a failed analysis read is a failure with a retry — never an empty Map that implies no analysis existed', async () => {
     let failing = true;
     const { view } = await mount('main', 3, 'ar', { failAnalysis: () => failing });
-    expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
+    expect(view.queryByTestId(REPLAY_COSMOS_TEST_ID)).toBeNull();
     expect(view.getByTestId('qandeel-replay-analysis-failed')).toBeTruthy();
     expect(view.getByText('تعذّر عرض التحليل الآن. هذا لا يعني أنه غير موجود.')).toBeTruthy();
     failing = false;
@@ -238,13 +262,14 @@ describe('S7-03 — the composite on the real Living Analysis components', () =>
     await flush();
     await resize(view, SIZE.width, SIZE.height, { mapHeight: 520 });
     await flush();
-    expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).not.toBeNull();
-    expect(mapNodes(view)).toHaveLength(threadsAt(3).length);
+    expect(view.queryByTestId(REPLAY_COSMOS_TEST_ID)).not.toBeNull();
+    expect(cosmosThreads(view)).toHaveLength(threadsAt(3).length);
   });
 
   it('(9) English, Arabic RTL, the accessible Map and Reduced Motion all carry the same truth', async () => {
     const ar = await mount('main', 3, 'ar');
-    const arNodes = mapNodes(ar.view);
+    const arNodes = cosmosThreads(ar.view);
+    expect(arNodes).toHaveLength(threadsAt(3).length);
     expect(ar.view.getByTestId('qandeel-replay-temporal').props.style.writingDirection).toBe('rtl');
     // Android ignores writingDirection, so the reader's side is set physically (found on the S7-03 emulator screenshots).
     for (const id of ['qandeel-replay-position', 'qandeel-replay-speaker', 'qandeel-replay-text', 'qandeel-replay-temporal', 'qandeel-replay-spatial']) {
@@ -257,19 +282,20 @@ describe('S7-03 — the composite on the real Living Analysis components', () =>
     expect(en.view.getByTestId('qandeel-replay-temporal').props.style.writingDirection).toBe('ltr');
     expect(en.view.getByTestId('qandeel-replay-temporal').props.style.textAlign).toBe('left');
     expect(en.view.getByTestId('qandeel-replay-text').props.style.textAlign).toBe('right'); // the Arabic message keeps its own start
-    expect(mapNodes(en.view)).toEqual(arNodes);
+    expect(cosmosThreads(en.view)).toEqual(arNodes);
     await cleanup();
     (globalThis as { __QANDEEL_TEST_REDUCED_MOTION__?: boolean }).__QANDEEL_TEST_REDUCED_MOTION__ = true;
     const reduced = await mount('main', 3, 'ar');
-    expect(mapNodes(reduced.view)).toEqual(arNodes);
+    expect(cosmosThreads(reduced.view)).toEqual(arNodes);
     expect(text(reduced.view, 'qandeel-replay-text')).toBe(MAIN.moments[2].text);
-    for (const node of reduced.view.queryAllByTestId(new RegExp(`^${MAP_ACCESSIBILITY_TEST_ID}:`, 'u'))) expect(typeof node.props.accessibilityLabel).toBe('string');
+    // Residue R-6 (named, not hidden): the COSMOS stage carries no accessible marks yet; the accessible truth is the
+    // chrome's temporal and spatial sentences, which are the same in every mode.
+    expect(text(reduced.view, 'qandeel-replay-temporal')).toBe('أنت عند اللحظة 3.');
   });
 
   it('(10) no identity or Session context reaches the screen: no id, no viewpoint key, no Reading scope', async () => {
     for (const [name, ordinal] of [['main', 4], ['part', 2], ['notViewable', 1], ['analysisMoved', 2]] as const) {
       const { view } = await mount(name, ordinal);
-      if (view.queryByTestId(MAP_ACCESSIBILITY_TEST_ID) !== null) await zoom(view, 'zoom-in');
       // Everything a reader can see or hear: every text, and every accessible name and action label. (T-04's own test
       // ids carry canonical ids by its existing design; a test id is neither shown nor announced.)
       const said = readerFacing(view.toJSON());
@@ -290,7 +316,7 @@ describe('S7-03 — the preview limits, as the real path answered them', () => {
     for (const outcome of ['MOMENT_NOT_SEALED', 'ANALYSIS_UNAVAILABLE'] as const) {
       const view = await render(<AppearanceProvider authority={appearance()}><ReplayPreviewLimit outcome={outcome} language="ar" insets={INSETS} /></AppearanceProvider>);
       await resize(view, SIZE.width, SIZE.height, { mapHeight: 520 });
-      expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
+      expect(view.queryByTestId(REPLAY_COSMOS_TEST_ID)).toBeNull();
       expect(view.getByText(outcome === 'MOMENT_NOT_SEALED'
         ? 'إعادة العرض التي تشمل آخر رسالة لا يمكن عرضها إلا بعد أن تستمر المحادثة.'
         : 'لا يتوفر تحليل محفوظ لهذه المحادثة، فلا يمكن إعادة عرضها.')).toBeTruthy();
@@ -365,7 +391,7 @@ describe('S7-03 — the governed adapter', () => {
     const scene = { ...main, version: { ...main.version, renderContract: { ...contract, policies: { ...contract.policies, editorialAnnotation: 'ANNOTATED' } } } };
     const { view, reads } = await mount(scene, 1);
     expect(view.getByTestId('qandeel-replay-not-available')).toBeTruthy();
-    expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
+    expect(view.queryByTestId(REPLAY_COSMOS_TEST_ID)).toBeNull();
     expect(reads.filter((read) => read.startsWith('analysis'))).toEqual([]);
   });
 
@@ -452,7 +478,7 @@ const mainRevoked = () => cloneScene(replayScene('main'), (scene) => {
   scene.version.viewing = { state: 'NOT_VIEWABLE', notViewableClass: 'SOURCE_NOT_CURRENTLY_AVAILABLE', sourceLayer: 'NOT_DEREFERENCEABLE', analyticalLayer: 'SEALED_HISTORICAL_EVIDENCE' };
   for (const moment of scene.moments.moments) moment.text = null;
 });
-const NOTHING_HISTORICAL = ['qandeel-replay-text', 'qandeel-replay-source', 'qandeel-replay-not-viewable-reason', 'qandeel-replay-source-layer', 'qandeel-replay-analytical-layer', MAP_SURFACE_TEST_ID];
+const NOTHING_HISTORICAL = ['qandeel-replay-text', 'qandeel-replay-source', 'qandeel-replay-not-viewable-reason', 'qandeel-replay-source-layer', 'qandeel-replay-analytical-layer', MAP_SURFACE_TEST_ID, REPLAY_COSMOS_TEST_ID];
 const expectNothingHistorical = (view: RenderResult) => {
   for (const id of NOTHING_HISTORICAL) expect(view.queryByTestId(id)).toBeNull();
 };
@@ -613,11 +639,14 @@ describe('S8B-07 CP1-B F-1 — a mixed V2 version is read as the server gives it
 
 describe('S7-03 review — a NOT_VIEWABLE analysis while viewing withdraws everything at once', () => {
   it('the text and the Map that are on screen are withdrawn, with no reason or layer from the earlier version read', async () => {
-    const { view, controller, show, settle, find } = await mountHeld(replayScene('main'), 2);
-    await find(2, 'WORLD').answer('REAL');
+    // REPLAY-COSMOS-01 RE-ANCHOR: the stage reads every moment's depths up front and draws only when ALL are answered,
+    // so the revoking answer is one still in flight while the moment's text is on screen (it was the next moment's lazy
+    // read). Nothing partial is drawn meanwhile: one read in flight holds the whole stage back.
+    const { view, controller, show, settle, find, held } = await mountHeld(replayScene('main'), 2);
+    for (const read of [...held]) if (!(read.ordinal === 3 && read.depth === 'WORLD')) await read.answer('REAL');
     await settle();
     expect(text(view, 'qandeel-replay-text')).toBe(MAIN.moments[1].text);
-    expect(view.getByTestId(MAP_SURFACE_TEST_ID)).toBeTruthy();
+    expect(view.queryByTestId(REPLAY_COSMOS_TEST_ID)).toBeNull();
 
     await show(3);
     await find(3, 'WORLD').answer('NOT_VIEWABLE');

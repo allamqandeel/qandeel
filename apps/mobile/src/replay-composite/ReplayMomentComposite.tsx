@@ -5,8 +5,11 @@
  *                 are analysed on, composed CHROME_ONLY, always: there is no Timeline here. The player and its
  *                 navigation are S7-04's, which hands its top band above the world and its moment controls into this
  *                 moment's own band (Product Owner visual direction, 2026-10-20: option (b), the measured band);
- *   the world     T-04's own `MapSurface`, over the analysis AT THIS MOMENT, through the governed adapter. There is no
- *                 Replay map, no copy of `LivingAnalysisMap` or `MapSurface`, and no world drawn here;
+ *   the world     REPLAY-COSMOS-01 (PO directive, 2026-11-22; supersedes the S7-03 `MapSurface` world): the production
+ *                 COSMOS stage of the Replay (`../replay-cosmos`), built from the analysis of EVERY moment through the
+ *                 same governed adapter and T-04's own scene derivation, under the Replay's one guided camera plan and
+ *                 one historical timeline — the same scene, plan and timeline its video export draws. No world is
+ *                 drawn here, and there is still no second engine: the stage is drawn by the production COSMOS parts;
  *   the chrome    the moment itself: who said it and its exact text, never rewritten or summarised; where the reader is
  *                 (T-08's own temporal and spatial sentences); and every honest "nothing to draw" state.
  *
@@ -15,8 +18,9 @@
  * that same (viewpoint, TC, depth). A moment change is T-06's own `commitMoment`; the Map's context goes stale at once,
  * so nothing of the earlier moment survives on the later one (and nothing of a later one on an earlier one).
  *
- * Nothing here animates. The world's travel and the disclosure arrivals are T-10's, with its Reduced Motion parity; this
- * file adds no transition, no entrance and no emphasis of its own, and the camera never moves because a moment changed.
+ * Nothing here animates. The world's motion is the Replay camera plan's alone (REPLAY-COSMOS-01 re-anchor of the S7-03
+ * motion law): explanatory motion only, every segment justified by a disclosure already visible, driven by presentation
+ * time and never by a gesture. This file adds no transition, no entrance and no emphasis of its own.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { ScrollView, Text, View, useWindowDimensions, type LayoutChangeEvent, type TextStyle } from 'react-native';
@@ -24,8 +28,10 @@ import { ScrollView, Text, View, useWindowDimensions, type LayoutChangeEvent, ty
 import { Control, conversationCopy, paragraphDirection, readerDirection, readerSide, typeStyle, usePalette, type ConversationPalette } from '../conversation';
 import { LivingAnalysisSurface } from '../living-analysis';
 import type { LivingAnalysisTopBand } from '../living-analysis';
-import { MapSurface, mapInspectionContext, mapProjectionRequest } from '../map';
+import { mapInspectionContext, mapProjectionRequest } from '../map';
 import { spatialSentence, temporalLineModel, temporalSentence, type ChromeLanguage } from '../orientation-chrome';
+import { ReplayCosmosWorld } from '../replay-cosmos';
+import type { ReplayStageClock } from '../replay-cosmos';
 import { replayEntryCopy } from '../replay-entry';
 import { presentationSurface, recompositionPlan } from '../responsive';
 import { returnAvailability } from '../return-navigation';
@@ -59,7 +65,16 @@ export interface ReplayMomentCompositeProps {
    * Default: none, and the moment is composed exactly as before.
    */
   readonly controls?: ReplayMomentControls | null;
+  /** REPLAY-COSMOS-01: whether the player is playing (presentation time runs through the moment's window). Default: no. */
+  readonly playing?: boolean;
+  /** REPLAY-COSMOS-01: each moment's presentation window (the player's pace). Default: a still 6 s per moment. */
+  readonly windowMs?: (moment: ReplayHistoryMoment) => number;
+  /** PR #404 RB-1: the version's audio clock, when the player has one: the COSMOS stage follows it. Default: none (text). */
+  readonly stageClock?: ReplayStageClock | null;
 }
+
+const STILL_WINDOW_MS = (): number => 6000;
+const FULL_SCOPE = { kind: 'FULL' } as const;
 
 /** The player's moment controls: its instrument (play / pause and the Replay's Temporal Spine), and the line that declares its pace. */
 export interface ReplayMomentControls {
@@ -87,7 +102,7 @@ export interface ReplayMomentPresentation {
   readonly beneath: ReactNode;
 }
 
-export function ReplayMomentComposite({ controller, ordinal, language, insets, initialDepth = 'WORLD', top = null, controls = null }: ReplayMomentCompositeProps) {
+export function ReplayMomentComposite({ controller, ordinal, language, insets, initialDepth = 'WORLD', top = null, controls = null, playing = false, windowMs = STILL_WINDOW_MS, stageClock = null }: ReplayMomentCompositeProps) {
   useSyncExternalStore(controller.subscribe, controller.revision);
   const state = controller.state();
   useEffect(() => controller.open(), [controller]);
@@ -121,15 +136,17 @@ export function ReplayMomentComposite({ controller, ordinal, language, insets, i
   }
   return (
     <ReadyComposite key={state.version.versionId} controller={controller} version={state.version} moments={state.moments} ordinal={ordinal}
-      language={language} insets={insets} fontScale={screen.fontScale} envelope={presentedIn} initialDepth={initialDepth} top={top} controls={controls} />
+      language={language} insets={insets} fontScale={screen.fontScale} envelope={presentedIn} initialDepth={initialDepth} top={top} controls={controls}
+      playing={playing} windowMs={windowMs} stageClock={stageClock} />
   );
 }
 
-function ReadyComposite({ controller, version, moments, ordinal, language, insets, fontScale, envelope, initialDepth, top, controls }: {
+function ReadyComposite({ controller, version, moments, ordinal, language, insets, fontScale, envelope, initialDepth, top, controls, playing, windowMs, stageClock }: {
   readonly controller: ReplayCompositeController; readonly version: ReplayHistoryVersion; readonly moments: readonly ReplayHistoryMoment[];
   readonly ordinal: number; readonly language: ChromeLanguage; readonly insets: ReplayMomentCompositeProps['insets'];
   readonly fontScale: number; readonly envelope: { readonly width: number; readonly height: number }; readonly initialDepth: SemanticDepth;
   readonly top: LivingAnalysisTopBand | null; readonly controls: ReplayMomentControls | null;
+  readonly playing: boolean; readonly windowMs: (moment: ReplayHistoryMoment) => number; readonly stageClock: ReplayStageClock | null;
 }) {
   const asked = moments.find((moment) => moment.ordinal === ordinal) ?? null;
   // One isolated viewpoint per version, opened on the moment first asked for.
@@ -180,7 +197,11 @@ function ReadyComposite({ controller, version, moments, ordinal, language, inset
         fontScale={fontScale}
         envelope={envelope}
         top={top}
-        world={(frame) => (context === null || !context.ok ? null : <MapSurface store={store} context={context.context} envelope={frame} language={language} />)}
+        world={(frame) => (context === null || !context.ok || request === null ? null : (
+          <ReplayCosmosWorld controller={controller} version={version} moments={moments} sessionId={request.sessionId} ordinal={moment?.ordinal ?? ordinal}
+            playing={playing} windowMs={windowMs} stageClock={stageClock} scope={FULL_SCOPE} rtl={language === 'ar'} typography="SYSTEM_LIVE_WEIGHTS"
+            width={frame.width} height={frame.height} />
+        ))}
         timeline={null}
         chrome={(composition) => (
           <Band bottomInset={composition.bottomInset}>

@@ -14,6 +14,7 @@ import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
 import { exchange, historyBody } from '../../conversation/__fixtures__/conversation';
 import { MAP_SURFACE_TEST_ID } from '../../map';
+import { REPLAY_COSMOS_TEST_ID } from '../../replay-cosmos';
 import { conversationCopy } from '../../conversation';
 import { replayEntryCopy } from '../../replay-entry';
 import { replayCompositeCopy } from '../../replay-composite';
@@ -144,7 +145,9 @@ describe('S7-04 — Select → Saved Draft → Real Preview → Player → Priva
     expect(JSON.parse(preview[0].body!)).toEqual({ commandId: expect.stringMatching(/^[0-9a-f-]{36}$/u), expectedDraftRevision: 1 });
     expect(view.getByTestId(REPLAY_PLAYER_TEST_ID)).toBeTruthy();
     expect(text(view, 'qandeel-replay-text')).toBe(MOMENTS[0].text);
-    expect(view.getByTestId(MAP_SURFACE_TEST_ID)).toBeTruthy();
+    // REPLAY-COSMOS-01: the passage's world is the Replay COSMOS stage; the pre-COSMOS renderer is not mounted.
+    expect(view.getByTestId(REPLAY_COSMOS_TEST_ID)).toBeTruthy();
+    expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
     // The Conversation is still mounted beneath, out of reach; the switcher is not over the passage.
     expect(view.queryByTestId('qandeel-conversation-input')).toBeNull();
     expect(view.getByTestId('qandeel-conversation-input', HIDDEN).props.value).toBe('fixture: words not sent yet');
@@ -418,6 +421,7 @@ describe('S7-05 D5 — NOT_VIEWABLE through the real path, in the production com
     expect(view.queryByTestId('qandeel-replay-text')).toBeNull();
     for (const moment of SOURCE_MOMENTS) expect(view.queryAllByText(moment.text, { ...HIDDEN, exact: false })).toHaveLength(0);
     expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
+    expect(view.queryByTestId(REPLAY_COSMOS_TEST_ID)).toBeNull();
     // Nothing is playable — no Spine is offered over a version that is not viewable — and no moment analysis is read.
     expect(view.queryByTestId('qandeel-replay-spine', HIDDEN)).toBeNull();
     expect(h.ready().replayPlayer.transport().available).toBe(false);

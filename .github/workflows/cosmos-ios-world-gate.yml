@@ -46,7 +46,7 @@ jobs:
   world-gate:
     name: iOS World gate — ${{ matrix.device }} ${{ matrix.lang }}
     runs-on: macos-26
-    # 120 holds the World gate's 60 minutes (run 44707574152: setup <= 38.5, clean native 14.4, fresh install 3.7 minutes).
+    # 120 holds the World gate's 60 minutes (run 44707574152: setup <= 38.5, clean native 14.4 minutes; the fresh-install step, 3.7, is no longer run here).
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -70,6 +70,9 @@ jobs:
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with: {node-version: '22', cache: npm}
+      # PO, 2026-11-23: the mandatory gate carries no case of the deferred first-tap limitation, and P-TAP-RAIL / P-LAND
+      # are never a stage's first touch. Checked before anything is built, so a reintroduction fails at once.
+      - {name: Gate composition contract (no deferred first-tap case), run: npm run test:cosmos-ios-world-gate-composition-contract}
       - {name: Install dependencies from the root lockfile, run: npm ci}
       - name: Select the S401 proof entry (this ephemeral checkout only; recorded)
         env: {S401_SHARED_PROOF: '1'}
@@ -139,39 +142,23 @@ jobs:
           pkill -KILL -f "$HOME/.maestro/" || true
           # The Maestro driver is an XCTest runner too; it is stopped so that one runner drives the simulator.
           xcrun simctl terminate "$IOS_SIM_UDID" dev.mobile.maestro-driver-iosUITests.xctrunner 2>/dev/null || true
-          # D-3: the fresh-install case runs on its own, last (below), so that this run and the World gate keep the D-1 conditions.
+          # The fresh-install first-tap test (SE-FU-1, the deferred first-tap limitation, Future Improvements item 022) is NOT
+          # part of this mandatory gate (PO, 2026-11-23): it is skipped here and has no step of its own. It stays in the suite
+          # only for the non-gating D-3 validation workflow (cosmos-ios-d3-validation.yml, cosmos/validate/** pushes only).
           xcodebuild test-without-building -xctestrun "$XCTESTRUN" -destination "id=$IOS_SIM_UDID" -resultBundlePath "$X/gestures.xcresult" \
             -skip-testing QandeelWorldUITests/CosmosWorldGestureUITests/testFreshInstallFirstVisibleDoorTapOpensTheAnalysis > "$X/xcodebuild.log" 2>&1 || true
           grep -E "Test [Cc]ase|error: -\[|\*\* TEST" "$X/xcodebuild.log" || true
           xcrun xcresulttool export attachments --path "$X/gestures.xcresult" --output-path "$X/attachments" || true
           # Compact evidence: the attachments and the log are kept; the result bundle (which repeats them) is not.
           rm -rf "${X:?}/gestures.xcresult"
-      - name: SE-FU-1 fresh install (D-a; XCUITest; the door tapped once at its first visible frame, no settle, no retry)
-        # PO 2026-11-18 (contract §24.1 D-a / D-b): a freshly booted simulator and a fresh install of the same build, then the
-        # one test alone. Its cold and warm timings are recorded in its row; they are judged in the D-3 report, not here.
-        if: ${{ !cancelled() && env.XCTESTRUN != '' }}
-        timeout-minutes: 20
-        run: |
-          E="$RUNNER_TEMP/evidence"; X="$E/xcui"; mkdir -p "$X"
-          xcrun simctl terminate "$IOS_SIM_UDID" dev.mobile.maestro-driver-iosUITests.xctrunner 2>/dev/null || true
-          xcrun simctl shutdown "$IOS_SIM_UDID" 2>/dev/null || true
-          xcrun simctl boot "$IOS_SIM_UDID"
-          node scripts/validation/bounded-run.mjs --seconds 300 --label ios-simulator-reboot -- xcrun simctl bootstatus "$IOS_SIM_UDID" -b > /dev/null
-          xcrun simctl uninstall "$IOS_SIM_UDID" com.qandeel.mobile 2>/dev/null || true
-          xcrun simctl install "$IOS_SIM_UDID" "$APP"
-          xcodebuild test-without-building -xctestrun "$XCTESTRUN" -destination "id=$IOS_SIM_UDID" -resultBundlePath "$X/fresh.xcresult" \
-            -only-testing QandeelWorldUITests/CosmosWorldGestureUITests/testFreshInstallFirstVisibleDoorTapOpensTheAnalysis > "$X/fresh.log" 2>&1 || true
-          grep -E "Test [Cc]ase|error: -\[|\*\* TEST" "$X/fresh.log" || true
-          xcrun xcresulttool export attachments --path "$X/fresh.xcresult" --output-path "$X/fresh-attachments" || true
-          rm -rf "${X:?}/fresh.xcresult"
       - name: Classify the native runs
         if: ${{ !cancelled() && env.XCTESTRUN != '' }}
         run: |
           E="$RUNNER_TEMP/evidence"; X="$E/xcui"; mkdir -p "$X" "$E/gate"
           [ -f "$E/gate/results.tsv" ] || printf 'case\tresult\tdetail\n' > "$E/gate/results.tsv"
-          cat "$X/xcodebuild.log" "$X/fresh.log" > "$X/native.log" 2>/dev/null || true
+          cat "$X/xcodebuild.log" > "$X/native.log" 2>/dev/null || true
           wpt="$(sed -n 's/.*device widthPoints=\([0-9]*\).*/\1/p' "$E/gate/gate.log" 2>/dev/null | head -n 1)"
-          node scripts/cosmos-ios-world/xcui-analyse.mjs "$X/native.log" "$X/attachments,$X/fresh-attachments" "${wpt:-0}" "$E/gate/results.tsv"
+          node scripts/cosmos-ios-world/xcui-analyse.mjs "$X/native.log" "$X/attachments" "${wpt:-0}" "$E/gate/results.tsv"
       - name: Results
         if: ${{ !cancelled() }}
         run: |

@@ -3933,6 +3933,28 @@ canonical document: the Product Owner's SD-2 / G-3). Nothing here authorizes imp
 Admitted by `COSMOS-INT-01` at its closure (2026-11-21) under BG-06's second route (explicitly deferred by a canonical
 document: the contract's §12 / G-5). Nothing here authorizes implementation (BG-07).
 
+Progress note (2026-11-22, not a disposition): the Product Owner's REPLAY-LOCAL-02 scope amendment directed this work. Branch
+`replay/replay-cosmos-01` draws the Replay passage's Personal map with the production COSMOS parts (`src/replay-cosmos`), and
+the S7-03 contract test's G-5 assertion is re-anchored to COSMOS. The item stays `OPEN — UNASSIGNED`. It is not closed until
+that branch is merged and the in-app Replay is verified against the exported video on a real device (CA-RL-01 v1.1 row N).
+The open decisions it raises (historical availability, call-end cut, historical Thread names, exact range clip) are with
+the Product Owner, and none is admitted here before that decision.
+
+Progress note (2026-11-23, not a disposition): the Product Owner authorised RB-1 S1–S3 only, on the same branch. When a
+version has an audio plan, the Replay's stage time now comes from the version's audio clock: `replayPresentationClock`
+lays out the CP1-B map, and the in-app stage follows the clock's own place. The export places the original audio by that
+same clock. A disclosure never comes before the speech that completes it. Overlapping windows are kept. With no recorded
+availability, the timeline is `UNESTABLISHED_PRESENTATION_GUARDS_ONLY`, and it never claims `RECORDED`. The item stays
+`OPEN — UNASSIGNED`. RB-2 (the recorded availability), RB-3, RB-4, RB-5, RS-7 and an end-of-Replay policy for a
+disclosure that falls at or after the last audio are not done. No migration.
+
+Progress note (2026-11-23, FC-0, not a disposition): the HONOR ALI-NX1 speaker proof measured the audio clock's reported
+place leading the heard sound by up to about 202 ms just after a resume or a handover, so the 100 ms stage allowance drew
+disclosures before their speech was audibly over. By Product Owner authorisation (FC-0),
+`REPLAY_STAGE_AUDIO_LAG_MS` is now 300 ms on the audio and in a text block after it. A text-only Replay keeps no
+allowance. This is evidence for that phone's speaker only. Bluetooth, wired output, a route change, other devices and iOS
+are not measured, and 300 ms is not claimed fail-closed for them. The item stays `OPEN — UNASSIGNED`.
+
 ### `QAN-BL-NAV-04` — No Full Personal Detail Surface Beyond the PEEK (PERSONAL-DETAIL-01)
 
 - **Title / Finding:** the Personal Detail Sheet is PEEK-only (G-7, V1). There is no full Personal detail surface for a

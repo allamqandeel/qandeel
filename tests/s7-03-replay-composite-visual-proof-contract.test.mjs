@@ -179,10 +179,14 @@ const FROZEN = [
   ['apps/mobile/src/replay-entry/copy.ts', 'e3afc223476941ce0e7d060947a3138da2a2eefee1d0ebfb31b7773f88d6aeaa'],
 ];
 
+// REPLAY-COSMOS-01: the Replay's COSMOS stage.
+const COSMOS_STAGE = 'apps/mobile/src/replay-cosmos';
+
 const shipped = () => {
   const composite = files(COMPOSITE).filter((path) => /\.(ts|tsx)$/u.test(path) && !/\/__(tests|fixtures)__\//u.test(path));
   return {
     composite: Object.fromEntries(composite.map((path) => [path.slice(COMPOSITE.length + 1), read(path)])),
+    cosmos: Object.fromEntries(files(COSMOS_STAGE).filter((path) => /\.(ts|tsx)$/u.test(path) && !/\/__(tests|fixtures)__\//u.test(path)).map((path) => [path.slice(COSMOS_STAGE.length + 1), read(path)])),
     client: read(CLIENT),
     fixture: read(`${COMPOSITE}/__fixtures__/replay-wire.ts`),
     mobile: files('apps/mobile/src').filter((path) => /\.(ts|tsx)$/u.test(path) && !/\/__(tests|fixtures|validation)__\//u.test(path)).map((path) => [path, read(path)]),
@@ -205,8 +209,14 @@ const DETECTORS = {
     const out = [];
     const view = tsCode(w.composite['ReplayMomentComposite.tsx'] ?? '');
     if (!/import \{ LivingAnalysisSurface \} from '\.\.\/living-analysis';/u.test(view)) out.push('the screen is the ONE LivingAnalysisSurface');
-    if (!/import \{ MapSurface, mapInspectionContext, mapProjectionRequest \} from '\.\.\/map';/u.test(view)) out.push('the world is T-04 MapSurface over T-04 context');
-    if (!/<MapSurface store=\{store\} context=\{context\.context\}/u.test(view)) out.push('MapSurface is given the viewpoint store and T-04 context');
+    // REPLAY-COSMOS-01 RE-ANCHOR (PO directive "REPLAY-LOCAL-02 Mandatory Scope Amendment", 2026-11-22; the G-5 graphics
+    // assertion is replaced, not deleted): the world was T-04's MapSurface; it is now the production COSMOS stage of the
+    // Replay, drawn only when T-04's own context for the viewpoint's moment is ok, and fed the SAME controller, version,
+    // moments and viewpoint Session as the chrome (source truth). The COSMOS stage's own rules are `cosmosViolations`.
+    if (!/import \{ mapInspectionContext, mapProjectionRequest \} from '\.\.\/map';/u.test(view)) out.push('the world is gated on T-04 context for the viewpoint');
+    if (!/import \{ ReplayCosmosWorld \} from '\.\.\/replay-cosmos';/u.test(view)) out.push('the world is the Replay COSMOS stage');
+    if (!/context === null \|\| !context\.ok \|\| request === null \? null : \(\s*<ReplayCosmosWorld controller=\{controller\} version=\{version\} moments=\{moments\} sessionId=\{request\.sessionId\}/u.test(view)) out.push('the COSMOS stage is given the composite controller, version, moments and viewpoint, only over T-04 context');
+    if (/MapSurface/u.test(view)) out.push('no second world beside the COSMOS stage');
     if (!/import \{ commitMoment \} from '\.\.\/temporal-navigation';/u.test(view)) out.push('a moment change is T-06 commitMoment');
     if ((view.match(/timeline=\{null\}/gu) ?? []).length < 1) out.push('no Timeline: the player is S7-04');
     for (const [name, text] of Object.entries(w.composite)) {
@@ -214,6 +224,57 @@ const DETECTORS = {
       if (/@shopify\/react-native-skia|react-native-reanimated|\bAnimated\b|LayoutAnimation|\bCanvas\b/u.test(code)) out.push(`${name}: no drawing or motion of its own`);
       if (/integration\/composition|LivingAnalysisMap|WorldCanvas|MapCanvas|placeScene|world-chroma|world-visual/u.test(code)) out.push(`${name}: no copy or reach into the Map's graphics`);
       if (/function\s+\w*Map\w*\s*\(|const\s+\w*Map\w*\s*=\s*\(/u.test(code)) out.push(`${name}: no Replay map`);
+    }
+    return out;
+  },
+
+  // REPLAY-COSMOS-01: the Replay's COSMOS stage. The production engine only, no gesture, no wall clock, nothing live,
+  // and every disclosure behind the S7-03 adapter and the no-future guards.
+  cosmosViolations(w) {
+    const out = [];
+    const c = (name) => tsCode(w.cosmos[name] ?? '');
+    const frame = c('frame.tsx');
+    if (!/import \{ Lens, PlateFill, RungDraws, VOID \} from '\.\.\/cosmos\/skia\/parts';/u.test(frame)) out.push('the frame is drawn by the production COSMOS parts');
+    if (!/import \{ placeLabels, type PlacedLabel \} from '\.\.\/cosmos\/skia\/CosmosCanvas';/u.test(frame)) out.push('labels are laid out by the production placeLabels');
+    if (!/knowledgeAt\(scene\.timeline, t\)/u.test(frame)) out.push('the knowledge drawn at t is the timeline knowledge');
+    const history = c('history.ts');
+    if (!/discloseReplayMoment\(version, moment, analysis\.analysis\)/u.test(history) || !/mapInspectionContext\(disclosed\.entry,/u.test(history)) out.push('every stage passes the S7-03 adapter and the T-04 scene derivation');
+    if (!/personalScene\(scene, null, rtl, ORIGIN, names\)/u.test(c('stages.ts'))) out.push('the production Personal chain, with no inspection focus');
+    // PR #404 RB-1 RE-ANCHOR (PO RB-1 S1–S3 authorisation, 2026-11-23: NO ANALYSIS BEFORE SPEECH): the guard gains the
+    // moment's completion (an audio window's END), and a missing availability is never filled in. Previous pin:
+    // Math.max(available, m.windowStartMs, previous) with `recorded ?? m.windowStartMs`.
+    const timeline = c('timeline.ts');
+    if (!/Math\.max\(available, m\.windowStartMs, m\.completeAtMs, previous\)/u.test(timeline)) out.push('a disclosure never precedes its availability, its moment, its speech, or the knowledge it contains');
+    if (!/const available = recorded \?\? -Infinity;/u.test(timeline)) out.push('a missing availability is never filled in with a time');
+    if (!/availability: d\.recorded === null \? options\.unrecorded : 'RECORDED'/u.test(timeline)) out.push('a missing availability is named, never RECORDED');
+    if (!/if \(d\.at >= endMs\) \{ afterEnd\.push\(d\.m\.ordinal\); continue; \}/u.test(timeline)) out.push('a disclosure at or after the end is listed, never pulled back into the last frame');
+    if (!/const t0 = Math\.max\(atMs, free\);/u.test(c('camera-plan.ts'))) out.push('a camera segment never starts before its disclosure');
+    // RB-1 S1–S2: with an audio plan the stage's ONE time authority is the audio clock's place, through the presentation
+    // clock laid out from the map the clock holds — never the reading pace, never a wall clock.
+    const world = c('ReplayCosmosWorld.tsx');
+    if (!/replayPresentationClock\(audioPlan, moments, windowMs\)/u.test(world) || !/if \(presentation !== null\) return presentation\.inputs;/u.test(world)) out.push('with an audio plan, the timeline is the presentation clock\'s, not the reading pace');
+    const follow = /function useAudioStageTime\([\s\S]*?\n\}\n/u.exec(world)?.[0] ?? '';
+    if (follow === '' || !/replayStageTime\(presentation, ordinal, \{ phase: state\.phase, ordinal: state\.ordinal, place: stageClock\.place\(\) \}\)/u.test(follow)) out.push('the audio stage time is the clock\'s place');
+    if (/Date\.now|performance\.now|setTimeout|setInterval/u.test(follow)) out.push('the audio stage time reads no wall clock');
+    const clock = c('presentation-clock.ts');
+    if (!/import \{ boundaryPauseMs, type PresentationBoundary, type PresentationSpan, type PresentationTrack \} from '\.\.\/original-audio\/presentation-map';/u.test(clock)) out.push('the presentation clock reads the CP1-B map and the pause the clock holds, nothing of its own');
+    if (/Date\.now|performance\.now|requestAnimationFrame|readingPaceMs/u.test(clock)) out.push('the presentation clock times nothing itself');
+    // RB-1 (emulator proof): the stage runs behind what the player reports by the stated allowance — on the audio, and in a
+    // text block of an audio plan (the player shows it on the previous file's end report, which leads what is heard).
+    if (!/return \{ kind: 'AUDIO', t: Math\.max\(0, Math\.min\(t, end\) - REPLAY_STAGE_AUDIO_LAG_MS\) \};/u.test(clock)) out.push('the audio stage time runs the stated allowance behind the place');
+    if (!/return \{ kind: 'PACED', startMs: text\.startMs, endMs: text\.endMs, behindMs: REPLAY_STAGE_AUDIO_LAG_MS \};/u.test(clock) || !/pacedRange !== null \? Math\.max\(0, paced - behind\)/u.test(world)) out.push('a text block of an audio plan is drawn the same allowance behind');
+    // FC-0 (PO, 2026-11-23; RB1_REPORT §13, HONOR speaker): the allowance covers the measured 201.65 ms lead of the reported
+    // place over the heard sound after a restart — never below 300 ms — and a text-only Replay (no audio clock) gets none.
+    const lag = Number(/export const REPLAY_STAGE_AUDIO_LAG_MS = (\d+);/u.exec(clock)?.[1] ?? NaN);
+    if (!(lag >= 300)) out.push('the stage allowance covers the HONOR-measured lead after a restart (FC-0: at least 300 ms)');
+    if (!/const behind = followed\?\.kind === 'PACED' \? followed\.behindMs : 0;/u.test(world)) out.push('a text-only Replay is drawn with no allowance (the reading pace unchanged)');
+    for (const [name, text] of Object.entries(w.cosmos)) {
+      const code = tsCode(text);
+      if (/drawAtlas|drawPath|drawPaint|drawRect|MakeRadialGradient|MakeLinearGradient|makeShader/u.test(code)) out.push(name + ': no drawing code of its own (no second engine)');
+      if (/GestureDetector|Gesture\.|react-native-gesture-handler|react-native-reanimated|useFrameCallback/u.test(code)) out.push(name + ': no gesture and no UI-thread camera, the guided camera is the plan');
+      if (name !== 'ReplayCosmosWorld.tsx' && /Date\.now|performance\.now|requestAnimationFrame/u.test(code)) out.push(name + ': nothing drawn reads a clock but presentation time');
+      if (/integration\/runtime|IntegrationRuntime|createHistoricalProjectionCache|projection\.ensure|\.ingest\(|LIVE_HEAD_ADVANCED|commitLiveEdge|conversation-session|owners\/personal|createPersonalCosmosOwner|viewpoint-store|liveFocus/u.test(code)) out.push(name + ': nothing live enters');
+      if (/map\/renderer|MapSurface|LivingAnalysisMap|integration\/composition/u.test(code)) out.push(name + ': no reach into the T-04 graphics');
     }
     return out;
   },
@@ -387,7 +448,29 @@ const PLANTED = [
   ['a Skia canvas in the composite', 'rendererViolations', add('composite', 'Glow.tsx', "import { Canvas } from '@shopify/react-native-skia';")],
   ['a copy of LivingAnalysisMap', 'rendererViolations', add('composite', 'Copied.tsx', "import { LivingAnalysisMap } from '../integration/composition/LivingAnalysisMap';")],
   ['an animation of its own', 'rendererViolations', add('composite', 'Fade.tsx', "import Animated from 'react-native-reanimated';")],
-  ['MapSurface replaced', 'rendererViolations', edit('composite', 'ReplayMomentComposite.tsx', '<MapSurface store={store} context={context.context}', '<View store={store} context={context.context}')],
+  ['the COSMOS stage replaced', 'rendererViolations', edit('composite', 'ReplayMomentComposite.tsx', '<ReplayCosmosWorld controller={controller}', '<View controller={controller}')],
+  ['MapSurface back beside the stage', 'rendererViolations', edit('composite', 'ReplayMomentComposite.tsx', '<ReplayCosmosWorld controller={controller}', '<MapSurface store={store} /><ReplayCosmosWorld controller={controller}')],
+  ['a stage drawn without T-04 context', 'rendererViolations', edit('composite', 'ReplayMomentComposite.tsx', 'context === null || !context.ok || request === null ? null', 'request === null ? null')],
+  ['a painter of its own', 'cosmosViolations', add('cosmos', 'painter.ts', 'export const p = (canvas) => canvas.drawAtlas(a, b, c, d);')],
+  ['a gesture on the Replay camera', 'cosmosViolations', add('cosmos', 'pan.tsx', "import { Gesture, GestureDetector } from 'react-native-gesture-handler';")],
+  ['a frame reading the wall clock', 'cosmosViolations', edit('cosmos', 'frame.tsx', 'const clock = t / 1000;', 'const clock = Date.now() / 1000;')],
+  ['the live Personal owner in the Replay', 'cosmosViolations', add('cosmos', 'owner.ts', "import { createPersonalCosmosOwner } from '../cosmos/product/owners/personal';")],
+  ['a disclosure at its moment, not its availability', 'cosmosViolations', edit('cosmos', 'timeline.ts', 'Math.max(available, m.windowStartMs, m.completeAtMs, previous)', 'Math.max(m.windowStartMs, m.completeAtMs, previous)')],
+  // PR #404 RB-1 plants: each must be caught.
+  ['analysis before speech (the window start again)', 'cosmosViolations', edit('cosmos', 'timeline.ts', 'Math.max(available, m.windowStartMs, m.completeAtMs, previous)', 'Math.max(available, m.windowStartMs, previous)')],
+  ['a missing availability filled in with the window start', 'cosmosViolations', edit('cosmos', 'timeline.ts', 'const available = recorded ?? -Infinity;', 'const available = recorded ?? m.windowStartMs;')],
+  ['a missing availability passed off as RECORDED', 'cosmosViolations', edit('cosmos', 'timeline.ts', "availability: d.recorded === null ? options.unrecorded : 'RECORDED'", "availability: 'RECORDED'")],
+  ['a disclosure after the end pulled into the last frame', 'cosmosViolations', edit('cosmos', 'timeline.ts', 'if (d.at >= endMs) { afterEnd.push(d.m.ordinal); continue; }', 'if (d.at >= endMs) d.at = endMs - 1;')],
+  ['the reading pace while an audio plan exists', 'cosmosViolations', edit('cosmos', 'ReplayCosmosWorld.tsx', 'if (presentation !== null) return presentation.inputs;', 'if (presentation === undefined) return presentation.inputs;')],
+  ['the audio stage time on the wall clock', 'cosmosViolations', edit('cosmos', 'ReplayCosmosWorld.tsx', 'place: stageClock.place() });', 'place: { kind: \'RUN\', runIndex: 0, positionMs: Date.now() } });')],
+  ['a presentation clock that paces by reading', 'cosmosViolations', edit('cosmos', 'presentation-clock.ts', 'const length = Math.max(1, paceMs(moment));', 'const length = Math.max(1, readingPaceMs(moment.text ?? \'\'));')],
+  ['the audio stage time without its allowance', 'cosmosViolations', edit('cosmos', 'presentation-clock.ts', 'Math.min(t, end) - REPLAY_STAGE_AUDIO_LAG_MS)', 'Math.min(t, end))')],
+  ['a text block after a run drawn on the end report', 'cosmosViolations', edit('cosmos', 'ReplayCosmosWorld.tsx', 'Math.max(0, paced - behind)', 'paced')],
+  ['the 100 ms allowance the HONOR proof refuted', 'cosmosViolations', edit('cosmos', 'presentation-clock.ts', 'export const REPLAY_STAGE_AUDIO_LAG_MS = 300;', 'export const REPLAY_STAGE_AUDIO_LAG_MS = 100;')],
+  ['an allowance on a text-only Replay', 'cosmosViolations', edit('cosmos', 'ReplayCosmosWorld.tsx', "const behind = followed?.kind === 'PACED' ? followed.behindMs : 0;", "const behind = followed?.kind === 'PACED' ? followed.behindMs : 300;")],
+  ['a camera ahead of its disclosure', 'cosmosViolations', edit('cosmos', 'camera-plan.ts', 'const t0 = Math.max(atMs, free);', 'const t0 = free;')],
+  ['a stage around the adapter', 'cosmosViolations', edit('cosmos', 'history.ts', 'discloseReplayMoment(version, moment, analysis.analysis)', "({ status: 'DISCLOSED', entry: analysis.analysis })")],
+  ['an inspection focus drawn', 'cosmosViolations', edit('cosmos', 'stages.ts', 'personalScene(scene, null, rtl, ORIGIN, names)', 'personalScene(scene, focus, rtl, ORIGIN, names)')],
   ['the live runtime in the composite', 'liveStateViolations', add('composite', 'live.ts', "import type { IntegrationRuntime } from '../integration/runtime/integration-runtime';")],
   ['an authorised Map act on the viewpoint', 'liveStateViolations', edit('composite', 'viewpoint-store.ts', '    camera: initialCameraIntent(WORLD_ORIGIN, undefined, depth),\n  });', '    camera: initialCameraIntent(WORLD_ORIGIN, undefined, depth),\n  }, { mapActionAuthority: MAP_ACTION_AUTHORITY });')],
   ['the conversation Session as the viewpoint', 'liveStateViolations', edit('composite', 'viewpoint-store.ts', 'session: { id: replayViewpointKey(version) }', 'session: { id: sessionId }')],
