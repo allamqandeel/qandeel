@@ -265,6 +265,7 @@ jobs:
       - {name: "Verify S8B-07 CP1-B media worker contract (the BtbN ffmpeg 9.0.2 LGPL pin sha256-checked, the proof wired with the in-memory store and with rclone S3, each entry point refusing every role but its own, the Replay role directly with pg pinned, sources read-only and processing files under voice-transient/ only, the API key rule unchanged)", run: npm run test:s8b-07-cp1b-media-worker-contract}
       - {name: "Verify S8B-07 CP1-B Replay Media Service contract (REPLAY_MEDIA on the Replay pool only, the five routes behind the shipped bearer guard, no-store on every answer, the 5 s / 2 s re-check, destroy never end, the 10 min cap, F-1 NOTE only, the proof wired with the in-memory store and with rclone S3)", run: npm run test:s8b-07-cp1b-media-service-contract}
       - {name: "Verify S8B-07 CP1-B V-24a First Audio isolation contract (D-06.7 +25 / +50 ms over medians of at least 3 interleaved repetitions for M0 and M1_SHIPPED, the S8B-05 CP3 harness unchanged, a separate Replay pool process as the Replay role at every bound, not a proof of pool separation, the 0196 admission lock, wired in the rclone step)", run: npm run test:s8b-07-cp1b-first-audio-isolation-contract}
+      - {name: "Verify S8B-07 RB-2 S1 semantic commit instants contract (0201 forward-only, one table and four functions, nothing replaced; the deferred row constraint trigger reading the clock as it stands and folding by transaction identity; the guard; service_role observer and sweeper, unwired; no handler, no dynamic SQL, no retryable SQLSTATE; the verifier wired after 0200)", run: npm run test:semantic-commit-instants-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1450,6 +1451,12 @@ jobs:
       # own. Seeds real Readings, withdraws their evidence, and proves no withheld word reaches the row.
       - name: Verify COSMOS E-2 Reading reliance gate (0200) against real PostgreSQL
         run: npm run verify:reading-reliance:integration
+      # S8B-07 RB-2 / S1 (PO authorization "RB-2/S1 ONLY", 2026-11-23): migration 0201 records, per Session and committing
+      # transaction, the semantic clock range it made durable and when that range was first SEEN committed. Proves the ten
+      # mandatory proofs (multi-UPDATE folding, deferred and IMMEDIATE timing, savepoints, concurrency, one row per
+      # transaction, no-op, MVCC-ordered observation, isolation and erasure), the identity proofs and 13 planted defects.
+      - name: Verify S8B-07 RB-2 S1 semantic commit instants (0201) against real PostgreSQL
+        run: npm run verify:semantic-commit-instants:integration
       # S8B-07 CP1-B (D-06.6): the Replay pool's ffmpeg - BtbN's 9.0.2 LGPL build, from its own release asset at a pinned
       # autobuild tag, refused unless its sha256 is the one pinned here (the rclone and PostgREST pattern: no registry, no
       # image, no package manager). FFMPEG_BIN / FFPROBE_BIN name it for the media proofs; nothing else uses it.

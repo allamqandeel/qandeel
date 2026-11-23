@@ -1,5 +1,15 @@
 # QANDEEL — Current State
 
+> **S8B-07 REPLAY-COSMOS-01 — RB-2 / S1 SEMANTIC COMMIT INSTANTS — DELIVERED / READY FOR PO REVIEW — NOT MERGED — 2026-11-23 (status only; no new task authority):**
+> - **Baseline:** PR #404 (RB-1 + FC-0, with the Product Owner's scoped iOS CI exception) merged into `main` as `5ce3a70c`. RB-1 is recorded in `QAN-BL-VIS-02`'s progress notes.
+> - **Authorization (PO, 2026-11-23): "RB-2/S1 ONLY"** — D-RB2-1, D-RB2-5a, D-RB2-7a, D-RB2-9 and D-RB2-11, for S1 only. S2 – S5, `0202`, Replay transport, mobile wiring, exports and live-call protocol changes are **not authorized**. M-2 (D-RB2-10) needs its own design review. S8B-05 is not reopened.
+> - **Delivered:** migration `0201` adds an append-only ledger with one row per committed transaction that moved a Session's semantic clock. A deferred, fold-capable recorder on the clock writes it, a guard makes it enforce its own transaction identity and chain, and two `service_role` observers stamp each row once, after its commit is visible. No API caller, worker or schedule exists yet. Record: [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §15; [database README](database/README.md).
+> - **Verification:** `verify-migration-0201` 41 / 41 locally on real PostgreSQL, including 13 planted defects. It runs in API CI. The exact-head CI result is on the Draft PR.
+> - **Database:** `0201` is **NOT applied to hosted Supabase** (with 0197 – 0200, under HOSTED-DEPLOY-01). The next migration is **0202**.
+> - **Planning:** the post-Replay gap register (unmerged branch `docs/post-replay-gap-map-2026-11-23`) still lists full historical availability as open. S1 is its database foundation only. The register is not duplicated here.
+> - **Backlog:** no item admitted or closed; `QAN-BL-VIS-02` gets a progress note and stays `OPEN — UNASSIGNED`. 112 items, unchanged.
+> - **Merge only on the Product Owner's explicit «ادمج».** Every voice gate stays `DISABLED`.
+
 > **COSMOS-INT-01 — COSMOS V5 PRODUCTION INTEGRATION (WITH COSMOS-FINAL-01 AND E-2) — ACCEPTED / MERGED / CLOSED — 2026-11-21 (status only; documentation-only closure; no new task authority):**
 > - **Integration:** PR #402 merged into `main` as `90819192` (parents `5a21971d` and `f478204b`). The accepted source is `f478204b`, and the merged tree is identical to it (0 files differ). The stack #394 – #402 is in `main` (151 commits). #394 is marked merged by GitHub; #395 – #401 are closed as superseded by #402. No COSMOS PR remains open. Record: [COSMOS contract](docs/e2e/QANDEEL_COSMOS_INT_01_PRODUCTION_INTEGRATION_CONTRACT_v1.md) v1.24, §31.11.
 > - **Accepted by the PO** after a personal physical test on the HONOR ALI-NX1. The acceptance covers:
@@ -21,7 +31,7 @@
 >   - SE-FU-1: accepted V1 limitation (Future Improvements item 022).
 >     - Post-closure CI maintenance (PO, 2026-11-23; [COSMOS contract](docs/e2e/QANDEEL_COSMOS_INT_01_PRODUCTION_INTEGRATION_CONTRACT_v1.md) §31.12; Draft PR #404): the fresh-install first-tap test is no longer in the mandatory iOS World gate, and P-TAP-RAIL / P-LAND follow a non-gating stage initialization. Expected rows: 31 per cell (32 before). This is guarded by `test:cosmos-ios-world-gate-composition-contract`. SE-FU-1 is not reopened.
 >   - DIAG-SE-DOOR 44928574802: 10 / 10, **NOT REPRODUCED — not FIXED**.
-> - **Database:** migrations 0197 – 0200 are merged into the source and are **NOT applied to hosted Supabase**. The next migration is **0201**. Hosted application, API or mobile release, and hosted verification of the E-2 backend stay separately controlled work (HOSTED-DEPLOY-01). They are open, not closed by COSMOS.
+> - **Database:** migrations 0197 – 0200 are merged into the source and are **NOT applied to hosted Supabase**. The next migration is **0201** *(2026-11-23: `0201` is now taken by RB-2 / S1, above; the next migration is **0202**)*. Hosted application, API or mobile release, and hosted verification of the E-2 backend stay separately controlled work (HOSTED-DEPLOY-01). They are open, not closed by COSMOS.
 > - **Backlog (BG-08), all `MEDIUM`, `OPEN — UNASSIGNED`:**
 >   - admitted `QAN-BL-VIS-02` (REPLAY-COSMOS-01: Replay still draws its Personal map with the pre-COSMOS renderer, G-5);
 >   - admitted `QAN-BL-NAV-04` (PERSONAL-DETAIL-01: no full Personal detail surface beyond the PEEK);

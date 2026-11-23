@@ -5259,3 +5259,40 @@ npm run test:s8a-01-deepseek-production-integration-contract
 The verifier needs `DATABASE_URL` pointing at a FULLY migrated database. It checks the posture of the three replaced
 functions and the service-role surface, then, in a rolled-back transaction, a DeepSeek begin and every settlement shape,
 the refusals of an unlisted provider and of a foreign usage kind, and exact rating once reviewed Price Cards exist.
+
+## S8B-07 RB-2 / S1 - Semantic commit instants (migration 0201)
+
+`0201_s8b_07_semantic_commit_instants_v1.sql` is REPLAY-COSMOS-01 RB-2's first slice, under the Product Owner's
+authorization "RB-2/S1 ONLY" (2026-11-23: D-RB2-1, D-RB2-5a, D-RB2-7a, D-RB2-9, D-RB2-11). It is forward-only and one
+transaction. Earlier migrations are untouched. Record: the
+[S8B-07 record](../docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §15.
+
+- **The ledger.** `session_semantic_commit_instants` holds one append-only row per committed transaction that moved a
+  Session's semantic clock. Each row names the range it covers (`from` → `through`, as SP and same-SP sequence), the
+  writing transaction (`xact_id`, `pg_current_xact_id()`), `trigger_at` (a lower bound only) and `observed_at`.
+- **The recorder.** A `DEFERRABLE INITIALLY DEFERRED` row constraint trigger on `session_semantic_clocks` reads the clock
+  as it stands, never `NEW`. A transaction's first firing inserts; every later firing of the same transaction folds into
+  that one row, keyed by transaction identity. A no-op move writes nothing. A backward move, or a fold that does not
+  touch exactly one row, aborts the transaction (`55000`). A ledger failure is never swallowed: there is no handler.
+- **The guard.** The ledger enforces its own identity and chain. An insert must carry its writer's own transaction and
+  continue the chain exactly. An update is either that transaction's forward fold or one observation by another
+  transaction. A delete is admitted only inside the governed account erasure.
+- **Observation.** `server_observe_session_semantic_commits_v1(session)` and the bounded sweeper
+  `server_observe_unobserved_semantic_commits_v1(limit)` write `observed_at` once, only on rows another, committed
+  transaction wrote. MVCC visibility is the authority. Numeric clock comparisons are diagnostics only.
+- **Posture.** postgres-owned, RLS with no policy, no client grant. Only the two observers are executable, by
+  `service_role` only. Rows cascade from their Session and leave with the account erasure. The 0130 export is not
+  extended: it carries no engine internals, so nothing it carries today is narrowed. A future export obligation is a
+  Product Owner decision.
+- **What it does not do.** No API caller, worker or schedule; no Replay read (0202); no backfill. Sessions that moved
+  before 0201 get a deploy-boundary row (`covers_from_sp1 = false`) at their next semantic commit.
+- **Deployment.** Not deployed.
+
+```sh
+npm run verify:semantic-commit-instants:integration
+npm run test:semantic-commit-instants-contract
+```
+
+The verifier needs `DATABASE_URL` pointing at a FULLY migrated database. It COMMITS fixtures, because transaction
+identity, deferred firing and MVCC visibility exist only across real commits, and it removes every fixture person through
+the account erasure itself. Its planted defects run inside one rolled-back transaction.

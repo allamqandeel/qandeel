@@ -3955,6 +3955,14 @@ disclosures before their speech was audibly over. By Product Owner authorisation
 allowance. This is evidence for that phone's speaker only. Bluetooth, wired output, a route change, other devices and iOS
 are not measured, and 300 ms is not claimed fail-closed for them. The item stays `OPEN — UNASSIGNED`.
 
+Progress note (2026-11-23, RB-2 / S1, not a disposition): PR #404 merged into `main` as `5ce3a70c`. The Product Owner
+then authorised RB-2 / S1 only. Migration `0201` records, for each committed transaction that moves a Session's semantic
+clock, one ledger row with its transaction identity, and two `service_role` observers stamp each row once after its commit
+is visible ([S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §15). Nothing calls the observers yet,
+nothing reads the ledger, and no Replay surface changes, so no Replay moment is yet `RECORDED`. RB-2 S2 – S5 (the API
+observer and sweeper, `0202`, the transport and the mobile wiring), the M-2 design review, RB-3 – RB-5, RS-7 and the
+end-of-Replay policy are not done. `0201` is not hosted. The item stays `OPEN — UNASSIGNED`.
+
 ### `QAN-BL-NAV-04` — No Full Personal Detail Surface Beyond the PEEK (PERSONAL-DETAIL-01)
 
 - **Title / Finding:** the Personal Detail Sheet is PEEK-only (G-7, V1). There is no full Personal detail surface for a
@@ -6534,7 +6542,7 @@ This closure change is documentation only.
   - The Replay AX5 selection bar stays as recorded at D-3: pre-existing from S7-02, and not admitted.
 - **Hosted:** migrations 0197 – 0200 are merged into the source and are NOT applied to hosted Supabase. Their hosted
   application stays separately controlled work (HOSTED-DEPLOY-01, under its own Product Owner authorization). The next
-  migration is 0201.
+  migration is 0201. *(2026-11-23: `0201` is now taken by RB-2 / S1; the next migration is 0202.)*
 - **BG-09:** the contract carries `ACCEPTED / MERGED / CLOSED` (v1.24, §31.11), and the locators are updated in the same
   change.
 - **Index after the COSMOS closure: 112 items; 54 / 4 / 17 / 37 by status, 63 / 46 / 3 by severity.**

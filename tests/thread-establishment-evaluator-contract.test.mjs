@@ -347,6 +347,10 @@ test('nothing reaches the slice: not ConversationModule, ConversationService, Ap
     // INTEL-04 RE-ANCHOR (2026-11-04): the 0194 verifier commits exchanges through 0070's own coordinator with the frozen
     // TE-01 provenance exactly as the 0070 verifier does, and never imports this evaluator.
     'database/verify-migration-0194.mjs',
+    // S8B-07 RB-2 / S1 RE-ANCHOR (2026-11-23, PO authorization "RB-2/S1 ONLY"): the 0201 verifier commits real exchanges
+    // through the FINAL 0071 coordinator with the frozen TE-01 provenance exactly as the 0191 verifier does (to prove the
+    // semantic commit instants against the real multi-UPDATE transaction), and never imports this evaluator.
+    'database/verify-migration-0201.mjs',
   ];
   for (const file of [...listFiles(join(rootPath, 'apps/api/scripts')), ...listFiles(join(rootPath, 'apps/mobile/src')), ...listFiles(join(rootPath, 'database'))].map((f) => relative(f))) {
     if (B2B2_DATABASE_FILES.includes(file)) {
