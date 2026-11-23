@@ -3948,6 +3948,13 @@ availability, the timeline is `UNESTABLISHED_PRESENTATION_GUARDS_ONLY`, and it n
 `OPEN — UNASSIGNED`. RB-2 (the recorded availability), RB-3, RB-4, RB-5, RS-7 and an end-of-Replay policy for a
 disclosure that falls at or after the last audio are not done. No migration.
 
+Progress note (2026-11-23, FC-0, not a disposition): the HONOR ALI-NX1 speaker proof measured the audio clock's reported
+place leading the heard sound by up to about 202 ms just after a resume or a handover, so the 100 ms stage allowance drew
+disclosures before their speech was audibly over. By Product Owner authorisation (FC-0),
+`REPLAY_STAGE_AUDIO_LAG_MS` is now 300 ms on the audio and in a text block after it. A text-only Replay keeps no
+allowance. This is evidence for that phone's speaker only. Bluetooth, wired output, a route change, other devices and iOS
+are not measured, and 300 ms is not claimed fail-closed for them. The item stays `OPEN — UNASSIGNED`.
+
 ### `QAN-BL-NAV-04` — No Full Personal Detail Surface Beyond the PEEK (PERSONAL-DETAIL-01)
 
 - **Title / Finding:** the Personal Detail Sheet is PEEK-only (G-7, V1). There is no full Personal detail surface for a

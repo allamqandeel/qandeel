@@ -313,6 +313,102 @@ describe('RB-1 S2 · end to end on the CP1-B player and clock (fake engine and s
   });
 });
 
+describe('FC-0 · the HONOR audible proof: no disclosure before the speech is HEARD after the player restarts', () => {
+  // RB1_REPORT §13 (HONOR ALI-NX1, built-in speaker, phone mic + SurfaceFlinger on one clock): after a resume or a
+  // generation handover the clock's reported place led the HEARD sound by up to 201.65 ms (n = 39 run ends), against up
+  // to 106.45 ms in steady play (n = 82); with a 100 ms allowance 8 of 121 reveal frames were drawn before the speech that
+  // completes them was audibly over (worst −81.8 ms), two of them on screen. The model here: heard = reported − lead.
+  // Written first, and seen failing at 100 ms, before the allowance was changed (PO FC-0 authorisation, 2026-11-23).
+  const RESTART_LEAD_MS = 202;
+  const c = clockOf();
+  const tl = timelineOf(c.inputs, c.durationMs);
+  const scene = sceneOf(tl);
+  const completeOf = new Map(c.inputs.map((m) => [m.ordinal, m.completeAtMs] as const));
+  /** Whatever the stage draws at t that depends on speech not yet heard by `heard`: a disclosure, or the camera's subject. */
+  const ahead = (t: number, heard: number): string[] => {
+    const out: string[] = [];
+    for (const s of tl.steps) if (s.atMs <= t && completeOf.get(s.ordinal)! > heard) out.push(`knowledge ${s.ordinal} at t ${t}, heard ${heard}`);
+    const { segment } = cameraAt(scene.plan, t);
+    if (segment !== null && segment.source.atMs <= t && completeOf.get(segment.source.ordinal)! > heard) out.push(`camera on ${segment.source.ordinal} at t ${t}, heard ${heard}`);
+    return out;
+  };
+  const running = (positionMs: number) => ({ phase: 'RUNNING' as const, ordinal: 3, place: { kind: 'RUN' as const, runIndex: 0, positionMs } });
+  const audioT = (shown: number, a: Parameters<typeof replayStageTime>[2]): number => {
+    const st = replayStageTime(c, shown, a);
+    if (st.kind === 'PACED') throw new Error('expected the audio path');
+    return st.t;
+  };
+
+  it('1 · pause / resume shortly before a speech window ends (HONOR p5, p6, p13, p14): the window\'s disclosure waits for the heard end', () => {
+    // Moment 2's speech ends at run 0, 6 000 ms (inside the QANDEEL overlap; the clock names moment 3 there). Resumed just
+    // before it, the player's report runs up to RESTART_LEAD_MS ahead of what is heard.
+    const violations: string[] = [];
+    for (let reported = 5_700; reported <= 6_400; reported += 1) violations.push(...ahead(audioT(3, running(reported)), R0 + reported - RESTART_LEAD_MS));
+    expect(violations).toEqual([]);
+  });
+
+  it('2 · resume near the end of an audio run followed by a text moment (HONOR p7 – p12): the run\'s last speech waits for its heard end', () => {
+    // The file reports its end (DONE at 9 000) while its last RESTART_LEAD_MS are still to be heard; the player then shows the
+    // text moment 5, whose block the world paces from that report: t = max(0, min(end, start + elapsed) − behind).
+    const st = replayStageTime(c, 5, { phase: 'DONE', ordinal: 4, place: { kind: 'RUN', runIndex: 0, positionMs: 9_000 } });
+    if (st.kind !== 'PACED') throw new Error('expected the paced text block');
+    const violations: string[] = [];
+    for (let elapsed = 0; elapsed <= 600; elapsed += 1) {
+      const t = Math.max(0, Math.min(st.endMs, st.startMs + elapsed) - st.behindMs);
+      violations.push(...ahead(t, Math.min(R0 + 9_000, R0 + 9_000 - RESTART_LEAD_MS + elapsed)));
+    }
+    // And the last audio frames before that report, on the audio path.
+    for (let reported = 8_700; reported <= 9_000; reported += 1) violations.push(...ahead(audioT(3, running(reported)), R0 + reported - RESTART_LEAD_MS));
+    expect(violations).toEqual([]);
+  });
+
+  it('3 · an in-run handover near a speech window\'s end (HONOR h11, h12): the switched file\'s lead never draws the disclosure early', () => {
+    // CA-07B-2: the old player is paused at the saved place S, the new file starts resumeBehindMs (57) before it, and the
+    // clock's place holds S (never back) until the new player passes it. The new player's report then leads what is
+    // heard by up to RESTART_LEAD_MS: heard = (S − 57 + x) − lead, the place = max(S, S − 57 + x).
+    const violations: string[] = [];
+    for (const saved of [5_800, 5_900, 5_950, 5_999]) {
+      for (let x = 0; x <= 700; x += 1) {
+        const q = saved - 57 + x;
+        violations.push(...ahead(audioT(3, running(Math.max(saved, q))), R0 + q - RESTART_LEAD_MS));
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it('4 · no premature analytical or camera disclosure at any restart: the frame drawn carries only heard speech, and the camera too', () => {
+    // The worst instants of 1 – 3, frame facts as the stage draws them: the knowledge drawn and the camera's subject.
+    const cases: [number, number][] = [];
+    for (let reported = 6_000; reported <= 6_000 + RESTART_LEAD_MS; reported += 10) cases.push([audioT(3, running(reported)), R0 + reported - RESTART_LEAD_MS]);
+    for (const [t, heard] of cases) {
+      const facts = replayFrameFacts(scene, t);
+      const drawn = tl.steps.find((s) => s.ordinal === facts.knowledge);
+      if (drawn !== undefined) expect(completeOf.get(drawn.ordinal)!).toBeLessThanOrEqual(heard);
+      const { segment } = cameraAt(scene.plan, t);
+      if (segment !== null && segment.source.atMs <= t) expect(completeOf.get(segment.source.ordinal)!).toBeLessThanOrEqual(heard);
+    }
+    expect(cases.length).toBeGreaterThan(10);
+  });
+
+  it('5 · a text-only Replay is unchanged: no audio clock, so no allowance applies; its moments disclose at their window starts', async () => {
+    jest.useFakeTimers();
+    try {
+      const w = world({ contract: REPLAY_RENDER_CONTRACT_V1, moments: MOMENTS_AS_TEXT });
+      await w.open();
+      expect(w.clock()).toBeNull();
+      let start = 0;
+      const inputs = MOMENTS_AS_TEXT.map((m) => {
+        const windowStartMs = start;
+        start += paceOf(m);
+        return { ordinal: m.ordinal, tc: m.tc, windowStartMs, windowEndMs: start, completeAtMs: windowStartMs, availableAtMs: null };
+      });
+      expect(timelineOf(inputs).steps.map((s) => s.atMs)).toEqual(inputs.slice(1).map((m) => m.windowStartMs));
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
 describe('RB-1 S3 · the export on the same presentation clock', () => {
   const c = clockOf();
   const tl = timelineOf(c.inputs, c.durationMs);

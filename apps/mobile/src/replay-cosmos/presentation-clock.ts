@@ -137,13 +137,14 @@ export function replayPresentationClock(plan: ReplayAudioPlan, moments: readonly
 }
 
 /**
- * The in-app stage's allowance behind the audio place (PROPOSED). A resumed file starts `TRANSIENT_HANDOVER.resumeBehindMs`
- * (57 ms) BEFORE the saved place while its reported place stays at it (CA-07B-2), and a reused player's reported place
- * was measured two AAC frames (≈ 43 ms) ahead of what is heard (CA-07B-2, step 6 on HONOR): the stage is drawn this much
- * behind the place, so neither can show a disclosure before its speech is heard. It delays; it never advances anything.
- * Output latency after the player (a Bluetooth route, the device mixer) is NOT measured and NOT covered by it.
+ * The in-app stage's allowance behind the audio place: FC-0 (PO, 2026-11-23), on the audio and in a text block after it.
+ * Measured on HONOR ALI-NX1's built-in speaker (RB1_REPORT §13, phone mic and screen-present times on one clock): the
+ * clock's reported place leads the HEARD sound by up to 106.45 ms in steady play and up to 201.65 ms just after a resume or
+ * a generation handover; at 100 ms, disclosures were drawn up to 81.8 ms before their speech was audibly over. 300 ms
+ * covers that measured worst case with margin. It delays; it never advances anything. It is evidence for that phone's
+ * speaker only: Bluetooth, wired, a route change, other devices and iOS are NOT measured, and it is not claimed for them.
  */
-export const REPLAY_STAGE_AUDIO_LAG_MS = 100;
+export const REPLAY_STAGE_AUDIO_LAG_MS = 300;
 
 /**
  * S2: what the stage reads of the version's audio clock (the CP1-B `ReplayAudioClock` is one, as it is): its state, its

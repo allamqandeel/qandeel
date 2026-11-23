@@ -263,6 +263,11 @@ const DETECTORS = {
     // text block of an audio plan (the player shows it on the previous file's end report, which leads what is heard).
     if (!/return \{ kind: 'AUDIO', t: Math\.max\(0, Math\.min\(t, end\) - REPLAY_STAGE_AUDIO_LAG_MS\) \};/u.test(clock)) out.push('the audio stage time runs the stated allowance behind the place');
     if (!/return \{ kind: 'PACED', startMs: text\.startMs, endMs: text\.endMs, behindMs: REPLAY_STAGE_AUDIO_LAG_MS \};/u.test(clock) || !/pacedRange !== null \? Math\.max\(0, paced - behind\)/u.test(world)) out.push('a text block of an audio plan is drawn the same allowance behind');
+    // FC-0 (PO, 2026-11-23; RB1_REPORT §13, HONOR speaker): the allowance covers the measured 201.65 ms lead of the reported
+    // place over the heard sound after a restart — never below 300 ms — and a text-only Replay (no audio clock) gets none.
+    const lag = Number(/export const REPLAY_STAGE_AUDIO_LAG_MS = (\d+);/u.exec(clock)?.[1] ?? NaN);
+    if (!(lag >= 300)) out.push('the stage allowance covers the HONOR-measured lead after a restart (FC-0: at least 300 ms)');
+    if (!/const behind = followed\?\.kind === 'PACED' \? followed\.behindMs : 0;/u.test(world)) out.push('a text-only Replay is drawn with no allowance (the reading pace unchanged)');
     for (const [name, text] of Object.entries(w.cosmos)) {
       const code = tsCode(text);
       if (/drawAtlas|drawPath|drawPaint|drawRect|MakeRadialGradient|MakeLinearGradient|makeShader/u.test(code)) out.push(name + ': no drawing code of its own (no second engine)');
@@ -461,6 +466,8 @@ const PLANTED = [
   ['a presentation clock that paces by reading', 'cosmosViolations', edit('cosmos', 'presentation-clock.ts', 'const length = Math.max(1, paceMs(moment));', 'const length = Math.max(1, readingPaceMs(moment.text ?? \'\'));')],
   ['the audio stage time without its allowance', 'cosmosViolations', edit('cosmos', 'presentation-clock.ts', 'Math.min(t, end) - REPLAY_STAGE_AUDIO_LAG_MS)', 'Math.min(t, end))')],
   ['a text block after a run drawn on the end report', 'cosmosViolations', edit('cosmos', 'ReplayCosmosWorld.tsx', 'Math.max(0, paced - behind)', 'paced')],
+  ['the 100 ms allowance the HONOR proof refuted', 'cosmosViolations', edit('cosmos', 'presentation-clock.ts', 'export const REPLAY_STAGE_AUDIO_LAG_MS = 300;', 'export const REPLAY_STAGE_AUDIO_LAG_MS = 100;')],
+  ['an allowance on a text-only Replay', 'cosmosViolations', edit('cosmos', 'ReplayCosmosWorld.tsx', "const behind = followed?.kind === 'PACED' ? followed.behindMs : 0;", "const behind = followed?.kind === 'PACED' ? followed.behindMs : 300;")],
   ['a camera ahead of its disclosure', 'cosmosViolations', edit('cosmos', 'camera-plan.ts', 'const t0 = Math.max(atMs, free);', 'const t0 = free;')],
   ['a stage around the adapter', 'cosmosViolations', edit('cosmos', 'history.ts', 'discloseReplayMoment(version, moment, analysis.analysis)', "({ status: 'DISCLOSED', entry: analysis.analysis })")],
   ['an inspection focus drawn', 'cosmosViolations', edit('cosmos', 'stages.ts', 'personalScene(scene, null, rtl, ORIGIN, names)', 'personalScene(scene, focus, rtl, ORIGIN, names)')],
