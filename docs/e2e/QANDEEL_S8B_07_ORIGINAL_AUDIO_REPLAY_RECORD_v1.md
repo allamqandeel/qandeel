@@ -1,7 +1,7 @@
 # QANDEEL S8B-07 — Original Audio Replay, Media Rendering & Distribution: Implementation Record v1
 
 **Slice (2026-11-23):** REPLAY-COSMOS-01 RB-2 / S1 — **DELIVERED / READY FOR PO REVIEW — NOT MERGED** (§15;
-Draft PR; migration `0201`, not hosted). RB-2 S2 – S5 are not authorized. S8B-07 is not closed.
+Draft PR #405; migration `0201`, not hosted). RB-2 S2 – S5 are not authorized. S8B-07 is not closed.
 
 **Checkpoint:** S8B-07 CP1-B — **MERGED — PR #385 — `a4b30517` — 2026-11-08** (§13). **S8B-07 is not closed.** S8B-07
 CP2-A WP0 v0.3.1 is **FINAL APPROVED — NOT APPROVED FOR EXECUTION** (2026-11-09, §14): CP2-A and CP2-B are not started,
@@ -1319,7 +1319,7 @@ it decided.
 
 ## 15. REPLAY-COSMOS-01 RB-2 / S1 — Semantic Commit Instants (DELIVERED, 2026-11-23)
 
-**Slice:** `RB-2 / S1 — DELIVERED / READY FOR PO REVIEW — NOT MERGED`. Draft PR on
+**Slice:** `RB-2 / S1 — DELIVERED / READY FOR PO REVIEW — NOT MERGED`. Draft PR #405 on
 `replay/rb2-s1-semantic-commit-instants`, from `main` at `5ce3a70c`. **Merge only on the Product Owner's explicit «ادمج».**
 S1 is a slice, not a phase or a task closure. S8B-07 stays open. RB-2's S2 – S5 are **not authorized**. Migration `0201` is
 **not hosted**. Every voice gate stays `DISABLED`.

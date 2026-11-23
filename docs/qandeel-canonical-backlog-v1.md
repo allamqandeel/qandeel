@@ -3956,7 +3956,7 @@ allowance. This is evidence for that phone's speaker only. Bluetooth, wired outp
 are not measured, and 300 ms is not claimed fail-closed for them. The item stays `OPEN — UNASSIGNED`.
 
 Progress note (2026-11-23, RB-2 / S1, not a disposition): PR #404 merged into `main` as `5ce3a70c`. The Product Owner
-then authorised RB-2 / S1 only. Migration `0201` records, for each committed transaction that moves a Session's semantic
+then authorised RB-2 / S1 only (Draft PR #405). Migration `0201` records, for each committed transaction that moves a Session's semantic
 clock, one ledger row with its transaction identity, and two `service_role` observers stamp each row once after its commit
 is visible ([S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §15). Nothing calls the observers yet,
 nothing reads the ledger, and no Replay surface changes, so no Replay moment is yet `RECORDED`. RB-2 S2 – S5 (the API
