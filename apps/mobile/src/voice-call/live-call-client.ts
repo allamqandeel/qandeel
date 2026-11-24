@@ -29,6 +29,7 @@ import {
   LIVE_CALL_CLOSE, LIVE_CALL_LIMITS, LIVE_CALL_PATH, LIVE_CALL_PROTOCOL, parseServerMessage, type RefusalReason, type ReplyAudioFrame,
   type ServerMessage,
 } from './live-call-protocol';
+import { encodeMarkEcho, LIVE_CALL_PROTOCOL_V2, LIVE_CALL_PROTOCOL_V2_VERSION, parseServerMessageV2 } from './live-call-protocol-v2';
 
 /** The subset of the React Native / WHATWG WebSocket the client uses (a fake implements it in tests). */
 export interface LiveCallSocket {
@@ -39,9 +40,11 @@ export interface LiveCallSocket {
   onerror: ((event: unknown) => void) | null;
   send(data: string | ArrayBuffer): void;
   close(code?: number, reason?: string): void;
+  /** RB-2 / M-2: the subprotocol the server selected (set on open). */
+  readonly protocol?: string | null;
 }
 
-export type LiveCallSocketFactory = (url: string, protocol: string, headers: Readonly<Record<string, string>>) => LiveCallSocket;
+export type LiveCallSocketFactory = (url: string, protocol: string | readonly string[], headers: Readonly<Record<string, string>>) => LiveCallSocket;
 
 export interface LiveCallTimers {
   setTimeout(fn: () => void, ms: number): unknown;
@@ -65,6 +68,8 @@ export type LiveCallClientEvent =
   | { readonly type: 'replyFrameDropped'; readonly reason: 'WRONG_EPOCH' | 'MALFORMED' }
   | { readonly type: 'resent'; readonly controls: number; readonly audio: number; readonly fromCaptureMs: number | null }
   | { readonly type: 'serverFault' }
+  /** RB-2 / M-2 (v2 only): the server asks for the capture position of this instant. */
+  | { readonly type: 'clockMark'; readonly seq: number }
   | { readonly type: 'ended'; readonly reason: LiveCallEnd };
 
 export interface LiveCallClientOptions {
@@ -80,6 +85,11 @@ export interface LiveCallClientOptions {
   readonly insecureLoopbackForProof?: boolean;
   /** How long after a loss the client keeps trying (the server's reconnect grace). */
   readonly reconnectGraceMs?: number;
+  /**
+   * RB-2 / M-2: offer protocol v2 (clock marks) before v1. Only a phone whose engine resolves a certified capture position
+   * (Android) sets it; the server's selection decides, and a server that selects v1 gets exactly v1.
+   */
+  readonly offerClockMarks?: boolean;
 }
 
 type LogItem =
@@ -99,8 +109,8 @@ export function isAllowedLiveCallUrl(url: string, insecureLoopbackForProof: bool
 }
 
 const defaultSocketFactory: LiveCallSocketFactory = (url, protocol, headers) => {
-  const Socket = WebSocket as unknown as new (url: string, protocols: string, options: { headers: Record<string, string> }) => LiveCallSocket;
-  const socket = new Socket(url, protocol, { headers: { ...headers } });
+  const Socket = WebSocket as unknown as new (url: string, protocols: string | string[], options: { headers: Record<string, string> }) => LiveCallSocket;
+  const socket = new Socket(url, typeof protocol === 'string' ? protocol : [...protocol], { headers: { ...headers } });
   socket.binaryType = 'arraybuffer';
   return socket;
 };
@@ -134,6 +144,8 @@ export class LiveCallClient {
   private lastRefusal: RefusalReason | null = null;
   private readonly log: LogItem[] = [];
   private newestCaptureMs = -AUDIO_PACKET_MS;
+  /** RB-2 / M-2: this connection runs v2 (the server selected it). */
+  private v2 = false;
   /** The call's state as the server last stated it. */
   callState: 'NONE' | 'CONNECTING' | 'ACTIVE' | 'ENDED' = 'NONE';
   readonly counters = { audioSent: 0, audioBuffered: 0, audioResent: 0, controlsResent: 0, replyFrames: 0, replyWrongEpoch: 0, replyMalformed: 0, reconnects: 0 };
@@ -240,7 +252,8 @@ export class LiveCallClient {
     this.options.onEvent({ type: 'connection', phase: 'CONNECTING', attempt: this.attempt });
     let socket: LiveCallSocket;
     try {
-      socket = this.factory(this.options.url, LIVE_CALL_PROTOCOL, { Authorization: `Bearer ${this.options.accessToken()}` });
+      const offered = this.options.offerClockMarks === true ? [LIVE_CALL_PROTOCOL_V2, LIVE_CALL_PROTOCOL] : LIVE_CALL_PROTOCOL;
+      socket = this.factory(this.options.url, offered, { Authorization: `Bearer ${this.options.accessToken()}` });
     } catch {
       this.lost(0);
       return;
@@ -251,8 +264,11 @@ export class LiveCallClient {
       if (this.socket !== socket) return;
       this.everConnected = true;
       this.resuming = resume;
+      this.v2 = this.options.offerClockMarks === true && socket.protocol === LIVE_CALL_PROTOCOL_V2;
       this.options.onEvent({ type: 'connection', phase: 'OPEN', attempt: this.attempt });
-      this.write({ type: 'HELLO', v: 1, callId: this.options.callId, sessionId: this.options.sessionId, clientInstanceId: this.options.clientInstanceId, resume });
+      const hello = { type: 'HELLO' as const, v: 1 as const, callId: this.options.callId, sessionId: this.options.sessionId, clientInstanceId: this.options.clientInstanceId, resume };
+      if (this.v2) this.writeRaw(JSON.stringify({ ...hello, v: LIVE_CALL_PROTOCOL_V2_VERSION }));
+      else this.write(hello);
       this.heartbeat = this.timers.setInterval(() => {
         this.write({ type: 'HEARTBEAT', n: this.heartbeatN });
         this.heartbeatN = (this.heartbeatN + 1) >>> 0;
@@ -271,7 +287,7 @@ export class LiveCallClient {
   }
 
   private onText(text: string): void {
-    const message = parseServerMessage(text);
+    const message = this.v2 ? parseServerMessageV2(text) : parseServerMessage(text);
     if (!message) {
       this.options.onEvent({ type: 'serverFault' });
       this.socket?.close(LIVE_CALL_CLOSE.PROTOCOL_ERROR, 'fault');
@@ -298,7 +314,19 @@ export class LiveCallClient {
       case 'REPLY_END':
         this.options.onEvent({ type: 'replyEnd', message });
         return;
+      case 'CLOCK_MARK':
+        this.options.onEvent({ type: 'clockMark', seq: message.seq });
+        return;
     }
+  }
+
+  /**
+   * RB-2 / M-2: the echo of a CLOCK_MARK, only on a v2 connection that is live. Evidence, never a command: not logged for a
+   * resend and not acknowledged — a lost echo only makes a certification later.
+   */
+  sendMarkEcho(seq: number, captureMs: number | null): void {
+    if (!this.v2 || this.ended || !this.canSendLive()) return;
+    this.writeRaw(encodeMarkEcho(seq, captureMs));
   }
 
   private onState(message: Extract<ServerMessage, { type: 'STATE' }>): void {
@@ -438,8 +466,12 @@ export class LiveCallClient {
   }
 
   private write(message: ClientMessage): void {
+    this.writeRaw(encodeClientMessage(message));
+  }
+
+  private writeRaw(text: string): void {
     try {
-      this.socket?.send(encodeClientMessage(message));
+      this.socket?.send(text);
     } catch {
       // the close event follows
     }

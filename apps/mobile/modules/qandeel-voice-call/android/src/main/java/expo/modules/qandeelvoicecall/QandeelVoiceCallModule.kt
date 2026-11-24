@@ -34,6 +34,7 @@ class QandeelVoiceCallModule : Module() {
     Events(
       "onUplink", "onPlayout", "onBargeIn", "onBargeInTrace", "onLevels", "onSpeech", "onReplyDrained",
       "onEngineState", "onFault", "onFocus", "onRoute", "onHold", "onResume", "onCue", "onCallLifecycle", "onTick",
+      "onMarkEcho",
     )
 
     OnCreate {
@@ -83,6 +84,11 @@ class QandeelVoiceCallModule : Module() {
 
     Function("forceBargeIn") {
       engine?.forceBargeIn() ?: false
+    }
+
+    // S8B-07 RB-2 / M-2: a CLOCK_MARK, under the JS session's token; false = the caller answers NOCLOCK itself.
+    Function("clockMark") { token: Double ->
+      engine?.clockMark(token.toLong()) ?: false
     }
 
     Function("describe") {
@@ -217,6 +223,8 @@ class QandeelVoiceCallModule : Module() {
     override fun held(captureMs: Long, cause: String) = sendEvent("onHold", mapOf("captureMs" to captureMs.toDouble(), "cause" to cause))
     override fun resumed(captureMs: Long) = sendEvent("onResume", mapOf("captureMs" to captureMs.toDouble()))
     override fun tick(nowMs: Long) = sendEvent("onTick", mapOf("nowMs" to nowMs.toDouble()))
+    override fun markEcho(token: Long, captureMs: Long?) =
+      sendEvent("onMarkEcho", mapOf("token" to token.toDouble(), "captureMs" to captureMs?.toDouble()))
     override fun cue(event: String, id: String, forced: Boolean, source: String?) {
       // The notification changes with the warning even while JS is paused (the screen locked, the app in the background).
       if (event == "QUEUED" || event == "DUE") cueTexts[id]?.let { LiveCallRegistry.updateNotification(it) }

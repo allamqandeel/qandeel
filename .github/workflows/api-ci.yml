@@ -267,6 +267,7 @@ jobs:
       - {name: "Verify S8B-07 CP1-B V-24a First Audio isolation contract (D-06.7 +25 / +50 ms over medians of at least 3 interleaved repetitions for M0 and M1_SHIPPED, the S8B-05 CP3 harness unchanged, a separate Replay pool process as the Replay role at every bound, not a proof of pool separation, the 0196 admission lock, wired in the rclone step)", run: npm run test:s8b-07-cp1b-first-audio-isolation-contract}
       - {name: "Verify S8B-07 RB-2 S1 semantic commit instants contract (0201 forward-only, one table and four functions, nothing replaced; the deferred row constraint trigger reading the clock as it stands and folding by transaction identity; the guard; service_role observer and sweeper, unwired; no handler, no dynamic SQL, no retryable SQLSTATE; the verifier wired after 0200)", run: npm run test:semantic-commit-instants-contract}
       - {name: "Verify S8B-07 RB-2 S3 Replay historical availability contract (0202 forward-only after 0201, 0201 byte-frozen, the completing row seals TC, no projection sequence / observed_at / trigger_at as a time, the read to the Replay pool only, the seam NULL until M-2)", run: npm run test:replay-historical-availability-contract}
+      - {name: "Verify S8B-07 RB-2 M-2 live call clock marks contract (0203 forward-only after 0202, 0201 byte-frozen, snapshot visibility of the writer xact, contiguous prefix, write-on-change, min-echo seam, service_role reaches the slot batch only, marks and ranges ACCOUNT_CASCADE)", run: npm run test:live-call-clock-marks-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1464,6 +1465,11 @@ jobs:
       # the historical-accuracy acceptance list and 8 planted defects of the read.
       - name: Verify S8B-07 RB-2 S3 Replay historical availability (0202) against real PostgreSQL
         run: npm run verify:replay-historical-availability:integration
+      # 0203 (M-2): the slot batch takes a fresh snapshot per slot, persists echoes write-on-change against the ledger
+      # prefix that snapshot saw, compacts ENDED calls, and answers the 0202 seam. Optimized vs unoptimized on identical
+      # data, compaction, isolation, collection, erasure, WAL and 6 planted defects.
+      - name: Verify S8B-07 RB-2 M-2 live call clock marks (0203) against real PostgreSQL
+        run: npm run verify:live-call-clock-marks:integration
       # S8B-07 CP1-B (D-06.6): the Replay pool's ffmpeg - BtbN's 9.0.2 LGPL build, from its own release asset at a pinned
       # autobuild tag, refused unless its sha256 is the one pinned here (the rclone and PostgREST pattern: no registry, no
       # image, no package manager). FFMPEG_BIN / FFPROBE_BIN name it for the media proofs; nothing else uses it.

@@ -1,7 +1,8 @@
 # QANDEEL S8B-07 — Original Audio Replay, Media Rendering & Distribution: Implementation Record v1
 
 **Slice (2026-11-24):** REPLAY-COSMOS-01 RB-2 / S3 — **DELIVERED / READY FOR PO REVIEW — NOT MERGED** (§16; migration
-`0202`, not hosted); M-2 (`0203`) on its stacked Draft PR (§16.8). RB-2 / S1 merged through PR #405 as `f45400a8` (§15;
+`0202`, not hosted); RB-2 / M-2 — **IMPLEMENTED / READY FOR PO REVIEW — NOT MERGED** (§17; migration `0203`, not hosted;
+stacked on S3). RB-2 / S1 merged through PR #405 as `f45400a8` (§15;
 `0201`, not hosted). S4 / S5 stay open. S8B-07 is not closed.
 
 **Checkpoint:** S8B-07 CP1-B — **MERGED — PR #385 — `a4b30517` — 2026-11-08** (§13). **S8B-07 is not closed.** S8B-07
@@ -1517,5 +1518,105 @@ The Replay timeline does not consume the answer (S4). No export, MP4 or publishi
 
 ### 16.8 M-2
 
-M-2 (`0203`, the v2 live-call clock marks, the Android capture clock) replaces the seam on a stacked Draft PR. Its
-status is recorded on that branch.
+M-2 (`0203`, the v2 live-call clock marks, the Android capture clock) replaces the seam on a stacked Draft PR (§17).
+
+## 17. REPLAY-COSMOS-01 RB-2 / M-2 — Direct Historical Binding (IMPLEMENTED, 2026-11-24)
+
+**Slice:** `RB-2 / M-2 — IMPLEMENTED / READY FOR PO REVIEW — NOT MERGED`. Draft PR on `replay/rb2-m2-clock-marks`,
+STACKED on the S3 branch (`replay/rb2-s3-historical-availability`, §16): it merges after S3 or is retargeted to `main`
+once S3 is merged. **Merge only on the Product Owner's explicit «ادمج».** A slice, not a phase or a task closure; S8B-07
+stays open. Migration `0203` is **not hosted**. Every voice gate stays `DISABLED`; nothing is deployed or activated.
+
+### 17.1 What M-2 delivers
+
+- **`0203`** (database README): the slot statement `server_call_clock_slot_v1` (`service_role` only), the per-instance
+  snapshots, the write-on-change marks, the post-call Pareto ranges, the compaction, and the seam
+  `replay_call_certified_capture_ms_v1` replaced so that S3's read places a committed moment at its certified capture
+  position. `0201` is byte-identical; `0202`'s read is untouched.
+- **Protocol v2** ([QANDEEL_LIVE_CALL_PROTOCOL_v2.md](../voice/QANDEEL_LIVE_CALL_PROTOCOL_v2.md)): v1 plus CLOCK_MARK
+  (server → phone) and MARK_ECHO (phone → server). v1's code and document are unchanged; the server selects v2 only when
+  offered; a v1 phone, an older client and the S8B-06 fake gateway get exactly v1.
+- **API** (`apps/api/src/voice/call/`): `LiveCallClockMarks` — ten staggered 100 ms slots (`slot = hash(callId) mod 10`),
+  one slot statement per non-empty slot, the marks sent only after it resolves, a busy slot skipped (never caught up), a
+  failed slot sends nothing and keeps its echoes and compactions for the next one; strict echo validation (known and
+  outstanding on that connection, first answer, ≤ 10 s, not NOCLOCK, above the floor held at send, rising). No worker, no
+  polling, no event routing: the timer runs only while the instance carries a v2 call or has something to persist.
+- **Phone** (`apps/mobile/src/voice-call/`): v2 is offered only when the engine has `clockMark` (Android). iOS offers v1
+  only and is never asked: **fail-closed**, its moments are `AFTER_END`. The session maps every mark to a token it never
+  reuses, so an answer for a lost connection can never answer the new connection's mark of the same `seq`.
+- **Android** (`modules/qandeel-voice-call`): `CaptureClockMarker` (pure Kotlin) answers with the first frame captured at
+  least 100 ms after the mark arrived, timed by `AudioRecord.getTimestamp(TIMEBASE_MONOTONIC)` through the samples read
+  (never the frame index); no echo before 10 consecutive consistent timestamps (200 ms); a missing or implausible timestamp
+  restarts the count. No change to encoding, AEC, TTS, playout or the recorded audio.
+
+### 17.2 The hold / resume correction
+
+A hold releases the microphone and the capture clock then jumps by the held time; the HAL's frame position does not. So:
+a hold answers every pending mark NOCLOCK at once and refuses new ones; a resume starts a new segment whose reference is
+re-established from its own timestamps only (the pre-hold frame index is never continued, and a frame that merely looks
+like the old clock does not carry stability over). `CallAudioEngine.resume` now publishes the new frame index BEFORE it
+clears the hold, and a frame whose read spanned a hold is discarded — a pre-existing window in which the first frame read
+after a resume could carry the pre-hold index is closed. Capture and playback never wait on a mark.
+
+**Device finding (HONOR, 2026-11-24), fixed in this slice.** The HONOR's `AudioRecord` timestamp position restarts at 0
+when the microphone restarts after a hold. The first candidate timed frames through the samples read since the recording
+started, so every post-resume frame looked captured in the future: the marker failed closed and certified 0 of 98 marks
+after a resume for the rest of the call (never early — safe, but the feature was dead after the first hold). The engine now
+reads the same timestamp both ways (samples read since the segment started, and since the recording started) and the
+marker takes the EARLIER plausible reading (`CaptureClockMarker.pick`): an instant taken too early only ever answers a mark
+later, never earlier, so no platform behaviour is assumed. On the same device the old frame-index formula would have
+placed post-resume frames 25–62 s off.
+
+### 17.3 Declared re-anchors
+
+`tests/s8b-05-live-call-contract.test.mjs` (the migration tail now ends with `0203`), `database/verify-migration-0194.mjs`,
+`0195.mjs`, `0196.mjs` (their migration lists), `tests/s8b-06-native-audio-engine-contract.test.mjs` (the fake gateway
+answers v1 to an offer list that contains v1), `database/tests/live-call-clock-marks-v1.test.mjs` (the contract script runs
+the v2 protocol contract too), and the `voice_private` censuses of `database/verify-migration-0183.mjs`, `0185.mjs` and
+`0186.mjs`, which count 0203's three new internals through `database/replay-rb2-census.mjs` only when 0203 is applied.
+The S8B-06 change extends its fake-gateway check; it removes no assertion. Each carries a `RE-ANCHORED by S8B-07 RB-2 / M-2`
+comment where a pin moved. As `verify-migration-0202` (§16.4), `verify-migration-0203` records the keys each governed
+erasure of a fixture human releases, proves they were queued, and discharges exactly those erasure-queue rows (two per
+run, objects that never existed), so it adds nothing due to the shared queue that the later storage proofs share.
+
+### 17.4 Verification
+
+Local, on PostgreSQL 17 and the HONOR ALI-NX1 (Android 15); evidence outside the repository in
+`QANDEEL_REPORTS/S8B-07/CP2-A/REPLAY-LOCAL-02/amendment/rb2/evidence-m2-s3-impl/`. CI runs on the Draft PR's head.
+
+- **Database:** `verify-migration-0203` (snapshot visibility of the writer transaction, contiguous prefix, write-on-change
+  against identical unoptimized data, min-echo seam, duplicate / unknown / expired / out-of-order echoes, multi-instance
+  isolation, RLS, cascades, governed erasure, census, idempotent compaction) and the re-anchored `0183`, `0185`, `0186`,
+  `0194`, `0195`, `0196`, `0202` verifiers pass on a database carrying 0203.
+- **Code:** Android JUnit 48/48 (`CaptureClockMarkerTest` 11), API voice jest 380/380, mobile jest 83/83, the v2 protocol
+  contract 6/6, the S8B-05 / S8B-06 contracts.
+- **1000-call load** (one laptop, 120 s, a commit every 10 s per call, 1 % echo loss): certification P50 673–703 ms, P95
+  1143–1240 ms, P99 1239–2119 ms; 0 early, 0 ambiguous, 0 settled uncertified; compaction changed 0 positions and left 0
+  marks; leftover rows 0 after governed erasure.
+- **Baseline vs M-2** (interleaved B / L × 3, the unchanged S8B-05 CP3 harness beside the 1000-call load; medians):
+  First Audio M0 P50 528 → 531 ms, P95 663 → 666 ms; M1 P50 593 → 603 ms, P95 782 → 810 ms; Live Focus P95 4507 → 4381 ms;
+  commit P99 8.6 → 9.0 ms; event loop P99 21.3 → 19.8 ms; WAL 305 → 408 KB/s per 1000 calls (+34 %).
+- **HONOR re-validation** (probe app around the candidate engine; holds at 20 s (5 s) and 40/45/50/55/60 s (2 s each), a
+  reconnect at 75 s, a second mark at the same instant every 7th): speaker screen-on and earpiece screen-off, 136 marks
+  each — 0 early, 0 certified during a hold, 94–96 of 96–97 certified after a resume, every token answered once, no frame
+  before its vibrator command; the vibrator onset after a resume P50 62–72 ms (the earlier proof ≈ 71 ms). The run before
+  the fix is kept as the FAIL it was (0 of 98 after a resume).
+
+### 17.5 Deliberately not done
+
+The Replay timeline does not consume the answer (S4). No export, MP4 or publishing (S5). No iOS certification. No Sweeper,
+worker or schedule. Nothing is hosted, deployed or activated.
+
+### 17.6 Residue
+
+Admitted to the backlog (progress note on the open RB-2 item); none is a disposition:
+
+- **MEDIUM — P99 certification latency under contention.** One of three interleaved runs (the voice harness on the same
+  laptop) reached P99 2119 ms, over the 2 s gate: the slot statement slowed (P95 ≈ 100 ms) and 46 slots were skipped as
+  busy. The two other runs gave 1239 and 1970 ms. To be measured on a production-like database before any activation.
+- **LOW — First Audio M1 P95 +28 ms** (782 → 810 ms median; two of three M-2 runs above every baseline run; n = 68 per run).
+  M0 and Live Focus unchanged.
+- **LOW — WAL +34 %** while calls run (write-on-change already applied); after compaction no mark row remains.
+- **MEDIUM — the moment completed by an assistant final waits for its sealing commit** (S3 §16).
+- iOS: no certified placement (fail-closed, `AFTER_END`). 4G: **NOT TESTED**. Android devices other than the HONOR ALI-NX1:
+  **NOT TESTED**. The Replay timeline does not consume the answer yet (S4); export and publishing (S5) not done.

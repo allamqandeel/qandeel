@@ -8,6 +8,7 @@ import { readOggOpus } from '../codec/ogg-opus';
 import { LIVE_CALL_SPEECH_SINK, NULL_LIVE_CALL_SPEECH_SINK } from '../live-call-speech.port';
 import { LiveCallService } from '../live-call.service';
 import { encodeAudioFrame, LIVE_CALL_PATH, LIVE_CALL_PROTOCOL, MAX_BINARY_FRAME_BYTES } from '../live-call.protocol';
+import { LIVE_CALL_PROTOCOL_V2 } from '../live-call.protocol-v2';
 import { LIVE_CALL_STORE } from '../live-call.store';
 import { InMemoryCallAuthority } from '../testing/in-memory-call-authority';
 import { syntheticUplinkPackets } from '../testing/synthetic-voice';
@@ -86,8 +87,8 @@ class Client {
   closed: Promise<{ code: number }>;
   private readonly ws: WebSocket;
 
-  constructor(url: string, token: string) {
-    this.ws = new WebSocket(url, { protocols: [LIVE_CALL_PROTOCOL], headers: { authorization: `Bearer ${token}` } } as never);
+  constructor(url: string, token: string, protocols: string[] = [LIVE_CALL_PROTOCOL]) {
+    this.ws = new WebSocket(url, { protocols, headers: { authorization: `Bearer ${token}` } } as never);
     this.ws.binaryType = 'arraybuffer';
     this.ws.onmessage = (event) => void this.messages.push(JSON.parse(String(event.data)) as Record<string, unknown>);
     this.closed = new Promise((resolve) => {
@@ -169,6 +170,21 @@ describe('S8B-05 CP1 the live call gateway over a real WebSocket, with real auth
     expect(await upgradeStatus(port, { Authorization: 'Bearer token-a' })).toBe(101);
     expect(booted.authority.calls.size).toBe(0);
   });
+
+  it('RB-2 / M-2: selects v2 when offered (HELLO must then say v: 2), else exactly v1', async () => {
+    const v2 = new Client(booted.url, 'token-a', [LIVE_CALL_PROTOCOL_V2, LIVE_CALL_PROTOCOL]);
+    expect(await v2.opened()).toBe(LIVE_CALL_PROTOCOL_V2);
+    v2.send({ ...hello(), v: 2 });
+    expect(await v2.waitFor((m) => m.type === 'STATE')).toMatchObject({ state: 'CONNECTING', epoch: 1 });
+    v2.close();
+    const v1Hello = new Client(booted.url, 'token-a', [LIVE_CALL_PROTOCOL_V2]);
+    expect(await v1Hello.opened()).toBe(LIVE_CALL_PROTOCOL_V2);
+    v1Hello.send(hello());
+    expect(await v1Hello.waitFor((m) => m.type === 'REFUSED')).toMatchObject({ reason: 'PROTOCOL_VIOLATION' });
+    const v1 = new Client(booted.url, 'token-b');
+    expect(await v1.opened()).toBe(LIVE_CALL_PROTOCOL);
+    v1.close();
+  }, 20_000);
 
   it('carries a call: HELLO, real Opus audio, ACTIVE, END; the USER track is valid Ogg Opus', async () => {
     const client = new Client(booted.url, 'token-a');

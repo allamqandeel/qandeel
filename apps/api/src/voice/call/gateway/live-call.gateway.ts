@@ -9,6 +9,7 @@ import { rateLimitTrackerOf } from '../../../http-security/rate-limit.policy';
 import { LiveCallService } from '../live-call.service';
 import { tokenDeadline, type CallTransport } from '../live-call.connection';
 import { LIVE_CALL_CLOSE, LIVE_CALL_PATH, LIVE_CALL_PROTOCOL } from '../live-call.protocol';
+import { LIVE_CALL_PROTOCOL_V2 } from '../live-call.protocol-v2';
 import { acceptKey, encodeClose, encodeFrame, FrameParser, OPCODE } from './websocket-frames';
 
 /** Engineering safety bounds of the upgrade (code, not configuration; a change is a reviewed change). */
@@ -31,7 +32,7 @@ const MINUTE_MS = 60_000;
 class SocketTransport implements CallTransport {
   private closed = false;
 
-  constructor(private readonly socket: Duplex) {}
+  constructor(private readonly socket: Duplex, readonly subprotocol: string = LIVE_CALL_PROTOCOL) {}
 
   get bufferedBytes(): number {
     return this.socket.writableLength;
@@ -89,7 +90,8 @@ const tokens = (value: string | undefined): string[] => (value ?? '').split(',')
  * so it carries the same boundary on its own:
  *
  *   - only `GET /voice/calls/connect` (no query) with WebSocket version 13, a valid key and the subprotocol
- *     `qandeel.live-call.v1`; any other upgrade path is 404, never a socket;
+ *     `qandeel.live-call.v1` — or `qandeel.live-call.v2` (RB-2 / M-2), selected whenever it is offered; any other upgrade
+ *     path is 404, never a socket;
  *   - a per-address upgrade rate (the client address Express resolves under the startup proxy topology, `trust proxy`
  *     unchanged, IPv6 by /64, SHA-256 keys held only for their minute: the HTTP throttler's tracker), then a per-instance
  *     and, after authentication, a per-person socket cap;
@@ -143,7 +145,10 @@ export class LiveCallGateway implements OnApplicationBootstrap, OnModuleDestroy 
       return refuse(socket, 400, 'BAD_REQUEST');
     }
     if (header(request, 'sec-websocket-version') !== '13') return refuse(socket, 426, 'UPGRADE_REQUIRED', { 'Sec-WebSocket-Version': '13' });
-    if (!tokens(header(request, 'sec-websocket-protocol')).includes(LIVE_CALL_PROTOCOL)) return refuse(socket, 400, 'BAD_REQUEST');
+    // RB-2 / M-2: v2 when the phone offers it, else exactly v1 (a v1 phone is answered exactly as before).
+    const offered = tokens(header(request, 'sec-websocket-protocol'));
+    const selected = offered.includes(LIVE_CALL_PROTOCOL_V2) ? LIVE_CALL_PROTOCOL_V2 : offered.includes(LIVE_CALL_PROTOCOL) ? LIVE_CALL_PROTOCOL : null;
+    if (selected === null) return refuse(socket, 400, 'BAD_REQUEST');
     if (!this.admitAddress(request, socket)) {
       this.calls.signal('upgrade', 'overloaded');
       return refuse(socket, 429, 'RATE_LIMITED', { 'Retry-After': '60' });
@@ -176,17 +181,17 @@ export class LiveCallGateway implements OnApplicationBootstrap, OnModuleDestroy 
 
     socket.write([
       'HTTP/1.1 101 Switching Protocols', 'Upgrade: websocket', 'Connection: Upgrade', `Sec-WebSocket-Accept: ${key}`,
-      `Sec-WebSocket-Protocol: ${LIVE_CALL_PROTOCOL}`, '', '',
+      `Sec-WebSocket-Protocol: ${selected}`, '', '',
     ].join('\r\n'));
     const raw = socket as Socket;
     raw.setNoDelay?.(true);
     raw.setTimeout?.(0);
     this.calls.signal('upgrade', 'success');
-    this.wire(socket, identity, head);
+    this.wire(socket, identity, head, selected);
   }
 
-  private wire(socket: Duplex, identity: { userId: string; accessToken: string }, head: Buffer): void {
-    const transport = new SocketTransport(socket);
+  private wire(socket: Duplex, identity: { userId: string; accessToken: string }, head: Buffer, subprotocol: string): void {
+    const transport = new SocketTransport(socket, subprotocol);
     const { connection, forget } = this.calls.attach(transport, identity.userId, tokenDeadline(identity.accessToken, Date.now()), undefined, identity.accessToken);
     const parser = new FrameParser();
     let gone = false;

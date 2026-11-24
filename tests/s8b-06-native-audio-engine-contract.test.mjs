@@ -218,6 +218,12 @@ test('gateway: the upgrade is refused before any frame exactly as the frozen gat
     assert.equal(ok.status, 101);
     assert.equal(ok.protocol, 'qandeel.live-call.v1');
     ok.close();
+    // RB-2 / M-2: a phone offering v2 first still gets exactly v1 from a v1 gateway.
+    const both = await connect(port, { protocol: 'qandeel.live-call.v2, qandeel.live-call.v1' });
+    assert.equal(both.status, 101);
+    assert.equal(both.protocol, 'qandeel.live-call.v1');
+    both.close();
+    assert.equal((await connect(port, { protocol: 'qandeel.live-call.v2' })).status, 400);
   });
 });
 

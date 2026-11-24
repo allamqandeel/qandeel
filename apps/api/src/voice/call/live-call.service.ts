@@ -5,6 +5,7 @@ import { VoiceMediaService } from '../../voice-media/voice-media.service';
 import { voiceWorkersEnabled } from '../../voice-media/voice-retention.worker';
 import { LiveCallAnalysisSignal } from '../call-turn/live-call-analysis.signal';
 import { LIVE_CALL_SPEECH_SINK, type LiveCallSpeechSink } from './live-call-speech.port';
+import { LiveCallClockMarks, type ClockSlotStore } from './live-call.clock-marks';
 import { LiveCallConnection, LiveCallRegistry, REAL_CLOCK, type CallClock, type CallTransport } from './live-call.connection';
 import { LIVE_CALL_STORE, type CallTruth, type LiveCallStore } from './live-call.store';
 
@@ -30,6 +31,8 @@ export class LiveCallService implements OnModuleInit, OnModuleDestroy {
   private readonly live = new Map<LiveCallConnection, string>();
   private timer: NodeJS.Timeout | null = null;
   private sweeping = false;
+  /** RB-2 / M-2: the instance's clock-mark slots (protocol v2 calls only); absent when the store cannot take a slot batch. */
+  readonly clockMarks: LiveCallClockMarks | null;
 
   constructor(
     @Inject(LIVE_CALL_STORE) private readonly store: LiveCallStore,
@@ -38,7 +41,12 @@ export class LiveCallService implements OnModuleInit, OnModuleDestroy {
     private readonly auth: SupabaseAuthService,
     @Optional() private readonly telemetry?: TelemetryService,
     @Optional() private readonly analysis?: LiveCallAnalysisSignal,
-  ) {}
+  ) {
+    const slots = store as LiveCallStore & Partial<ClockSlotStore>;
+    this.clockMarks = typeof slots.clockSlot === 'function'
+      ? new LiveCallClockMarks(slots as ClockSlotStore, undefined, (operation, outcome) => this.signal(operation, outcome))
+      : null;
+  }
 
   onModuleInit(): void {
     if (!voiceWorkersEnabled()) return;
@@ -49,6 +57,7 @@ export class LiveCallService implements OnModuleInit, OnModuleDestroy {
   async onModuleDestroy(): Promise<void> {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
+    this.clockMarks?.stop();
     await Promise.all([...this.live.keys()].map((c) => c.goingAway().catch(() => undefined)));
   }
 
@@ -75,6 +84,7 @@ export class LiveCallService implements OnModuleInit, OnModuleDestroy {
       clock,
       signal: (operation, outcome) => this.signal(operation, outcome),
       analysisKick: (sessionId) => this.analysis?.kick(sessionId, 'CALL_ACTIVATED'),
+      clockMarks: this.clockMarks ?? undefined,
     }, accessToken);
     this.live.set(connection, userId);
     return { connection, forget: () => void this.live.delete(connection) };
