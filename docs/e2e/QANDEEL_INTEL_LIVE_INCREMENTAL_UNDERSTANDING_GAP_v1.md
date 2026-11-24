@@ -48,6 +48,10 @@ Record for each: actual speech position, partial/final ASR arrival, provisional 
 
 Use synthetic content and protect actual call performance. If the upstream analysis has not emitted a trustworthy event, presentation and Replay must not fabricate it.
 
+## 5A. Replay future-compatibility requirement (PO direction, 2026-11-24)
+
+Replay S4 and later video S5 must be prepared to ingest a separately governed, versioned event stream for **actual in-speech attention**, distinct from the existing RB-2 committed-moment track; both must use the same original-audio presentation clock and deterministic temporal reducer. See [S4/S5 compatibility contract](QANDEEL_S8B07_S4_INCREMENTAL_UNDERSTANDING_REPLAY_COMPATIBILITY_v1.md). Do not weaken `Moment.completeAt` for committed knowledge, backdate a late semantic commit, manufacture interim history, or alter S3/M-2. This is design direction and acceptance guardrail, not authorization to implement a provisional producer or its persistence.
+
 ## 6. Scope and governance
 
 **Status:** OPEN — UNASSIGNED; **severity:** HIGH (central user experience of being understood while speaking).  
