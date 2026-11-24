@@ -13,3 +13,7 @@ export {
   type ReplayCosmosAvailability, type ReplayCosmosMomentInput, type ReplayCosmosTimeline, type ReplayDisclosureStep, type ReplayScope, type ReplayTimelineMode, type ReplayTimelineOptions, type UnrecordedAvailabilityPolicy,
 } from './timeline';
 export { replayStageTimeline, type ReplayStageBasis, type ReplayStageTimeline, type ReplayStageTimelineKind } from './stage-timeline';
+export {
+  attentionAt, attentionOnFrame, buildReplayEventTimeline, emptyReplayEventTrack,
+  type ReplayAttentionEntry, type ReplayAttentionState, type ReplayEventSource, type ReplayEventStep, type ReplayEventTimeline, type ReplayEventTrackBinding, type ReplayEventTrackRefusal, type ReplayHistoricalEvent, type ReplayHistoricalEventTrack,
+} from './event-track';
