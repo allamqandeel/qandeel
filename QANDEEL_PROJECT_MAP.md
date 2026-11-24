@@ -1,5 +1,13 @@
 # QANDEEL — Project Map
 
+> **NEW PO PRODUCT GAP — INTEL-LIVE-INCREMENTAL-01 / `QAN-BL-INTEL-06` — HIGH / OPEN — UNASSIGNED — 2026-11-24 (documentation only, no execution permission):**
+> - **Primary location: Live Call Intelligence / Live Analysis producer (S8B-05 input + CP3 semantic worker; adjacent to Stage 8A understanding).** Speechmatics streams INTERIM, but the call turn engine does not feed INTERIM to semantic analysis; it waits for the user turn to commit after a silence endpoint. Worker default `AFTER_FIRST_AUDIO` can add a further wait. In a long uninterrupted confessional narrative the live map therefore cannot reliably reveal emerging meaning before the user finishes speaking.
+> - **Dependent locations: Living Analysis Map presentation, then S8B-07 Replay S4 / video S5.** The future product contract must separate provisional attention from durable knowledge, correctly handle corrections/negations, and preserve actual historical timing rather than backdate later commits.
+> - **Mandatory future acceptance:** a 90–120-second uninterrupted monologue causes several evidence-based map developments before turn-end or QANDEEL's next spoken reply, without material First Audio regression; provisional versus committed provenance is explicit. These acceptance goals still need a PO-approved bounded implementation contract.
+> - **Canonical authority:** [gap record](docs/e2e/QANDEEL_INTEL_LIVE_INCREMENTAL_UNDERSTANDING_GAP_v1.md) and [backlog §5](docs/qandeel-canonical-backlog-v1.md) `QAN-BL-INTEL-06`. The candidate name `INTEL-LIVE-01` is NOT an assigned task; current owner remains `UNASSIGNED`.
+> - **Separation:** S3 / M-2 PRs #408 / #409 remain Draft and may be reviewed on their own gates; technical Replay S4 consumption does not itself fix this gap. No alteration to frozen COSMOS, voice engines, S1, `0201`–`0203`; no merge/deploy/activation from this document.
+
+
 > **S8B-07 REPLAY-COSMOS-01 — RB-2 / S1 SEMANTIC COMMIT INSTANTS — DELIVERED / READY FOR PO REVIEW — NOT MERGED — 2026-11-23 (status only; no new task authority):**
 > - **Baseline:** PR #404 (RB-1 + FC-0, with the Product Owner's scoped iOS CI exception) merged into `main` as `5ce3a70c`. RB-1 is recorded in `QAN-BL-VIS-02`'s progress notes.
 > - **Authorization (PO, 2026-11-23): "RB-2/S1 ONLY"** — D-RB2-1, D-RB2-5a, D-RB2-7a, D-RB2-9 and D-RB2-11, for S1 only. S2 – S5, `0202`, Replay transport, mobile wiring, exports and live-call protocol changes are **not authorized**. M-2 (D-RB2-10) needs its own design review. S8B-05 is not reopened.
