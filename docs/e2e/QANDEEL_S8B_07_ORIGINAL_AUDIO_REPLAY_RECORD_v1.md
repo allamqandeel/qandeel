@@ -1864,6 +1864,7 @@ correction.
 | `rb1-audio-clock` (tests 6 and 8 re-anchored) | 27 / 27 |
 | `rb2-s4-lane-b-event-track` (Lane A expectation of the 120 s case re-anchored) | 10 / 10 |
 | `replay-cosmos`, `rb2-s4-availability-binding`, the original-audio and replay-player suites | 275 / 275 across 16 suites (with the above) |
+| Mobile jest (full, unloaded run) | 318 suites, 3993 / 3993 |
 | Mobile `tsc` | clean |
 | Mobile ESLint (replay-cosmos, original-audio) | 0 errors (2 pre-existing array-type warnings, untouched) |
 | S7-03 contract (re-pinned; 4 new plants, 2 retired with the superseded rule) | 62 / 62 |
