@@ -12,7 +12,7 @@
  *
  * Subcommands:
  *
- *   plan   --workflow api-ci|mobile-ci
+ *   plan   --workflow api-ci|mobile-ci|cosmos-ios-world-gate
  *          GITHUB_OUTPUT: <gate>=RUN|CARRY_FORWARD|NOT_RELEVANT, <gate>_contracts, <gate>_source_run_id,
  *          <gate>_source_head_sha, for each gate of that workflow.
  *
@@ -36,12 +36,15 @@ import {
   DOMAINS,
   EVIDENCE_JOB_NAME,
   EVIDENCE_SCHEMA,
+  IOS_WORLD_GATE,
   LIGHT_KINDS,
+  WORLD_GATE_WORKFLOW,
   analyzeLightPaths,
   authorityDigest,
   classifyPath,
   evidenceArtifactName,
   planGate,
+  planWorldGate,
   selectPredecessorRun,
   validateEvidence,
   workflowContracts,
@@ -59,6 +62,8 @@ export const WORKFLOWS = Object.freeze({
     file: '.github/workflows/mobile-ci.yml',
     gates: Object.freeze([DOMAINS.MOBILE_CONTRACT, DOMAINS.MOBILE_NATIVE_BINARY]),
   }),
+  // CI-SPEED-01 / C-2: the iOS World gate (BG-10), decided by `planWorldGate`.
+  'cosmos-ios-world-gate': Object.freeze({ file: WORLD_GATE_WORKFLOW, gates: Object.freeze([IOS_WORLD_GATE]) }),
 });
 
 const SHA = /^[0-9a-f]{40}$/u;
@@ -185,8 +190,10 @@ function planWorkflow(workflowKey) {
   const baseSha = event.pull_request?.base?.sha;
 
   const delta = eventName === 'pull_request' && event.action === 'synchronize' ? changedPaths(event.before, headSha) : null;
+  let sources = null;
+  const allSources = () => (sources ??= trackedSources());
   const light = (delta ?? []).filter((path) => LIGHT_KINDS.includes(classifyPath(path).kind));
-  const analysis = light.length > 0 ? analyzeLightPaths({ lightPaths: light, sources: trackedSources() }) : { contracts: [], heavyBinders: [], consumers: [] };
+  const analysis = light.length > 0 ? analyzeLightPaths({ lightPaths: light, sources: allSources() }) : { contracts: [], heavyBinders: [], consumers: [] };
   const suite = workflowContracts(readRepoFile(workflow.file) ?? '', JSON.parse(readRepoFile('package.json') ?? '{}').scripts ?? {});
   const nativeConsumerFlows = workflowFlows(readRepoFile(workflow.file) ?? '');
   const digest = authorityDigest(readTreeEntries('HEAD', root), workflow.file);
@@ -208,13 +215,20 @@ function planWorkflow(workflowKey) {
         continue;
       }
     }
-    let plan = planGate({ gate, context, delta, analysis, suite, nativeConsumerFlows, evidence: { ok: false, refusals: ['NOT_LOOKED_UP'] } });
+    // The iOS World gate decides from the PR's own diff and its latest update together (C-2); every other gate as before.
+    const cumulative = gate === IOS_WORLD_GATE && eventName === 'pull_request'
+      ? changedPaths(git(['merge-base', baseSha ?? '', headSha ?? ''])?.trim() ?? '', headSha ?? '')
+      : null;
+    const decide = (evidence) => (gate === IOS_WORLD_GATE
+      ? planWorldGate({ context, delta, cumulative, sources: allSources(), evidence })
+      : planGate({ gate, context, delta, analysis, suite, nativeConsumerFlows, evidence }));
+    let plan = decide({ ok: false, refusals: ['NOT_LOOKED_UP'] });
     let looked = null;
     if (plan.reason === 'PREDECESSOR_NOT_PROVEN_GREEN') {
       looked = lookupPredecessorEvidence({
         repository: process.env.GITHUB_REPOSITORY, workflowKey, gate, predecessorSha: event.before, baseSha, digest,
       });
-      plan = planGate({ gate, context, delta, analysis, suite, nativeConsumerFlows, evidence: looked.verdict });
+      plan = decide(looked.verdict);
     }
     outputs[key] = plan.decision;
     outputs[`${key}_contracts`] = plan.contracts.join(' ');
