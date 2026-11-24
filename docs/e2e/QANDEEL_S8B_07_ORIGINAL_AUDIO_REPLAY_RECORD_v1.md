@@ -1570,7 +1570,9 @@ answers v1 to an offer list that contains v1), `database/tests/live-call-clock-m
 the v2 protocol contract too), and the `voice_private` censuses of `database/verify-migration-0183.mjs`, `0185.mjs` and
 `0186.mjs`, which count 0203's three new internals through `database/replay-rb2-census.mjs` only when 0203 is applied.
 The S8B-06 change extends its fake-gateway check; it removes no assertion. Each carries a `RE-ANCHORED by S8B-07 RB-2 / M-2`
-comment where a pin moved.
+comment where a pin moved. As `verify-migration-0202` (§16.4), `verify-migration-0203` records the keys each governed
+erasure of a fixture human releases, proves they were queued, and discharges exactly those erasure-queue rows (two per
+run, objects that never existed), so it adds nothing due to the shared queue that the later storage proofs share.
 
 ### 17.4 Verification
 
