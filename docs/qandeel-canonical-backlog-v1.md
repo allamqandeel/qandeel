@@ -1,6 +1,7 @@
 # QANDEEL — Canonical Backlog v1
 
 **Status:** ACTIVE — governance authority
+**2026-11-24 PO admission (documentation-only):** `QAN-BL-INTEL-06` is an OPEN — UNASSIGNED, HIGH cross-task product gap for progressive understanding during uninterrupted speech; see its §5 record. No existing item is closed or re-owned, no live-call implementation is authorized, and historical item counts are retained as dated snapshots.
 **Established by:** QAN-GOV-01 (documentation-only normalization)
 **Canonical baseline:** `4473beb3d34993103baa82c034a76998bb40bc03` — the merge of PR #213, which
 closed T-10 Living Analysis Map Motion System v1
@@ -266,6 +267,7 @@ that Android, Jest and the iOS boot smoke had all passed. It relaxes nothing in 
 | `QAN-BL-MOB-02` | Written Composer on Android: the Last Composing Word Returns at the Start of the Next Message | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-VOICE-09` | Live Call 60-Minute Notice After a Late Rejoin: No CALL_ENDING Is Repeated on a Connection That Resumes Inside the Last Minute | `UNASSIGNED` | `LOW` | `OPEN — UNASSIGNED` |
 | `QAN-BL-INTEL-05` | Analysis Refusal Handling: a Deterministic Semantic-Establishment Refusal Is Treated as Transient (a Call Item Parks and Retries With No Terminal State; a Written Exchange's Chain Is Silently Skipped) | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
+| `QAN-BL-INTEL-06` | In-Speech Incremental Understanding: long continuous speech receives no semantic/map updates before the call turn commits | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 | `QAN-BL-NAV-03` | Shared / Public World Replay Surface | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-MOB-03` | Conversation History Order on an Equal Timestamp: Two Exchanges Whose User Turns Share One `createdAt` Are Ordered by Their Random Id, Not by Write Order | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-PROD-11` | Replay Generation Hand-over: the Phone's Content-free `TRANSIENT_HANDOVER_DEGRADED` Has No Receiver, and the Server Cannot Tell a Degraded Switch From an Ordinary End | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `MEDIUM` | `DEFERRED — OWNED` |
@@ -3735,6 +3737,20 @@ Admitted by `S8B-06` CP3 at the Product Owner's Copy Gate approval and final dev
 - **Status:** `OPEN — UNASSIGNED`
 
 Admitted by `INTEL-04` at its closing change (2026-11-04) under BG-06. Nothing here authorizes implementation (BG-07).
+
+### `QAN-BL-INTEL-06` — In-Speech Incremental Understanding and Evolving Map Attention
+
+- **Title / Finding:** during a long uninterrupted personal live-call monologue, QANDEEL's recognizer receives partial/interim text, but the call engine does not forward it to semantic analysis. User-turn commitment waits for an endpointer silence boundary; the ordered analysis worker begins from already-committed halves and its default background permit respects the First Audio critical window. The Living Analysis Map therefore has no established in-speech semantic progression to present during a continuously spoken turn, and Replay/video cannot reconstruct such progression from the subsequent durable commit.
+- **Source:** [INTEL-LIVE-INCREMENTAL-01 canonical gap record](e2e/QANDEEL_INTEL_LIVE_INCREMENTAL_UNDERSTANDING_GAP_v1.md) §1–§5; Product Owner's explicit finding dated 2026-11-24, verified against `apps/api/src/voice/call-turn/live-call-turn.engine.ts`, `call-endpointer.ts` and `apps/api/src/live-analysis/call-analysis.worker.ts` on `main` at `f45400a8`.
+- **Why not current work:** RB-2/S3 + M-2 are committed-analysis historical timing infrastructure, not an incremental speech-analysis producer. The current S4 scope is presentation consumption, not new provisional knowledge semantics. The Producer/Presentation/Replay contract is not yet authorized. Existing approved S8B-05 and COSMOS changes stay frozen.
+- **Owner task:** `UNASSIGNED`. `INTEL-LIVE-01` is only a *candidate* future task label, not an approved owner.
+- **Severity:** `HIGH` — the intended core conversation experience (a person feels heard and sees the map evolve while confiding) is not achieved when the person speaks continuously.
+- **Reopen condition:** before declaring in-speech living understanding or evolving map behavior complete for users, or before accepting Replay/video as a truthful reconstruction of that in-speech behavior; PO explicitly assigns a future task and approves the product semantics.
+- **Required future properties:** while one person speaks for 90–120 seconds without turn-end, at least two significant in-speech attention/map developments can occur before their final utterance or QANDEEL's reply; provisional signals remain distinct from durable semantic truth, and corrections/negations retract or revise them; no backdating of later commits in Replay/video; measured First Audio/Live Focus non-regression; privacy/consent, capture-clock provenance, and no fabricated interpretation.
+- **Product Owner priority:** real, important gap to resolve, not a decorative polish item or a reason to reopen RB-2/S3, M-2, or COSMOS. Technical S4 integration may proceed without claiming that it closes this item.
+- **Status:** `OPEN — UNASSIGNED`.
+
+Admitted as a documentation-only Product Owner-designated cross-task gap (2026-11-24; BG-06 / BG-07). No runtime or implementation authorization is implied.
 
 ### `QAN-BL-NAV-03` — Shared / Public World Replay Surface
 
