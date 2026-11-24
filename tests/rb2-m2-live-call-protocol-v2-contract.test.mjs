@@ -126,8 +126,11 @@ test('Android: the capture-clock marker — segment reference, hold invalidation
   assert.match(marker, /const val MARGIN_NS = 100_000_000L/u, 'the frozen 100 ms Android margin');
   assert.doesNotMatch(marker, /^import android|Log\.|println|java\.net/mu, 'pure: no Android, no log, no network');
   const engine = read(`${K}/main/java/expo/modules/qandeelvoicecall/CallAudioEngine.kt`);
-  assert.match(engine, /stamp\.nanoTime \+ \(readSamples - UplinkOpusEncoder\.FRAME_SAMPLES - stamp\.framePosition\)/u,
+  assert.match(engine, /stamp\.nanoTime \+ \(segmentSamples - UplinkOpusEncoder\.FRAME_SAMPLES - stamp\.framePosition\)/u,
     'the mark is timed through the samples read, never through the (jumping) frame index');
+  assert.match(engine, /stamp\.nanoTime \+ \(readSamples - UplinkOpusEncoder\.FRAME_SAMPLES - stamp\.framePosition\)/u,
+    'both readings of the timestamp: a platform position that restarts with the microphone, or one that continues');
+  assert.match(marker, /fun pick\(segmentTimeNs: Long, recordingTimeNs: Long, readNs: Long\): Long/u, 'the earlier plausible reading');
   assert.match(engine, /holdCount \+= 1[\s\S]*?clockMarker\.invalidate\(\)[\s\S]*?record\?\.stop\(\)/u, 'a hold invalidates before the microphone stops');
   assert.match(engine, /synchronized\(holdMonitor\) \{ resumeFrameIndex = continueAt \}\n\s*synchronized\(lock\) \{ held = false \}/u,
     'resume publishes the new index before it clears the hold');

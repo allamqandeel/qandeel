@@ -648,8 +648,10 @@ class CallAudioEngine(
     var wasMuted = false
     var secondLevels = ArrayList<Double>(50)
     var secondRefs = ArrayList<Double?>(50)
-    // S8B-07 RB-2 / M-2: the samples READ from this recording — the position space of its timestamps, across holds.
+    // S8B-07 RB-2 / M-2: the samples READ from this recording, and since this segment (the microphone's last (re)start):
+    // the position space of its timestamps, whichever of the two the platform keeps across a hold.
     var readSamples = 0L
+    var segmentSamples = 0L
     clockMarker.segmentStart()
     while (running.get()) {
       val wasHeld = held // read before the index: [resume] writes the index before it clears the hold
@@ -659,6 +661,7 @@ class CallAudioEngine(
         resumeFrameIndex = -1
         wasMuted = true // a fresh encoder state after the hole, as after a mute
         clockMarker.segmentStart() // a new segment: its reference comes from its own timestamps only
+        segmentSamples = 0L
         continue
       }
       if (wasHeld) {
@@ -681,6 +684,7 @@ class CallAudioEngine(
         }
         got += n
         readSamples += n
+        segmentSamples += n
       }
       if (!running.get()) return
       if (held || got < frame.size || segment != holdCount) continue // a frame cut by (or spanning) a hold is never sent
@@ -695,7 +699,11 @@ class CallAudioEngine(
       }
       // S8B-07 RB-2 / M-2: the same timestamp through the samples read, never through the (jumping) frame index.
       val clockTimeNs = if (stamped) {
-        stamp.nanoTime + (readSamples - UplinkOpusEncoder.FRAME_SAMPLES - stamp.framePosition) * 1_000_000_000L / UplinkOpusEncoder.RATE
+        clockMarker.pick(
+          stamp.nanoTime + (segmentSamples - UplinkOpusEncoder.FRAME_SAMPLES - stamp.framePosition) * 1_000_000_000L / UplinkOpusEncoder.RATE,
+          stamp.nanoTime + (readSamples - UplinkOpusEncoder.FRAME_SAMPLES - stamp.framePosition) * 1_000_000_000L / UplinkOpusEncoder.RATE,
+          now,
+        )
       } else {
         -1L
       }

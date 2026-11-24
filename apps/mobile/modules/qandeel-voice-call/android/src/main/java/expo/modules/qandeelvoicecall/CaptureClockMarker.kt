@@ -7,8 +7,10 @@ package expo.modules.qandeelvoicecall
  * the engine feeds it, and a mark can only ever be answered later than the truth, never earlier.
  *
  *   timing      a frame's capture instant comes from `AudioRecord.getTimestamp(TIMEBASE_MONOTONIC)` mapped through the
- *               samples actually READ in this recording (the timestamp's own position space), never through the capture
- *               clock's frame index: after a hold that index jumps by the held time, the read position does not.
+ *               samples actually READ (the timestamp's own position space), never through the capture clock's frame
+ *               index: after a hold that index jumps by the held time, the read position does not. Whether the platform's
+ *               position restarts with the microphone after a hold (the HONOR's does, device proof 2026-11-24) or
+ *               continues is not assumed: [pick] takes the earlier plausible reading.
  *   segment     every (re)start of the microphone is a new segment ([segmentStart]); the reference of the previous one is
  *               never carried over. [invalidate] (a hold, a stop) answers every pending mark NOCLOCK at once.
  *   stability   no echo until [stableFrames] consecutive frames each had a plausible timestamp (the frame was captured
@@ -70,7 +72,7 @@ class CaptureClockMarker(
   @Synchronized
   fun frame(captureMs: Long, captureTimeNs: Long, readNs: Long): List<Echo> {
     if (!live) return emptyList()
-    val plausible = captureTimeNs >= 0 && captureTimeNs + FRAME_NS <= readNs + jitterNs && readNs - captureTimeNs <= maxReadLatencyNs
+    val plausible = plausible(captureTimeNs, readNs)
     if (!plausible) {
       reset()
     } else {
@@ -95,6 +97,21 @@ class CaptureClockMarker(
     }
     return out
   }
+
+  /**
+   * The capture instant of a frame from the two readings of one timestamp: through the samples read since this segment
+   * started ([segmentTimeNs], a platform whose position restarts with the microphone) or since the recording started
+   * ([recordingTimeNs], one whose position continues across a hold). The EARLIER plausible one: an instant taken too
+   * early only ever answers a mark later, never earlier. -1 when neither is plausible (the frame then certifies nothing).
+   */
+  fun pick(segmentTimeNs: Long, recordingTimeNs: Long, readNs: Long): Long {
+    val a = minOf(segmentTimeNs, recordingTimeNs)
+    val b = maxOf(segmentTimeNs, recordingTimeNs)
+    return if (plausible(a, readNs)) a else if (plausible(b, readNs)) b else -1L
+  }
+
+  private fun plausible(captureTimeNs: Long, readNs: Long): Boolean =
+    captureTimeNs >= 0 && captureTimeNs + FRAME_NS <= readNs + jitterNs && readNs - captureTimeNs <= maxReadLatencyNs
 
   @Synchronized
   fun isStable(): Boolean = live && consistent >= stableFrames

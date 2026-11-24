@@ -228,4 +228,39 @@ class CaptureClockMarkerTest {
     assertFalse(m.mark(99, 0))
     assertFalse("not started", CaptureClockMarker().mark(1, 0))
   }
+
+  @Test
+  fun pickTakesTheEarlierPlausibleReadingOfTheTimestamp() {
+    // Device proof 2026-11-24: the HONOR's capture position restarts with the microphone after a hold, so the samples read
+    // since the recording started place every post-resume frame in the future (implausible) and certify nothing.
+    val m = CaptureClockMarker()
+    val read = 10_000 * ms
+    val truth = read - 50 * ms
+    assertEquals("a restarting position: the segment reading", truth, m.pick(truth, truth + 5_000 * ms, read))
+    assertEquals("a continuing position: the recording reading", truth, m.pick(truth - 5_000 * ms, truth, read))
+    assertEquals("both plausible: the earlier one (an early instant only ever answers later)", truth - 200 * ms, m.pick(truth - 200 * ms, truth, read))
+    assertEquals("neither plausible", -1L, m.pick(read + 100 * ms, read + 200 * ms, read))
+    assertEquals("one reading (the first segment)", truth, m.pick(truth, truth, read))
+  }
+
+  @Test
+  fun afterAResumeOnARestartingPositionTheSegmentReadingCertifiesAgain() {
+    val m = CaptureClockMarker()
+    m.segmentStart()
+    val mic = Mic(t0 = 1_000 * ms, captureMs0 = 0)
+    feed(m, mic, 50) // 1 s read before the hold
+    val preHoldSamples = 50 * 320L
+    m.invalidate()
+    // held 2 s; the platform position restarts at 0 with the microphone, the capture clock continues after the held time
+    val mic2 = Mic(t0 = mic.timeNs() + 2_000 * ms, captureMs0 = mic.captureMs() + 2_000)
+    m.segmentStart()
+    val recordingReading = { x: Mic -> x.timeNs() + preHoldSamples * 1_000_000_000L / 16_000 }
+    assertTrue(m.mark(7, mic2.t0))
+    val echoes = feed(m, mic2, 20) { x -> m.pick(x.timeNs(), recordingReading(x), x.readNs()) }
+    assertEquals(1, echoes.size)
+    val e = echoes.single()
+    assertEquals(7L, e.token)
+    // stable at the segment's 10th consistent frame (k = 9, captured 180 ms in, past the mark + 100 ms): never earlier
+    assertEquals(mic2.captureMs0 + 9 * 20, e.captureMs)
+  }
 }
