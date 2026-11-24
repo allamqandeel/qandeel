@@ -44,6 +44,8 @@ const CLIENT_ROLES = ['anon', 'authenticated', 'service_role'];
 
 const fixtureHumans = [];
 const erasedHumans = new Set();
+/** The storage keys each governed erasure of a fixture human released to the shared erasure queue (see removeFixtures). */
+const releasedKeys = [];
 
 // ------------------------------------------------------------------ transaction and role helpers
 async function tx(work) {
@@ -462,10 +464,13 @@ async function verifyPlantedDefects(report, world) {
 // ------------------------------------------------------------------ fixture removal through the account erasure itself
 async function erase(user) {
   await tx(async () => {
+    const released = (await rows(`SELECT o.storage_key FROM voice_private.recording_objects o
+        JOIN voice_private.recordings r ON r.id = o.recording_id WHERE r.user_id = $1`, [user])).map((r) => r.storage_key);
     const [del] = await rows(`INSERT INTO personal_data_private.account_deletions (user_id, command_id, status, requested_at, final_at)
         VALUES ($1, gen_random_uuid(), 'SCHEDULED', clock_timestamp() - interval '8 days', clock_timestamp() - interval '1 day') RETURNING id`, [user]);
     const outcome = await asRoleLocal('service_role', async () => (await rows('SELECT public.server_erase_account_v1($1) AS outcome', [del.id]))[0].outcome);
     assert.equal(outcome, 'ERASED');
+    releasedKeys.push(...released);
   });
   erasedHumans.add(user);
 }
@@ -473,8 +478,17 @@ async function removeFixtures() {
   await q('ROLLBACK').catch(() => undefined);
   await q('RESET ROLE').catch(() => undefined);
   for (const user of fixtureHumans) if (!erasedHumans.has(user)) await erase(user);
+  // RE-ANCHORED by S8B-07 RB-2 / S3 (PR #408 CI, 2026-11-24): each governed erasure of a fixture human queued its
+  // storage keys in the shared erasure queue. Their objects never existed, so the fixture discharges exactly those rows,
+  // as verify-0183 / 0195 / 0196 do: left due, they pushed the later storage proofs on this database (prove-0162 P04) past
+  // the erasure worker's 25-key batch.
+  const keys = [...releasedKeys].sort();
+  const queued = await rows(`SELECT storage_key FROM introduction_sharing_private.media_erasure_queue
+     WHERE storage_key = ANY($1::text[]) ORDER BY storage_key COLLATE "C"`, [keys]);
+  assert.deepEqual(queued.map((r) => r.storage_key), keys, 'every governed erasure queued each storage key it released');
   await tx(async () => {
     await q("SET LOCAL session_replication_role = 'replica'");
+    await q('DELETE FROM introduction_sharing_private.media_erasure_queue WHERE storage_key = ANY($1::text[])', [keys]);
     await q('DELETE FROM personal_data_private.account_deletions WHERE user_id = ANY($1::uuid[])', [fixtureHumans]);
   });
   await rt.removeFixtureHumans(fixtureHumans);

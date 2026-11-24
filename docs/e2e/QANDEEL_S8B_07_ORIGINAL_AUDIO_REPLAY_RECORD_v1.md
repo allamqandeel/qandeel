@@ -1487,7 +1487,12 @@ conservative: an assistant-final moment may wait for the next sealing commit (re
 migrations now name `0202` by its whole file name, beside `0195`), `database/tests/session-semantic-commit-instants-v1.test.mjs` (0202 is exactly
 the S3 read and touches nothing of S1) and the `voice_private` function censuses of `database/verify-migration-0183.mjs`,
 `0185.mjs` and `0186.mjs` (0202's one internal, the seam, derived from the migration text by `database/replay-rb2-census.mjs`;
-found by the first CI run of PR #408). Each carries a `RE-ANCHORED by S8B-07 RB-2 / S3` comment.
+found by the first CI run of PR #408). Each carries a `RE-ANCHORED by S8B-07 RB-2 / S3` comment. The second CI run
+(`a06617b9`) failed in the S6-06 photo proof (`prove-0162` P04: one of three photo objects not erased in the worker's one
+cycle): `verify-migration-0202`'s governed erasures had left their five fixture `voice-call/` keys due in the shared
+erasure queue, so 23 older due keys filled the worker's 25-key batch ahead of the photos. `verify-migration-0202` now
+records the keys each erasure releases, proves they were queued, and discharges exactly those rows (their objects never
+existed), as `verify-migration-0183` / `0195` / `0196` do. No product code, proof or migration changed.
 
 ### 16.5 Verification (local, real PostgreSQL 17)
 
