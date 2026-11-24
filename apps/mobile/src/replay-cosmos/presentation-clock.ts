@@ -11,7 +11,8 @@
  *             has been presented in full (an audio window's END: no analysis before speech; a text moment's display),
  *             and NO availability (UNRECORDED: nothing is filled in here; RB-2 / S4's `withReplayAvailability` applies a
  *             bound answer, each IN_RECORDING place at `runStartMs(runIndex) + fileMs` — the server already placed it AT
- *             OR AFTER the certified capture position — and AFTER_END as it is)
+ *             OR AFTER the certified capture position — and AFTER_END as it is, which the timeline places by source
+ *             order, S4-CORRECTION-01)
  *   at(place) the clock's place (a file position, or the elapsed part of the pause) as presentation time; `placeAt` the
  *             reverse, which is how the export places the original audio under its frames (S3)
  *
@@ -144,8 +145,8 @@ export function replayPresentationClock(plan: ReplayAudioPlan, moments: readonly
  * RB-2 / S4: the clock's moments with a BOUND availability answer applied (bound by the caller to the very map this clock
  * was laid out from). IN_RECORDING{runIndex, fileMs} is that run's start plus the file position — exact: the server
  * already moved the certified position to the first presented instant AT OR AFTER it (the end of a shortened HELD, never
- * earlier). AFTER_END stays AFTER_END (never pulled onto the recording's end or the last frame). UNESTABLISHED, BROKEN,
- * ORDINAL_ONLY and an ordinal the answer does not name stay UNRECORDED: no time is claimed for them.
+ * earlier). AFTER_END stays AFTER_END (no instant on this clock is invented for it). UNESTABLISHED, BROKEN, ORDINAL_ONLY
+ * and an ordinal the answer does not name stay UNRECORDED: no time is claimed for them.
  */
 export function withReplayAvailability(clock: ReplayPresentationClock, answer: ReplayAvailability): readonly ReplayCosmosMomentInput[] {
   return clock.inputs.map((input) => {
@@ -178,7 +179,7 @@ export interface ReplayStageClock {
   place(): ReplayAudioPlace | null;
   /**
    * RB-2 / S4: the historical availability bound to the map this clock holds. Absent (a bare clock), or anything but
-   * BOUND: the stage is neutral — no analysis is drawn on the audio clock without a certified time.
+   * BOUND: the stage places the analysis by source order (S4-CORRECTION-01); NOT_FOUND alone makes it neutral.
    */
   availability?(): ReplayAvailabilitySourceState;
 }
@@ -198,6 +199,12 @@ export type ReplayStageTime =
   | { readonly kind: 'PACED'; readonly startMs: number; readonly endMs: number; readonly behindMs: number }
   /** Following the audio: the clock's place, behind it by the stated allowance. */
   | { readonly kind: 'AUDIO'; readonly t: number }
+  /**
+   * S4-CORRECTION-01, the closing display: the clock reports the END of its last run while the player shows the last
+   * presented moment — the whole presentation has been reported heard. `t` is the presentation's end; the world draws it
+   * only after the same allowance the audio has (the report leads what is heard), and the closing knowledge appears there.
+   */
+  | { readonly kind: 'END'; readonly t: number }
   /** Nothing presents the moment shown now: its start, where the player starts it. */
   | { readonly kind: 'AT'; readonly t: number };
 
@@ -220,6 +227,9 @@ export function replayStageTime(clock: ReplayPresentationClock, shown: number, a
   const end = next === undefined ? clock.durationMs : next.windowStartMs;
   const presentedBy = (ordinal: number) => clock.inputs.find((m) => m.ordinal === ordinal)?.presentedBy ?? ordinal;
   const presents = audio.ordinal === null || presentedBy(audio.ordinal) === own.presentedBy;
+  // The end of the last run, reported while its last moment is shown: the presentation is over (a text block after the
+  // last run is PACED above, and never reaches here). The place is not needed: the report itself is the fact.
+  if (audio.phase === 'DONE' && presents && end === clock.durationMs) return { kind: 'END', t: clock.durationMs };
   if (audio.place === null || !FOLLOWING.includes(audio.phase) || !presents) return { kind: 'AT', t: start };
   const t = clock.at(audio.place);
   if (t < start) return { kind: 'AT', t: start };

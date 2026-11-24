@@ -189,15 +189,20 @@ describe('Lane B · a 120-second USER turn (#410 annex §4.2–4.3), SYNTHETIC',
     expect(view(attentionAt(tl, 16_999))).toEqual([]);
     const changes = new Set([0, 17_000, 40_000, 75_000, 110_000].map((t) => JSON.stringify(view(attentionAt(tl, t)))));
     expect(changes.size).toBe(5); // four distinct changes, all before the window ends at 120 s
-    // Lane A for the same turn: nothing of moment 1 before its window has ended.
+    // Lane A for the same turn: nothing of moment 1 before its window has ended. S4-CORRECTION-01 RE-ANCHOR: moment 2 is
+    // AFTER_END, so Lane A is SOURCE_ORDER (its certified instant for moment 1 kept; moment 2 the closing knowledge at the
+    // presentation's end, never inside); before the correction this read CERTIFIED with moment 2 never shown.
     const answer = decodeReplayAvailability({
       replayId: REPLAY, versionId: VERSION, revision: 1, sourceWindowBindingDigest: `sha256:${'a'.repeat(64)}`, mapDigest: binding.mapDigest,
       ledgerWatermark: { sp: 2, seq: 0 },
       moments: [{ ordinal: 1, state: 'RECORDED', placement: { kind: 'IN_RECORDING', runIndex: 0, fileMs: 30_000 } }, { ordinal: 2, state: 'RECORDED', placement: { kind: 'AFTER_END' } }],
     }, { replayId: REPLAY, versionId: VERSION, runs: plan.runs })!;
     const a = replayStageTimeline(clock.inputs, FULL, { kind: 'AUDIO', presentation: clock, availability: { kind: 'BOUND', answer } }, FPS)!;
-    expect(a.kind).toBe('CERTIFIED');
+    expect(a.kind).toBe('SOURCE_ORDER');
     expect(knowledgeAt(a.timeline, 119_999)).toBeNull();
     expect(knowledgeAt(a.timeline, 120_000)).toBe(1);
+    expect(a.timeline.steps.map((s) => [s.ordinal, s.atMs, s.availability])).toEqual([[1, 120_000, 'RECORDED']]);
+    expect(a.timeline.closing).toEqual([2]);
+    expect(knowledgeAt(a.timeline, 124_999)).toBe(1);
   });
 });

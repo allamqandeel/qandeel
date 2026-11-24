@@ -6,10 +6,15 @@
  *
  * Proven here on SYNTHETIC answers over the CP1-B synthetic world (no customer content, no recording): never before
  * availableAt, completeAt or windowStart; overlapping windows; causal frames; pause, seek and restart as pure functions of
- * presentation time; RANGE openings drawn only from certified knowledge; a shortened HELD; a second recording; AFTER_END
- * never inside the Replay; and every uncertified case — UNESTABLISHED, BROKEN, ORDINAL_ONLY, a missing moment, an answer
- * pending, refused, not found or unavailable — drawn as the NEUTRAL stage, never as the snapshot. V1 / text-only keep
- * their ordinal pacing, labelled as such.
+ * presentation time; RANGE openings drawn only from certified knowledge; a shortened HELD; a second recording.
+ *
+ * S4-CORRECTION-01 (the Product Owner's decision of 2026-11-24 on PR #413, superseding S4's display policy): eligible
+ * historical analysis is SHOWN whether or not its instant is certified. A certified instant places it exactly; AFTER_END,
+ * UNESTABLISHED, BROKEN, ORDINAL_ONLY, a missing moment, an answer pending, refused or unavailable, no source, no map —
+ * each is placed by SOURCE ORDER (after its own speech, after the knowledge before it, labelled non-exact), never blank.
+ * NOT_FOUND (not this person's current version) alone is the NEUTRAL stage. The last speech's knowledge is the CLOSING
+ * display at the presentation's end. V1 / text-only keep their ordinal pacing, labelled as such. Before the correction,
+ * every one of those cases was the neutral stage (the previous pins are quoted where they changed).
  */
 import { CROSS, MOMENTS, REPLAY, RUN0, RUN1, VERSION, moment, pace } from '../../original-audio/__fixtures__/replay-audio-world';
 import { planFor } from '../../original-audio/replay-audio-clock';
@@ -17,15 +22,16 @@ import { decodeReplayAvailability, type ReplayAvailability } from '../../origina
 import type { ReplayAvailabilitySourceState } from '../../original-audio/replay-availability-source';
 import { readingPaceMs } from '../../replay-player';
 import type { ReplayHistoryMoment } from '../../runtime-entry';
-import { planFutureViolations } from '../camera-plan';
+import { buildReplayCameraPlan, planFutureViolations } from '../camera-plan';
 import { replayFrameFacts } from '../frame';
-import { replayPresentationClock, withReplayAvailability, type ReplayPresentationClock } from '../presentation-clock';
+import { replayPresentationClock, replayStageTime, withReplayAvailability, type ReplayPresentationClock } from '../presentation-clock';
 import { replayStageTimeline, type ReplayStageTimeline } from '../stage-timeline';
+import { marksOf } from '../stages';
 import {
-  buildReplayCosmosTimeline, knowledgeAt, knowledgeOnFrame, UNRECORDED_AVAILABILITY, UNRECORDED_IN_CERTIFIED,
+  buildReplayCosmosTimeline, causalFrame, knowledgeAt, knowledgeOnFrame, UNRECORDED_AVAILABILITY, UNRECORDED_IN_CERTIFIED,
   type ReplayCosmosTimeline, type ReplayScope,
 } from '../timeline';
-import { STAGES, sceneOf } from '../__fixtures__/synthetic-history';
+import { STAGES, VIEW, sceneOf } from '../__fixtures__/synthetic-history';
 
 const FPS = 30;
 const FULL: ReplayScope = { kind: 'FULL' };
@@ -94,9 +100,12 @@ describe('S4-C · IN_RECORDING mapped onto the presentation clock, AT OR AFTER',
       moments: [{ ordinal: 1, state: 'RECORDED', placement: { kind: 'IN_RECORDING', runIndex: 0, fileMs: 7_500 } }, { ordinal: 2, state: 'RECORDED', placement: { kind: 'AFTER_END' } }],
     }, { replayId: REPLAY, versionId: VERSION, runs: plan.runs })!;
     const tl = replayStageTimeline(clock.inputs, FULL, { kind: 'AUDIO', presentation: clock, availability: { kind: 'BOUND', answer: held } }, FPS)!;
-    expect(tl.kind).toBe('CERTIFIED');
-    expect(tl.timeline.steps.map((s) => [s.ordinal, s.atMs])).toEqual([[1, 7_500]]);
-    expect(tl.timeline.afterEnd).toEqual([2]);
+    // S4-CORRECTION-01 RE-ANCHOR: moment 2 is AFTER_END, so the stage is SOURCE_ORDER (previous pin: CERTIFIED with 2 in
+    // `afterEnd`); 1's certified position is kept as it is, and 2 completes at the recording's end: the closing knowledge.
+    expect(tl.kind).toBe('SOURCE_ORDER');
+    expect(tl.timeline.steps.map((s) => [s.ordinal, s.atMs, s.availability])).toEqual([[1, 7_500, 'RECORDED']]);
+    expect(tl.timeline.afterEnd).toEqual([]);
+    expect(tl.timeline.closing).toEqual([2]);
   });
 });
 
@@ -111,7 +120,8 @@ describe('S4-C · the certified timeline: NO ANALYSIS BEFORE SPEECH, never befor
       [4, R0 + 9_000, 'RECORDED', 0],
       [5, R0 + 9_000, 'RECORDED', 0],
     ]);
-    expect(tl.afterEnd).toEqual([6]); // completes at the very end: never pulled into the last frame
+    expect(tl.afterEnd).toEqual([]);
+    expect(tl.closing).toEqual([6]); // completes at the very end: never pulled into the last frame; the closing knowledge (S4-CORRECTION-01)
     const inputs = withReplayAvailability(CLOCK, answer(CERTIFIED));
     for (const s of tl.steps) {
       const m = inputs.find((i) => i.ordinal === s.ordinal)!;
@@ -179,39 +189,163 @@ describe('S4-C · Selection / RANGE: the opening knowledge is certified knowledg
   });
 });
 
-describe('S4-D · what is not certified is never drawn as knowledge', () => {
-  it('AFTER_END is never inside the Replay — not before the audio end, not on its last frame — and holds every later moment', () => {
-    const tl = certified({ ...CERTIFIED, 2: { kind: 'AFTER_END' } });
-    expect(tl.steps.map((s) => s.ordinal)).toEqual([1]);
-    expect(tl.afterEnd).toEqual([2, 3, 4, 5, 6]);
-    const last = Math.ceil((tl.durationMs * FPS) / 1000) - 1;
-    expect(knowledgeOnFrame(tl, last)).toBe(1);
-    expect(knowledgeAt(tl, tl.durationMs)).toBe(1);
-  });
-
-  it.each(['UNESTABLISHED', 'BROKEN', 'ORDINAL_ONLY'] as const)('%s on any moment: the whole stage is neutral (U-N), no opening, no snapshot', (state) => {
-    const s = stage(bound({ ...CERTIFIED, 4: state }));
-    expectNeutral(s);
-    expect(s.reason).toBe(UNRECORDED_IN_CERTIFIED);
-    // The same clock and windows as the certified stage: only the knowledge is withheld.
+describe('S4-CORRECTION-01 (PO, 2026-11-24, PR #413) · eligible analysis is shown; certification places it and never gates it', () => {
+  const NON_EXACT = 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY';
+  /** Where source order alone places each moment: after its own speech (an audio window's END), after the knowledge before it. */
+  const SOURCE_ORDER_STEPS: [number, number, string][] = [[2, R0 + 6_000, NON_EXACT], [3, R0 + 9_000, NON_EXACT], [4, R0 + 9_000, NON_EXACT], [5, R0 + 9_000, NON_EXACT]];
+  const everyMoment = (p: Placement): Record<number, Placement> => Object.fromEntries([1, 2, 3, 4, 5, 6].map((o) => [o, p]));
+  /** VISIBLY drawn at t: the frame names knowledge, and that knowledge's stage has marks on the map. */
+  const drawnAt = (tl: ReplayCosmosTimeline, t: number): boolean => {
+    const facts = replayFrameFacts(sceneOf(tl), t);
+    return facts.knowledge !== null && marksOf(STAGES.get(facts.knowledge)!.list).threads.length > 0;
+  };
+  const neverBeforeSpeech = (tl: ReplayCosmosTimeline, inputs = CLOCK.inputs) => {
+    let previous = -Infinity;
+    for (const s of tl.steps) {
+      const m = inputs.find((i) => i.ordinal === s.ordinal)!;
+      expect(s.atMs).toBeGreaterThanOrEqual(Math.max(m.windowStartMs, m.completeAtMs, previous));
+      previous = s.atMs;
+    }
+  };
+  const expectSourceOrderMap = (s: ReplayStageTimeline, reason: string) => {
+    expect(s.kind).toBe('SOURCE_ORDER');
+    expect(s.reason).toBe(reason);
+    expect(s.timeline.initialOrdinal).toBe(1);
+    expect(s.timeline.steps.map((x) => [x.ordinal, x.atMs, x.availability])).toEqual(SOURCE_ORDER_STEPS);
+    expect(s.timeline.steps.every((x) => x.heldByGuardMs === null)).toBe(true);
+    expect(s.timeline.closing).toEqual([6]);
+    expect(s.timeline.afterEnd).toEqual([]);
+    expect(s.timeline.availabilityEstablished).toBe(false);
+    expect(s.timeline.unrecorded).toEqual([1, 2, 3, 4, 5, 6]);
+    // The same clock and windows as the certified stage: only the placement differs, and it is labelled.
     expect(s.timeline.windows).toEqual(certified().windows);
     expect(s.timeline.durationMs).toBe(CLOCK.durationMs);
+    neverBeforeSpeech(s.timeline);
+    // The acceptance: the map is DRAWN — not a blank stage for want of a certificate.
+    expect(drawnAt(s.timeline, R0 + 6_000)).toBe(true);
+    expect(drawnAt(s.timeline, s.timeline.durationMs - 1)).toBe(true);
+    expect(planFutureViolations(sceneOf(s.timeline).plan, s.timeline, STAGES)).toEqual([]);
+  };
+
+  it.each(['UNESTABLISHED', 'BROKEN', 'ORDINAL_ONLY'] as const)('Case B · valid history, %s on every moment: SOURCE_ORDER, the map is drawn (previous pin: neutral)', (state) => {
+    expectSourceOrderMap(stage(bound(everyMoment(state))), UNRECORDED_IN_CERTIFIED);
   });
 
-  it('a moment the answer does not name is UNRECORDED: neutral', () => {
+  it('Case E · iOS: AFTER_END on every moment (no certified position, fail-closed) is the same drawn map, never a blank Replay', () => {
+    const s = stage(bound(everyMoment({ kind: 'AFTER_END' })));
+    expectSourceOrderMap(s, UNRECORDED_IN_CERTIFIED);
+    expect(s.timeline.steps.some((x) => x.availability === 'RECORDED')).toBe(false); // nothing is passed off as certified
+  });
+
+  it.each(['UNESTABLISHED', 'BROKEN', 'ORDINAL_ONLY', { kind: 'AFTER_END' }] as const)('Case C · mixed: %s on one moment keeps every certified instant exactly; only that moment is placed by its speech (previous pin: neutral)', (p) => {
+    const s = stage(bound({ ...CERTIFIED, 4: p }));
+    expect(s.kind).toBe('SOURCE_ORDER');
+    expect(s.reason).toBe(UNRECORDED_IN_CERTIFIED);
+    const exact = certified();
+    expect(s.timeline.steps.map((x) => [x.ordinal, x.atMs])).toEqual(exact.steps.map((x) => [x.ordinal, x.atMs]));
+    expect(s.timeline.steps.map((x) => x.availability)).toEqual(['RECORDED', 'RECORDED', 'RECORDED', NON_EXACT, 'RECORDED']);
+    expect(s.timeline.unrecorded).toEqual([4]);
+    expect(s.timeline.closing).toEqual([6]);
+    expect(drawnAt(s.timeline, R0 + 9_000)).toBe(true);
+  });
+
+  it('Case C · an uncertified moment is never moved by a certified neighbour: by its speech, the certified ones as recorded', () => {
+    const s = stage(bound({ ...CERTIFIED, 2: 'BROKEN' }));
+    expect(s.timeline.steps.map((x) => [x.ordinal, x.atMs, x.availability, x.heldByGuardMs])).toEqual([
+      [1, R0 + 200, 'RECORDED', 0],
+      [2, R0 + 6_000, NON_EXACT, null], // the USER's speech ends here; no certified instant (it would have been R0 + 6400): labelled
+      [3, R0 + 9_000, 'RECORDED', 1_000],
+      [4, R0 + 9_000, 'RECORDED', 0],
+      [5, R0 + 9_000, 'RECORDED', 0],
+    ]);
+    neverBeforeSpeech(s.timeline);
+  });
+
+  it('Case D · AFTER_END on one moment erases nothing before it and suppresses nothing after it (previous pin: 2 … 6 never drawn)', () => {
+    const s = stage(bound({ ...CERTIFIED, 2: { kind: 'AFTER_END' } }));
+    expect(s.kind).toBe('SOURCE_ORDER');
+    expect(s.timeline.steps.map((x) => [x.ordinal, x.atMs, x.availability])).toEqual([
+      [1, R0 + 200, 'RECORDED'], [2, R0 + 6_000, NON_EXACT], [3, R0 + 9_000, 'RECORDED'], [4, R0 + 9_000, 'RECORDED'], [5, R0 + 9_000, 'RECORDED'],
+    ]);
+    expect(s.timeline.closing).toEqual([6]);
+    expect(knowledgeAt(s.timeline, s.timeline.durationMs)).toBe(6);
+    const last = Math.ceil((s.timeline.durationMs * FPS) / 1000) - 1;
+    expect(knowledgeOnFrame(s.timeline, last)).toBe(5);
+  });
+
+  it('a moment the answer does not name is placed by source order, the rest as certified (previous pin: neutral)', () => {
     const { 3: _omitted, ...rest } = CERTIFIED;
-    expectNeutral(stage(bound(rest)));
+    const s = stage(bound(rest));
+    expect(s.kind).toBe('SOURCE_ORDER');
+    expect(s.timeline.steps.find((x) => x.ordinal === 3)).toMatchObject({ atMs: R0 + 9_000, availability: NON_EXACT });
+    expect(s.timeline.steps.find((x) => x.ordinal === 2)).toMatchObject({ atMs: R0 + 6_400, availability: 'RECORDED' });
   });
 
-  it('pending, refused, not found (revoked, deleted, retired), unavailable, no source, no map: neutral — never the last answer', () => {
-    const states: (ReplayAvailabilitySourceState | null)[] = [
-      { kind: 'PENDING' }, { kind: 'REFUSED', reason: 'REVISION_MISMATCH' }, { kind: 'REFUSED', reason: 'MAP_DIGEST_MISMATCH' },
-      { kind: 'REFUSED', reason: 'WATERMARK_REGRESSED' }, { kind: 'NOT_FOUND' }, { kind: 'UNAVAILABLE' }, null,
+  it('the closing display: the last speech\'s knowledge is drawn at the presentation\'s end and not one frame before', () => {
+    const tl = certified();
+    expect(tl.closing).toEqual([6]);
+    expect(tl.afterEnd).toEqual([]);
+    expect(knowledgeAt(tl, tl.durationMs - 1)).toBe(5);
+    expect(knowledgeAt(tl, tl.durationMs)).toBe(6);
+    const last = Math.ceil((tl.durationMs * FPS) / 1000) - 1;
+    expect(knowledgeOnFrame(tl, last)).toBe(5);
+    expect(knowledgeOnFrame(tl, causalFrame(tl.durationMs, FPS))).toBe(6);
+    expect(drawnAt(tl, tl.durationMs)).toBe(true);
+    // A scope that ends AT the presentation's end closes on it too; one that ends before lists it after its end, undrawn.
+    expect(certified(CERTIFIED, { kind: 'RANGE', startMs: R0 + 7_000, endMs: CLOCK.durationMs }).closing).toEqual([6]);
+    const cut = certified(CERTIFIED, { kind: 'RANGE', startMs: R0 + 7_000, endMs: R1 + 4_000 });
+    expect(cut.closing).toEqual([]);
+    expect(cut.afterEnd).toEqual([6]);
+    // The camera plan is the plan of what is drawn inside the Replay: the closing knowledge adds no segment.
+    expect(buildReplayCameraPlan(tl, STAGES, VIEW)).toEqual(buildReplayCameraPlan({ ...tl, closing: [] }, STAGES, VIEW));
+  });
+
+  it('in the app: the clock\'s end report on the last moment is the END time; a report on an earlier run, or for another moment, is not', () => {
+    expect(replayStageTime(CLOCK, 6, { phase: 'DONE', ordinal: 6, place: { kind: 'RUN', runIndex: 1, positionMs: 5_000 } })).toEqual({ kind: 'END', t: CLOCK.durationMs });
+    expect(replayStageTime(CLOCK, 6, { phase: 'DONE', ordinal: 6, place: null })).toEqual({ kind: 'END', t: CLOCK.durationMs });
+    expect(replayStageTime(CLOCK, 4, { phase: 'DONE', ordinal: 4, place: { kind: 'RUN', runIndex: 0, positionMs: 9_000 } }).kind).toBe('AUDIO');
+    expect(replayStageTime(CLOCK, 6, { phase: 'DONE', ordinal: 2, place: { kind: 'RUN', runIndex: 0, positionMs: 9_000 } })).toEqual({ kind: 'AT', t: R1 });
+    expect(replayStageTime(CLOCK, 6, { phase: 'RUNNING', ordinal: 6, place: { kind: 'RUN', runIndex: 1, positionMs: 5_000 } }).kind).toBe('AUDIO');
+  });
+
+  it('play, pause, backward and forward seek, restart on a source-order timeline: the knowledge at t is a pure function of t', () => {
+    const build = () => stage(bound({ ...CERTIFIED, 2: 'UNESTABLISHED', 4: { kind: 'AFTER_END' } })).timeline;
+    const tl = build();
+    const truth = (t: number) => (t >= tl.durationMs && tl.closing.length > 0 ? tl.closing.at(-1) : tl.steps.filter((s) => s.atMs <= t).at(-1)?.ordinal ?? tl.initialOrdinal);
+    const visits = [0, 1_000, R0 + 5_999, R0 + 6_000, R0 + 6_000, 2_000, R0 + 9_000, R0 + 100, R1 + 4_999, tl.durationMs, 0, R0 + 8_999, R0 + 9_000];
+    for (const t of visits) expect(knowledgeAt(tl, t)).toBe(truth(t));
+    expect(build()).toEqual(tl);
+    const scene = sceneOf(tl);
+    for (const t of visits) expect(JSON.stringify(replayFrameFacts(scene, t))).toBe(JSON.stringify(replayFrameFacts(sceneOf(build()), t)));
+    expect(planFutureViolations(scene.plan, tl, STAGES)).toEqual([]);
+    neverBeforeSpeech(tl);
+  });
+
+  it('Case F · NOT_FOUND (revoked, deleted, retired, replaced) is the one neutral answer: no opening, no snapshot, no closing', () => {
+    const s = stage({ kind: 'NOT_FOUND' });
+    expectNeutral(s);
+    expect(s.reason).toBe('NOT_FOUND');
+    expect(s.timeline.closing).toEqual([]);
+    expectNeutral(stage({ kind: 'NOT_FOUND' }, FULL, null)); // before the map is held, too
+    expectNeutral(stage({ kind: 'NOT_FOUND' }, { kind: 'RANGE', startMs: R0 + 9_500, endMs: R1 }));
+  });
+
+  it('a timing gap is never neutral: pending, refused (every reason), unavailable, no source, no map are source order (previous pin: neutral)', () => {
+    const gaps: [ReplayAvailabilitySourceState | null, string][] = [
+      [{ kind: 'PENDING' }, 'PENDING'], [{ kind: 'UNAVAILABLE' }, 'UNAVAILABLE'], [null, 'NO_AVAILABILITY_SOURCE'],
+      [{ kind: 'REFUSED', reason: 'MALFORMED' }, 'REFUSED:MALFORMED'], [{ kind: 'REFUSED', reason: 'MAP_UNREADABLE' }, 'REFUSED:MAP_UNREADABLE'],
+      [{ kind: 'REFUSED', reason: 'REVISION_MISMATCH' }, 'REFUSED:REVISION_MISMATCH'], [{ kind: 'REFUSED', reason: 'MAP_DIGEST_MISMATCH' }, 'REFUSED:MAP_DIGEST_MISMATCH'],
+      [{ kind: 'REFUSED', reason: 'SOURCE_WINDOWS_UNBOUND' }, 'REFUSED:SOURCE_WINDOWS_UNBOUND'], [{ kind: 'REFUSED', reason: 'SOURCE_WINDOWS_CHANGED' }, 'REFUSED:SOURCE_WINDOWS_CHANGED'],
+      [{ kind: 'REFUSED', reason: 'WATERMARK_REGRESSED' }, 'REFUSED:WATERMARK_REGRESSED'], [{ kind: 'REFUSED', reason: 'MOMENTS_MISMATCH' }, 'REFUSED:MOMENTS_MISMATCH'],
     ];
-    for (const a of states) expectNeutral(stage(a));
-    expectNeutral(stage(bound(CERTIFIED), FULL, null));
-    // A RANGE of a neutral stage is neutral too: no opening knowledge.
-    expectNeutral(stage({ kind: 'UNAVAILABLE' }, { kind: 'RANGE', startMs: R0 + 9_500, endMs: R1 }));
+    for (const [a, reason] of gaps) expectSourceOrderMap(stage(a), reason);
+    // No map yet: the paced windows the world lays out, in source order (the world holds t at the moment shown).
+    const noMap = stage(bound(CERTIFIED), FULL, null);
+    expect(noMap.kind).toBe('SOURCE_ORDER');
+    expect(noMap.reason).toBe('NO_MAP');
+    expect(noMap.timeline.steps.length).toBeGreaterThan(0);
+    // A refused or stale answer is never used for placement: no certified instant survives it.
+    expect(stage({ kind: 'REFUSED', reason: 'REVISION_MISMATCH' }).timeline.steps.some((x) => x.availability === 'RECORDED')).toBe(false);
   });
 
   it('a neutral scene draws the empty stage at every t, with a camera that aims at nothing ahead', () => {
@@ -221,13 +355,15 @@ describe('S4-D · what is not certified is never drawn as knowledge', () => {
     expect(planFutureViolations(scene.plan, tl, STAGES)).toEqual([]);
   });
 
-  it('the guards-only policy is never availability evidence: CERTIFIED refuses it, and it is never labelled RECORDED', () => {
+  it('the source-order policy is never availability evidence: CERTIFIED refuses it (UNRECORDED and AFTER_END alike), and it is never labelled RECORDED', () => {
     expect(buildReplayCosmosTimeline(CLOCK.inputs, FULL, { fps: FPS, mode: 'CERTIFIED', durationMs: CLOCK.durationMs }))
+      .toEqual({ ok: false, reason: UNRECORDED_IN_CERTIFIED });
+    expect(buildReplayCosmosTimeline(withReplayAvailability(CLOCK, answer({ ...CERTIFIED, 5: { kind: 'AFTER_END' } })), FULL, { fps: FPS, mode: 'CERTIFIED', durationMs: CLOCK.durationMs }))
       .toEqual({ ok: false, reason: UNRECORDED_IN_CERTIFIED });
     const guards = buildReplayCosmosTimeline(CLOCK.inputs, FULL, { fps: FPS, mode: 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY', durationMs: CLOCK.durationMs });
     if (!guards.ok) throw new Error(guards.reason);
     expect(guards.timeline.availabilityEstablished).toBe(false);
-    expect(new Set(guards.timeline.steps.map((s) => s.availability))).toEqual(new Set(['UNESTABLISHED_PRESENTATION_GUARDS_ONLY']));
+    expect(new Set(guards.timeline.steps.map((s) => s.availability))).toEqual(new Set([NON_EXACT]));
   });
 });
 

@@ -30,7 +30,7 @@ import {
   replayStageTime,
   type ReplayPresentationClock,
 } from '../presentation-clock';
-import { buildReplayCosmosTimeline, knowledgeAt, UNRECORDED_AVAILABILITY, type ReplayCosmosAvailability, type ReplayCosmosMomentInput, type ReplayCosmosTimeline } from '../timeline';
+import { buildReplayCosmosTimeline, knowledgeAt, knowledgeOnFrame, UNRECORDED_AVAILABILITY, type ReplayCosmosAvailability, type ReplayCosmosMomentInput, type ReplayCosmosTimeline } from '../timeline';
 import { STAGES, sceneOf } from '../__fixtures__/synthetic-history';
 
 // RB-2 / S4 RE-ANCHOR (input shape only; every assertion unchanged): availability is typed (contract v1.1 §6.2) — none
@@ -158,13 +158,18 @@ describe('RB-1 · NO ANALYSIS BEFORE SPEECH, on the timeline', () => {
     expect(knowledgeAt(tl2, 9_999)).toBeNull();
   });
 
-  it('8 · a disclosure at or after the end is never pulled back into the last frame: it is listed, not drawn', () => {
-    // Moment 6's window ends where the Replay does: nothing is drawn for it (the end-of-Replay policy is a PO decision).
+  it('8 · a disclosure at the end is never pulled back into the last frame: it is the closing knowledge, drawn only at the end', () => {
+    // Moment 6's window ends where the Replay does: nothing is drawn for it inside the Replay. S4-CORRECTION-01 RE-ANCHOR
+    // (the end-of-Replay policy, decided 2026-11-24): it is the closing knowledge, visible at t = durationMs and not one
+    // frame before. Previous pin: listed in `afterEnd`, and knowledgeAt(durationMs) = 5.
     expect(at.has(6)).toBe(false);
-    expect(tl.afterEnd).toEqual([6]);
-    expect(knowledgeAt(tl, c.durationMs)).toBe(5);
+    expect(tl.afterEnd).toEqual([]);
+    expect(tl.closing).toEqual([6]);
+    expect(knowledgeAt(tl, c.durationMs)).toBe(6);
+    expect(knowledgeAt(tl, c.durationMs - 1)).toBe(5);
     const last = Math.floor((c.durationMs * FPS) / 1000) - 1;
     expect(knowledgeAt(tl, (last * 1000) / FPS)).toBe(5);
+    expect(knowledgeOnFrame(tl, last)).toBe(5);
   });
 
   it('6 · a missing availability is UNESTABLISHED, never RECORDED, and carries no held-by-guard precision', () => {
@@ -172,7 +177,8 @@ describe('RB-1 · NO ANALYSIS BEFORE SPEECH, on the timeline', () => {
       expect(s.availability).toBe('UNESTABLISHED_PRESENTATION_GUARDS_ONLY');
       expect(s.heldByGuardMs).toBeNull();
     }
-    expect(tl.unrecorded).toEqual([1, 2, 3, 4, 5]);
+    // S4-CORRECTION-01 RE-ANCHOR: moment 6 is drawn too (the closing knowledge), so it is reported unrecorded as well. Previous pin: [1, 2, 3, 4, 5].
+    expect(tl.unrecorded).toEqual([1, 2, 3, 4, 5, 6]);
     expect(tl.availabilityEstablished).toBe(false);
   });
 

@@ -3987,6 +3987,19 @@ iOS-recorded call shows no analysis during its Replay (MEDIUM; correct by contra
 decision); one availability request per opening, no retry (LOW). The HONOR device proof and iOS are not tested. No
 migration; nothing hosted. The item stays `OPEN — UNASSIGNED`.
 
+Progress note (2026-11-24, S4-CORRECTION-01, not a disposition): by the Product Owner's decision on PR #413 and the
+execution direction "S4-CORRECTION-01" (§19 of the [S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md)),
+S4's display policy is superseded on the same Draft PR: eligible historical analysis is shown whether or not its instant is
+certified. A certified instant places it exactly (CERTIFIED); AFTER_END, UNESTABLISHED / BROKEN / ORDINAL_ONLY, a moment not
+named, an answer pending, refused or unavailable, no source (iOS) and no map are placed by SOURCE ORDER — after the moment's
+own speech, after the knowledge before it, labelled non-exact, never a recorded instant; NOT_FOUND alone stays neutral; the
+last speech's knowledge is the closing display at the presentation's end (the end-of-Replay policy, now decided). The
+§18 residue "one uncertified moment makes a Replay neutral and one AFTER_END moment holds every later one" is closed by
+this correction; the source-window digest pin (MEDIUM) and the one-request-per-opening (LOW) stand; a late certified answer
+may briefly re-place a disclosure already drawn (LOW, new). The Product Owner's sequence: S4-CORRECTION-01 → INTEL-LIVE-01
+(`QAN-BL-INTEL-06`, Draft PR #410, unmerged) → HONOR Live + Replay proof → CP2-A → CP2-B. S3 #408 and M-2 #409 are merged;
+the HONOR device proof and iOS are not tested; no migration; nothing hosted. The item stays `OPEN — UNASSIGNED`.
+
 ### `QAN-BL-NAV-04` — No Full Personal Detail Surface Beyond the PEEK (PERSONAL-DETAIL-01)
 
 - **Title / Finding:** the Personal Detail Sheet is PEEK-only (G-7, V1). There is no full Personal detail surface for a
