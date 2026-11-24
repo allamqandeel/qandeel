@@ -142,13 +142,14 @@ test('0189 is forward-only, one transaction, opens no voice gate, grants no clie
   // follows 0200; the order before it is unchanged.
   // RE-ANCHORED by S8B-07 RB-2 / S3 (the PO's "RB-2 / M-2 + S3 PRODUCTION IMPLEMENTATION" authorization, 2026-11-24, CP1):
   // 0202 (the Replay historical availability read) follows 0201; the order before it is unchanged.
-  assert.deepEqual(migrations.slice(-14), ['0189_s8b_05_live_call_authority_v1.sql', '0190_s8b_05_live_call_spoken_turn_v1.sql',
+  // RE-ANCHORED by S8B-07 RB-2 / M-2 (the same authorization, CP2): 0203 (the live call clock marks) follows 0202.
+  assert.deepEqual(migrations.slice(-15), ['0189_s8b_05_live_call_authority_v1.sql', '0190_s8b_05_live_call_spoken_turn_v1.sql',
     '0191_s8b_05_live_call_ordered_halves_v1.sql', '0192_s8b_05_live_call_barge_in_text_turn_v1.sql',
     '0193_s8b_06_session_finished_calls_read_v1.sql', '0194_intel_04_lifecycle_relation_at_binding_sp_v1.sql',
     '0195_s8b_07_replay_original_audio_source_truth_v1.sql', '0196_s8b_07_transient_media_v1.sql',
     '0197_cosmos_e2_conversation_catalog_v1.sql', '0198_cosmos_e2_thread_names_v1.sql', '0199_cosmos_e2_current_personal_world_v1.sql',
     '0200_cosmos_e2_reading_reliance_gate_v1.sql', '0201_s8b_07_semantic_commit_instants_v1.sql',
-    '0202_s8b_07_replay_historical_availability_v1.sql'],
+    '0202_s8b_07_replay_historical_availability_v1.sql', '0203_s8b_07_live_call_clock_marks_v1.sql'],
   'CP2 adds exactly 0190 after 0189, CP3 exactly 0191 after 0190, CP4 exactly 0192 after 0191, S8B-06 CP3 R3 exactly 0193 after 0192, INTEL-04 exactly 0194 after 0193, S8B-07 CP1-A exactly 0195 after 0194, S8B-07 CP1-B exactly 0196 after 0195, COSMOS E-2 Slice B exactly 0197 after 0196');
   const scripts = JSON.parse(read('package.json')).scripts;
   assert.equal(scripts['verify:live-call-authority:integration'], 'node --env-file-if-exists=.env database/verify-migration-0189.mjs');
