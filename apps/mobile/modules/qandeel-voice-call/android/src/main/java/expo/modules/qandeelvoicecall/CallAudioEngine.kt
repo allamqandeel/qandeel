@@ -58,6 +58,14 @@ import java.util.concurrent.atomic.AtomicBoolean
  *             clock jumps by the held time, so the client brackets the hole with MUTE / UNMUTE (a MUTED gap).
  *   cue       [playCue] — the 60-minute warning ([CuePlayer]) in the same track, at the first suitable silence, HEARD only
  *             once the platform presented its last frame.
+ *
+ * S8B-07 RB-2 / M-2 (CP3) adds, without changing the encoding, the AEC, the playout or the recorded audio:
+ *   clock     [clockMark] — a CLOCK_MARK resolved by [CaptureClockMarker] at the first frame captured at least 100 ms after
+ *             it arrived, answered by [EngineSink.markEcho] (null = NOCLOCK). A hold invalidates the reference at once and
+ *             answers every pending mark NOCLOCK; a resume starts a new segment whose reference is re-established from its
+ *             own timestamps, never by continuing the pre-hold frame index. [resume] now publishes the new frame index
+ *             before it clears the hold, and a frame whose read spanned a hold is discarded, so no frame read after a
+ *             resume is ever stamped with the pre-hold index.
  */
 class CallAudioEngine(
   private val context: Context,
@@ -114,6 +122,8 @@ class CallAudioEngine(
      * paced by this tick too (`native-paced-timers.ts`); it carries no audio and no content.
      */
     fun tick(nowMs: Long)
+    /** S8B-07 RB-2 / M-2: the answer to [clockMark] [token] — a capture position (a multiple of 20), or null (NOCLOCK). */
+    fun markEcho(token: Long, captureMs: Long?) {}
   }
 
   private class Pending(val callTurnIndex: Long, val chunkSeq: Long, val offsetMs: Long, val packet: ByteArray)
@@ -152,6 +162,9 @@ class CallAudioEngine(
   @Volatile private var held = false
   /** Set by [resume] for the capture thread: the frame index the clock continues at. */
   @Volatile private var resumeFrameIndex = -1L
+  /** S8B-07 RB-2 / M-2: counts holds, so a frame whose read spanned one is never sent or stamped. */
+  @Volatile private var holdCount = 0L
+  private val clockMarker = CaptureClockMarker()
   private val holdMonitor = Object()
   private var heldAtNs = 0L
   @Volatile private var lastSpeechNs = Long.MIN_VALUE
@@ -242,6 +255,7 @@ class CallAudioEngine(
   fun stop(reason: String) {
     if (!running.compareAndSet(true, false)) return
     synchronized(holdMonitor) { holdMonitor.notifyAll() }
+    for (echo in clockMarker.invalidate()) sink.markEcho(echo.token, echo.captureMs)
     val dropped = synchronized(lock) {
       listOfNotNull(cuePlayer.abortPlaying(), cuePlayer.dropPending()) + cueSchedule.clear()
     }
@@ -271,6 +285,7 @@ class CallAudioEngine(
     synchronized(lock) {
       if (!running.get() || held) return false
       held = true
+      holdCount += 1
       heldAtNs = System.nanoTime()
       heldAt = nextFrameIndex * ReplyLedger.PACKET_MS
       faded = true
@@ -290,6 +305,8 @@ class CallAudioEngine(
     }
     final?.let { sink.playout(it, presentedFrame, "HOLD") }
     droppedCue?.let { sink.cue("REQUEUED", it, false, null) }
+    // S8B-07 RB-2 / M-2: nothing captured from here on certifies a mark; every pending one is NOCLOCK.
+    for (echo in clockMarker.invalidate()) sink.markEcho(echo.token, echo.captureMs)
     try { record?.stop() } catch (_: Throwable) {}
     try { track?.pause() } catch (_: Throwable) {}
     sink.held(heldAt, cause)
@@ -317,12 +334,22 @@ class CallAudioEngine(
     val continueAt = nextFrameIndex + heldFrames
     // The event goes out BEFORE the capture thread produces the first packet after the hole: UNMUTE precedes it.
     sink.resumed(continueAt * ReplyLedger.PACKET_MS)
+    // S8B-07 RB-2 / M-2: the index first, then the hold cleared — the capture thread can never read a frame after the
+    // resume on the pre-hold index.
+    synchronized(holdMonitor) { resumeFrameIndex = continueAt }
     synchronized(lock) { held = false }
-    synchronized(holdMonitor) {
-      resumeFrameIndex = continueAt
-      holdMonitor.notifyAll()
-    }
+    synchronized(holdMonitor) { holdMonitor.notifyAll() }
     return true
+  }
+
+  /**
+   * S8B-07 RB-2 / M-2 — a CLOCK_MARK arrived now: [token] is answered once by [EngineSink.markEcho]. Returns false when it
+   * cannot be taken (not running, held, re-establishing nothing to answer from): the caller answers NOCLOCK itself.
+   * Never blocks or delays capture or playback.
+   */
+  fun clockMark(token: Long): Boolean {
+    if (!running.get() || held) return false
+    return clockMarker.mark(token, System.nanoTime())
   }
 
   /**
@@ -621,21 +648,28 @@ class CallAudioEngine(
     var wasMuted = false
     var secondLevels = ArrayList<Double>(50)
     var secondRefs = ArrayList<Double?>(50)
+    // S8B-07 RB-2 / M-2: the samples READ from this recording — the position space of its timestamps, across holds.
+    var readSamples = 0L
+    clockMarker.segmentStart()
     while (running.get()) {
-      if (held) {
+      val wasHeld = held // read before the index: [resume] writes the index before it clears the hold
+      if (resumeFrameIndex >= 0) {
+        frameIndex = resumeFrameIndex
+        nextFrameIndex = frameIndex
+        resumeFrameIndex = -1
+        wasMuted = true // a fresh encoder state after the hole, as after a mute
+        clockMarker.segmentStart() // a new segment: its reference comes from its own timestamps only
+        continue
+      }
+      if (wasHeld) {
         // S8B-06 CP2: the microphone is released; nothing is read, encoded or sent until resume moves the clock on.
         synchronized(holdMonitor) {
           while (held && running.get() && resumeFrameIndex < 0) holdMonitor.wait(50)
         }
         if (!running.get()) return
-        if (resumeFrameIndex >= 0) {
-          frameIndex = resumeFrameIndex
-          nextFrameIndex = frameIndex
-          resumeFrameIndex = -1
-          wasMuted = true // a fresh encoder state after the hole, as after a mute
-        }
         continue
       }
+      val segment = holdCount
       var got = 0
       while (got < frame.size && running.get() && !held) {
         val n = source.read(frame, got, frame.size - got)
@@ -646,14 +680,22 @@ class CallAudioEngine(
           return
         }
         got += n
+        readSamples += n
       }
       if (!running.get()) return
-      if (held || got < frame.size) continue // a frame cut by the hold is never sent
+      if (held || got < frame.size || segment != holdCount) continue // a frame cut by (or spanning) a hold is never sent
       val now = System.nanoTime()
       val captureMs = frameIndex * ReplyLedger.PACKET_MS
       captureMsNow = captureMs
-      val captureTimeNs = if (source.getTimestamp(stamp, AudioTimestamp.TIMEBASE_MONOTONIC) == AudioRecord.SUCCESS) {
+      val stamped = source.getTimestamp(stamp, AudioTimestamp.TIMEBASE_MONOTONIC) == AudioRecord.SUCCESS
+      val captureTimeNs = if (stamped) {
         stamp.nanoTime + (frameIndex * UplinkOpusEncoder.FRAME_SAMPLES - stamp.framePosition) * 1_000_000_000L / UplinkOpusEncoder.RATE
+      } else {
+        -1L
+      }
+      // S8B-07 RB-2 / M-2: the same timestamp through the samples read, never through the (jumping) frame index.
+      val clockTimeNs = if (stamped) {
+        stamp.nanoTime + (readSamples - UplinkOpusEncoder.FRAME_SAMPLES - stamp.framePosition) * 1_000_000_000L / UplinkOpusEncoder.RATE
       } else {
         -1L
       }
@@ -672,6 +714,8 @@ class CallAudioEngine(
         sink.uplink(captureMs, packet)
       }
       wasMuted = isMuted
+      // S8B-07 RB-2 / M-2: the marks this frame answers, after the uplink (which never waits for them).
+      for (echo in clockMarker.frame(captureMs, clockTimeNs, now)) sink.markEcho(echo.token, echo.captureMs)
 
       val level = SpeechOnsetDetector.levelDb(frame, frame.size)
       var audible: Boolean

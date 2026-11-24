@@ -101,7 +101,12 @@ export type EngineEvent =
   /** CP2: a warning cue. HEARD only once the platform presented its last frame. */
   | { readonly type: 'cue'; readonly event: CueEvent; readonly id: string; readonly forced: boolean; readonly source: string | null }
   /** The engine's own clock (every 250 ms while it runs, held included): paces the call's timers when JS timers pause. */
-  | { readonly type: 'tick'; readonly nowMs: number };
+  | { readonly type: 'tick'; readonly nowMs: number }
+  /**
+   * RB-2 / M-2 (Android): the capture position of the first frame captured at least the margin after `clockMark(token)`
+   * was called, or null (NOCLOCK: held, re-establishing the capture clock, start-up, no timestamp).
+   */
+  | { readonly type: 'markEcho'; readonly token: number; readonly captureMs: number | null };
 
 export type CueEvent = 'QUEUED' | 'DUE' | 'STARTED' | 'HEARD' | 'REQUEUED' | 'SUPERSEDED' | 'DROPPED' | 'REPEATED';
 export type CueKind = 'T5' | 'T1';
@@ -126,6 +131,12 @@ export interface VoiceCallEngine {
    * reply's queued packets dropped, its later packets refused), reported as a forced `bargeIn`. False when nothing runs.
    */
   cutReply?(): boolean;
+  /**
+   * RB-2 / M-2 (Android only; absent on iOS, which is never asked): resolve a CLOCK_MARK against the capture clock, under a
+   * `token` the session never reuses (a mark's `seq` restarts on every connection). Answered once, by a `markEcho` event;
+   * false = not taken (answer NOCLOCK). Never blocks or delays capture or playback.
+   */
+  clockMark?(token: number): boolean;
 }
 
 export type CallRoute = 'EARPIECE' | 'SPEAKER' | 'WIRED_HEADSET' | 'BLUETOOTH';
@@ -200,6 +211,8 @@ interface NativeVoiceCall {
   updateCallNotification(text: string): boolean;
   /** Android only. */
   moveToBackground?(): boolean;
+  /** RB-2 / M-2, Android only. */
+  clockMark?(token: number): boolean;
   addListener(event: string, listener: (payload: Record<string, unknown>) => void): Subscription;
 }
 
@@ -220,9 +233,15 @@ const NATIVE_EVENTS: readonly [string, (p: Record<string, unknown>) => EngineEve
   ['onCue', (p) => ({ type: 'cue', event: p.event as CueEvent, id: p.id as string, forced: p.forced === true, source: (p.source as string | null) ?? null })],
   ['onTick', (p) => ({ type: 'tick', nowMs: p.nowMs as number })],
 ];
+/** RB-2 / M-2: subscribed only where the engine has clockMark (Android). */
+const MARK_ECHO_EVENT: [string, (p: Record<string, unknown>) => EngineEvent] =
+  ['onMarkEcho', (p) => ({ type: 'markEcho', token: p.token as number, captureMs: typeof p.captureMs === 'number' ? p.captureMs : null })];
 
 function bind(native: NativeVoiceCall): VoiceCallEngine & { forceBargeIn(): boolean } {
+  // RB-2 / M-2: only Android's engine certifies a capture position; iOS stays fail-closed (no clockMark, so no v2 offer).
+  const clockMark = Platform.OS === 'android' && typeof native.clockMark === 'function' ? native.clockMark.bind(native) : undefined;
   return {
+    ...(clockMark ? { clockMark: (token: number) => clockMark(token) } : {}),
     start: (options) => native.start(options),
     stop: () => native.stop(),
     setMuted: (muted) => native.setMuted(muted),
@@ -233,7 +252,8 @@ function bind(native: NativeVoiceCall): VoiceCallEngine & { forceBargeIn(): bool
     playCue: (id, kind, forceAfterMs, notificationText) => native.playCue(id, kind, forceAfterMs, notificationText),
     scheduleCue: (id, kind, dueInMs, forceAfterMs, notificationText) => native.scheduleCue(id, kind, dueInMs, forceAfterMs, notificationText),
     subscribe(listener) {
-      const subscriptions = NATIVE_EVENTS.map(([name, map]) => native.addListener(name, (payload) => listener(map(payload))));
+      const events = clockMark ? [...NATIVE_EVENTS, MARK_ECHO_EVENT] : NATIVE_EVENTS;
+      const subscriptions = events.map(([name, map]) => native.addListener(name, (payload) => listener(map(payload))));
       return () => subscriptions.forEach((s) => s.remove());
     },
   };

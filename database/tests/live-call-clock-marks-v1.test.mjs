@@ -76,7 +76,7 @@ test('the verifier proves the acceptance list and the planted defects; API CI ru
     'M-10', 'M-11', 'M-12']) assert.ok(verifier.includes(`'${s} `), `the verifier runs ${s}`);
   for (const d of ['D-01', 'D-02', 'D-03', 'D-04', 'D-05', 'D-06']) assert.ok(verifier.includes(`['${d} `), `the verifier plants ${d}`);
   assert.equal(packageJson.scripts['verify:live-call-clock-marks:integration'], 'node --env-file-if-exists=.env database/verify-migration-0203.mjs');
-  assert.equal(packageJson.scripts['test:live-call-clock-marks-contract'], 'node --test database/tests/live-call-clock-marks-v1.test.mjs');
+  assert.equal(packageJson.scripts['test:live-call-clock-marks-contract'], 'node --test database/tests/live-call-clock-marks-v1.test.mjs tests/rb2-m2-live-call-protocol-v2-contract.test.mjs');
   const at0202 = workflow.indexOf('run: npm run verify:replay-historical-availability:integration');
   const at0203 = workflow.indexOf('run: npm run verify:live-call-clock-marks:integration');
   assert.ok(at0202 > 0 && at0203 > at0202, 'API CI runs verify-0203 after verify-0202');

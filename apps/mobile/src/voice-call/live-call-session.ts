@@ -65,12 +65,20 @@ export class LiveCallSession {
   private audibleTurn: number | null = null;
   /** CP3: the local cut asked for a typed message (T1): its forced barge-in sends no BARGE_IN. */
   private textCuts = 0;
+  /**
+   * RB-2 / M-2: the marks the engine is resolving, by a token never reused. A mark's `seq` restarts on every connection, so
+   * an answer is sent only on the connection that asked; any other is dropped (it could certify a later mark too early).
+   */
+  private readonly marks = new Map<number, { readonly connection: number; readonly seq: number }>();
+  private markToken = 0;
+  private connection = 0;
   ended: LiveCallEnd | null = null;
 
   constructor(private readonly options: LiveCallSessionOptions) {
     this.engine = options.engine;
     this.playoutIntervalMs = options.playoutIntervalMs ?? 200;
-    this.client = new LiveCallClient({ ...options, onEvent: (event) => this.onClient(event) });
+    // RB-2 / M-2: v2 (clock marks) is offered only when the engine can resolve a certified capture position (Android).
+    this.client = new LiveCallClient({ ...options, offerClockMarks: typeof options.engine.clockMark === 'function', onEvent: (event) => this.onClient(event) });
   }
 
   start(): void {
@@ -156,6 +164,23 @@ export class LiveCallSession {
         this.emit({ source: 'session', event: { type: 'replyAdmission', callTurnIndex, chunkSeq, admission } });
         return;
       }
+      case 'connection':
+        if (event.phase === 'OPEN') {
+          this.connection += 1;
+          this.marks.clear();
+        }
+        return;
+      case 'clockMark': {
+        // Resolved natively against the capture clock, or NOCLOCK at once when the engine cannot (not running, iOS).
+        this.markToken += 1;
+        const token = this.markToken;
+        this.marks.set(token, { connection: this.connection, seq: event.seq });
+        if (!this.engineRunning || !this.engine.clockMark?.(token)) {
+          this.marks.delete(token);
+          this.client.sendMarkEcho(event.seq, null);
+        }
+        return;
+      }
       case 'ended':
         this.ended = event.reason;
         void this.engine.stop().catch(() => undefined).then(() => {
@@ -225,6 +250,12 @@ export class LiveCallSession {
         this.held = false;
         this.syncMute(event.captureMs, 'HOLD');
         return;
+      case 'markEcho': {
+        const mark = this.marks.get(event.token);
+        this.marks.delete(event.token);
+        if (mark && mark.connection === this.connection) this.client.sendMarkEcho(mark.seq, event.captureMs);
+        return;
+      }
       default:
     }
   }

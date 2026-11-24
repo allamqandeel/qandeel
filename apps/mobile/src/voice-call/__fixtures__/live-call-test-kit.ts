@@ -13,7 +13,14 @@ export class FakeSocket implements LiveCallSocket {
   readonly sent: (string | ArrayBuffer)[] = [];
   closedWith: number | null = null;
 
-  constructor(readonly url: string, readonly protocol: string, readonly headers: Readonly<Record<string, string>>) {}
+  /** What the server selected (RB-2 / M-2): by default the last offered (a v1 server); a test may select v2 before open(). */
+  protocol: string;
+  readonly offered: readonly string[];
+
+  constructor(readonly url: string, offered: string | readonly string[], readonly headers: Readonly<Record<string, string>>) {
+    this.offered = typeof offered === 'string' ? [offered] : [...offered];
+    this.protocol = this.offered[this.offered.length - 1]!;
+  }
 
   send(data: string | ArrayBuffer): void {
     this.sent.push(data);

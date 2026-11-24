@@ -4,6 +4,10 @@ import {
   type CallState, type ClientMessage, type RefusalReason, type ServerMessage,
 } from './live-call.protocol';
 import type { LiveCallSpeechSink, LiveCallSpeechStream, LiveCallTurnChannel, ReplyAudioPacket } from './live-call-speech.port';
+import type { ClockMarkRegistration, LiveCallClockMarks } from './live-call.clock-marks';
+import {
+  encodeServerMessageV2, LIVE_CALL_PROTOCOL_V2, parseClientMessageV2, type ClientMessageV2, type HelloV2, type ServerMessageV2,
+} from './live-call.protocol-v2';
 import type { LiveCallStore, TrackState } from './live-call.store';
 import { UserTrackWriter, type CallSegmentMedia, type WriterFailure } from './recording/user-track-writer';
 
@@ -15,6 +19,8 @@ export interface CallTransport {
   close(code: number, reason: string): void;
   /** Bytes queued towards the phone and not yet written. */
   readonly bufferedBytes: number;
+  /** RB-2 / M-2: the subprotocol the upgrade selected (absent: v1). */
+  readonly subprotocol?: string;
 }
 
 export interface CallClock {
@@ -44,6 +50,8 @@ export interface CallConnectionDeps {
   readonly signal: (operation: string, outcome: string) => void;
   /** S8B-05 CP3 (O3b as amended by DEC-R1-1): the call analysis worker's in-memory kick once the call is ACTIVE. */
   readonly analysisKick?: (sessionId: string) => void;
+  /** RB-2 / M-2 (protocol v2 only): the instance's clock-mark slots. */
+  readonly clockMarks?: LiveCallClockMarks;
 }
 
 /** The connections this instance holds, by call: a resume here takes over from the older one (it is fenced). */
@@ -169,6 +177,9 @@ export class LiveCallConnection {
   private readonly controls: Bucket;
   private readonly timers = new Map<string, unknown>();
   private readonly endingNotices = new Set<number>();
+  /** RB-2 / M-2: v2 was negotiated; only then is a CLOCK_MARK ever sent or a MARK_ECHO accepted. */
+  private readonly v2: boolean;
+  private marks: ClockMarkRegistration | null = null;
 
   constructor(
     private readonly transport: CallTransport,
@@ -179,6 +190,7 @@ export class LiveCallConnection {
     private accessToken = '',
   ) {
     const now = deps.clock.now();
+    this.v2 = transport.subprotocol === LIVE_CALL_PROTOCOL_V2;
     this.lastInboundAt = now;
     this.frames = new Bucket(LIVE_CALL_LIMITS.framesPerSecond, LIVE_CALL_LIMITS.frameBurst, now);
     this.controls = new Bucket(LIVE_CALL_LIMITS.controlPerSecond, LIVE_CALL_LIMITS.controlPerSecond, now);
@@ -193,7 +205,7 @@ export class LiveCallConnection {
   // ------------------------------------------------------------------ inbound
   onText(text: string): void {
     if (!this.admit(true)) return;
-    const message = parseClientMessage(text);
+    const message = this.v2 ? parseClientMessageV2(text) : parseClientMessage(text);
     if (!message) {
       this.violation();
       return;
@@ -243,7 +255,7 @@ export class LiveCallConnection {
   }
 
   // ------------------------------------------------------------------ control messages
-  private async handle(message: ClientMessage): Promise<void> {
+  private async handle(message: ClientMessage | ClientMessageV2): Promise<void> {
     if (this.doomed || this.phase === 'CLOSING' || this.phase === 'CLOSED') return;
     if (message.type === 'HELLO') {
       if (this.phase !== 'AWAIT_HELLO') return this.violation();
@@ -252,6 +264,10 @@ export class LiveCallConnection {
     if (this.phase === 'AWAIT_HELLO') return this.violation();
     switch (message.type) {
       case 'HEARTBEAT':
+        return;
+      case 'MARK_ECHO':
+        // Evidence, never a command: not ACKed; outside ACTIVE (or with no mark outstanding) it is simply dropped.
+        if (this.phase === 'ACTIVE') this.marks?.echo(message.seq, message.captureMs);
         return;
       case 'TOKEN_REFRESH':
         return this.refreshToken(message.msgId, message.accessToken);
@@ -315,7 +331,7 @@ export class LiveCallConnection {
     this.send({ type: 'ACK', msgId });
   }
 
-  private async hello(hello: Extract<ClientMessage, { type: 'HELLO' }>): Promise<void> {
+  private async hello(hello: Extract<ClientMessage, { type: 'HELLO' }> | HelloV2): Promise<void> {
     this.callId = hello.callId;
     this.clientInstanceId = hello.clientInstanceId;
     this.sessionId = hello.sessionId;
@@ -364,6 +380,7 @@ export class LiveCallConnection {
     this.phase = 'ACTIVE';
     this.resumedGap = true;
     this.sendState('ACTIVE');
+    this.startMarks();
     this.armLease();
     await this.renewLease();
   }
@@ -464,6 +481,7 @@ export class LiveCallConnection {
       // The activation adopted the session's unestablished pre-call exchanges (0191): their analysis may start now. A kick,
       // synchronous and in memory; never awaited, never a database call.
       this.deps.analysisKick?.(this.sessionId!);
+      this.startMarks();
       await this.renewLease();
       if (this.phase !== 'ACTIVE') return;
     }
@@ -715,7 +733,20 @@ export class LiveCallConnection {
     this.transport.close(code, reason);
   }
 
+  /** RB-2 / M-2: a v2 call that is ACTIVE on this connection receives clock marks in its slot. */
+  private startMarks(): void {
+    if (!this.v2 || !this.deps.clockMarks || this.marks || this.epoch === null || this.callId === null) return;
+    this.marks = this.deps.clockMarks.register(this.callId, this.epoch, {
+      send: (seq) => {
+        if (this.phase === 'ACTIVE') this.send({ type: 'CLOCK_MARK', seq });
+      },
+      latestCaptureMs: () => this.latestCaptureMs,
+    });
+  }
+
   private cleanup(): void {
+    this.marks?.release(this.ended);
+    this.marks = null;
     for (const handle of this.timers.values()) this.deps.clock.clearTimeout(handle);
     this.timers.clear();
     this.decoder?.close();
@@ -734,10 +765,10 @@ export class LiveCallConnection {
   }
 
   // ------------------------------------------------------------------ outbound
-  private send(message: ServerMessage): void {
+  private send(message: ServerMessage | ServerMessageV2): void {
     if (this.phase === 'CLOSED') return;
     if (this.transport.bufferedBytes > LIVE_CALL_LIMITS.maxOutboundBufferBytes) return;
-    this.transport.sendText(encodeServerMessage(message));
+    this.transport.sendText(message.type === 'CLOCK_MARK' ? encodeServerMessageV2(message) : encodeServerMessage(message));
   }
 
   /** One reply packet (REPLY_AUDIO) while the call is ACTIVE; a stalled consumer gets nothing more (it is lost by its own bound). */

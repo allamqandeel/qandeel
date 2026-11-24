@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseServiceRoleApiService } from '../../conversation/supabase-service-role-api.service';
+import type { ClockEchoRecord, ClockSlotStore } from './live-call.clock-marks';
 import type { CallState } from './live-call.protocol';
 import type {
   ActivateOutcome, BeginOutcome, CallTruth, EndOutcome, GapKind, HeartbeatOutcome, LiveCallStore, ResumeOutcome, SuspendOutcome, TrackState,
@@ -13,7 +14,7 @@ const toText = (value: unknown): string | null => (typeof value === 'string' ? v
  * did not promise is an error, never a guess. Nothing here carries audio, words or a token.
  */
 @Injectable()
-export class LiveCallRepository implements LiveCallStore {
+export class LiveCallRepository implements LiveCallStore, ClockSlotStore {
   constructor(private readonly serverApi: SupabaseServiceRoleApiService) {}
 
   private async rows<T>(name: string, body: Record<string, unknown>): Promise<T[]> {
@@ -103,6 +104,20 @@ export class LiveCallRepository implements LiveCallStore {
       userNextSegment: Number(row.user_next_segment), qandeelTrackEndMs: Number(row.qandeel_track_end_ms),
       qandeelNextSegment: Number(row.qandeel_next_segment),
     };
+  }
+
+  /** RB-2 / M-2 (0203): one slot batch — persist echoes, compact ended calls, take and return the fresh snapshot. */
+  async clockSlot(input: { instanceId: string; echoes: ReadonlyArray<ClockEchoRecord>; compact: readonly string[] }): Promise<{ snapshotId: number }> {
+    const row = await this.first<{ snapshot_id: unknown }>('server_call_clock_slot_v1', {
+      p_instance_id: input.instanceId,
+      p_call_ids: input.echoes.map((e) => e.callId),
+      p_connection_epochs: input.echoes.map((e) => e.epoch),
+      p_mark_seqs: input.echoes.map((e) => e.markSeq),
+      p_snapshot_ids: input.echoes.map((e) => e.snapshotId),
+      p_echo_capture_ms: input.echoes.map((e) => e.captureMs),
+      p_compact_call_ids: input.compact,
+    });
+    return { snapshotId: Number(row.snapshot_id) };
   }
 
   async recordGap(input: { userId: string; recordingId: string; epoch: number; track: 'USER' | 'QANDEEL'; startMs: number; endMs: number; kind: GapKind }) {

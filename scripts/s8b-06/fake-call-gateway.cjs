@@ -7,7 +7,7 @@
  * opens no PERSONAL_LIVE_CALL gate, touches no database and reads no credential. It is not the server and is never deployed.
  *
  *   - Upgrade exactly as the frozen gateway: GET /voice/calls/connect, no query (404), WebSocket version 13 (426),
- *     subprotocol `qandeel.live-call.v1` (400), `Authorization: Bearer <the local synthetic token>` (401), no extension.
+ *     subprotocol `qandeel.live-call.v1` offered (400; it always selects v1, also when v2 is offered first), `Authorization: Bearer <the local synthetic token>` (401), no extension.
  *   - RFC 6455 framing with the frozen bounds: client frames masked, FIN on every frame, text ≤ 4096 bytes, binary ≤ 1295,
  *     control ≤ 125 — anything larger closes 1009.
  *   - Messages parsed by exact keys (the same rule as the frozen parser; tests/s8b-06-native-audio-engine-contract.test.mjs
@@ -455,7 +455,9 @@ function createGateway(options = {}) {
     };
     if (url.includes('?') || url !== PATH) return fail(404);
     if (req.headers['sec-websocket-version'] !== '13') return fail(426);
-    if (req.headers['sec-websocket-protocol'] !== PROTOCOL || typeof req.headers['sec-websocket-key'] !== 'string') return fail(400);
+    // RB-2 / M-2: an Android phone offers `qandeel.live-call.v2, qandeel.live-call.v1`; this gateway selects v1, as a v1 server would.
+    const offered = String(req.headers['sec-websocket-protocol'] ?? '').split(',').map((p) => p.trim());
+    if (!offered.includes(PROTOCOL) || typeof req.headers['sec-websocket-key'] !== 'string') return fail(400);
     if (req.headers.authorization !== `Bearer ${SYNTHETIC_TOKEN}`) return fail(401);
     socket.setNoDelay(true);
     socket.write(
