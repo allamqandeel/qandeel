@@ -1483,8 +1483,10 @@ conservative: an assistant-final moment may wait for the next sealing commit (re
 
 `tests/s8b-05-live-call-contract.test.mjs` (the migration tail), `database/verify-migration-0194.mjs`, `0195.mjs`,
 `0196.mjs` (their migration lists), `tests/s7-04-replay-player-navigation-contract.test.mjs` (the approved later Replay
-migrations now name `0202` by its whole file name, beside `0195`) and `database/tests/session-semantic-commit-instants-v1.test.mjs` (0202 is exactly
-the S3 read and touches nothing of S1). Each carries a `RE-ANCHORED by S8B-07 RB-2 / S3` comment.
+migrations now name `0202` by its whole file name, beside `0195`), `database/tests/session-semantic-commit-instants-v1.test.mjs` (0202 is exactly
+the S3 read and touches nothing of S1) and the `voice_private` function censuses of `database/verify-migration-0183.mjs`,
+`0185.mjs` and `0186.mjs` (0202's one internal, the seam, derived from the migration text by `database/replay-rb2-census.mjs`;
+found by the first CI run of PR #408). Each carries a `RE-ANCHORED by S8B-07 RB-2 / S3` comment.
 
 ### 16.5 Verification (local, real PostgreSQL 17)
 
