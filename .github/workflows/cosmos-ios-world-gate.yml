@@ -11,8 +11,23 @@ name: iOS World gate (COSMOS stages, touch)
 # double tap, a two-finger pinch — from the SAME build (scripts/cosmos-ios-world/xcuitest; PO, 2026-11-18). Every case
 # is PASS / FAIL / NOT TESTED in results.tsv; the job fails unless every case passed. Nothing retries a failed case.
 #
-# Change-aware: it runs for a pull request that changes the mobile application, its shared packages, the API, the
-# database, the dependency lock, or this gate; for a push to main; and on manual dispatch.
+# Change-aware: it starts for a pull request that changes the mobile application, its shared packages, the API, the
+# database, the dependency lock, the validation tooling or this gate; for a push to main; and on manual dispatch.
+#
+# CI-SPEED-01 / C-2 (PO, 2026-11-24) — VAL-01 decides, per event, whether the cells run (`planWorldGate`,
+# scripts/validation/change-planner.mjs). The trigger above still matches the PR's CUMULATIVE diff; the plan adds:
+#
+#   NOT_RELEVANT   nothing the PR changes is built, executed or read by this gate (for example, database verifiers and
+#                  documents only). `main` and manual dispatch always run.
+#   CARRY_FORWARD  the latest update reaches no input of the gate AND the predecessor head's IOS_WORLD_GATE evidence is
+#                  PROVEN green (exact head, same base, same authority, latest attempt, green evidence job).
+#   RUN            everything else: the mobile app and its build inputs, packages, manifests and lockfile, this gate's
+#                  tooling and contract, the validation tooling, PRODUCTION API and database source (BG-10's backend
+#                  scope, unchanged), any file the gate reads, any unknown path, a PR's first head, a red / cancelled /
+#                  NOT TESTED / missing predecessor result.
+#
+# A cell's FAIL or NOT TESTED makes the run red, so it records no evidence and the next head runs again. The cells, the
+# cases and their assertions are unchanged; only WHEN they run is decided here.
 on:
   pull_request:
     paths:
@@ -25,7 +40,9 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'scripts/cosmos-ios-world/**'
-      - 'scripts/validation/bounded-run.mjs'
+      # C-2: the planner decides when the cells run, so it is this gate's authority too (it was bounded-run.mjs alone).
+      - 'scripts/validation/**'
+      - 'tests/cosmos-ios-world-gate-composition-contract.test.mjs'
       - '.github/workflows/cosmos-ios-world-gate.yml'
   push:
     branches: [main]
@@ -35,6 +52,7 @@ concurrency:
   cancel-in-progress: true
 permissions:
   contents: read
+  actions: read
 env:
   CI: 1
   EXPO_NO_TELEMETRY: 1
@@ -43,8 +61,32 @@ env:
   MAESTRO_ZIP_SHA256: 29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991
   IOS_RUNTIME_SUFFIX: iOS-26-5
 jobs:
+  # VAL-01 — the ONE place this workflow decides whether its cells run (C-2). A planner that fails, prints nothing or
+  # is skipped leaves the output empty, and an empty output runs the cells.
+  plan:
+    name: Change-aware plan (VAL-01)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      ios_world_gate: ${{ steps.plan.outputs.ios_world_gate }}
+      ios_world_gate_source_run_id: ${{ steps.plan.outputs.ios_world_gate_source_run_id }}
+      ios_world_gate_source_head_sha: ${{ steps.plan.outputs.ios_world_gate_source_head_sha }}
+    steps:
+      # Full history so the PR's own diff and the latest update are derived from real commits; a shallow clone would
+      # force the fail-safe.
+      - {name: Checkout, uses: actions/checkout@v4, with: {fetch-depth: 0}}
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Plan the iOS World gate against the pull request's diff and its latest update
+        id: plan
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: node scripts/validation/plan-validation.mjs plan --workflow cosmos-ios-world-gate
+
   world-gate:
     name: iOS World gate — ${{ matrix.device }} ${{ matrix.lang }}
+    needs: [plan]
+    if: ${{ !cancelled() && needs.plan.outputs.ios_world_gate != 'CARRY_FORWARD' && needs.plan.outputs.ios_world_gate != 'NOT_RELEVANT' }}
     runs-on: macos-26
     # 120 holds the World gate's 60 minutes (run 44707574152: setup <= 38.5, clean native 14.4 minutes; the fresh-install step, 3.7, is no longer run here).
     timeout-minutes: 120
@@ -170,3 +212,36 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with: {name: 'ios-world-gate-${{ matrix.cell }}', path: '${{ runner.temp }}/evidence', if-no-files-found: warn}
+
+  # The gate's evidence for this head, under VAL-01's one job name and artifact identity. It is written only when every
+  # cell passed every case (or the result was carried from a proven-green predecessor); a red, cancelled or NOT TESTED
+  # run writes none, so its successor cannot carry it.
+  evidence:
+    name: Validation evidence (VAL-01)
+    needs: [plan, world-gate]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Record the iOS World gate's evidence for this head
+        run: >-
+          node scripts/validation/plan-validation.mjs record --workflow cosmos-ios-world-gate --gate IOS_WORLD_GATE
+          --decision "${{ needs.plan.outputs.ios_world_gate || 'RUN' }}"
+          --gate-result "${{ needs.world-gate.result }}"
+          --bound-result skipped --contracts ''
+          --source-run-id "${{ needs.plan.outputs.ios_world_gate_source_run_id }}"
+          --source-head-sha "${{ needs.plan.outputs.ios_world_gate_source_head_sha }}"
+          --out "$RUNNER_TEMP/val01-evidence"
+      - name: Publish the iOS World gate's evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: val01-evidence-cosmos-ios-world-gate-IOS_WORLD_GATE
+          path: ${{ runner.temp }}/val01-evidence/IOS_WORLD_GATE/evidence.json
+          if-no-files-found: ignore
+          overwrite: true
+          retention-days: 30

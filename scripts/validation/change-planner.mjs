@@ -35,6 +35,8 @@
 
 import { createHash } from 'node:crypto';
 
+import { classifyBuildInput } from '../phase-m/native-build-fingerprint.mjs';
+
 /** The six change domains (Task Contract §7). */
 export const DOMAINS = Object.freeze({
   API_HEAVY: 'API_HEAVY',
@@ -349,13 +351,21 @@ export function validateEvidence(record, expected) {
  * contracts this gate's workflow runs. `nativeConsumerFlows`: for MOBILE_NATIVE_BINARY only, the flows (and
  * their runFlow closure) this gate's device consumers execute. `evidence`: `validateEvidence` output.
  */
-export function planGate({ gate, context, delta, analysis, suite = [], nativeConsumerFlows = [], evidence }) {
-  const run = (reason, extra = {}) => ({ decision: 'RUN', reason, contracts: [], ...extra });
-  if (!GATES.includes(gate)) return run(`UNKNOWN_GATE:${gate}`);
+const run = (reason, extra = {}) => ({ decision: 'RUN', reason, contracts: [], ...extra });
+
+/** The conditions every carry-forward needs before any path is looked at; null when they all hold. */
+function updatePreamble(context, delta) {
   if (context?.event !== 'pull_request') return run('NOT_A_PULL_REQUEST_UPDATE — main, push and dispatch stay conservative');
   if (context.action !== 'synchronize') return run(`FIRST_HEAD_OF_PULL_REQUEST (${context.action ?? 'unknown action'})`);
   if (!SHA.test(String(context.predecessorSha ?? ''))) return run('PREDECESSOR_UNESTABLISHED');
   if (!Array.isArray(delta) || delta.map(normalizePath).filter(Boolean).length === 0) return run('DELTA_UNESTABLISHED_OR_EMPTY');
+  return null;
+}
+
+export function planGate({ gate, context, delta, analysis, suite = [], nativeConsumerFlows = [], evidence }) {
+  if (!GATES.includes(gate)) return run(`UNKNOWN_GATE:${gate}`);
+  const preamble = updatePreamble(context, delta);
+  if (preamble !== null) return preamble;
 
   const paths = delta.map(normalizePath).filter(Boolean);
   const relevant = paths.filter((p) => domainsOf(p).includes(gate));
@@ -372,4 +382,205 @@ export function planGate({ gate, context, delta, analysis, suite = [], nativeCon
 
   const contracts = gate === DOMAINS.MOBILE_NATIVE_BINARY ? [] : (analysis?.contracts ?? []).filter((c) => suite.includes(c));
   return { decision: 'CARRY_FORWARD', reason: 'LATEST_DELTA_IRRELEVANT_AND_PREDECESSOR_PROVEN_GREEN', contracts };
+}
+
+// -------------------------------------------------------------------------------------------------
+// CI-SPEED-01 / C-2 — the iOS World gate (BG-10)
+// -------------------------------------------------------------------------------------------------
+
+/**
+ * The iOS World gate (`cosmos-ios-world-gate.yml`) builds ONE app — the S401 proof build: the production composition over
+ * the labelled synthetic proof network and an in-memory stand-in for the API — and drives it on three simulator cells.
+ * Its trigger is a raw `pull_request.paths` list, which matches the PR's cumulative diff, so before C-2 every later push
+ * to a PR that had once touched `database/**` rebuilt that app three times and re-ran every case (CI-SPEED-01, 30 days:
+ * 21 of 31 later pushes, 3,407 macOS minutes, changed nothing the gate could observe).
+ *
+ * C-2 adds the gate to the planner with the same one-way law, decided per path:
+ *
+ *   input      validation authority (`.github/`, `scripts/validation/`); the gate's own tooling; any input of the app it
+ *              builds (the QAN-INF-04 build-input law, default-include: the mobile workspace, `packages/`, the manifests,
+ *              the lockfile, the bundled `__validation__` harness, root scripts); PRODUCTION backend source (`apps/api/**`
+ *              and `database/**` other than the test files below — BG-10's backend scope, unchanged); anything unknown.
+ *   no input   prose, root contracts, Maestro flows, proof runners, and the backend's own TEST AND FIXTURE files
+ *              (`BACKEND_TEST_PATTERNS`) — but only while no file the gate builds or executes READS the path
+ *              (`worldGateBinders`, the VAL-01 binding tokens). One reader makes it an input, and the gate runs.
+ *
+ * A pull request whose cumulative diff holds no input at all is NOT_RELEVANT (as MOB-CI-01 is for native smoke): it
+ * cannot change what the gate builds or drives, and `main` still runs the gate on every push. A later update whose delta
+ * holds no input CARRIES FORWARD the predecessor head's result only when that result is PROVEN green by its evidence
+ * (`validateEvidence`: the exact predecessor head, the same base, the same authority, the latest attempt, a green
+ * evidence job). A red, cancelled, NOT TESTED or missing result is never carried: the gate runs.
+ */
+export const IOS_WORLD_GATE = 'IOS_WORLD_GATE';
+export const WORLD_GATE_WORKFLOW = '.github/workflows/cosmos-ios-world-gate.yml';
+
+/** What the gate executes beside the app it builds: its scripts, flows and native tests, its contract, the entry switch. */
+export const WORLD_GATE_TOOLING_PREFIXES = Object.freeze(['scripts/cosmos-ios-world/']);
+export const WORLD_GATE_TOOLING_FILES = Object.freeze([
+  WORLD_GATE_WORKFLOW,
+  'scripts/validation/bounded-run.mjs',
+  'tests/cosmos-ios-world-gate-composition-contract.test.mjs',
+  'apps/mobile/scripts/select-s401-proof-entry.mjs',
+]);
+
+/**
+ * The backend's TEST AND FIXTURE files: verifiers and proofs run against PostgreSQL by API CI, the database static tests,
+ * their fixtures and shared verifier support, the API's unit specs and fixtures. Migrations, functions, the bootstrap,
+ * API source and the API's proof scripts are not here: they stay inputs under BG-10's backend scope.
+ */
+export const BACKEND_TEST_PATTERNS = Object.freeze([
+  /^database\/verify-[^/]+\.mjs$/u,
+  /^database\/prove-[^/]+\.mjs$/u,
+  /^database\/[^/]*verifier[^/]*\.mjs$/u,
+  /^database\/tests\//u,
+  /^database\/fixtures\//u,
+  /^apps\/api\/src\/.+\.spec\.ts$/u,
+  /^apps\/api\/fixtures\//u,
+]);
+
+/** The npm lifecycle scripts `npm ci` runs, wherever a manifest defines them. */
+export const NPM_CI_LIFECYCLE = Object.freeze(['preinstall', 'install', 'postinstall', 'prepublish', 'preprepare', 'prepare', 'postprepare']);
+
+/** Kinds that reach the gate only through a reader (decided by `worldGateBinders`). */
+const WORLD_GATE_READ_ONLY_KINDS = Object.freeze(['DOC', 'CONTRACT', 'FLOW', 'PROOF_RUNNER']);
+
+export const isWorldGateTooling = (entry) => {
+  const path = normalizePath(entry);
+  return WORLD_GATE_TOOLING_FILES.includes(path) || WORLD_GATE_TOOLING_PREFIXES.some((p) => path.startsWith(p));
+};
+export const isBackendTestOrFixture = (entry) => BACKEND_TEST_PATTERNS.some((pattern) => pattern.test(normalizePath(entry)));
+
+/** Whether ONE changed path is an input of the gate by what it is, before any reader is looked for. */
+export function worldGatePathRelevance(entry) {
+  const path = normalizePath(entry);
+  const { kind } = classifyPath(path);
+  const input = (reason) => ({ path, input: true, reason });
+  if (path.length === 0) return input('EMPTY_PATH');
+  if (kind === 'INFRA') return input('VALIDATION_AUTHORITY');
+  if (isWorldGateTooling(path)) return input('WORLD_GATE_TOOLING');
+  if (classifyBuildInput(path).included) return input('BUILD_INPUT_OF_THE_GATE_APP');
+  if (isBackendTestOrFixture(path)) return { path, input: false, reason: 'BACKEND_TEST_OR_FIXTURE' };
+  if (WORLD_GATE_READ_ONLY_KINDS.includes(kind)) return { path, input: false, reason: kind };
+  if (kind === 'API') return input('BACKEND_PRODUCTION_SOURCE (BG-10 backend scope)');
+  return input('UNCLASSIFIED_PATH_FAILS_SAFE');
+}
+
+/**
+ * The files whose reading a path makes that path an input: everything the gate executes or builds from. Its tooling
+ * always; every build input of the app except prose, the validation tooling (it classifies paths and reads none) and the
+ * consumers of OTHER proofs (other workflows, other suites' leg runners and flows), which this gate never executes.
+ */
+export function isWorldGateBinder(entry) {
+  const path = normalizePath(entry);
+  if (isWorldGateTooling(path)) return true;
+  if (classifyPath(path).kind === 'DOC' || isValidationTooling(path) || isFlowConsumer(path)) return false;
+  return classifyBuildInput(path).included;
+}
+
+const NPM_RUN = /npm run (?:--silent )?([A-Za-z0-9_:.-]+)/gu;
+
+/** The manifest scripts the gate can run: the ones its workflow names, their pre/post hooks, what they call, `npm ci`'s lifecycle. */
+export function worldGateScripts(workflowText, scriptMaps) {
+  const names = new Set(NPM_CI_LIFECYCLE);
+  const invoked = [...stripFullLineComments('workflow.yml', workflowText).matchAll(NPM_RUN)].map((m) => m[1]);
+  const seen = new Set();
+  while (invoked.length > 0) {
+    const name = invoked.pop();
+    if (seen.has(name)) continue;
+    seen.add(name);
+    // `npm run x` runs `prex`, `x` and `postx`; a hook has no hooks of its own.
+    for (const script of [name, `pre${name}`, `post${name}`]) {
+      names.add(script);
+      for (const scripts of scriptMaps) {
+        if (Object.hasOwn(scripts, script)) for (const match of String(scripts[script]).matchAll(NPM_RUN)) invoked.push(match[1]);
+      }
+    }
+  }
+  for (const hook of NPM_CI_LIFECYCLE) {
+    for (const scripts of scriptMaps) {
+      if (Object.hasOwn(scripts, hook)) for (const match of String(scripts[hook]).matchAll(NPM_RUN)) names.add(match[1]);
+    }
+  }
+  return names;
+}
+
+const isManifest = (path) => /(?:^|\/)package\.json$/u.test(path);
+const manifestScripts = (text) => {
+  try {
+    const scripts = JSON.parse(text)?.scripts;
+    return scripts !== null && typeof scripts === 'object' ? scripts : {};
+  } catch {
+    return {};
+  }
+};
+
+/**
+ * A manifest as the gate reads it: everything except the scripts it cannot run. The root manifest names every verifier
+ * in a script the gate never runs; that is not a read by the gate. A manifest that does not parse is read whole.
+ */
+export function manifestAsTheGateReadsIt(text, reachable) {
+  try {
+    const manifest = JSON.parse(text);
+    if (manifest?.scripts && typeof manifest.scripts === 'object') {
+      manifest.scripts = Object.fromEntries(Object.entries(manifest.scripts).filter(([name]) => reachable.has(name)));
+    }
+    return JSON.stringify(manifest, null, 2);
+  } catch {
+    return String(text ?? '');
+  }
+}
+
+/** Every (path, reader) pair where a file the gate builds or executes reads one of `paths`. */
+export function worldGateBinders({ paths, sources }) {
+  const targets = paths.map(normalizePath).filter(Boolean);
+  if (targets.length === 0) return [];
+  const files = [...sources.keys()].map((key) => [normalizePath(key), key]);
+  const scriptMaps = files.filter(([path]) => isManifest(path)).map(([, key]) => manifestScripts(sources.get(key)));
+  const reachable = worldGateScripts(sources.get(WORLD_GATE_WORKFLOW) ?? '', scriptMaps);
+  // `references`, with each target's binding tokens compiled once rather than once per file.
+  const tokens = targets.map((target) => [target, bindingPatterns(target, { contentRoots: false }), bindingPatterns(target, { contentRoots: true })]);
+  const binders = [];
+  for (const [file, key] of files) {
+    if (!isWorldGateBinder(file)) continue;
+    const text = isManifest(file) ? manifestAsTheGateReadsIt(sources.get(key), reachable) : sources.get(key);
+    const contract = isRootContract(file);
+    const code = contract ? String(text ?? '') : stripFullLineComments(file, text);
+    for (const [target, plain, enumerating] of tokens) {
+      if (file !== target && (contract ? enumerating : plain).some((pattern) => pattern.test(code))) binders.push({ path: target, binder: file });
+    }
+  }
+  return binders;
+}
+
+/** The gate's verdict on a set of changed paths: those that are inputs, and those a gate file reads. */
+export function worldGateInputs({ paths, sources }) {
+  const verdicts = paths.map(normalizePath).filter(Boolean).map(worldGatePathRelevance);
+  const inputs = verdicts.filter((v) => v.input);
+  const candidates = verdicts.filter((v) => !v.input).map((v) => v.path);
+  return { inputs, binders: worldGateBinders({ paths: candidates, sources }) };
+}
+
+/**
+ * Plans the iOS World gate for one event. `cumulative` is the PR's own diff (merge base → head) or null; `delta` the
+ * latest update (predecessor → head) or null; `sources` every tracked text file; `evidence` the `validateEvidence`
+ * verdict on the predecessor head's IOS_WORLD_GATE record.
+ */
+export function planWorldGate({ context, delta, cumulative, sources, evidence }) {
+  if (context?.event === 'pull_request' && Array.isArray(cumulative)) {
+    const paths = cumulative.map(normalizePath).filter(Boolean);
+    if (paths.length > 0) {
+      const verdict = worldGateInputs({ paths, sources });
+      if (verdict.inputs.length === 0 && verdict.binders.length === 0) {
+        return { decision: 'NOT_RELEVANT', reason: 'THE_PULL_REQUEST_HOLDS_NO_INPUT_OF_THE_GATE', contracts: [] };
+      }
+    }
+  }
+  const preamble = updatePreamble(context, delta);
+  if (preamble !== null) return preamble;
+
+  const verdict = worldGateInputs({ paths: delta, sources });
+  if (verdict.inputs.length > 0) return run('DELTA_TOUCHES_GATE', { relevant: verdict.inputs.map((v) => `${v.path} (${v.reason})`) });
+  if (verdict.binders.length > 0) return run('A_GATE_FILE_READS_A_CHANGED_PATH', { relevant: verdict.binders.map((b) => `${b.path} ← ${b.binder}`) });
+  if (evidence?.ok !== true) return run('PREDECESSOR_NOT_PROVEN_GREEN', { refusals: evidence?.refusals ?? ['EVIDENCE_NOT_EVALUATED'] });
+  return { decision: 'CARRY_FORWARD', reason: 'LATEST_DELTA_REACHES_NO_GATE_INPUT_AND_PREDECESSOR_PROVEN_GREEN', contracts: [] };
 }

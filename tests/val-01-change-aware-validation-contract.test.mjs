@@ -24,14 +24,24 @@ import {
   DOMAINS,
   EVIDENCE_JOB_NAME,
   EVIDENCE_SCHEMA,
+  BACKEND_TEST_PATTERNS,
   GATES,
+  IOS_WORLD_GATE,
+  WORLD_GATE_WORKFLOW,
   analyzeLightPaths,
   classifyPath,
   domainsOf,
   evidenceArtifactName,
+  isBackendTestOrFixture,
   isRootContract,
   isValidationTooling,
+  isWorldGateBinder,
+  isWorldGateTooling,
   planGate,
+  planWorldGate,
+  worldGateBinders,
+  worldGatePathRelevance,
+  worldGateScripts,
   selectPredecessorRun,
   stripFullLineComments,
   validateEvidence,
@@ -781,7 +791,11 @@ test('15 — a failed gate cannot be laundered into success by an irrelevant fol
 // ------------------------------------------------------------------------------------------------
 
 test('the workflows plan first, record evidence under ONE job name and artifact identity, and read only what they need', () => {
-  for (const [file, key, gates] of [[API_CI, 'api-ci', ['API_HEAVY']], [MOBILE_CI, 'mobile-ci', ['MOBILE_CONTRACT', 'MOBILE_NATIVE_BINARY']]]) {
+  for (const [file, key, gates] of [
+    [API_CI, 'api-ci', ['API_HEAVY']],
+    [MOBILE_CI, 'mobile-ci', ['MOBILE_CONTRACT', 'MOBILE_NATIVE_BINARY']],
+    [WORLD_GATE_WORKFLOW, 'cosmos-ios-world-gate', [IOS_WORLD_GATE]],
+  ]) {
     const wf = workflow(file);
     assert.deepEqual(wf.permissions, { contents: 'read', actions: 'read' }, `${file} reads runs and artifacts, writes nothing`);
     assert.match(stepText(wf.jobs.plan.steps.at(-1)), new RegExp(`plan-validation\\.mjs plan --workflow ${key}`, 'u'));
@@ -851,4 +865,256 @@ test('VAL-01 adds no dependency and touches no Product source', () => {
 test('the gate is wired', () => {
   assert.equal(scripts['test:val-01-change-aware-validation-contract'], 'node --test tests/val-01-change-aware-validation-contract.test.mjs');
   assert.match(read(MOBILE_CI), /run: npm run test:val-01-change-aware-validation-contract\b/u);
+});
+
+// ------------------------------------------------------------------------------------------------
+// CI-SPEED-01 / C-2 — the iOS World gate (BG-10) is planned by VAL-01: acceptance (PO, 2026-11-24)
+// ------------------------------------------------------------------------------------------------
+
+const WORLD = Object.freeze({
+  verify0201: 'database/verify-migration-0201.mjs',
+  verify0202: 'database/verify-migration-0202.mjs', // the S3 verifier (PR #408); not on this base, so a new path
+  migration0201: 'database/migrations/0201_s8b_07_semantic_commit_instants_v1.sql',
+  apiShared: 'apps/api/src/shared-world/shared-world.service.ts',
+  proofWorld: 'apps/mobile/src/integration/__validation__/s401-proof-world.ts',
+  runner: 'scripts/cosmos-ios-world/run-world-gate.sh',
+  composition: 'tests/cosmos-ios-world-gate-composition-contract.test.mjs',
+  record: 'docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md',
+});
+const worldPlan = (delta, { evidence = GREEN, context = PR_UPDATE, cumulative = null } = {}) =>
+  planWorldGate({ context, delta, cumulative, sources, evidence });
+const firstTracked = (predicate, what) => {
+  const path = trackedPaths.find(predicate);
+  assert.ok(path, `${what} is tracked, so the case is real`);
+  return path;
+};
+
+test('C-2 / 1 — a database verifier alone is no input: carried forward after a PROVEN green head, NOT_RELEVANT for a PR of such files', () => {
+  assert.ok(trackedPaths.includes(WORLD.verify0201));
+  for (const path of [WORLD.verify0201, WORLD.verify0202]) {
+    assert.deepEqual(worldGatePathRelevance(path), { path, input: false, reason: 'BACKEND_TEST_OR_FIXTURE' });
+    const plan = worldPlan([path]);
+    assert.equal(plan.decision, 'CARRY_FORWARD', `${path}: ${plan.reason}`);
+    assert.deepEqual(plan.contracts, []);
+  }
+  // The root manifest names that verifier in a script the gate never runs: that is not a read by the gate.
+  assert.match(read('package.json'), /database\/verify-migration-0201\.mjs/u, 'the root manifest names the verifier (non-vacuity)');
+  assert.deepEqual(worldGateBinders({ paths: [WORLD.verify0201], sources }), []);
+  // Every backend test family is no input, and none is a build input of the app.
+  for (const [pattern, path] of BACKEND_TEST_PATTERNS.map((p) => [p, trackedPaths.find((t) => p.test(t))])) {
+    assert.ok(path, `a tracked file matches ${pattern}`);
+    assert.equal(classifyBuildInput(path).included, false, `${path} is not an input of the app's build`);
+    assert.equal(worldGatePathRelevance(path).input, false, path);
+  }
+  // A pull request made only of verifiers, database tests and documents cannot change what the gate builds or drives.
+  const docsAndTests = [WORLD.verify0201, WORLD.verify0202, firstTracked((p) => p.startsWith('database/tests/'), 'a database test'), WORLD.record];
+  for (const context of [PR_UPDATE, { event: 'pull_request', action: 'opened', predecessorSha: PRED }]) {
+    const plan = worldPlan(docsAndTests, { context, cumulative: docsAndTests, evidence: { ok: false, refusals: ['EVIDENCE_MISSING'] } });
+    assert.equal(plan.decision, 'NOT_RELEVANT', `${context.action}: ${plan.reason}`);
+  }
+});
+
+test('C-2 / 2 — a production migration, API source and the proof world RUN, whatever the evidence says', () => {
+  assert.ok(trackedPaths.includes(WORLD.migration0201) && trackedPaths.includes(WORLD.apiShared) && trackedPaths.includes(WORLD.proofWorld));
+  for (const [path, reason] of [
+    [WORLD.migration0201, /BACKEND_PRODUCTION_SOURCE/u],
+    ['database/supabase-compatible-bootstrap.sql', /BACKEND_PRODUCTION_SOURCE/u],
+    [WORLD.apiShared, /BACKEND_PRODUCTION_SOURCE/u],
+    ['apps/api/scripts/s8b-05-live-call-synthetic-proof.ts', /BACKEND_PRODUCTION_SOURCE/u],
+    [WORLD.proofWorld, /BUILD_INPUT_OF_THE_GATE_APP/u], // the in-memory stand-in that answers as 0138 and shared-world do
+  ]) {
+    const plan = worldPlan([path], { cumulative: [path] });
+    assert.equal(plan.decision, 'RUN', path);
+    assert.equal(plan.reason, 'DELTA_TOUCHES_GATE');
+    assert.match(plan.relevant.join(' '), reason, path);
+  }
+  // One input in a mixed delta is enough.
+  assert.equal(worldPlan([WORLD.verify0201, WORLD.record, WORLD.migration0201]).decision, 'RUN');
+});
+
+test('C-2 / 3 — COSMOS and React Native source, shared packages, manifests and the lockfile RUN', () => {
+  const cosmos = firstTracked((p) => /^apps\/mobile\/src\/.*cosmos/iu.test(p) && /\.tsx?$/u.test(p), 'a COSMOS source file');
+  const pkg = firstTracked((p) => p.startsWith('packages/') && /\.ts$/u.test(p), 'a shared package source file');
+  for (const path of [cosmos, 'apps/mobile/app.json', 'apps/mobile/package.json', pkg, 'package.json', 'package-lock.json', 'tsconfig.base.json']) {
+    const plan = worldPlan([path], { cumulative: [path] });
+    assert.equal(plan.decision, 'RUN', path);
+    assert.match(plan.relevant[0], /BUILD_INPUT_OF_THE_GATE_APP/u, path);
+  }
+});
+
+test('C-2 / 4 — the gate\'s tooling, its contract, its workflow and the validation tooling RUN', () => {
+  const flow = firstTracked((p) => p.startsWith('scripts/cosmos-ios-world/flows/'), 'a World gate flow');
+  for (const path of [WORLD.runner, flow, 'scripts/cosmos-ios-world/xcuitest/CosmosWorldGestureUITests.swift', WORLD.composition,
+    'apps/mobile/scripts/select-s401-proof-entry.mjs', WORLD_GATE_WORKFLOW, 'scripts/validation/change-planner.mjs',
+    'scripts/validation/bounded-run.mjs', 'scripts/phase-m/native-build-fingerprint.mjs', API_CI]) {
+    const plan = worldPlan([path], { cumulative: [path] });
+    assert.equal(plan.decision, 'RUN', path);
+    assert.equal(plan.reason, 'DELTA_TOUCHES_GATE', path);
+  }
+  assert.equal(isWorldGateTooling(WORLD.composition) && isWorldGateTooling(WORLD.runner), true);
+});
+
+test('C-2 / 5 — a document or contract no gate file reads is no input; one a gate file reads RUNS', () => {
+  for (const path of [WORLD.record, 'docs/qandeel-canonical-backlog-v1.md', 'QANDEEL_PROJECT_MAP.md', 'tests/val-01-change-aware-validation-contract.test.mjs']) {
+    assert.equal(worldPlan([path]).decision, 'CARRY_FORWARD', path);
+  }
+  // The mobile generators (build inputs) read the canonical design artifacts: such a "document" is read by the gate's app.
+  const artifact = firstTracked((p) => p.startsWith('docs/design/canonical-artifacts/living-analysis/') && p.endsWith('/wf-living-constellation.html'), 'the canonical constellation artifact');
+  assert.match(read('apps/mobile/scripts/generate-world-visual.mjs'), /wf-living-constellation.html/u, 'a mobile generator reads it (non-vacuity)');
+  const plan = worldPlan([artifact], { cumulative: [artifact] });
+  assert.equal(plan.decision, 'RUN', artifact);
+  assert.equal(plan.reason, 'A_GATE_FILE_READS_A_CHANGED_PATH');
+  // A Maestro flow the gate's own contract reads is an input too (its readers decide, not its directory).
+  const read0 = worldGateBinders({ paths: ['apps/mobile/.maestro/boot-smoke.yaml'], sources });
+  assert.ok(read0.some((b) => b.binder === WORLD.composition), 'the composition contract enumerates flows by extension');
+  // A planted reader in a gate file binds a document at once.
+  const planted = new Map(sources);
+  planted.set(WORLD.runner, `${sources.get(WORLD.runner)}\ncat "$ROOT/${WORLD.record}"\n`);
+  const p2 = planWorldGate({ context: PR_UPDATE, delta: [WORLD.record], cumulative: null, sources: planted, evidence: GREEN });
+  assert.equal(p2.decision, 'RUN');
+  assert.match(p2.relevant[0], new RegExp(`← ${WORLD.runner}$`, 'u'));
+  // So does a manifest script the gate runs — but not one it never runs.
+  const manifest = JSON.parse(sources.get('package.json'));
+  assert.ok(worldGateScripts(sources.get(WORLD_GATE_WORKFLOW), [manifest.scripts]).has('test:cosmos-ios-world-gate-composition-contract'));
+  manifest.scripts['test:cosmos-ios-world-gate-composition-contract'] += ` && node ${WORLD.verify0201}`;
+  const withRun = new Map(sources);
+  withRun.set('package.json', JSON.stringify(manifest, null, 2));
+  assert.equal(planWorldGate({ context: PR_UPDATE, delta: [WORLD.verify0201], cumulative: null, sources: withRun, evidence: GREEN }).decision, 'RUN');
+});
+
+test('C-2 / 6 — an unknown, empty or unestablished change RUNS; so do main, push, dispatch and a PR\'s first head', () => {
+  for (const path of ['some/new/area/thing.bin', 'infra-next/x.yaml', '.gitignore', 'scripts/s8a-03/final-acceptance.ts']) {
+    assert.equal(worldPlan([path], { cumulative: [path] }).decision, 'RUN', path);
+  }
+  // An unknown path is a build input by the QAN-INF-04 default-include law; one that law excludes and no rule names fails safe.
+  assert.equal(worldGatePathRelevance('some/new/area/thing.bin').reason, 'BUILD_INPUT_OF_THE_GATE_APP');
+  assert.equal(worldGatePathRelevance('.gitignore').reason, 'UNCLASSIFIED_PATH_FAILS_SAFE');
+  for (const delta of [null, [], [''], undefined]) assert.equal(worldPlan(delta).decision, 'RUN', JSON.stringify(delta));
+  // A PR's first head with an input runs; an unestablished cumulative diff decides nothing.
+  assert.match(worldPlan([WORLD.record], { context: { event: 'pull_request', action: 'opened', predecessorSha: PRED }, cumulative: [WORLD.runner] }).reason, /^FIRST_HEAD_OF_PULL_REQUEST/u);
+  assert.equal(worldPlan([WORLD.record], { context: { event: 'pull_request', action: 'opened', predecessorSha: PRED }, cumulative: null }).decision, 'RUN');
+  assert.equal(worldPlan([WORLD.record], { context: { event: 'pull_request', action: 'opened', predecessorSha: PRED }, cumulative: [] }).decision, 'RUN');
+  // main, push and dispatch never skip — even for a change that is no input.
+  for (const context of [{ event: 'push', predecessorSha: PRED }, { event: 'workflow_dispatch' }, { event: 'pull_request_target', action: 'synchronize', predecessorSha: PRED }]) {
+    const plan = worldPlan([WORLD.verify0201], { context, cumulative: [WORLD.verify0201] });
+    assert.equal(plan.decision, 'RUN', context.event);
+  }
+});
+
+test('C-2 / 7 — a red, NOT TESTED, cancelled, missing or foreign predecessor result is never carried', () => {
+  const expectation = (o = {}) => goodExpectation({ workflow: 'cosmos-ios-world-gate', gate: IOS_WORLD_GATE, ...o });
+  const record = (o = {}) => goodRecord({ workflow: 'cosmos-ios-world-gate', gate: IOS_WORLD_GATE, ...o });
+  assert.deepEqual(validateEvidence(record(), expectation()), { ok: true, refusals: [] }, 'the baseline verifies');
+  for (const [code, verdict] of [
+    ['EVIDENCE_MISSING', validateEvidence(null, expectation())], // a red or NOT TESTED run wrote none; a lost artifact
+    ['PREDECESSOR_NOT_GREEN', validateEvidence(record({ outcome: 'FAILURE' }), expectation())],
+    ['EVIDENCE_JOB_NOT_GREEN', validateEvidence(record(), expectation({ evidenceJobConclusion: 'cancelled' }))],
+    ['EVIDENCE_NOT_FROM_LATEST_ATTEMPT', validateEvidence(record(), expectation({ latestAttempt: 2 }))],
+    ['BASE_MOVED', validateEvidence(record({ baseSha: 'c'.repeat(40) }), expectation())],
+    ['AUTHORITY_CHANGED', validateEvidence(record({ authorityDigest: 'e'.repeat(64) }), expectation())],
+    ['EVIDENCE_GATE_MISMATCH', validateEvidence(record({ gate: 'MOBILE_NATIVE_BINARY' }), expectation())],
+    ['EVIDENCE_WORKFLOW_MISMATCH', validateEvidence(record({ workflow: 'mobile-ci' }), expectation())],
+    ['NOT_THE_EXACT_PREDECESSOR', validateEvidence(record({ headSha: 'c'.repeat(40) }), expectation())],
+  ]) {
+    assert.ok(verdict.refusals.some((r) => r.startsWith(code)), code);
+    const plan = worldPlan([WORLD.verify0201], { evidence: verdict, cumulative: [WORLD.runner, WORLD.verify0201] });
+    assert.equal(plan.decision, 'RUN', code);
+    assert.equal(plan.reason, 'PREDECESSOR_NOT_PROVEN_GREEN', code);
+  }
+  assert.equal(planWorldGate({ context: PR_UPDATE, delta: [WORLD.verify0201], cumulative: [WORLD.runner], sources }).decision, 'RUN', 'unevaluated evidence is not proof');
+  // A cell's FAIL or NOT TESTED fails the job; a failed or cancelled matrix records no evidence; NOT_RELEVANT records none.
+  const results = workflow(WORLD_GATE_WORKFLOW).jobs['world-gate'].steps.find((s) => s.name === 'Results');
+  assert.match(results.run, /awk -F'\\t' '\$2 != "PASS"'/u, 'any case that is not PASS fails the cell');
+  assert.deepEqual(gateOutcome({ decision: 'RUN', gateResult: 'failure' }), { due: true, green: false, disposition: null });
+  assert.deepEqual(gateOutcome({ decision: 'RUN', gateResult: 'cancelled' }), { due: true, green: false, disposition: null });
+  assert.deepEqual(gateOutcome({ decision: 'NOT_RELEVANT', gateResult: 'skipped' }), { due: false, green: true, disposition: null });
+  assert.equal(gateOutcome({ decision: 'CARRY_FORWARD', boundResult: 'skipped', contracts: '' }).disposition, 'CARRIED_FORWARD');
+});
+
+test('C-2 / 8 — isolation: a backend test is skipped only when no gate file names it, and the gate runs no backend', () => {
+  // Measured over the whole tree, not assumed: the gate's readers are the real app and its tooling, and almost every backend
+  // test or fixture is named by none of them. Those that ARE named — a provenance note in a mobile fixture, a basename or an
+  // extension filter — are inputs, so a change to them runs the gate (the binding tokens over-include; never the reverse).
+  const backendTests = trackedPaths.filter(isBackendTestOrFixture);
+  assert.ok(backendTests.length > 300, `the backend test families are tracked (${backendTests.length})`);
+  assert.ok(trackedPaths.filter(isWorldGateBinder).length > 500, 'the readers looked at are the real app and gate');
+  const named = new Set(worldGateBinders({ paths: backendTests, sources }).map((b) => b.path));
+  const verifiers = backendTests.filter((p) => /^database\/(?:verify|prove)-|^database\/tests\//u.test(p));
+  const unread = verifiers.filter((p) => !named.has(p));
+  assert.ok(unread.length / verifiers.length > 0.95, `${unread.length} of ${verifiers.length} database verifiers, proofs and tests are named by no gate file`);
+  assert.ok(unread.includes(WORLD.verify0201));
+  // A named one runs the gate: the replay-wire fixture in the mobile app names the T-03D verifier it was frozen from.
+  assert.ok(named.has('database/verify-migration-0072.mjs'), 'the provenance mention binds (non-vacuity)');
+  const p0072 = worldPlan(['database/verify-migration-0072.mjs'], { cumulative: ['database/verify-migration-0072.mjs'] });
+  assert.equal(p0072.decision, 'RUN');
+  assert.equal(p0072.reason, 'A_GATE_FILE_READS_A_CHANGED_PATH');
+  assert.match(p0072.relevant[0], /replay-composite\/__fixtures__\/replay-wire\.json$/u);
+  // What the gate executes, beside the app it builds, is its own tooling — no backend file, service, database or API URL.
+  const violations = (text) => {
+    const wf = YAML.parse(text);
+    const out = [];
+    const code = Object.values(wf.jobs).flatMap((job) => (job.steps ?? []).map((s) => s.run ?? '')).join('\n');
+    if (Object.values(wf.jobs).some((job) => job.services !== undefined || job.container !== undefined)) out.push('a service or container');
+    if (/\b(?:postgres|psql|supabase|docker|DATABASE_URL|EXPO_PUBLIC_[A-Z_]*(?:API|URL))/iu.test(code)) out.push('a backend in a step');
+    if (/(?:^|\s)(?:\.\/)?(?:database|apps\/api)\//mu.test(code)) out.push('a backend file executed');
+    for (const m of code.matchAll(/(?:^|\s)(?:bash|node|ruby|sh)\s+("?)([A-Za-z0-9_./-]+\.(?:sh|mjs|js|rb))\1/gmu)) {
+      if (!isWorldGateTooling(m[2]) && !m[2].startsWith('scripts/validation/')) out.push(`an executed file outside the gate's tooling: ${m[2]}`);
+    }
+    return out;
+  };
+  const text = read(WORLD_GATE_WORKFLOW);
+  assert.deepEqual(violations(text), []);
+  const step = '      - name: Results\n';
+  assert.ok(text.includes(step));
+  for (const [name, planted] of [
+    ['a database service', text.replace('    runs-on: macos-26\n', '    runs-on: macos-26\n    services: {postgres: {image: postgres:17}}\n')],
+    ['a verifier executed', text.replace(step, `      - {name: Verify, run: node ${WORLD.verify0201}}\n${step}`)],
+    ['an API URL', text.replace(step, `      - {name: Point, run: echo EXPO_PUBLIC_API_URL=https://x >> "$GITHUB_ENV"}\n${step}`)],
+    ['a foreign script', text.replace(step, `      - {name: Other, run: bash scripts/s8b-03/run-s803-ios-proof.sh}\n${step}`)],
+  ]) assert.notDeepEqual(violations(planted), [], `not caught: ${name}`);
+  // And nothing else loses its integration proof: API CI still starts for, and verifies, every backend change.
+  const apiPaths = workflow(API_CI).on.pull_request.paths;
+  for (const p of ['apps/api/**', 'database/**']) assert.ok(apiPaths.includes(p), `API CI still starts for ${p}`);
+});
+
+test('C-2 / 9 — the gate is wired: plan first, cells only on proof, evidence recorded, the BG-10 matrix and trigger intact', () => {
+  const wf = workflow(WORLD_GATE_WORKFLOW);
+  assert.deepEqual(Object.keys(wf.jobs), ['plan', 'world-gate', 'evidence']);
+  assert.equal(wf.jobs['world-gate'].if, "${{ !cancelled() && needs.plan.outputs.ios_world_gate != 'CARRY_FORWARD' && needs.plan.outputs.ios_world_gate != 'NOT_RELEVANT' }}");
+  assert.deepEqual(wf.jobs['world-gate'].needs, ['plan']);
+  assert.deepEqual(wf.jobs.evidence.needs, ['plan', 'world-gate']);
+  assert.match(stepText(wf.jobs.evidence.steps.find((s) => /record --workflow/u.test(s.run ?? ''))), /--decision "\$\{\{ needs\.plan\.outputs\.ios_world_gate \|\| 'RUN' \}\}"/u, 'an empty plan records RUN');
+  assert.deepEqual(wf.on.push, { branches: ['main'] }, 'main always runs, unfiltered');
+  assert.ok(Object.hasOwn(wf.on, 'workflow_dispatch'), 'a manual run stays possible');
+  // BG-10's trigger (backend scope included) and its permanent ar / size matrix are unchanged; every cell runs every case.
+  for (const p of ['apps/mobile/**', 'packages/**', 'apps/api/**', 'database/**', 'package.json', 'package-lock.json', 'scripts/cosmos-ios-world/**', 'scripts/validation/**', WORLD.composition, WORLD_GATE_WORKFLOW]) {
+    assert.ok(wf.on.pull_request.paths.includes(p), `the trigger keeps ${p}`);
+  }
+  assert.deepEqual(wf.jobs['world-gate'].strategy.matrix.include.map((c) => c.cell), ['i17-en', 'i17-ar', 'small-en']);
+  assert.equal(wf.jobs['world-gate'].strategy['fail-fast'], false);
+  // A planner crash answers RUN for this gate too.
+  assert.match(read('scripts/validation/plan-validation.mjs'), /'cosmos-ios-world-gate': Object\.freeze\(\{ file: WORLD_GATE_WORKFLOW, gates: Object\.freeze\(\[IOS_WORLD_GATE\]\) \}\)/u);
+  assert.equal(GATES.includes(IOS_WORLD_GATE), false, 'the API / Mobile gates and their law are unchanged');
+  assert.equal(planGate({ gate: IOS_WORLD_GATE, context: PR_UPDATE, delta: [WORLD.record], evidence: GREEN }).decision, 'RUN', 'planGate never decides this gate');
+});
+
+test('C-2 / 10 — the narrowing of BG-10\'s backend trigger is declared in COSMOS §21.2 / §31.13, limited, and matches the law', () => {
+  const doc = read('docs/e2e/QANDEEL_COSMOS_INT_01_PRODUCTION_INTEGRATION_CONTRACT_v1.md');
+  const s212 = doc.slice(doc.indexOf('### 21.2 BG-10'), doc.indexOf('### 21.3 '));
+  // §21.2's backend scope stays word for word; the amendment is one declared pointer, not a rewrite.
+  assert.match(s212, /\*\*Backend scope \(PO, 2026-11-18\)\.\*\* Backend changes that can affect iOS behaviour carry the same obligation\./u);
+  assert.match(s212, /\*\*Amended by §31\.13 \(CI-SPEED-01 \/ C-2, 2026-11-24\), declared and limited\.\*\*.*Production backend, migrations included, still does\. BG-10 itself is unchanged\./u);
+  const s3113 = doc.slice(doc.indexOf('### 31.13 '), doc.indexOf('## Appendix A'));
+  assert.ok(s3113.length > 0, '§31.13 exists');
+  assert.match(s3113, /\*\*BG-10 \(§21\.2\) is not withdrawn and not weakened\*\*/u);
+  assert.match(s3113, /never as a pass/u);
+  assert.match(s3113, /A FAIL, NOT TESTED, cancelled or missing predecessor result is never carried/u);
+  // The document's examples are exactly what the law excludes, and what it keeps is exactly what the law RUNS.
+  for (const p of ['database/verify-0202.mjs', 'database/prove-x.mjs', 'database/tests/a.sql', 'database/fixtures/a.json', 'apps/api/src/a/b.spec.ts', 'apps/api/fixtures/a.json']) {
+    assert.equal(isBackendTestOrFixture(p), true, `${p} is the declared narrowing`);
+  }
+  for (const p of ['database/migrations/0202_x.sql', 'apps/api/src/a/b.service.ts', 'database/supabase-compatible-bootstrap.sql']) {
+    assert.equal(isBackendTestOrFixture(p), false, `${p} stays production backend`);
+    assert.equal(worldGatePathRelevance(p).input, true, `${p} RUNS`);
+  }
 });

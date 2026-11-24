@@ -2069,6 +2069,7 @@ No lineage and no context choice appear. That is F-1 (§20), unchanged by CP4.
     - backend paths (the API, the database, migrations, the API contracts);
     - the ar / responsive-size matrix (one device, en).
   - Widening the gate to the full BG-10 scope is Slice E work after the PO's review. Existing tests are not weakened, and nothing bypasses the gate.
+- **Amended by §31.13 (CI-SPEED-01 / C-2, 2026-11-24), declared and limited.** Backend test and fixture files that no gate file names no longer trigger the gate. Production backend, migrations included, still does. BG-10 itself is unchanged.
 
 ### 21.3 D-1 — the root cause, from native touch-path evidence
 - **Diagnostic branch.** `cosmos/slice-e-d1-diag` is a diagnostic only, never merged, with no PR. Its counter board publishes, per touch:
@@ -4153,6 +4154,41 @@ The change touches no production COSMOS, gesture or Replay code. It was made on 
   - It also fails if P-TAP-RAIL or P-LAND loses its initialization, if the initialization writes a row or skips its
     precondition check, or if the 16 / 12 / 3 composition changes.
   - Each of these is shown on a planted defect.
+
+### 31.13 Post-closure CI maintenance: change-aware planning of the iOS World gate (CI-SPEED-01 / C-2, PO authorisation, 2026-11-24)
+
+This section records only a change to how the CI gate is scheduled. COSMOS-INT-01 stays `ACCEPTED / MERGED / CLOSED`.
+No production COSMOS, gesture, Replay, API or database code changes. **BG-10 (§21.2) is not withdrawn and not weakened**,
+and no gate case, cell, assertion or row count changes: §31.12's 31 rows per cell and 93 in all stand.
+
+- **What changes.** A `plan` job now runs before the three macOS cells, with the VAL-01 planner
+  (`scripts/validation/change-planner.mjs`, `planWorldGate`). Its decision is RUN, CARRY_FORWARD or NOT_RELEVANT.
+  A `Validation evidence (VAL-01)` job records the decision and the gate's result for the next head.
+- **RUN (fail closed).** The gate runs whenever the change could reach the app under test or the gate. That covers:
+  - the gate's build inputs, under the QAN-INF-04 law: mobile and COSMOS code, shared packages, manifests, the lockfile
+    and build configuration;
+  - the gate's tooling: its workflow, `scripts/cosmos-ios-world/**`, the composition contract and the S401 entry
+    selector;
+  - validation authority, including `scripts/validation/**`;
+  - **production backend:** every `apps/api/**` and `database/**` file that is not a test or fixture file, migrations
+    included (the BG-10 backend scope);
+  - any path whose classification is unknown;
+  - any file that a gate reader names, even a test file;
+  - the first head of a pull request with any such input, every `main` push and every manual dispatch.
+- **The one narrowing of §21.2's backend trigger, declared.** Backend **test and fixture files** do not trigger the gate,
+  unless a file the gate reads names them. Examples are `database/verify-*.mjs`, `database/prove-*.mjs`, verifiers,
+  `database/tests/**`, `database/fixtures/**`, `apps/api/src/**/*.spec.ts` and `apps/api/fixtures/**`.
+  - Why this is safe: the gate's app is the S401 proof build. It runs the production composition over a synthetic
+    network and an in-memory Shared stand-in, and it reaches no real API or database. The gate's workflow starts no
+    database or service, and it executes no `apps/api/` or `database/` file.
+  - The VAL-01 contract proves each point on planted defects. If any point stops holding, the narrowing stops applying.
+  - These files are still verified by API CI, which keeps its `apps/api/**` and `database/**` triggers.
+- **NOT_RELEVANT** applies only to a pull request whose whole diff, from the merge base to the head, holds no gate
+  input. It is shown as `NOT_RELEVANT`, never as a pass.
+- **CARRY_FORWARD** applies only when the latest push holds no gate input and the predecessor's evidence is proven
+  green. The evidence must match the exact predecessor head, the base, the authority digest, the latest attempt and the
+  gate. A FAIL, NOT TESTED, cancelled or missing predecessor result is never carried: the gate runs.
+- **Regression check:** `tests/val-01-change-aware-validation-contract.test.mjs`, cases C-2/1 to C-2/9.
 
 ## Appendix A — files opened for this contract (main @ `5a21971d`, cosmos @ `d5c45571` + working tree)
 
