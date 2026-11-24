@@ -3971,6 +3971,11 @@ capture position, no call certifies anything, so no moment is placed inside a re
 consume the answer yet (S4), and export and publishing (S5) are not done. iOS stays fail-closed; 4G is not tested.
 `0202` is not hosted. The item stays `OPEN — UNASSIGNED`.
 
+Progress note (2026-11-24, RB-2 / M-2, not a disposition): migration `0203`, Live Call protocol v2 and the Android
+capture-clock marker certify a committed moment's capture position on Android calls (stacked Draft PR, §17 of the
+[S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md)). iOS stays fail-closed (`AFTER_END`); 4G is not
+tested; devices other than the HONOR ALI-NX1 are not tested; P99 certification reached 2119 ms in one of three contended local runs (MEDIUM, to be measured on a production-like database); First Audio M1 P95 +28 ms (LOW); WAL +34 % while calls run (LOW). `0203` is not hosted. The item stays `OPEN — UNASSIGNED`.
+
 ### `QAN-BL-NAV-04` — No Full Personal Detail Surface Beyond the PEEK (PERSONAL-DETAIL-01)
 
 - **Title / Finding:** the Personal Detail Sheet is PEEK-only (G-7, V1). There is no full Personal detail surface for a

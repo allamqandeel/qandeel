@@ -5328,3 +5328,38 @@ npm run test:replay-historical-availability-contract
 The verifier needs `DATABASE_URL` pointing at a FULLY migrated database. It commits fixtures (the ledger exists only
 across real commits), plants a certifying seam for the placement scenarios, and removes every fixture person through the
 account erasure. Its eight planted defects each have a canonical control.
+
+## S8B-07 RB-2 / M-2 - Live call certified clock marks (migration 0203)
+
+`0203_s8b_07_live_call_clock_marks_v1.sql` is REPLAY-COSMOS-01 RB-2's direct historical binding (M-2), under the Product
+Owner's "RB-2 / M-2 + S3 PRODUCTION IMPLEMENTATION — Direct Historical Binding" authorization (2026-11-24, CP2 / CP4).
+Forward-only, one transaction; `0201` is byte-identical and `0202`'s read is untouched — only its seam is replaced. Record:
+the [S8B-07 record](../docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §17; protocol:
+[Live Call Protocol v2](../docs/voice/QANDEEL_LIVE_CALL_PROTOCOL_v2.md).
+
+- **The chain.** A slot statement (`server_call_clock_slot_v1`, `service_role` only) persists the echoes received since
+  the previous slot and takes `pg_current_snapshot()` LAST; the API sends CLOCK_MARK only after it has committed; the
+  Android phone echoes the capture position of the first frame captured at least 100 ms after the mark arrived. An echo
+  certifies W = the longest contiguous prefix of the call's Session ledger visible in that snapshot
+  (`pg_visible_in_snapshot(xact_id, snapshot)`, stopping at the first hole): every row of W committed before the mark was
+  sent, hence before the echoed frame was captured.
+- **Relations** (`voice_private`): `call_clock_snapshots` (per API instance, collected after 120 s), `call_clock_marks`
+  (one row per certified ledger coordinate, write-on-change) and `call_clock_cert_ranges` (the compacted Pareto pairs of
+  an ENDED call, one row per call). Marks and ranges cascade with the call and the person (`ACCOUNT_CASCADE`).
+- **Write-on-change.** An echo is stored only if no held pair with an echo at or before it already certifies as long a
+  prefix. The seam (`replay_call_certified_capture_ms_v1`) is the minimum echo whose W covers the target: identical to
+  keeping every echo (the verifier proves optimized == unoptimized on the same data).
+- **Compaction.** `compact_call_clock_marks_v1` keeps the Pareto-minimal pairs of an ENDED call in its range row and
+  deletes its marks; idempotent, merges later marks, never touches a live call, preserves every position.
+- **Never early.** An unknown, expired, foreign-instance or malformed echo is dropped; a snapshot cannot certify a commit
+  it does not see; a hole stops W. `observed_at` and `trigger_at` are never read. iOS is never asked (fail-closed).
+- **Deployment.** Not deployed.
+
+```sh
+npm run verify:live-call-clock-marks:integration
+npm run test:live-call-clock-marks-contract
+```
+
+The verifier needs `DATABASE_URL` pointing at a FULLY migrated database. It commits fixtures (the ledger exists only
+across real commits), models lost, delayed, reordered and duplicated echoes and a reconnect against a reference, measures
+WAL, and removes every fixture person through the account erasure. Its six planted defects each have a canonical control.
