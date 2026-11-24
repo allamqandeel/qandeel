@@ -9,15 +9,18 @@
 import { buildReplayCameraPlan, cameraAt, planFutureViolations } from '../camera-plan';
 import { replayFrameFacts, REVEAL_MS } from '../frame';
 import { marksOf } from '../stages';
-import { buildReplayCosmosTimeline, frameTimeMs, knowledgeAt, knowledgeOnFrame, type ReplayCosmosMomentInput, type ReplayCosmosTimeline } from '../timeline';
+import { buildReplayCosmosTimeline, frameTimeMs, knowledgeAt, knowledgeOnFrame, UNRECORDED_AVAILABILITY, type ReplayCosmosAvailability, type ReplayCosmosMomentInput, type ReplayCosmosTimeline } from '../timeline';
 import { KNOWLEDGE, STAGES, VIEW, sceneOf, stageOf } from '../__fixtures__/synthetic-history';
 
 // Six text-presented moments of 4 s (each shown whole at its window's start, so the speech guard is that start; the
 // audio case — a window's END — is RB-1's own suite, rb1-audio-clock.test.ts).
+// RB-2 / S4 RE-ANCHOR (input shape only; every assertion unchanged): availability is typed (contract v1.1 §6.2) — a
+// recorded instant is RECORDED{atMs}, none is UNRECORDED — and the named pre-RB-2 policy is passed as `mode`.
+const typed = (at: number | null): ReplayCosmosAvailability => (at === null ? UNRECORDED_AVAILABILITY : { kind: 'RECORDED', atMs: at });
 const moments = (available: (ordinal: number, start: number) => number | null): ReplayCosmosMomentInput[] =>
-  [1, 2, 3, 4, 5, 6].map((ordinal) => ({ ordinal, tc: ordinal, windowStartMs: (ordinal - 1) * 4000, windowEndMs: ordinal * 4000, completeAtMs: (ordinal - 1) * 4000, availableAtMs: available(ordinal, (ordinal - 1) * 4000) }));
+  [1, 2, 3, 4, 5, 6].map((ordinal) => ({ ordinal, tc: ordinal, windowStartMs: (ordinal - 1) * 4000, windowEndMs: ordinal * 4000, completeAtMs: (ordinal - 1) * 4000, availability: typed(available(ordinal, (ordinal - 1) * 4000)) }));
 const built = (input: ReplayCosmosMomentInput[], scope: Parameters<typeof buildReplayCosmosTimeline>[1] = { kind: 'FULL' }): ReplayCosmosTimeline => {
-  const r = buildReplayCosmosTimeline(input, scope, { fps: 30, unrecorded: 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY' });
+  const r = buildReplayCosmosTimeline(input, scope, { fps: 30, mode: 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY' });
   if (!r.ok) throw new Error(r.reason);
   return r.timeline;
 };
@@ -81,9 +84,9 @@ describe('the timeline: availability is the authority, and the no-future guard s
 
   it('refuses a scope outside the version, a reversed scope, and out-of-order moments', () => {
     const input = moments(() => null);
-    expect(buildReplayCosmosTimeline(input, { kind: 'RANGE', startMs: 0, endMs: 24_001 }, { fps: 30, unrecorded: 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY' }).ok).toBe(false);
-    expect(buildReplayCosmosTimeline(input, { kind: 'RANGE', startMs: 5000, endMs: 5000 }, { fps: 30, unrecorded: 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY' }).ok).toBe(false);
-    expect(buildReplayCosmosTimeline([input[1], input[0]], { kind: 'FULL' }, { fps: 30, unrecorded: 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY' }).ok).toBe(false);
+    expect(buildReplayCosmosTimeline(input, { kind: 'RANGE', startMs: 0, endMs: 24_001 }, { fps: 30, mode: 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY' }).ok).toBe(false);
+    expect(buildReplayCosmosTimeline(input, { kind: 'RANGE', startMs: 5000, endMs: 5000 }, { fps: 30, mode: 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY' }).ok).toBe(false);
+    expect(buildReplayCosmosTimeline([input[1], input[0]], { kind: 'FULL' }, { fps: 30, mode: 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY' }).ok).toBe(false);
   });
 });
 

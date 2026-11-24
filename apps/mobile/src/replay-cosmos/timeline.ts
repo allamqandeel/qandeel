@@ -10,7 +10,7 @@
  *   - availability(k): the first historically RECORDED instant at which the analysis became available to the
  *     authorised map, already mapped onto presentation time (PO decision, 2026-11-22). Never the end of a speaker's
  *     audio, of the turn, the export request or a projection rebuild. Where none is recorded the caller must name the
- *     policy it applies (`unrecorded`); nothing is inferred from turn order and no time is invented;
+ *     policy it applies (`mode`); nothing is inferred from turn order and no time is invented;
  *   - windowStart(k): the SP/TC no-future guard, kept independently — knowledge at TC = k never shows before the
  *     presentation reaches moment k;
  *   - completeAt(k): NO ANALYSIS BEFORE SPEECH (PO, RB-1, 2026-11-23: a hard invariant) — knowledge at TC = k never
@@ -26,7 +26,28 @@
  * start (never the final state, never nothing), and nothing in it is shortened, snapped or dropped. A disclosure that
  * falls at or after the scope's end is never pulled back into its last frame: it is listed (`afterEnd`), not drawn — what
  * a Replay shows after its last audio is a separate PO decision (the end-of-Replay policy).
+ *
+ * RB-2 / S4 (PO execution directive, 2026-11-24; RB-2 contract v1.1 §6.2 / §7): availability is TYPED end to end, never
+ * `null`. RECORDED{atMs} is a historically certified instant (the S3 answer, bound by the phone and mapped onto this clock);
+ * AFTER_END is +Infinity, so it is always listed in `afterEnd` and never reaches the speech guards; UNRECORDED claims no
+ * time at all. The caller names the mode: CERTIFIED (the Replay of a version with original audio) REFUSES any UNRECORDED
+ * moment — the caller then shows the neutral, analysis-free stage (`neutralReplayCosmosTimeline`, U-N), never a snapshot
+ * or opening knowledge; UNESTABLISHED_PRESENTATION_GUARDS_ONLY is the pre-RB-2 behaviour of a version with no audio (V1 and
+ * text only, D-RB2-12: ordinal pacing, labelled, never a historical-availability claim). The guard line is unchanged.
  */
+
+/**
+ * RB-2 / S4: a moment's historical availability on the full presentation clock. RECORDED: certified at `atMs` (an
+ * in-recording position mapped AT OR AFTER, never earlier). AFTER_END: certified only after the whole recording — never
+ * drawn inside the Replay, whatever the scope. UNRECORDED: no time established (UNESTABLISHED, BROKEN, ORDINAL_ONLY, a
+ * refused answer, or none fetched); nothing may be inferred from it.
+ */
+export type ReplayCosmosAvailability =
+  | { readonly kind: 'RECORDED'; readonly atMs: number }
+  | { readonly kind: 'AFTER_END' }
+  | { readonly kind: 'UNRECORDED' };
+
+export const UNRECORDED_AVAILABILITY: ReplayCosmosAvailability = Object.freeze({ kind: 'UNRECORDED' as const });
 
 /** One moment of the version, on the full (unscoped) presentation clock. */
 export interface ReplayCosmosMomentInput {
@@ -38,8 +59,8 @@ export interface ReplayCosmosMomentInput {
   readonly completeAtMs: number;
   /** The moment whose presentation window this is: a later unit of a voice turn names its turn's first (C-B1). */
   readonly presentedBy?: number;
-  /** The recorded map-availability instant, on the full presentation clock; null where none was recorded. */
-  readonly availableAtMs: number | null;
+  /** When the moment's analysis became historically available, on the full presentation clock (typed; never null). */
+  readonly availability: ReplayCosmosAvailability;
 }
 
 /**
@@ -50,6 +71,15 @@ export interface ReplayCosmosMomentInput {
  * (`LEGACY_WINDOW_START_PENDING_PO`), and is never earlier than it.
  */
 export type UnrecordedAvailabilityPolicy = 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY';
+
+/**
+ * RB-2 / S4: CERTIFIED — every drawn disclosure rests on a certified availability (an UNRECORDED moment refuses the
+ * timeline); or the named pre-RB-2 policy, selected explicitly by a caller that claims no historical time.
+ */
+export type ReplayTimelineMode = 'CERTIFIED' | UnrecordedAvailabilityPolicy;
+
+/** The refusal a CERTIFIED timeline gives for a moment with no certified availability (the caller shows U-N). */
+export const UNRECORDED_IN_CERTIFIED = 'UNRECORDED_AVAILABILITY_IN_CERTIFIED_MODE';
 
 export type ReplayScope =
   | { readonly kind: 'FULL' }
@@ -90,12 +120,17 @@ export interface ReplayCosmosTimeline {
 
 export type TimelineRefusal = { readonly ok: false; readonly reason: string };
 
-export function buildReplayCosmosTimeline(
-  moments: readonly ReplayCosmosMomentInput[],
-  scope: ReplayScope,
-  /** `durationMs`: the presentation's own length (the audio clock's, past the last window); default the last window end. */
-  options: { readonly fps: number; readonly unrecorded: UnrecordedAvailabilityPolicy; readonly durationMs?: number },
-): { readonly ok: true; readonly timeline: ReplayCosmosTimeline } | TimelineRefusal {
+export interface ReplayTimelineOptions {
+  readonly fps: number;
+  readonly mode: ReplayTimelineMode;
+  /** The presentation's own length (the audio clock's, past the last window); default the last window end. */
+  readonly durationMs?: number;
+}
+
+type Scoped = { readonly ok: true; readonly startMs: number; readonly endMs: number } | TimelineRefusal;
+
+/** The checks every timeline of a version makes, and its scope on the full clock. */
+function scopeOf(moments: readonly ReplayCosmosMomentInput[], scope: ReplayScope, options: { readonly fps: number; readonly durationMs?: number }): Scoped {
   if (moments.length === 0) return { ok: false, reason: 'no moment' };
   if (!(options.fps > 0)) return { ok: false, reason: 'fps' };
   for (let i = 0; i < moments.length; i += 1) {
@@ -113,18 +148,45 @@ export function buildReplayCosmosTimeline(
   const startMs = scope.kind === 'FULL' ? 0 : scope.startMs;
   const endMs = scope.kind === 'FULL' ? total : scope.endMs;
   if (!(startMs >= 0 && endMs > startMs && endMs <= total)) return { ok: false, reason: 'scope outside the version' };
+  return { ok: true, startMs, endMs };
+}
+
+/** One window per presented window, on the scoped clock: a later unit of a voice turn is on its turn's window. */
+function scopedWindows(moments: readonly ReplayCosmosMomentInput[], startMs: number, endMs: number): ReplayCosmosTimeline['windows'] {
+  return moments
+    .filter((m) => (m.presentedBy ?? m.ordinal) === m.ordinal)
+    .filter((m) => m.windowEndMs > startMs && m.windowStartMs < endMs)
+    .map((m) => ({ ordinal: m.ordinal, startMs: Math.max(m.windowStartMs, startMs) - startMs, endMs: Math.min(m.windowEndMs, endMs) - startMs }));
+}
+
+/** Causal: the first frame i with i · frameMs ≥ atMs. The epsilon only absorbs binary rounding of an exact boundary. */
+export const causalFrame = (atMs: number, fps: number): number => Math.ceil(atMs / (1000 / fps) - 1e-9);
+
+export function buildReplayCosmosTimeline(
+  moments: readonly ReplayCosmosMomentInput[],
+  scope: ReplayScope,
+  options: ReplayTimelineOptions,
+): { readonly ok: true; readonly timeline: ReplayCosmosTimeline } | TimelineRefusal {
+  const scoped = scopeOf(moments, scope, options);
+  if (!scoped.ok) return scoped;
+  const { startMs, endMs } = scoped;
+  // CERTIFIED: no disclosure without a certified time. One UNRECORDED moment refuses the whole timeline — K(k) contains
+  // K(k − 1), so no later moment could be placed either, and no opening knowledge is drawn from it (N-04, N-09).
+  if (options.mode === 'CERTIFIED' && moments.some((m) => m.availability.kind === 'UNRECORDED')) return { ok: false, reason: UNRECORDED_IN_CERTIFIED };
 
   // Disclosure times on the FULL clock, with every guard.
   let previous = -Infinity;
   const full = moments.map((m) => {
-    const recorded = m.availableAtMs;
-    const available = recorded ?? -Infinity; // the named policy: the guards alone decide; nothing is computed or filled in
+    const a = m.availability;
+    // RECORDED: its certified instant. AFTER_END: +Infinity, so it can only ever be listed after the scope (N-01, N-03).
+    // UNRECORDED (only under the named pre-RB-2 policy): the guards alone decide; nothing is computed or filled in.
+    const recorded = a.kind === 'RECORDED' ? a.atMs : a.kind === 'AFTER_END' ? Infinity : null;
+    const available = recorded ?? -Infinity;
     const at = Math.max(available, m.windowStartMs, m.completeAtMs, previous);
     previous = at;
     return { m, at, recorded, held: recorded === null ? null : at - recorded };
   });
 
-  const frameMs = 1000 / options.fps;
   let initialOrdinal: number | null = null;
   const steps: ReplayDisclosureStep[] = [];
   const unrecorded: number[] = [];
@@ -133,21 +195,39 @@ export function buildReplayCosmosTimeline(
     if (d.at <= startMs) { initialOrdinal = d.m.ordinal; if (d.recorded === null) unrecorded.push(d.m.ordinal); continue; }
     if (d.at >= endMs) { afterEnd.push(d.m.ordinal); continue; }
     const atMs = d.at - startMs;
-    // Causal: the first frame i with i · frameMs ≥ atMs. The epsilon only absorbs binary rounding of an exact boundary.
-    const frame = Math.ceil(atMs / frameMs - 1e-9);
+    const frame = causalFrame(atMs, options.fps);
     steps.push({
       ordinal: d.m.ordinal, tc: d.m.tc, atMs, frame, frameLagMs: (frame * 1000 - atMs * options.fps) / options.fps,
-      availability: d.recorded === null ? options.unrecorded : 'RECORDED', heldByGuardMs: d.held,
+      availability: d.recorded === null ? 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY' : 'RECORDED', heldByGuardMs: d.held,
     });
     if (d.recorded === null) unrecorded.push(d.m.ordinal);
   }
-  // One window per presented window: a later unit of a voice turn is on its turn's window, not on a second one.
-  const windows = moments
-    .filter((m) => (m.presentedBy ?? m.ordinal) === m.ordinal)
-    .filter((m) => m.windowEndMs > startMs && m.windowStartMs < endMs)
-    .map((m) => ({ ordinal: m.ordinal, startMs: Math.max(m.windowStartMs, startMs) - startMs, endMs: Math.min(m.windowEndMs, endMs) - startMs }));
+  const windows = scopedWindows(moments, startMs, endMs);
   const availabilityEstablished = unrecorded.length === 0;
   return { ok: true, timeline: { scope, startMs, endMs, durationMs: endMs - startMs, fps: options.fps, initialOrdinal, steps, unrecorded, availabilityEstablished, afterEnd, windows } };
+}
+
+/**
+ * RB-2 / S4, U-N (contract v1.1 §7, D-RB2-3): the NEUTRAL, analysis-free timeline of a scope whose availability is not
+ * certified — pending, refused, unavailable, or any UNRECORDED moment in CERTIFIED mode. The same windows and clock, and
+ * NOTHING disclosed: no step, no opening knowledge, no tail. Its frames draw the empty stage; the analysis held in the
+ * Replay snapshot is never drawn merely because it exists.
+ */
+export function neutralReplayCosmosTimeline(
+  moments: readonly ReplayCosmosMomentInput[],
+  scope: ReplayScope,
+  options: { readonly fps: number; readonly durationMs?: number },
+): { readonly ok: true; readonly timeline: ReplayCosmosTimeline } | TimelineRefusal {
+  const scoped = scopeOf(moments, scope, options);
+  if (!scoped.ok) return scoped;
+  const { startMs, endMs } = scoped;
+  return {
+    ok: true,
+    timeline: {
+      scope, startMs, endMs, durationMs: endMs - startMs, fps: options.fps, initialOrdinal: null, steps: [],
+      unrecorded: moments.map((m) => m.ordinal), availabilityEstablished: false, afterEnd: [], windows: scopedWindows(moments, startMs, endMs),
+    },
+  };
 }
 
 /** The knowledge visible at scoped time t: the latest step disclosed at or before t, else the opening knowledge. */

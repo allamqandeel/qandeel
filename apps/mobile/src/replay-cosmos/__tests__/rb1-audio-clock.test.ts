@@ -30,8 +30,12 @@ import {
   replayStageTime,
   type ReplayPresentationClock,
 } from '../presentation-clock';
-import { buildReplayCosmosTimeline, knowledgeAt, type ReplayCosmosMomentInput, type ReplayCosmosTimeline } from '../timeline';
+import { buildReplayCosmosTimeline, knowledgeAt, UNRECORDED_AVAILABILITY, type ReplayCosmosAvailability, type ReplayCosmosMomentInput, type ReplayCosmosTimeline } from '../timeline';
 import { STAGES, sceneOf } from '../__fixtures__/synthetic-history';
+
+// RB-2 / S4 RE-ANCHOR (input shape only; every assertion unchanged): availability is typed (contract v1.1 §6.2) — none
+// is UNRECORDED, a synthetic recorded instant is RECORDED{atMs} — and the named pre-RB-2 policy is passed as `mode`.
+const recordedAt = (atMs: number): ReplayCosmosAvailability => ({ kind: 'RECORDED', atMs });
 
 const FPS = 30;
 const paceOf = (m: ReplayHistoryMoment): number => readingPaceMs(m.text ?? '');
@@ -47,7 +51,7 @@ const clockOf = (paceMs = paceOf): ReplayPresentationClock => {
   return c;
 };
 const timelineOf = (inputs: readonly ReplayCosmosMomentInput[], durationMs?: number): ReplayCosmosTimeline => {
-  const r = buildReplayCosmosTimeline(inputs, { kind: 'FULL' }, { fps: FPS, unrecorded: 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY', ...(durationMs === undefined ? {} : { durationMs }) });
+  const r = buildReplayCosmosTimeline(inputs, { kind: 'FULL' }, { fps: FPS, mode: 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY', ...(durationMs === undefined ? {} : { durationMs }) });
   if (!r.ok) throw new Error(r.reason);
   return r.timeline;
 };
@@ -63,8 +67,8 @@ describe('RB-1 · the existing mismatch: the timeline refused what the presentat
   it('overlapping USER / QANDEEL windows from the map are accepted, and every window is kept (none dropped or flattened)', () => {
     // Before RB-1, buildReplayCosmosTimeline refused this ("out of order"): a QANDEEL window starting inside a USER one.
     const inputs: ReplayCosmosMomentInput[] = [
-      { ordinal: 2, tc: 2, windowStartMs: 3_500, windowEndMs: 9_500, completeAtMs: 9_500, availableAtMs: null },
-      { ordinal: 3, tc: 3, windowStartMs: 7_500, windowEndMs: 12_500, completeAtMs: 12_500, availableAtMs: null },
+      { ordinal: 2, tc: 2, windowStartMs: 3_500, windowEndMs: 9_500, completeAtMs: 9_500, availability: UNRECORDED_AVAILABILITY },
+      { ordinal: 3, tc: 3, windowStartMs: 7_500, windowEndMs: 12_500, completeAtMs: 12_500, availability: UNRECORDED_AVAILABILITY },
     ];
     const tl = timelineOf(inputs);
     expect(tl.windows).toEqual([{ ordinal: 2, startMs: 3_500, endMs: 9_500 }, { ordinal: 3, startMs: 7_500, endMs: 12_500 }]);
@@ -112,12 +116,12 @@ describe('RB-1 S1 · replayPresentationClock(plan): one presentation clock from 
   it('gives the timeline every moment: windows from the map, a later unit on its turn\'s window, nothing invented', () => {
     const c = clockOf();
     expect(c.inputs).toEqual([
-      { ordinal: 1, tc: 1, windowStartMs: 0, windowEndMs: P1, completeAtMs: 0, presentedBy: 1, availableAtMs: null },
-      { ordinal: 2, tc: 2, windowStartMs: R0, windowEndMs: R0 + 6_000, completeAtMs: R0 + 6_000, presentedBy: 2, availableAtMs: null },
-      { ordinal: 3, tc: 3, windowStartMs: R0 + 4_000, windowEndMs: R0 + 9_000, completeAtMs: R0 + 9_000, presentedBy: 3, availableAtMs: null },
-      { ordinal: 4, tc: 4, windowStartMs: R0 + 4_000, windowEndMs: R0 + 9_000, completeAtMs: R0 + 9_000, presentedBy: 3, availableAtMs: null },
-      { ordinal: 5, tc: 5, windowStartMs: R0 + 9_000, windowEndMs: R0 + 9_000 + pace('fifth'), completeAtMs: R0 + 9_000, presentedBy: 5, availableAtMs: null },
-      { ordinal: 6, tc: 6, windowStartMs: R1, windowEndMs: R1 + 5_000, completeAtMs: R1 + 5_000, presentedBy: 6, availableAtMs: null },
+      { ordinal: 1, tc: 1, windowStartMs: 0, windowEndMs: P1, completeAtMs: 0, presentedBy: 1, availability: UNRECORDED_AVAILABILITY },
+      { ordinal: 2, tc: 2, windowStartMs: R0, windowEndMs: R0 + 6_000, completeAtMs: R0 + 6_000, presentedBy: 2, availability: UNRECORDED_AVAILABILITY },
+      { ordinal: 3, tc: 3, windowStartMs: R0 + 4_000, windowEndMs: R0 + 9_000, completeAtMs: R0 + 9_000, presentedBy: 3, availability: UNRECORDED_AVAILABILITY },
+      { ordinal: 4, tc: 4, windowStartMs: R0 + 4_000, windowEndMs: R0 + 9_000, completeAtMs: R0 + 9_000, presentedBy: 3, availability: UNRECORDED_AVAILABILITY },
+      { ordinal: 5, tc: 5, windowStartMs: R0 + 9_000, windowEndMs: R0 + 9_000 + pace('fifth'), completeAtMs: R0 + 9_000, presentedBy: 5, availability: UNRECORDED_AVAILABILITY },
+      { ordinal: 6, tc: 6, windowStartMs: R1, windowEndMs: R1 + 5_000, completeAtMs: R1 + 5_000, presentedBy: 6, availability: UNRECORDED_AVAILABILITY },
     ]);
   });
 
@@ -147,8 +151,8 @@ describe('RB-1 · NO ANALYSIS BEFORE SPEECH, on the timeline', () => {
   it('3 · overlapping windows: the causal boundary is the latest end among the windows it depends on (running maximum)', () => {
     // A short QANDEEL interjection wholly inside a long USER window: K(3) contains K(2), so it waits for 2's end too.
     const tl2 = timelineOf([
-      { ordinal: 2, tc: 2, windowStartMs: 0, windowEndMs: 10_000, completeAtMs: 10_000, availableAtMs: null },
-      { ordinal: 3, tc: 3, windowStartMs: 2_000, windowEndMs: 3_000, completeAtMs: 3_000, availableAtMs: null },
+      { ordinal: 2, tc: 2, windowStartMs: 0, windowEndMs: 10_000, completeAtMs: 10_000, availability: UNRECORDED_AVAILABILITY },
+      { ordinal: 3, tc: 3, windowStartMs: 2_000, windowEndMs: 3_000, completeAtMs: 3_000, availability: UNRECORDED_AVAILABILITY },
     ], 12_000);
     expect(tl2.steps.map((s) => [s.ordinal, s.atMs])).toEqual([[2, 10_000], [3, 10_000]]);
     expect(knowledgeAt(tl2, 9_999)).toBeNull();
@@ -183,7 +187,7 @@ describe('RB-1 · NO ANALYSIS BEFORE SPEECH, on the timeline', () => {
 describe('RB-2 CONTRACT (synthetic recorded instants; no production source until RB-2) · the availability guard', () => {
   it('2 · never before an authoritative availability: a later recorded instant decides, an earlier one is held to the speech', () => {
     const c = clockOf();
-    const inputs = c.inputs.map((m) => (m.ordinal === 2 ? { ...m, availableAtMs: R0 + 8_200 } : m.ordinal === 3 ? { ...m, availableAtMs: R0 + 5_000 } : { ...m, availableAtMs: m.completeAtMs }));
+    const inputs = c.inputs.map((m) => (m.ordinal === 2 ? { ...m, availability: recordedAt(R0 + 8_200) } : m.ordinal === 3 ? { ...m, availability: recordedAt(R0 + 5_000) } : { ...m, availability: recordedAt(m.completeAtMs) }));
     const tl = timelineOf(inputs, c.durationMs);
     const step = (o: number) => tl.steps.find((s) => s.ordinal === o)!;
     expect(step(2)).toMatchObject({ atMs: R0 + 8_200, availability: 'RECORDED', heldByGuardMs: 0 });
@@ -400,7 +404,7 @@ describe('FC-0 · the HONOR audible proof: no disclosure before the speech is HE
       const inputs = MOMENTS_AS_TEXT.map((m) => {
         const windowStartMs = start;
         start += paceOf(m);
-        return { ordinal: m.ordinal, tc: m.tc, windowStartMs, windowEndMs: start, completeAtMs: windowStartMs, availableAtMs: null };
+        return { ordinal: m.ordinal, tc: m.tc, windowStartMs, windowEndMs: start, completeAtMs: windowStartMs, availability: UNRECORDED_AVAILABILITY };
       });
       expect(timelineOf(inputs).steps.map((s) => s.atMs)).toEqual(inputs.slice(1).map((m) => m.windowStartMs));
     } finally {
@@ -456,7 +460,7 @@ describe('RB-1 · the text-only fallback is preserved (no audio claim)', () => {
     const inputs = MOMENTS_AS_TEXT.map((m) => {
       const windowStartMs = start;
       start += paceOf(m);
-      return { ordinal: m.ordinal, tc: m.tc, windowStartMs, windowEndMs: start, completeAtMs: windowStartMs, availableAtMs: null };
+      return { ordinal: m.ordinal, tc: m.tc, windowStartMs, windowEndMs: start, completeAtMs: windowStartMs, availability: UNRECORDED_AVAILABILITY };
     });
     const tl = timelineOf(inputs);
     expect(tl.initialOrdinal).toBe(1);

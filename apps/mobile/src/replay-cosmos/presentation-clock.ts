@@ -9,7 +9,9 @@
  *   windows   every WINDOW of every run, overlapping speakers kept as they are (none dropped, merged or flattened)
  *   inputs    each moment for the timeline: its window (a later unit of a voice turn: its turn's, C-B1), the instant it
  *             has been presented in full (an audio window's END: no analysis before speech; a text moment's display),
- *             and NO availability (none is recorded before RB-2 — never filled in here)
+ *             and NO availability (UNRECORDED: nothing is filled in here; RB-2 / S4's `withReplayAvailability` applies a
+ *             bound answer, each IN_RECORDING place at `runStartMs(runIndex) + fileMs` — the server already placed it AT
+ *             OR AFTER the certified capture position — and AFTER_END as it is)
  *   at(place) the clock's place (a file position, or the elapsed part of the pause) as presentation time; `placeAt` the
  *             reverse, which is how the export places the original audio under its frames (S3)
  *
@@ -20,9 +22,11 @@
  */
 import { boundaryPauseMs, type PresentationBoundary, type PresentationSpan, type PresentationTrack } from '../original-audio/presentation-map';
 import type { ReplayAudioPlace, ReplayAudioPlan } from '../original-audio/replay-audio-clock';
+import { momentAvailability, type ReplayAvailability } from '../original-audio/replay-availability';
+import type { ReplayAvailabilitySourceState } from '../original-audio/replay-availability-source';
 import type { ReplayMomentClockPhase } from '../replay-player';
 import type { ReplayHistoryMoment } from '../runtime-entry';
-import type { ReplayCosmosMomentInput } from './timeline';
+import { UNRECORDED_AVAILABILITY, type ReplayCosmosAvailability, type ReplayCosmosMomentInput } from './timeline';
 
 export type ReplayPresentationBlock =
   | { readonly kind: 'TEXT'; readonly ordinal: number; readonly startMs: number; readonly endMs: number }
@@ -70,7 +74,7 @@ export function replayPresentationClock(plan: ReplayAudioPlan, moments: readonly
       open = null;
       const length = Math.max(1, paceMs(moment));
       blocks.push({ kind: 'TEXT', ordinal: moment.ordinal, startMs: cursor, endMs: cursor + length });
-      inputs.push({ ordinal: moment.ordinal, tc: moment.tc, windowStartMs: cursor, windowEndMs: cursor + length, completeAtMs: cursor, presentedBy: moment.ordinal, availableAtMs: null });
+      inputs.push({ ordinal: moment.ordinal, tc: moment.tc, windowStartMs: cursor, windowEndMs: cursor + length, completeAtMs: cursor, presentedBy: moment.ordinal, availability: UNRECORDED_AVAILABILITY });
       cursor += length;
       continue;
     }
@@ -99,7 +103,7 @@ export function replayPresentationClock(plan: ReplayAudioPlan, moments: readonly
     // A later unit of a voice turn is presented on its turn's window (C-B1): the same window, the same end.
     inputs.push({
       ordinal: moment.ordinal, tc: moment.tc, windowStartMs: offset + window.fromMs, windowEndMs: offset + window.toMs, completeAtMs: offset + window.toMs,
-      presentedBy: window.momentOrdinal, availableAtMs: null,
+      presentedBy: window.momentOrdinal, availability: UNRECORDED_AVAILABILITY,
     });
   }
   if (runStart.size !== plan.runs.length) return null;
@@ -137,6 +141,22 @@ export function replayPresentationClock(plan: ReplayAudioPlan, moments: readonly
 }
 
 /**
+ * RB-2 / S4: the clock's moments with a BOUND availability answer applied (bound by the caller to the very map this clock
+ * was laid out from). IN_RECORDING{runIndex, fileMs} is that run's start plus the file position — exact: the server
+ * already moved the certified position to the first presented instant AT OR AFTER it (the end of a shortened HELD, never
+ * earlier). AFTER_END stays AFTER_END (never pulled onto the recording's end or the last frame). UNESTABLISHED, BROKEN,
+ * ORDINAL_ONLY and an ordinal the answer does not name stay UNRECORDED: no time is claimed for them.
+ */
+export function withReplayAvailability(clock: ReplayPresentationClock, answer: ReplayAvailability): readonly ReplayCosmosMomentInput[] {
+  return clock.inputs.map((input) => {
+    const a = momentAvailability(answer, input.ordinal);
+    const availability: ReplayCosmosAvailability = a.kind === 'IN_RECORDING' ? { kind: 'RECORDED', atMs: clock.runStartMs(a.runIndex) + a.fileMs }
+      : a.kind === 'AFTER_END' ? { kind: 'AFTER_END' } : UNRECORDED_AVAILABILITY;
+    return { ...input, availability };
+  });
+}
+
+/**
  * The in-app stage's allowance behind the audio place: FC-0 (PO, 2026-11-23), on the audio and in a text block after it.
  * Measured on HONOR ALI-NX1's built-in speaker (RB1_REPORT §13, phone mic and screen-present times on one clock): the
  * clock's reported place leads the HEARD sound by up to 106.45 ms in steady play and up to 201.65 ms just after a resume or
@@ -156,6 +176,11 @@ export interface ReplayStageClock {
   revision(): number;
   detail(): { readonly plan: ReplayAudioPlan | null };
   place(): ReplayAudioPlace | null;
+  /**
+   * RB-2 / S4: the historical availability bound to the map this clock holds. Absent (a bare clock), or anything but
+   * BOUND: the stage is neutral — no analysis is drawn on the audio clock without a certified time.
+   */
+  availability?(): ReplayAvailabilitySourceState;
 }
 
 export interface ReplayStageAudioState {

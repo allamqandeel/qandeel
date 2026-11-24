@@ -19,6 +19,11 @@
  *     text only           (no audio clock: every V1 version, a V2 version of text alone) exactly the S7-03 / S7-04
  *                        behaviour: t runs through the moment's declared reading pace while the player plays (pause
  *                        holds t; a step or a Spine commit puts t at the start of the target's window). No audio claim.
+ *
+ * RB-2 / S4 (2026-11-24): WHAT is drawn on the audio clock is decided by `replayStageTimeline` — the CERTIFIED timeline
+ * when the version's historical availability is bound to the map the clock holds, and otherwise the NEUTRAL stage (U-N:
+ * the same clock and windows, no analysis). A text-only version keeps its ordinal pacing (D-RB2-12). How t moves is
+ * unchanged: the availability decides only when knowledge may appear, never where the presentation is.
  */
 import { useImage } from '@shopify/react-native-skia';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
@@ -34,7 +39,8 @@ import { replayMomentScenes } from './history';
 import { replayPresentationClock, replayStageTime, type ReplayPresentationClock, type ReplayStageClock, type ReplayStageTime } from './presentation-clock';
 import { ReplayCosmosStage } from './ReplayCosmosStage';
 import { emptyReplayStage, type ReplayMomentStage } from './stages';
-import { buildReplayCosmosTimeline, type ReplayCosmosMomentInput, type ReplayScope } from './timeline';
+import { replayStageTimeline } from './stage-timeline';
+import { UNRECORDED_AVAILABILITY, type ReplayCosmosMomentInput, type ReplayScope } from './timeline';
 
 /** The in-app frame rate the timeline's causal frames are counted at (the video's own; the app redraws per display frame). */
 export const REPLAY_COSMOS_FPS = 30;
@@ -131,15 +137,15 @@ export function ReplayCosmosWorld(props: ReplayCosmosWorldProps) {
     const ends = moments.reduce<number[]>((acc, moment) => [...acc, (acc.at(-1) ?? 0) + Math.max(1, windowMs(moment))], []);
     return moments.map((moment, i) => {
       const windowStartMs = i === 0 ? 0 : ends[i - 1];
-      return { ordinal: moment.ordinal, tc: moment.tc, windowStartMs, windowEndMs: ends[i], completeAtMs: moment.originalMedium === 'ORIGINAL_AUDIO' ? ends[i] : windowStartMs, availableAtMs: null };
+      return { ordinal: moment.ordinal, tc: moment.tc, windowStartMs, windowEndMs: ends[i], completeAtMs: moment.originalMedium === 'ORIGINAL_AUDIO' ? ends[i] : windowStartMs, availability: UNRECORDED_AVAILABILITY };
     });
   }, [presentation, moments, windowMs]);
+  // RB-2 / S4: an audio clock draws only CERTIFIED knowledge (or the neutral stage); no audio clock: ordinal pacing.
+  const availability = stageClock === null ? null : stageClock.availability?.() ?? null;
   const timeline = useMemo(() => {
-    const built = buildReplayCosmosTimeline(windows, scope, {
-      fps: REPLAY_COSMOS_FPS, unrecorded: 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY', ...(presentation === null ? {} : { durationMs: presentation.durationMs }),
-    });
-    return built.ok ? built.timeline : null;
-  }, [windows, scope, presentation]);
+    const built = replayStageTimeline(windows, scope, stageClock === null ? { kind: 'TEXT_ONLY' } : { kind: 'AUDIO', presentation, availability }, REPLAY_COSMOS_FPS);
+    return built === null ? null : built.timeline;
+  }, [windows, scope, presentation, stageClock, availability]);
   const prepared = usePrepared(stages);
   const images = useReplayCosmosImages();
   const scene = useMemo((): ReplayCosmosScene | null => {

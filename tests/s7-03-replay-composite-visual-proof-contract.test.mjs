@@ -246,8 +246,26 @@ const DETECTORS = {
     const timeline = c('timeline.ts');
     if (!/Math\.max\(available, m\.windowStartMs, m\.completeAtMs, previous\)/u.test(timeline)) out.push('a disclosure never precedes its availability, its moment, its speech, or the knowledge it contains');
     if (!/const available = recorded \?\? -Infinity;/u.test(timeline)) out.push('a missing availability is never filled in with a time');
-    if (!/availability: d\.recorded === null \? options\.unrecorded : 'RECORDED'/u.test(timeline)) out.push('a missing availability is named, never RECORDED');
+    // RB-2 / S4 RE-ANCHOR (PO S4 execution directive, 2026-11-24; RB-2 contract v1.1 §6.2 / §7): availability is typed
+    // (RECORDED{atMs} | AFTER_END | UNRECORDED) and the policy is the caller's `mode`. Previous pin:
+    // `availability: d.recorded === null ? options.unrecorded : 'RECORDED'`. The label of an uncertified disclosure is now
+    // the one named policy written out; its plant (passed off as RECORDED) is kept, and the certified path gains its own.
+    if (!/availability: d\.recorded === null \? 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY' : 'RECORDED'/u.test(timeline)) out.push('a missing availability is named, never RECORDED');
     if (!/if \(d\.at >= endMs\) \{ afterEnd\.push\(d\.m\.ordinal\); continue; \}/u.test(timeline)) out.push('a disclosure at or after the end is listed, never pulled back into the last frame');
+    // RB-2 / S4: CERTIFIED refuses any moment with no certified time (U-N), and AFTER_END is +Infinity (never inside).
+    if (!/if \(options\.mode === 'CERTIFIED' && moments\.some\(\(m\) => m\.availability\.kind === 'UNRECORDED'\)\) return \{ ok: false, reason: UNRECORDED_IN_CERTIFIED \};/u.test(timeline)) out.push('a certified timeline refuses an uncertified moment');
+    if (!/const recorded = a\.kind === 'RECORDED' \? a\.atMs : a\.kind === 'AFTER_END' \? Infinity : null;/u.test(timeline)) out.push('AFTER_END is never inside the Replay');
+    const neutral = /export function neutralReplayCosmosTimeline\([\s\S]*?\n\}\n/u.exec(timeline)?.[0] ?? '';
+    if (neutral === '' || !/initialOrdinal: null, steps: \[\]/u.test(neutral) || !/afterEnd: \[\]/u.test(neutral)) out.push('the neutral stage discloses nothing');
+    // RB-2 / S4: on the audio clock only a BOUND answer is drawn; anything else is the neutral stage, never the guards alone.
+    const stageTimeline = c('stage-timeline.ts');
+    if (!/if \(availability\.kind !== 'BOUND'\) \{\n\s+return neutral\(/u.test(stageTimeline) || !/if \(presentation === null\) return neutral\(windows, 'NO_MAP'\);/u.test(stageTimeline)
+        || (stageTimeline.match(/mode: 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY'/gu) ?? []).length !== 1 || !/if \(basis\.kind === 'TEXT_ONLY'\) \{/u.test(stageTimeline)) {
+      out.push('on the audio clock, only certified knowledge is drawn (the guards alone only for a version with no audio clock)');
+    }
+    if (!/replayStageTimeline\(windows, scope, stageClock === null \? \{ kind: 'TEXT_ONLY' \} : \{ kind: 'AUDIO', presentation, availability \}, REPLAY_COSMOS_FPS\)/u.test(c('ReplayCosmosWorld.tsx'))) {
+      out.push('the world draws the stage timeline the availability decides');
+    }
     if (!/const t0 = Math\.max\(atMs, free\);/u.test(c('camera-plan.ts'))) out.push('a camera segment never starts before its disclosure');
     // RB-1 S1–S2: with an audio plan the stage's ONE time authority is the audio clock's place, through the presentation
     // clock laid out from the map the clock holds — never the reading pace, never a wall clock.
@@ -459,7 +477,14 @@ const PLANTED = [
   // PR #404 RB-1 plants: each must be caught.
   ['analysis before speech (the window start again)', 'cosmosViolations', edit('cosmos', 'timeline.ts', 'Math.max(available, m.windowStartMs, m.completeAtMs, previous)', 'Math.max(available, m.windowStartMs, previous)')],
   ['a missing availability filled in with the window start', 'cosmosViolations', edit('cosmos', 'timeline.ts', 'const available = recorded ?? -Infinity;', 'const available = recorded ?? m.windowStartMs;')],
-  ['a missing availability passed off as RECORDED', 'cosmosViolations', edit('cosmos', 'timeline.ts', "availability: d.recorded === null ? options.unrecorded : 'RECORDED'", "availability: 'RECORDED'")],
+  ['a missing availability passed off as RECORDED', 'cosmosViolations', edit('cosmos', 'timeline.ts', "availability: d.recorded === null ? 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY' : 'RECORDED'", "availability: 'RECORDED'")],
+  // RB-2 / S4 plants: each must be caught.
+  ['a certified timeline drawing an uncertified moment', 'cosmosViolations', edit('cosmos', 'timeline.ts', "if (options.mode === 'CERTIFIED' && moments.some", "if (options.mode === 'NEVER' && moments.some")],
+  ['AFTER_END pulled to the speech guards', 'cosmosViolations', edit('cosmos', 'timeline.ts', "a.kind === 'AFTER_END' ? Infinity : null;", "a.kind === 'AFTER_END' ? null : null;")],
+  ['a neutral stage that opens on knowledge', 'cosmosViolations', edit('cosmos', 'timeline.ts', 'initialOrdinal: null, steps: [],', 'initialOrdinal: moments[0]!.ordinal, steps: [],')],
+  ['an unbound answer masked by the guards alone', 'cosmosViolations', edit('cosmos', 'stage-timeline.ts', "if (availability.kind !== 'BOUND') {\n    return neutral(", "if (availability.kind !== 'BOUND') {\n    return buildReplayCosmosTimeline(windows, scope, { fps, mode: 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY' }) && neutral(")],
+  ['an audio version with no map drawn by the reading pace', 'cosmosViolations', edit('cosmos', 'stage-timeline.ts', "if (presentation === null) return neutral(windows, 'NO_MAP');", "if (presentation === null) return null;")],
+  ['an audio version drawn as text only', 'cosmosViolations', edit('cosmos', 'ReplayCosmosWorld.tsx', "stageClock === null ? { kind: 'TEXT_ONLY' } : { kind: 'AUDIO', presentation, availability }", "{ kind: 'TEXT_ONLY' }")],
   ['a disclosure after the end pulled into the last frame', 'cosmosViolations', edit('cosmos', 'timeline.ts', 'if (d.at >= endMs) { afterEnd.push(d.m.ordinal); continue; }', 'if (d.at >= endMs) d.at = endMs - 1;')],
   ['the reading pace while an audio plan exists', 'cosmosViolations', edit('cosmos', 'ReplayCosmosWorld.tsx', 'if (presentation !== null) return presentation.inputs;', 'if (presentation === undefined) return presentation.inputs;')],
   ['the audio stage time on the wall clock', 'cosmosViolations', edit('cosmos', 'ReplayCosmosWorld.tsx', 'place: stageClock.place() });', 'place: { kind: \'RUN\', runIndex: 0, positionMs: Date.now() } });')],
