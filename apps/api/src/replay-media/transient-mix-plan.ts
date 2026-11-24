@@ -91,6 +91,20 @@ export class RunTimeline {
     return at;
   }
 
+  /**
+   * RB-2 / S3: the file position of the FIRST presented instant at or after run clock instant `t` — the run start before
+   * the run, the end of a shortened HELD span inside one (its middle is not presented at its own length), and null at or
+   * after the run end (nothing of the run is after it). Conservative by construction: never earlier than `t`.
+   */
+  fileMsAtOrAfter(t: number): number | null {
+    if (!Number.isSafeInteger(t) || t >= this.runEndMs) return null;
+    if (t <= this.runStartMs) return 0;
+    for (const h of this.helds) if (h.shrink > 0 && h.a < t && t < h.b) return this.fileMs(h.b);
+    let at = t - this.runStartMs;
+    for (const h of this.helds) if (h.b <= t) at -= h.shrink;
+    return at;
+  }
+
   get fileLengthMs(): number {
     return this.fileMs(this.runEndMs);
   }

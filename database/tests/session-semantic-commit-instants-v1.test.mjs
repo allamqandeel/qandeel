@@ -107,7 +107,14 @@ test('D — the observer and the sweeper: service_role only, see-then-stamp, ski
     assert.doesNotMatch(text, /session_semantic_commit_instants|observe_session_semantic_commits|observe_unobserved_semantic_commits/u,
       `S1 wires nothing: ${path}`);
   }
-  assert.equal(readdirSync(new URL('../migrations/', import.meta.url)).some((name) => name.startsWith('0202_')), false, '0202 is not part of S1');
+  // RE-ANCHORED by S8B-07 RB-2 / S3 (the PO's "RB-2 / M-2 + S3 PRODUCTION IMPLEMENTATION" authorization, 2026-11-24, CP1;
+  // was: no 0202 exists): 0202 is the S3 read, not part of S1. It reads the ledger and never writes or replaces anything
+  // of S1 (database/tests/replay-historical-availability-v1.test.mjs pins 0201 byte-for-byte).
+  const s3 = readdirSync(new URL('../migrations/', import.meta.url)).filter((name) => name.startsWith('0202_'));
+  assert.deepEqual(s3, ['0202_s8b_07_replay_historical_availability_v1.sql'], '0202 is the S3 read only');
+  assert.doesNotMatch(read(`../migrations/${s3[0]}`).replace(/^s*--.*$/gmu, ''),
+    /(?:INSERTs+INTO|UPDATE|DELETEs+FROM|ALTERs+TABLE|DROPs+w+)s+public.session_semantic_|observe_session_semantic_commits|observe_unobserved_semantic_commits/u,
+    'S3 writes, alters or calls nothing of S1');
 });
 
 test('E — no handler, no dynamic SQL, no retryable SQLSTATE in any body (PROD-RETRY-01); the failure of a recording is the failure of the commit', () => {

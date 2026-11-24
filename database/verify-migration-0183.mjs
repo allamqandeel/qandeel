@@ -47,6 +47,7 @@ import { liveCallTurnsApplied, substitutedBody as liveCallBody, voiceInternals01
 import { liveCallHalvesApplied, substitutedBody as liveCallHalfBody, voiceInternals0191 } from './live-call-0191-substitutions.mjs';
 import { liveCallTextTurnApplied, voiceInternals0192 } from './live-call-0192-substitutions.mjs';
 import { transientMediaApplied, voiceInternals0196 } from './transient-media-0196-census.mjs';
+import { historicalAvailabilityApplied, voiceInternals0202 } from './replay-rb2-census.mjs';
 
 // S8B-03 re-anchor (migration 0186): the approved consent text 0186 installs, and the one current text after any run.
 const NOTES_CONSENT_VERSION = 'VOICE_RECORDING_V1';
@@ -445,6 +446,14 @@ async function verifyCatalogue(report) {
     if (await transientMediaApplied(rows)) {
       const internals = voiceInternals0196();
       assert.equal(internals.length, 10, 'S0b 0196 names ten voice_private internals');
+      declared.push(...internals);
+    }
+    // RE-ANCHORED by S8B-07 RB-2 / S3 (migration 0202, the PO's "RB-2 / M-2 + S3 PRODUCTION IMPLEMENTATION" authorization,
+    // 2026-11-24): 0202 adds one voice_private internal (the certification seam, executable by no role), held to the same
+    // rules (verify-migration-0202 proves its shape).
+    if (await historicalAvailabilityApplied(rows)) {
+      const internals = voiceInternals0202();
+      assert.equal(internals.length, 1, 'S0b 0202 names one voice_private internal');
       declared.push(...internals);
     }
     const functions = await rows(`SELECT p.oid::regprocedure::text AS sig, n.nspname AS schema, p.proname AS name, p.prosecdef AS definer,

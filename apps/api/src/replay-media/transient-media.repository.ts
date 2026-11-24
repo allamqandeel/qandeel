@@ -83,6 +83,21 @@ export interface TransientMapRow {
   readonly boundary_kind: 'SAME_RECORDING' | 'CROSS_RECORDING' | null;
 }
 
+/** One moment of `server_read_replay_version_availability_v1` (0202, RB-2 / S3), with the version binding on every row. */
+export interface ReplayAvailabilityRow {
+  readonly replay_id: string;
+  readonly replay_version_id: string;
+  readonly replay_version_revision: number;
+  readonly source_window_binding_digest: string | null;
+  readonly ledger_through_sp: number | null;
+  readonly ledger_through_event_sequence: string | number | null;
+  readonly selected_ordinal: number;
+  readonly availability_state: 'RECORDED' | 'UNESTABLISHED' | 'BROKEN' | 'ORDINAL_ONLY';
+  readonly placement: 'IN_RECORDING' | 'AFTER_END' | null;
+  readonly run_ordinal: number | null;
+  readonly clock_ms: string | number | null;
+}
+
 /** The per-request read (every GET, every Range): the key stays in this process, the deadline is the database's. */
 export interface TransientReadRow {
   readonly storage_key: string;
@@ -112,6 +127,11 @@ export class TransientMediaRepository {
 
   map(userId: string, replayId: string, versionId: string): Promise<TransientMapRow[]> {
     return this.db.query<TransientMapRow>('SELECT * FROM public.server_read_transient_media_map_v1($1, $2, $3)', [userId, replayId, versionId]);
+  }
+
+  availability(userId: string, replayId: string, versionId: string): Promise<ReplayAvailabilityRow[]> {
+    return this.db.query<ReplayAvailabilityRow>('SELECT * FROM public.server_read_replay_version_availability_v1($1, $2, $3)',
+      [userId, replayId, versionId]);
   }
 
   async read(userId: string, artifactId: string): Promise<TransientReadRow | null> {

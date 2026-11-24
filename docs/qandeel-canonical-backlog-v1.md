@@ -3963,6 +3963,14 @@ nothing reads the ledger, and no Replay surface changes, so no Replay moment is 
 observer and sweeper, `0202`, the transport and the mobile wiring), the M-2 design review, RB-3 – RB-5, RS-7 and the
 end-of-Replay policy are not done. `0201` is not hosted. The item stays `OPEN — UNASSIGNED`.
 
+Progress note (2026-11-24, RB-2 / S3 + M-2, not a disposition): PR #405 merged into `main` as `f45400a8`; the S2
+Sweeper is retired and PR #407 is closed without merge. Under the Product Owner's "RB-2 / M-2 + S3 PRODUCTION
+IMPLEMENTATION" authorization, migration `0202` adds the Replay historical availability read and the Replay Media Service
+serves it ([S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §16). Until M-2's `0203` certifies a
+capture position, no call certifies anything, so no moment is placed inside a recording. The Replay timeline does not
+consume the answer yet (S4), and export and publishing (S5) are not done. iOS stays fail-closed; 4G is not tested.
+`0202` is not hosted. The item stays `OPEN — UNASSIGNED`.
+
 ### `QAN-BL-NAV-04` — No Full Personal Detail Surface Beyond the PEEK (PERSONAL-DETAIL-01)
 
 - **Title / Finding:** the Personal Detail Sheet is PEEK-only (G-7, V1). There is no full Personal detail surface for a

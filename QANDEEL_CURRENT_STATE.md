@@ -1,6 +1,17 @@
 # QANDEEL — Current State
 
-> **S8B-07 REPLAY-COSMOS-01 — RB-2 / S1 SEMANTIC COMMIT INSTANTS — DELIVERED / READY FOR PO REVIEW — NOT MERGED — 2026-11-23 (status only; no new task authority):**
+> **S8B-07 REPLAY-COSMOS-01 — RB-2 / S3 HISTORICAL AVAILABILITY READ + M-2 DIRECT HISTORICAL BINDING — IN IMPLEMENTATION — NOT MERGED — 2026-11-24 (status only; no new task authority):**
+> - **Authorization (PO, 2026-11-24): "RB-2 / M-2 + S3 PRODUCTION IMPLEMENTATION — Direct Historical Binding"**, from `main` at `f45400a8`. Option B, T = 1000 ms, a 100 ms Android margin, 10 staggered batches, write-on-change, iOS fail-closed, after-call analysis `AFTER_END`. Migration numbers: `0202` (S3), `0203` (M-2); no collision.
+> - **Predecessors:** RB-2 / S1 (`0201`) **MERGED** through PR #405 as `f45400a8` — **NOT HOSTED**. RB-2 / S2 Alt A (the Sweeper) is **RETIRED**; PR #407 is **CLOSED WITHOUT MERGE**. The M-2 HONOR device proof is complete: **CONDITIONAL GO, Android only** (0 early marks at the 100 ms margin; P95 ≈ 1.06 – 1.09 s, P99 ≈ 1.10 – 1.13 s).
+> - **S3 (Draft PR, `replay/rb2-s3-historical-availability`):** migration `0202` adds the database availability read and a certification seam that certifies NOTHING until M-2's `0203` replaces it; the Replay Media Service answers `GET /replay/:replayId/versions/:versionId/availability`; the phone gets a pure decoder only. **DELIVERED / READY FOR PO REVIEW.** Record: [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §16.
+> - **M-2** (`0203`, the v2 live-call clock marks and the Android capture clock) is on a separate stacked Draft PR; its status is recorded there. **S4 / S5 stay OPEN** (Replay timeline consumption, export, publishing).
+> - **Gaps:** iOS stays fail-closed (no certified placement); 4G is **NOT TESTED**; only the HONOR ALI-NX1 was measured. WAL growth of the mark records is a known operational risk, bounded by write-on-change and post-call compaction.
+> - CI-04 (Draft PR #406) is an independent task and is not touched.
+> - **Database:** `0201` – `0203` are **NOT applied to hosted Supabase** (HOSTED-DEPLOY-01). The next migration after this work is **0204**.
+> - **Backlog:** no item admitted or closed; `QAN-BL-VIS-02` gets a progress note and stays `OPEN — UNASSIGNED`. 112 items, unchanged.
+> - **Merge only on the Product Owner's explicit «ادمج».** Every voice gate stays `DISABLED`. Nothing is deployed or activated.
+
+> **S8B-07 REPLAY-COSMOS-01 — RB-2 / S1 SEMANTIC COMMIT INSTANTS — DELIVERED 2026-11-23; MERGED through PR #405 as `f45400a8` (2026-11-24, above), NOT HOSTED (status only; no new task authority):**
 > - **Baseline:** PR #404 (RB-1 + FC-0, with the Product Owner's scoped iOS CI exception) merged into `main` as `5ce3a70c`. RB-1 is recorded in `QAN-BL-VIS-02`'s progress notes.
 > - **Authorization (PO, 2026-11-23): "RB-2/S1 ONLY"** — D-RB2-1, D-RB2-5a, D-RB2-7a, D-RB2-9 and D-RB2-11, for S1 only. S2 – S5, `0202`, Replay transport, mobile wiring, exports and live-call protocol changes are **not authorized**. M-2 (D-RB2-10) needs its own design review. S8B-05 is not reopened.
 > - **Delivered:** migration `0201` adds an append-only ledger with one row per committed transaction that moved a Session's semantic clock. A deferred, fold-capable recorder on the clock writes it, a guard makes it enforce its own transaction identity and chain, and two `service_role` observers stamp each row once, after its commit is visible. No API caller, worker or schedule exists yet. Record: [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §15; [database README](database/README.md).

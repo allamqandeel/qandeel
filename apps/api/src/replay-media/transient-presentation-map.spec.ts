@@ -1,5 +1,5 @@
 import type { TransientMapRow } from './transient-media.repository';
-import { buildPresentationMap } from './transient-presentation-map';
+import { buildPresentationMap, presentationMapDigest, runTimelinesOf } from './transient-presentation-map';
 
 // S8B-07 CP1-B (contract §5.3, §5.4) — the presentation map against plan rows shaped as 0195's resolver and 0196's map
 // read answer them. The fixture is the verifier's three-run Replay (verify-migration-0196 THREE_RUN_EXPECTED): a note
@@ -87,5 +87,47 @@ describe('the presentation map (contract §5.3)', () => {
       ['no rows', []],
     ];
     for (const [name, rows] of cases) expect([name, buildPresentationMap(rows)]).toEqual([name, null]);
+  });
+});
+
+describe('RB-2 / S3: a certified run clock position in the map, at or after it', () => {
+  it('fileMsAtOrAfter: the run start before the run, linear in a real span, the HELD end inside a shortened one, null at the end', () => {
+    const timelines = runTimelinesOf(plan());
+    expect(timelines).not.toBeNull();
+    const run2 = timelines!.get(2)!;
+    expect(run2.fileMsAtOrAfter(0)).toBe(0);
+    expect(run2.fileMsAtOrAfter(1000)).toBe(0);
+    expect(run2.fileMsAtOrAfter(4000)).toBe(3000);
+    expect(run2.fileMsAtOrAfter(5000)).toBe(4000);
+    // inside the 16 s HELD [5000, 21000) shortened to 1500 ms: the first presented instant after it is its end
+    expect(run2.fileMsAtOrAfter(5001)).toBe(5500);
+    expect(run2.fileMsAtOrAfter(20999)).toBe(5500);
+    expect(run2.fileMsAtOrAfter(21000)).toBe(5500);
+    expect(run2.fileMsAtOrAfter(24000)).toBe(8500);
+    expect(run2.fileMsAtOrAfter(25000)).toBeNull();
+    expect(run2.fileMsAtOrAfter(Number.NaN)).toBeNull();
+    // never earlier than the position: every presented instant at or after the answer was captured at or after t
+    const clockOf = (f: number) => (f <= 4000 ? f + 1000 : f + 1000 + 14_500); // file ms → run clock ms (outside the held)
+    for (let t = 1000; t < 25000; t += 250) {
+      const at = run2.fileMsAtOrAfter(t)!;
+      expect(at <= 4000 || at >= 5500).toBe(true);
+      expect(clockOf(at)).toBeGreaterThanOrEqual(t);
+    }
+  });
+
+  it('runTimelinesOf: one timeline per run, null for a plan the map refuses', () => {
+    expect([...runTimelinesOf(plan())!.keys()]).toEqual([1, 2]);
+    expect(runTimelinesOf([])).toBeNull();
+    expect(runTimelinesOf([...plan(), r('RUN', { run_ordinal: 1, clock_start_ms: 0, clock_end_ms: 3000 })])).toBeNull();
+  });
+
+  it('presentationMapDigest: deterministic over the answered map, and changed by any change of it', () => {
+    const map = buildPresentationMap(plan())!;
+    const digest = presentationMapDigest(map);
+    expect(digest).toMatch(/^sha256:[0-9a-f]{64}$/u);
+    expect(presentationMapDigest(buildPresentationMap(plan())!)).toBe(digest);
+    const shorter = plan().map((row) => (row.row_kind === 'RUN' && row.run_ordinal === 1 ? { ...row, clock_end_ms: 2900 } : row))
+      .map((row) => (row.row_kind === 'WINDOW' && row.window_ordinal === 1 ? { ...row, clock_end_ms: 2900 } : row));
+    expect(presentationMapDigest(buildPresentationMap(shorter)!)).not.toBe(digest);
   });
 });
