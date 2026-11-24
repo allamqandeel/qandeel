@@ -2,7 +2,7 @@ import { HttpException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
 import type { TransientAudioStore } from './transient-audio.store';
-import type { TransientMapRow, TransientMediaRepository, TransientSetRow } from './transient-media.repository';
+import type { ReplayAvailabilityRow, TransientMapRow, TransientMediaRepository, TransientSetRow } from './transient-media.repository';
 import { TransientPlaybackService } from './transient-playback.service';
 
 // S8B-07 CP1-B step 3 — the Replay Media Service's translation of the database's answers into the approved wire, against
@@ -42,6 +42,7 @@ function harness(over: Partial<Record<keyof TransientMediaRepository, jest.Mock>
   const repository = {
     request: jest.fn().mockResolvedValue([setRow()]),
     map: jest.fn().mockResolvedValue(TWO_RUN_MAP),
+    availability: jest.fn().mockResolvedValue([]),
     read: jest.fn().mockResolvedValue(null),
     check: jest.fn().mockResolvedValue(null),
     release: jest.fn().mockResolvedValue(null),
@@ -181,5 +182,71 @@ describe('status, release and the per-request read', () => {
     await failureOf(h.service.requestListening(USER, CALL, COMMAND));
     expect(h.telemetry.recordOperationalOutcome).toHaveBeenCalledWith('REPLAY_MEDIA', 'request', 'live_call_active');
     for (const call of h.telemetry.recordOperationalOutcome.mock.calls) expect(JSON.stringify(call)).not.toMatch(/[0-9a-f]{8}-/u);
+  });
+});
+
+describe('RB-2 / S3: the availability read (GET /replay/:replayId/versions/:versionId/availability)', () => {
+  const DIGEST = `sha256:${'a'.repeat(64)}`;
+  const row = (over: Partial<ReplayAvailabilityRow>): ReplayAvailabilityRow => ({
+    replay_id: REPLAY, replay_version_id: VERSION, replay_version_revision: 2, source_window_binding_digest: DIGEST,
+    ledger_through_sp: 9, ledger_through_event_sequence: '3', selected_ordinal: 1, availability_state: 'RECORDED',
+    placement: 'AFTER_END', run_ordinal: null, clock_ms: null, ...over,
+  });
+
+  it('translates a certified clock position into its run and file position, at or after it, bound to the version and map', async () => {
+    const h = harness({
+      availability: jest.fn().mockResolvedValue([
+        row({ selected_ordinal: 1, placement: 'IN_RECORDING', run_ordinal: 2, clock_ms: '1700' }),
+        row({ selected_ordinal: 2, placement: 'AFTER_END' }),
+      ]),
+    });
+    const answer = await h.service.availability(USER, REPLAY, VERSION);
+    expect(answer).toEqual({
+      replayId: REPLAY, versionId: VERSION, revision: 2, sourceWindowBindingDigest: DIGEST,
+      mapDigest: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u), ledgerWatermark: { sp: 9, seq: 3 },
+      moments: [
+        { ordinal: 1, state: 'RECORDED', placement: { kind: 'IN_RECORDING', runIndex: 1, fileMs: 1200 } },
+        { ordinal: 2, state: 'RECORDED', placement: { kind: 'AFTER_END' } },
+      ],
+    });
+    expect(h.repository.availability).toHaveBeenCalledWith(USER, REPLAY, VERSION);
+    expect(JSON.stringify(answer)).not.toMatch(/recording_?id|clock|voice-|key/iu);
+  });
+
+  it('a position at or after its run end waits for the end; non-RECORDED states carry no placement; V1 reads no map', async () => {
+    const late = harness({ availability: jest.fn().mockResolvedValue([row({ placement: 'IN_RECORDING', run_ordinal: 2, clock_ms: 2500 })]) });
+    expect((await late.service.availability(USER, REPLAY, VERSION)).moments[0]!.placement).toEqual({ kind: 'AFTER_END' });
+    const v1 = harness({ availability: jest.fn().mockResolvedValue([
+      row({ availability_state: 'ORDINAL_ONLY', placement: null, source_window_binding_digest: null, ledger_through_sp: null, ledger_through_event_sequence: null }),
+    ]) });
+    const answer = await v1.service.availability(USER, REPLAY, VERSION);
+    expect(answer).toMatchObject({ mapDigest: null, ledgerWatermark: null, moments: [{ ordinal: 1, state: 'ORDINAL_ONLY', placement: null }] });
+    expect(v1.repository.map).not.toHaveBeenCalled();
+    for (const state of ['UNESTABLISHED', 'BROKEN'] as const) {
+      const h = harness({ availability: jest.fn().mockResolvedValue([row({ availability_state: state, placement: null })]) });
+      expect((await h.service.availability(USER, REPLAY, VERSION)).moments).toEqual([{ ordinal: 1, state, placement: null }]);
+    }
+  });
+
+  it('refuses whole, never repairs: not found, foreign binding, unknown state, a placement on a non-RECORDED row, a run the map lacks', async () => {
+    expect(await failureOf(harness({ availability: jest.fn().mockResolvedValue([]) }).service.availability(USER, REPLAY, VERSION)))
+      .toEqual([404, { outcome: 'NOT_FOUND', reason: null }]);
+    expect(await failureOf(harness().service.availability(USER, 'not-a-uuid', VERSION))).toEqual([404, { outcome: 'NOT_FOUND', reason: null }]);
+    const busyCases: ReplayAvailabilityRow[][] = [
+      [row({ replay_version_id: randomUUID() })],
+      [row({}), row({ selected_ordinal: 2, replay_version_revision: 3 })],
+      [row({ availability_state: 'PENDING' as never })],
+      [row({ availability_state: 'BROKEN', placement: 'AFTER_END' })],
+      [row({ placement: 'IN_RECORDING', run_ordinal: 7, clock_ms: 0 })],
+      [row({ placement: 'IN_RECORDING', run_ordinal: 2, clock_ms: null })],
+    ];
+    for (const rows of busyCases) {
+      expect(await failureOf(harness({ availability: jest.fn().mockResolvedValue(rows) }).service.availability(USER, REPLAY, VERSION)))
+        .toEqual([503, { outcome: 'BUSY' }]);
+    }
+    expect(await failureOf(harness({ availability: jest.fn().mockRejectedValue(pgError('57014', 'timeout')) }).service.availability(USER, REPLAY, VERSION)))
+      .toEqual([503, { outcome: 'BUSY' }]);
+    const noMap = harness({ availability: jest.fn().mockResolvedValue([row({})]), map: jest.fn().mockResolvedValue([]) });
+    expect(await failureOf(noMap.service.availability(USER, REPLAY, VERSION))).toEqual([404, { outcome: 'NOT_FOUND', reason: null }]);
   });
 });

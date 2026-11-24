@@ -1,7 +1,8 @@
 # QANDEEL S8B-07 — Original Audio Replay, Media Rendering & Distribution: Implementation Record v1
 
-**Slice (2026-11-23):** REPLAY-COSMOS-01 RB-2 / S1 — **DELIVERED / READY FOR PO REVIEW — NOT MERGED** (§15;
-Draft PR #405; migration `0201`, not hosted). RB-2 S2 – S5 are not authorized. S8B-07 is not closed.
+**Slice (2026-11-24):** REPLAY-COSMOS-01 RB-2 / S3 — **DELIVERED / READY FOR PO REVIEW — NOT MERGED** (§16; migration
+`0202`, not hosted); M-2 (`0203`) on its stacked Draft PR (§16.8). RB-2 / S1 merged through PR #405 as `f45400a8` (§15;
+`0201`, not hosted). S4 / S5 stay open. S8B-07 is not closed.
 
 **Checkpoint:** S8B-07 CP1-B — **MERGED — PR #385 — `a4b30517` — 2026-11-08** (§13). **S8B-07 is not closed.** S8B-07
 CP2-A WP0 v0.3.1 is **FINAL APPROVED — NOT APPROVED FOR EXECUTION** (2026-11-09, §14): CP2-A and CP2-B are not started,
@@ -1440,3 +1441,74 @@ one-Session observer transaction, median / p95, ms: 1.30 / 1.66
   historical availability as open. S1 is only its database foundation, and the register is not duplicated here.
 - **Backlog (BG-08).** No item is admitted or closed. `QAN-BL-VIS-02` gets a progress note and stays
   `OPEN — UNASSIGNED`.
+
+## 16. REPLAY-COSMOS-01 RB-2 / S3 — Historical Availability Read (DELIVERED, 2026-11-24)
+
+**Slice:** `RB-2 / S3 — DELIVERED / READY FOR PO REVIEW — NOT MERGED`. Draft PR on
+`replay/rb2-s3-historical-availability`, from `main` at `f45400a8`. **Merge only on the Product Owner's explicit «ادمج».**
+S3 is a slice, not a phase or a task closure. S8B-07 stays open. Migration `0202` is **not hosted**. Every voice gate stays
+`DISABLED`.
+
+### 16.1 Authority and baseline
+
+- **Authorization:** the Product Owner's "RB-2 / M-2 + S3 PRODUCTION IMPLEMENTATION — Direct Historical Binding"
+  (2026-11-24): semantic commit → S1 durable record → certified clock mark → S3 historical availability read → Replay
+  timing. The Sweeper is retired. Frozen: Option B, T = 1000 ms, the 100 ms Android margin, no certified echo before
+  timestamp stability, 10 staggered batches with a fresh snapshot per batch, late slots skipped, no mark on a database
+  failure, `observed_at` never a timing authority, write-on-change with post-call compaction, iOS fail-closed, after-call
+  analysis `AFTER_END`, `0201` frozen, `0202` for S3 and `0203` for M-2.
+- **Baseline:** PR #405 (S1) merged into `main` as `f45400a8`. PR #407 (S2 Alt A) is closed without merge. The M-2 HONOR
+  proof is complete: CONDITIONAL GO, Android only.
+
+### 16.2 What S3 delivers
+
+- **`0202`** (database README): `server_read_replay_version_availability_v1` and the certification seam
+  `voice_private.replay_call_certified_capture_ms_v1`, which in `0202` certifies nothing.
+- **Replay Media Service:** `GET /replay/:replayId/versions/:versionId/availability` (`no-store, private`). It translates a
+  certified run clock position into the playback map's file position AT OR AFTER it (`RunTimeline.fileMsAtOrAfter`: the
+  end of a shortened HELD span, never earlier) and binds the answer to the version, its revision, its source-window digest,
+  the SHA-256 digest of the presentation map and the ledger watermark. A malformed database answer is refused whole.
+- **Phone:** a pure decoder (`apps/mobile/src/original-audio/replay-availability.ts`) that refuses the answer whole unless
+  it is exact and bound to the version and map the player holds. It fetches nothing; consumption is S4.
+
+### 16.3 The moment coordinate (a correction of the direction-change review)
+
+The review assumed a moment's point key equals its clock key. It does not: `projection_same_sp_event_sequence` is the
+clock sequence at the live head when the projection was taken (a freshness token, 0072 / 0102), not a coordinate. A
+tighter rule cannot be proven, because a transaction may reserve at a moment's SP before it moves the head. So the
+completing row is the first ledger row whose `through_sp` passes the moment's SP — the row that seals it. This is
+conservative: an assistant-final moment may wait for the next sealing commit (residue, §16.7).
+
+### 16.4 Declared re-anchors
+
+`tests/s8b-05-live-call-contract.test.mjs` (the migration tail), `database/verify-migration-0194.mjs`, `0195.mjs`,
+`0196.mjs` (their migration lists), `tests/s7-04-replay-player-navigation-contract.test.mjs` (the approved later Replay
+migrations now name `0202` by its whole file name, beside `0195`) and `database/tests/session-semantic-commit-instants-v1.test.mjs` (0202 is exactly
+the S3 read and touches nothing of S1). Each carries a `RE-ANCHORED by S8B-07 RB-2 / S3` comment.
+
+### 16.5 Verification (local, real PostgreSQL 17)
+
+- `verify-migration-0202`: 33 / 33, including the census (36 Replay relations, unchanged) and 8 planted defects, each
+  with its canonical control. Historical accuracy, as it applies to the read: a committed moment appears at its certified
+  position; an uncommitted or rolled-back one never does; a chain gap fails closed; a deploy boundary claims nothing; a
+  revision answers bound to its own id and revision; a position after a run is never pulled into it.
+- Static: the 0202 contract 5 / 5; S1 contract 7 / 7; S8B-05 live-call contract 16 / 16.
+- API jest (replay-media) and `tsc --noEmit` pass; mobile decoder jest 3 / 3.
+- The exact-head CI result is recorded on the Draft PR.
+
+### 16.6 Deliberately not done
+
+The Replay timeline does not consume the answer (S4). No export, MP4 or publishing (S5). No Sweeper, worker or schedule.
+`0201` is unchanged. Nothing is hosted, deployed or activated.
+
+### 16.7 Residue
+
+- **MEDIUM:** assistant-final moments wait for the next sealing commit (§16.3).
+- **Mobile fetch wiring** needs a declared re-anchor of the S7-01 client pin
+  (`tests/s7-01-replay-secure-integration-contract.test.mjs`): S4.
+- **Backlog (BG-08):** no item admitted or closed; `QAN-BL-VIS-02` gets a progress note and stays `OPEN — UNASSIGNED`.
+
+### 16.8 M-2
+
+M-2 (`0203`, the v2 live-call clock marks, the Android capture clock) replaces the seam on a stacked Draft PR. Its
+status is recorded on that branch.

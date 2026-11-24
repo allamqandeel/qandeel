@@ -5,8 +5,10 @@ import type { TelemetryService } from '../observability/telemetry.service';
 import { parseByteRange } from '../voice-media/byte-range';
 import { assertReplayDatabaseRole, type ReplayDatabase } from './replay-database';
 import type { TransientAudioStore } from './transient-audio.store';
-import type { TransientMediaRepository, TransientSetRow } from './transient-media.repository';
-import { buildPresentationMap, type PresentationBoundary, type PresentationSpan } from './transient-presentation-map';
+import type { ReplayAvailabilityRow, TransientMediaRepository, TransientSetRow } from './transient-media.repository';
+import {
+  buildPresentationMap, presentationMapDigest, runTimelinesOf, type PresentationBoundary, type PresentationSpan,
+} from './transient-presentation-map';
 import { boundedRecheck, type OpenedTransient } from './transient-stream';
 
 /**
@@ -21,6 +23,9 @@ import { boundedRecheck, type OpenedTransient } from './transient-stream';
  *   GET    /voice/transient/:artifactId/status                   → { state, failure, readableForMs, reason }
  *   GET    /voice/transient/:artifactId                          → the audio, whole (200) or one Range (206)
  *   DELETE /voice/transient/:artifactId                          → { state } (released; never read or reused again)
+ *   GET    /replay/:replayId/versions/:versionId/availability    → RB-2 / S3: { replayId, versionId, revision,
+ *                                                                  sourceWindowBindingDigest, mapDigest, ledgerWatermark,
+ *                                                                  moments[{ ordinal, state, placement }] }
  *
  * Refusals are the bounded words only: 404 NOT_FOUND (with the PROVEN reason, or null), 409 COMMAND_REUSED (nothing
  * else), 409 LIVE_CALL_ACTIVE, 503 BUSY (a full queue, a generation limit, or any failure to answer: fail-closed), 400
@@ -54,6 +59,26 @@ export interface ReplayPlaybackAnswer {
   readonly readableForMs: number;
   readonly reason: Reason;
 }
+
+/** RB-2 / S3: where a moment's analysis may appear — inside a run of the playback map, or after the whole Replay. */
+export type ReplayMomentPlacement =
+  | { readonly kind: 'IN_RECORDING'; readonly runIndex: number; readonly fileMs: number }
+  | { readonly kind: 'AFTER_END' };
+
+export interface ReplayAvailabilityAnswer {
+  readonly replayId: string;
+  readonly versionId: string;
+  readonly revision: number;
+  readonly sourceWindowBindingDigest: string | null;
+  readonly mapDigest: string | null;
+  readonly ledgerWatermark: { readonly sp: number; readonly seq: number } | null;
+  readonly moments: ReadonlyArray<{
+    readonly ordinal: number;
+    readonly state: ReplayAvailabilityRow['availability_state'];
+    readonly placement: ReplayMomentPlacement | null;
+  }>;
+}
+const AVAILABILITY_STATES: ReadonlySet<string> = new Set(['RECORDED', 'UNESTABLISHED', 'BROKEN', 'ORDINAL_ONLY']);
 
 export interface TransientStatusAnswer {
   readonly state: JobState;
@@ -139,6 +164,62 @@ export class TransientPlaybackService {
         ...(rows[i]!.job_state === 'READY' ? { artifactId: rows[i]!.artifact_id } : {}), durationMs: run.durationMs, spans: run.spans,
       })),
       boundaries: map.boundaries, readableForMs, reason,
+    };
+  }
+
+  /**
+   * RB-2 / S3 (contract v1.1 §6.1 / §8 as amended by Direct Historical Binding): the database places every moment
+   * (0202); this answer only translates a certified run clock position into the playback map's file position, AT OR
+   * AFTER it (RunTimeline.fileMsAtOrAfter), and binds the answer to the version, its revision, its source windows, the
+   * map and the ledger watermark. Nothing is cached; a malformed answer is refused whole (BUSY), never repaired.
+   */
+  async availability(userId: string, replayId: string, versionId: string): Promise<ReplayAvailabilityAnswer> {
+    if (!UUID.test(replayId) || !UUID.test(versionId)) throw this.refused('availability', notFound());
+    const read = await settle(this.repository.availability(userId, replayId, versionId));
+    if (!read.ok) throw this.refused('availability', busy(), 'transport_failure');
+    const rows = read.value;
+    const first = rows[0];
+    if (first === undefined) throw this.refused('availability', notFound());
+    const integrity = () => this.refused('availability', busy(), 'integrity_failure');
+    if (rows.some((r) => r.replay_id !== replayId || r.replay_version_id !== versionId
+        || r.replay_version_revision !== first.replay_version_revision
+        || r.source_window_binding_digest !== first.source_window_binding_digest || !AVAILABILITY_STATES.has(r.availability_state))) {
+      throw integrity();
+    }
+    let mapDigest: string | null = null;
+    let timelines: ReturnType<typeof runTimelinesOf> = null;
+    if (rows.some((r) => r.availability_state !== 'ORDINAL_ONLY')) {
+      const plan = await settle(this.repository.map(userId, replayId, versionId));
+      if (!plan.ok) throw this.refused('availability', busy(), 'transport_failure');
+      if (plan.value.length === 0) throw this.refused('availability', notFound());
+      const map = buildPresentationMap(plan.value);
+      timelines = runTimelinesOf(plan.value);
+      if (map === null || timelines === null) throw integrity();
+      mapDigest = presentationMapDigest(map);
+    }
+    const moments = rows.map((r) => {
+      if (r.availability_state !== 'RECORDED') {
+        if (r.placement !== null) throw integrity();
+        return { ordinal: r.selected_ordinal, state: r.availability_state, placement: null };
+      }
+      if (r.placement === 'AFTER_END') return { ordinal: r.selected_ordinal, state: r.availability_state, placement: { kind: 'AFTER_END' as const } };
+      const timeline = r.placement === 'IN_RECORDING' && r.run_ordinal !== null ? timelines?.get(r.run_ordinal) : undefined;
+      const clock = Number(r.clock_ms);
+      if (timeline === undefined || r.clock_ms === null || !Number.isSafeInteger(clock)) throw integrity();
+      const fileMs = timeline.fileMsAtOrAfter(clock);
+      // Nothing of the run is at or after the position: the moment waits for the end, never for an earlier instant.
+      const placement: ReplayMomentPlacement = fileMs === null
+        ? { kind: 'AFTER_END' }
+        : { kind: 'IN_RECORDING', runIndex: r.run_ordinal! - 1, fileMs };
+      return { ordinal: r.selected_ordinal, state: r.availability_state, placement };
+    });
+    const seq = Number(first.ledger_through_event_sequence);
+    this.signal('availability', 'success');
+    return {
+      replayId, versionId, revision: first.replay_version_revision, sourceWindowBindingDigest: first.source_window_binding_digest,
+      mapDigest,
+      ledgerWatermark: first.ledger_through_sp === null || !Number.isSafeInteger(seq) ? null : { sp: first.ledger_through_sp, seq },
+      moments,
     };
   }
 

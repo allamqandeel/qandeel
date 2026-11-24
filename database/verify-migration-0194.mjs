@@ -571,10 +571,12 @@ async function verifyStatic() {
   // (verify-migration-0197 … 0200), and nothing else. The order 0194 → 0195 → 0196 is unchanged.
   // RE-ANCHORED by S8B-07 RB-2 / S1 (the Product Owner's authorization "RB-2/S1 ONLY", 2026-11-23; a declared re-anchor):
   // exactly 0201, the semantic commit instants, follows 0200 (verify-migration-0201), and nothing else.
+  // RE-ANCHORED by S8B-07 RB-2 / S3 (the PO's "RB-2 / M-2 + S3 PRODUCTION IMPLEMENTATION" authorization, 2026-11-24, CP1;
+  // a declared re-anchor): exactly 0202, the Replay historical availability read, follows 0201 (verify-migration-0202).
   const at0194 = migrations.indexOf(M0194);
   strict(migrations[at0194 + 1], '0195_s8b_07_replay_original_audio_source_truth_v1.sql', '0194 is followed only by 0195');
   strict(migrations[at0194 + 2], '0196_s8b_07_transient_media_v1.sql', 'exactly 0196 follows 0195');
-  check(() => assert.deepEqual(migrations.slice(at0194 + 3), ['0197_cosmos_e2_conversation_catalog_v1.sql', '0198_cosmos_e2_thread_names_v1.sql', '0199_cosmos_e2_current_personal_world_v1.sql', '0200_cosmos_e2_reading_reliance_gate_v1.sql', '0201_s8b_07_semantic_commit_instants_v1.sql'], 'after 0196 exactly the four COSMOS E-2 migrations, then 0201'));
+  check(() => assert.deepEqual(migrations.slice(at0194 + 3), ['0197_cosmos_e2_conversation_catalog_v1.sql', '0198_cosmos_e2_thread_names_v1.sql', '0199_cosmos_e2_current_personal_world_v1.sql', '0200_cosmos_e2_reading_reliance_gate_v1.sql', '0201_s8b_07_semantic_commit_instants_v1.sql', '0202_s8b_07_replay_historical_availability_v1.sql'], 'after 0196 exactly the four COSMOS E-2 migrations, then 0201, then 0202'));
   const m0194 = readFileSync(`database/migrations/${M0194}`, 'utf8');
   const executable = m0194.replace(/^\s*--.*$/gmu, '');
   ok(!/GRANT /u.test(executable), '0194 grants nothing');

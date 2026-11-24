@@ -5296,3 +5296,35 @@ npm run test:semantic-commit-instants-contract
 The verifier needs `DATABASE_URL` pointing at a FULLY migrated database. It COMMITS fixtures, because transaction
 identity, deferred firing and MVCC visibility exist only across real commits, and it removes every fixture person through
 the account erasure itself. Its planted defects run inside one rolled-back transaction.
+
+## S8B-07 RB-2 / S3 - Replay historical availability read (migration 0202)
+
+`0202_s8b_07_replay_historical_availability_v1.sql` is REPLAY-COSMOS-01 RB-2's availability read, under the Product
+Owner's "RB-2 / M-2 + S3 PRODUCTION IMPLEMENTATION — Direct Historical Binding" authorization (2026-11-24, CP1). It is
+forward-only and one transaction, adds two functions and no relation, and leaves `0201` byte-identical. Record: the
+[S8B-07 record](../docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §16.
+
+- **The read.** `server_read_replay_version_availability_v1(user, replay, version)` returns one row per selected moment
+  of the owner's CURRENT version: its state and, when `RECORDED`, its placement (`IN_RECORDING` run + run clock ms, or
+  `AFTER_END`), each row bound to the version, its revision, its source-window digest and the ledger watermark.
+- **The completing row.** A moment's analysis is committed by the FIRST ledger row whose `through_sp` passes the
+  moment's SP: the row that seals it. The projection's same-SP sequence is a freshness token of the live head, not a
+  coordinate, and `observed_at` / `trigger_at` are never times.
+- **States.** `UNESTABLISHED` (no ledger, or a deploy boundary), `BROKEN` (a chain gap, or no sealing row yet),
+  `ORDINAL_ONLY` (a V1 version), `RECORDED`. Nothing is guessed.
+- **Placement.** Only a LIVE_CALL recording of the version's own Session and owner certifies, through the seam
+  `voice_private.replay_call_certified_capture_ms_v1(call, sp, seq)`. In `0202` the seam returns NULL: nothing is
+  certified until M-2 (`0203`) replaces it. A certified position goes in the first presented run of that recording that
+  ends after it, at or after the position, never earlier; otherwise the moment is `AFTER_END`.
+- **Posture.** postgres-owned, STABLE, SECURITY DEFINER, empty `search_path`, no handler, no dynamic SQL, no write. The
+  read is executable by `qandeel_replay_media` only; the seam by nobody.
+- **Deployment.** Not deployed.
+
+```sh
+npm run verify:replay-historical-availability:integration
+npm run test:replay-historical-availability-contract
+```
+
+The verifier needs `DATABASE_URL` pointing at a FULLY migrated database. It commits fixtures (the ledger exists only
+across real commits), plants a certifying seam for the placement scenarios, and removes every fixture person through the
+account erasure. Its eight planted defects each have a canonical control.

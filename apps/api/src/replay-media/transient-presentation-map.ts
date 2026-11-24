@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { TransientMapRow } from './transient-media.repository';
 import { HELD_REAL_MAX_MS, RunTimeline } from './transient-mix-plan';
 
@@ -88,6 +89,37 @@ function buildRun(runOrdinal: number, rows: readonly TransientMapRow[]): Present
   for (const s of spans) if (!(0 <= s.fromMs && s.fromMs < s.toMs && s.toMs <= durationMs)) throw new Malformed();
   spans.sort((x, y) => x.fromMs - y.fromMs || SPAN_ORDER[x.kind] - SPAN_ORDER[y.kind] || x.toMs - y.toMs);
   return { runOrdinal, durationMs, spans };
+}
+
+/**
+ * RB-2 / S3: each run's timeline (run ordinal → RunTimeline), from the same RUN and HELD rows the map is built from, or
+ * null for a plan the map would refuse. The availability answer translates a certified clock position with it.
+ */
+export function runTimelinesOf(rows: readonly TransientMapRow[]): ReadonlyMap<number, RunTimeline> | null {
+  try {
+    const out = new Map<number, RunTimeline>();
+    for (const run of rows.filter((r) => r.row_kind === 'RUN')) {
+      if (run.run_ordinal === null || out.has(run.run_ordinal)) return null;
+      out.set(run.run_ordinal, new RunTimeline(ms(run.clock_start_ms), ms(run.clock_end_ms),
+        rows.filter((r) => r.row_kind === 'HELD' && r.run_ordinal === run.run_ordinal)
+          .map((r) => ({ a: ms(r.clock_start_ms), b: ms(r.clock_end_ms) }))));
+    }
+    return out.size === 0 ? null : out;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * RB-2 / S3: the digest of the map the playback answer carries (runs: durationMs and spans in order; boundaries), so an
+ * availability answer names the exact presentation it was placed in. SHA-256 over the canonical JSON of those fields.
+ */
+export function presentationMapDigest(map: PresentationMap): string {
+  const canonical = JSON.stringify({
+    runs: map.runs.map((run) => ({ durationMs: run.durationMs, spans: run.spans })),
+    boundaries: map.boundaries,
+  });
+  return `sha256:${createHash('sha256').update(canonical).digest('hex')}`;
 }
 
 /** The map of a Replay version's plan rows, or null when they do not describe a well-formed sequence of runs. */

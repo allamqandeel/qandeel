@@ -23,7 +23,7 @@ function clientGone(response: ServerResponse): AbortSignal {
 }
 
 /**
- * S8B-07 CP1-B step 3 — the five routes of the Replay Media Service (contract §6; INFRA-07 P-1: the Replay pool only,
+ * S8B-07 CP1-B step 3 — the five routes of the Replay Media Service, and RB-2 / S3's availability read (a sixth) (contract §6; INFRA-07 P-1: the Replay pool only,
  * never the API). Each route is the verified bearer's own (the same Supabase bearer check as the Voice Note read: the
  * token travels in a header, never in a URL); no route takes a user, a key or a URL. Every answer is
  * `Cache-Control: no-store, private`, and the audio never carries a Content-Disposition: it is private playback, not a
@@ -51,6 +51,13 @@ export class TransientMediaController {
   requestReplay(@Req() request: AuthenticatedRequest, @Param('replayId') replayId: string, @Param('versionId') versionId: string,
     @Param('commandId') commandId: string) {
     return this.playback.requestReplay(request.authenticatedUser.userId, replayId, versionId, commandId);
+  }
+
+  /** RB-2 / S3: when each moment's analysis may appear, bound to the version and its playback map. */
+  @Get('replay/:replayId/versions/:versionId/availability')
+  @Header('Cache-Control', PRIVATE_NO_STORE)
+  availability(@Req() request: AuthenticatedRequest, @Param('replayId') replayId: string, @Param('versionId') versionId: string) {
+    return this.playback.availability(request.authenticatedUser.userId, replayId, versionId);
   }
 
   @Get('voice/transient/:artifactId/status')
