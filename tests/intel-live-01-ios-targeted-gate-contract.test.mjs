@@ -75,6 +75,10 @@ export function violations({ gate, runner, world, server, flows }) {
   if (!/wait_turn 120 03-attempt-1 "\$BEFORE"/u.test(r) || !/> "\$OUT\/host\/03-loss-1\.jsonl"/u.test(r)) out.push('the first attempt\'s evidence is not kept');
   if (!/^start_client_diagnostics$/mu.test(r) || !/log show --style compact --start "\$CLIENT_LOG_FROM"/u.test(r) || !/^\s+collect_client_log$/mu.test(r)
     || !/client_snapshot "failure-\$1"/u.test(r)) out.push('the client-side diagnostics are missing');
+  // Run 45612961224: ITG-02's tap reached the app and nothing followed, with no client evidence. They start before ITG-01.
+  if (!/\nstart_client_diagnostics\nflow itg-call-launch\.yaml launch /u.test(r) || !/\( while :; do pid="\$\(pgrep -x QANDEEL \| head -n 1\)"/u.test(r)) {
+    out.push('the client-side diagnostics do not cover the run from ITG-01');
+  }
   // Run 45601664395 (PO, 2026-11-25): the harness's own load on a runner with no idle CPU and 129 MB free.
   if (/log stream/u.test(r)) out.push('the runner streams the app log during the cases (measured at about a third of a core)');
   if (!/ts-node\/dist\/bin\.js" --transpile-only --project/u.test(r) || !/run: node node_modules\/typescript\/bin\/tsc -p apps\/api\/tsconfig\.scripts\.json --noEmit/u.test(g)) {
@@ -90,6 +94,9 @@ export function violations({ gate, runner, world, server, flows }) {
   if (!/attentionSettlement: process\.env\.PROOF_ATTENTION === 'ON' \? new CallAttentionRepository\(serverApi\) : undefined/u.test(s)) out.push('the proof server does not settle the attention lane at the call\'s end');
   if (!/if \(openStreams === 0\) throw new HttpException/u.test(s)) out.push('/proof/speak arms a stimulus with no open uplink');
   if (!/evidence\('connection-lose', \{ code: args\[0\] \?\? null, reason: args\[1\] \?\? null, phase: this\.phase \?\? null, epoch: this\.epoch \?\? null \}\)/u.test(s)) out.push('a connection loss is recorded without its epoch');
+  if (!/evidence\('http', \{ method: req\.method, path: req\.url\.split\('\?'\)\[0\], status: res\.statusCode, ms: Date\.now\(\) - started \}\)/u.test(s)) {
+    out.push('the proof server does not record each HTTP request\'s path and status, without its query');
+  }
 
   const worldPaths = prPaths(world);
   for (const p of ['apps/mobile/**', 'packages/**', 'package-lock.json', 'scripts/cosmos-ios-world/**', WORLD]) {
@@ -169,6 +176,10 @@ test('each refusal is real: planted regressions are caught', () => {
     ['a third stimulus', plant('runner', '  wait_turn 120 03-repeat "$BEFORE"', '  curl -s -X POST "$SERVER/proof/speak?ms=1500"\n  wait_turn 120 03-repeat "$BEFORE"')],
     ['the loss taken from elsewhere', plant('runner', 'if [ "$(losses)" -gt "$before" ]; then', 'if false; then')],
     ['the diagnostics dropped', plant('runner', '\nstart_client_diagnostics\n', '\n')],
+    ['the diagnostics started late again', plant('runner', '\nstart_client_diagnostics\nflow itg-call-launch.yaml', '\nflow itg-call-launch.yaml')],
+    ['the pid read once', plant('runner', '( while :; do pid="$(pgrep -x QANDEEL | head -n 1)"', 'pid="$(pgrep -x QANDEEL | head -n 1)"; ( while :; do')],
+    ['the HTTP evidence dropped', plant('server', "evidence('http', {", 'void ({')],
+    ['the HTTP evidence with its query', plant('server', "path: req.url.split('?')[0]", 'path: req.url')],
     ['the loss epoch dropped', plant('server', ', epoch: this.epoch ?? null });', ' });')],
     ['the app log streamed again', plant('runner', '  CLIENT_LOG_FROM="$(date', '  xcrun simctl spawn "$UDID" log stream --style compact &\n  CLIENT_LOG_FROM="$(date')],
     ['the server type-checked beside the simulator', plant('runner', '/bin.js" --transpile-only --project', '/bin.js" --project')],

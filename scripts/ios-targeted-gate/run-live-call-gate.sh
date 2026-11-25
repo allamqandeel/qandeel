@@ -88,17 +88,18 @@ flow() {
 }
 read_state() { curl -s -m 5 "$SERVER/proof/state" || echo '{}'; }
 read_attention() { curl -s -m 5 "$SERVER/proof/attention" || echo '{}'; }
-# Client-side diagnostics (PO, 2026-11-25): evidence only, never a verdict, and nothing here can fail a case.
+# Client-side diagnostics (PO, 2026-11-25): evidence only, never a verdict, and nothing here can fail a case. They start
+# before ITG-01 (run 45612961224: ITG-02's tap reached the app and nothing followed, with no client evidence), so the
+# app's pid is looked up on every tick: ITG-01's launch replaces the app process.
 start_client_diagnostics() {
   mkdir -p "$OUT/client"
-  local pid
-  pid="$(pgrep -x QANDEEL | head -n 1)"
-  echo "app pid: ${pid:-not found}" > "$OUT/client/app-pid.txt"
   # The app's log is read ONCE, when the run ends (collect_client_log), never streamed: run 45601664395 measured a live
   # `log stream` at about a third of a core (diagnosticd and log) on a host with no idle CPU.
   CLIENT_LOG_FROM="$(date '+%Y-%m-%d %H:%M:%S')"
-  # epoch seconds, host load average, the app's %CPU and RSS (KiB)
-  ( while :; do printf '%s\t%s\t%s\n' "$(date +%s)" "$(sysctl -n vm.loadavg)" "$([ -n "$pid" ] && ps -o %cpu=,rss= -p "$pid" | tr -s ' ')"; sleep 1; done ) \
+  # epoch seconds, host load average, the app's pid, %CPU and RSS (KiB)
+  ( while :; do pid="$(pgrep -x QANDEEL | head -n 1)"
+      printf '%s\t%s\t%s\t%s\n' "$(date +%s)" "$(sysctl -n vm.loadavg)" "${pid:--}" "$([ -n "$pid" ] && ps -o %cpu=,rss= -p "$pid" | tr -s ' ')"
+      sleep 1; done ) \
     > "$OUT/client/load-1hz.tsv" 2>/dev/null &
   DIAG_PIDS="$DIAG_PIDS $!"
 }
@@ -107,7 +108,7 @@ client_snapshot() {
   top -l 2 -s 1 -n 12 -o cpu -stats pid,command,cpu,mem > "$OUT/client/$1-top.txt" 2>&1 || true
   { echo; echo '# the largest resident processes'; ps -axm -o rss,pcpu,comm | head -n 16; } >> "$OUT/client/$1-top.txt" 2>&1 || true
 }
-# collect_client_log: the app's unified log (default level and above) from ITG-03 on, read once at the end of the run.
+# collect_client_log: the app's unified log (default level and above) from before ITG-01 on, read once at the end of the run.
 CLIENT_LOG_FROM=""
 collect_client_log() {
   [ -n "$CLIENT_LOG_FROM" ] && [ -d "$OUT/client" ] || return 0
@@ -202,6 +203,7 @@ fi
 note "driver-readiness: answered after $(( $(date +%s) - DRIVER_START )) s"
 
 # ITG-01 — launch: the call entry is drawn only after the production runtime reached the server.
+start_client_diagnostics
 flow itg-call-launch.yaml launch -e SHOT=01-launch || fail ITG-01 "the Conversation's call entry was not drawn after launch"
 record ITG-01 PASS "the proof build installed and launched; the Conversation's call entry is drawn"
 
@@ -213,7 +215,6 @@ wait_json 60 read_state 02-call-active 's => s.call != null && s.call.state === 
 record ITG-02 PASS "the tap opened a call the server holds ACTIVE; the call line's End is drawn"
 
 # ITG-03 — one turn: the synthetic voiced signal, the endpointer's commit, the reply, played out by the iOS engine.
-start_client_diagnostics
 RECOVERED=""
 BEFORE="$(losses)"
 curl -s -m 5 -f -X POST "$SERVER/proof/speak?ms=1500" > "$OUT/host/03-speak.json" || fail ITG-03 "the server refused /proof/speak (no open uplink)"

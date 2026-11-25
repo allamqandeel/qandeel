@@ -454,7 +454,8 @@ within the same run, and only after the server itself recorded the connection lo
 - **Nothing else changed.** The assertions are unchanged, and so are the 3 s rule, the audio engine, the heartbeat policy,
   prompt v5 and COSMOS.
 
-From ITG-03 on, the run also keeps lightweight client-side diagnostics in `client/`:
+The run also keeps lightweight client-side diagnostics in `client/` (from ITG-03 on until the fourth run; from before
+ITG-01 since):
 - the app's unified log at default level (this proof's synthetic data only);
 - a once-a-second line of host load and the app's CPU;
 - a `top` snapshot at each loss and each failure.
@@ -524,6 +525,67 @@ The ITG contract pins each change and plants its reversal.
 pause still recurs, the next run's evidence will show what remains, including which processes hold the memory. The
 harness's contribution is removed. The runner's capacity is not something CP1 can change without a paid or different
 runner.
+
+**The fourth simulator run.** Run 45612961224 on `885c89ed`, with the harness correction:
+
+| Case | Result | Detail |
+|---|---|---|
+| ITG-01 | PASS | |
+| ITG-02 | FAIL | a tap on the call entry did not draw the call line's End within 60 s |
+| ITG-03 – 06 | NOT TESTED | not reached |
+
+**ITG-02's diagnosis, from the run's evidence** (artifact `15023788500`, PO-approved). The app's log for the tap was
+compared with the third run's, where ITG-02 passed with the same app source (`apps/mobile` is unchanged between the two
+heads).
+
+| Question | Evidence | Answer |
+|---|---|---|
+| Was the tap received? | The driver's `POST /touch` at 13:01:09.85 ("Tapping 322.0, 751.0", 0.46 s). The element under that point is `qandeel-call-entry` (`[300,729][344,773]`, enabled), with nothing above it: the full-screen overlay is `box-none`. UIKit delivered touch-down 13:01:10.070 and touch-up 10.256 to the app's window ("send gesture actions"). | **Yes, by the app's window.** |
+| Did the call-start logic run? | Its first native step is `callCapability`, which reads the record permission (`tcc_send_request_authorization`). In run 3 that came 45 ms after the touch, then the call-truth read (`GET /voice/calls/truth`) and the audio session. In run 4 the app logged none of them: no permission read, no request but the Conversation's 5 s temporal poll, no audio session. | **No.** `CallOwner.start()` did not reach its capability read. |
+| Did permissions or local state block it? | The microphone was granted twice (`simctl privacy grant`, and `launchApp` with `microphone: allow`). No system alert was on screen. No call notice (`qandeel-call-notice`) was drawn, which each of `start()`'s refusals (not available, already in a call, microphone) draws. The app was alive: its 5 s poll ran on until 13:02:19. | **No visible block.** |
+| Did a connection attempt reach the server? | The server's events after the tap: only `analysis-read` temporal polls. No WebSocket, no `CALL_ACTIVATED`, no refusal. | **No.** |
+
+**The cause is not established.** The point of failure lies between UIKit's delivery and `CallOwner.start()`'s
+capability read: React Native's touch handling, the Pressable's `onPress`, or `start()`'s first guard
+(`!live() || controller !== null || preparing`), which returns without a notice. This Release proof build writes no
+JavaScript log, so the evidence cannot tell those apart. The same app source passed ITG-02 in runs 1 – 3. No production
+code is changed, and nothing is retried.
+
+**The correction is to the diagnostic coverage only:**
+- **Client diagnostics from before ITG-01.** They used to start at ITG-03, so run 4's ITG-02 had none. The app's log now
+  covers the whole run, and the 1 Hz sampler finds the app's pid on each tick (ITG-01's launch replaces the process).
+- **The proof server records each HTTP request** as `http` evidence: method, path, status and time. It never records
+  the query, headers or body. A case that sees nothing happen then shows whether the app asked the server at all; the
+  app's own log does not name the paths it read.
+
+The ITG contract pins both and plants their reversals. A local stand-in call with this server played out as before:
+`PLAYED_OUT`, `USER_ENDED`, attention settled, 313 MB, 2.2 CPU-s.
+
+**ITG-01 – 06 reviewed together after four runs:**
+- **Each run failed at a different case, for different reasons.** Run 1 failed ITG-04 on a harness defect (J3, fixed).
+  Runs 2 and 3 failed ITG-03 on host starvation; the harness load was removed. Run 4 failed ITG-02 on a lost call start;
+  its cause is not observable.
+- **UI assumptions.** Each flow waits for an element the production surface draws only after the action took effect:
+  - ITG-01: the call entry, drawn once a call owner exists;
+  - ITG-02: the call line's End;
+  - ITG-03: End still drawn;
+  - ITG-04: J3's order.
+
+  No flow hides the keyboard or retries.
+- **Server predicates.** They read only `/proof/state` and `/proof/attention`, whose fields were checked against the
+  proof server (ACTIVE, `PLAYED_OUT`, `USER_ENDED`, the attention evaluations, events and settlements).
+- **Readiness conditions.**
+  - The driver must answer before any Product step (122 s in run 4).
+  - ITG-01 waits up to 180 s for the entry.
+  - `/proof/speak` refuses a stimulus with no open uplink.
+  - ITG-03's repeat waits for ACTIVE at a later epoch.
+- **Resource consumption.** The proof server runs transpile-only, Spotlight is off, and the app log is read once at the
+  end.
+- **Diagnostic coverage.** It now spans ITG-01 – 06 on both sides: the client log and samples, and the server's events
+  with its HTTP requests.
+
+The stubbed runner simulation still gives the intended result for ITG-03's five paths: first-attempt PASS, PASS AFTER
+RECOVERY, a second loss, no reconnection, and no turn. No retry or timeout was added.
 
 **The run on the final head:** `PENDING`. It is recorded here per case. No case is reported before it ran.
 
@@ -728,6 +790,17 @@ stub run history, gave:
 
 The change edits the gate's workflow, so its own plan answers `RUN / FULL` once. Later pushes that reach nothing reuse
 that pass.
+
+**That FULL run did not pass, so there is nothing to reuse.** Run 45612961126 on `885c89ed`: the iPhone 17 en and ar
+cells failed, with no assertion failing.
+- **en:** the wait for the Personal Analysis door (`p-door`, 109 s) timed out, so P-TAP-RAIL, P-TAP, F1-RESOLVED,
+  P-PAN and P-PAN-RAIL are NOT TESTED. Every Shared, Public and native case passed.
+- **ar:** the wait for the World list (`se-worlds`) timed out, so S-EMPTY is NOT TESTED.
+
+Both are readiness waits that left cases NOT TESTED: the open `QAN-BL-CI-04` residue, which main records too. The PR
+changes no application source the gate exercises; its `apps/mobile` changes are the targeted gate's own Maestro flows.
+The rule is not relaxed for this, and the next head runs FULL again. It is not reported as passed. The iPhone SE (3rd
+generation) / iPhone 16e en cell passed every case.
 
 ### 6.3 Migration 0204 and the earlier verifiers' exact sets
 

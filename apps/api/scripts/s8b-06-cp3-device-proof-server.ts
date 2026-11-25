@@ -786,6 +786,14 @@ async function main(): Promise<void> {
   class ProofModule {}
 
   const app: INestApplication = await NestFactory.create(ProofModule, { logger: ['error', 'warn'] });
+  // INTEL-LIVE-01 CP1: each HTTP request's method, path, status and time (never its query, headers or body), so a case
+  // that saw nothing happen tells whether the app asked this server at all (the iOS Targeted Gate's run 45612961224:
+  // ITG-02's tap reached the app, and the app's own log cannot name the paths it read).
+  app.use((req: { method: string; url: string }, res: { statusCode: number; on(event: 'finish', listener: () => void): void }, next: () => void) => {
+    const started = Date.now();
+    res.on('finish', () => evidence('http', { method: req.method, path: req.url.split('?')[0], status: res.statusCode, ms: Date.now() - started }));
+    next();
+  });
   const port = Number(process.env.PORT ?? 8806);
   await app.listen(port, '127.0.0.1');
   evidence('listening', { port, ws: `ws://127.0.0.1:${port}${LIVE_CALL_PATH}`, user: PROOF_USER, session: PROOF_SESSION });
