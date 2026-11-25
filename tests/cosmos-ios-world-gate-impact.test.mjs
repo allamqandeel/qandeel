@@ -173,6 +173,42 @@ test('the analysis classifies prose without naming it, so a docs-only delta keep
   assert.equal(decide(['AGENTS.md', 'apps/mobile/README.md', 'docs/e2e/ANY_RECORD_v1.md']).decision, 'NOT_AFFECTED');
 });
 
+/** PO, 2026-11-25: an earlier FULL pass of THIS pull request is reused only when nothing since then can reach the gate. */
+function evidenceViolations(wf) {
+  const out = [];
+  const block = /evidence=""\n([\s\S]+?)\n\s+# The functional scope:/u.exec(wf)?.[1] ?? '';
+  if (!block) return ['the exact-input evidence block is missing'];
+  if (!/if \[ "\$EVENT" = pull_request \] && \[ "\$decision" = RUN \]; then/u.test(block)) out.push('evidence is reused outside a pull request, or for a decision that was not RUN');
+  if (!/--status success/u.test(block)) out.push('evidence is taken from a run that did not succeed');
+  if (!/git merge-base --is-ancestor "\$h" "\$PR_HEAD" 2>\/dev\/null \|\| continue/u.test(block)) out.push('evidence is taken from a head outside this history');
+  if (!/select\(\.name \| startswith\("iOS World gate — "\)\) \| select\(\.conclusion == "success"\)/u.test(block) || !/\[ "\$passed" = "\$full_cells" \] \|\| continue/u.test(block)
+    || !/JSON\.parse\(process\.argv\[1\]\)\.length/u.test(block)) out.push('evidence is taken from a run that did not pass every cell');
+  if (!/git diff --name-only "\$h" "\$PR_HEAD"/u.test(block) || !/world-gate-impact\.mjs --base "\$h"/u.test(block)
+    || !/\.decision === "NOT_AFFECTED" \? 0 : 1\)' "\$RUNNER_TEMP\/delta-plan\.json" 2>\/dev\/null \|\| continue/u.test(block)) out.push('evidence is reused without the planner proving the change since then reaches nothing');
+  if (/continue-on-error/u.test(block)) out.push('the evidence read softens a failure');
+  if (!/permissions: \{contents: read, actions: read\}/u.test(wf)) out.push('the plan cannot read the earlier runs');
+  if (!/The World gate did NOT run again: exact-input evidence, \$evidence\./u.test(wf)) out.push('reused evidence is not named in the summary');
+  return out;
+}
+
+test('exact-input evidence: only an earlier FULL pass of this pull request, only when nothing since then can reach the gate', () => {
+  const wf = read('.github/workflows/cosmos-ios-world-gate.yml');
+  assert.deepEqual(evidenceViolations(wf), []);
+  const plant = (from, to) => {
+    assert.ok(wf.includes(from), `the plant anchor exists: ${from.slice(0, 60)}`);
+    return wf.replace(from, to);
+  };
+  for (const [what, mutated] of [
+    ['a push to main reusing evidence', plant('if [ "$EVENT" = pull_request ] && [ "$decision" = RUN ]; then', 'if [ "$decision" = RUN ]; then')],
+    ['any run conclusion', plant('--status success ', '')],
+    ['a head outside this history', plant('git merge-base --is-ancestor "$h" "$PR_HEAD" 2>/dev/null || continue', 'true')],
+    ['a run with fewer cells', plant('[ "$passed" = "$full_cells" ] || continue', '[ "$passed" -ge 1 ] || continue')],
+    ['no planner on the delta', plant('printf \'%s\\n\' "$delta" | node scripts/cosmos-ios-world/world-gate-impact.mjs --base "$h"', 'true')],
+  ]) {
+    assert.notDeepEqual(evidenceViolations(mutated), [], `${what} must be refused`);
+  }
+});
+
 test('each refusal is real: planted regressions are caught', () => {
   const closure = new Set();
   // A lockfile or a shared package must never be NOT_AFFECTED.

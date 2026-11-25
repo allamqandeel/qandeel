@@ -70,6 +70,8 @@ jobs:
     name: World gate impact plan
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # actions: read — the exact-input evidence reads this pull request's earlier World gate runs.
+    permissions: {contents: read, actions: read}
     outputs:
       decision: ${{ steps.plan.outputs.decision }}
       scope: ${{ steps.plan.outputs.scope }}
@@ -87,6 +89,8 @@ jobs:
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
           PUSH_BEFORE: ${{ github.event.before }}
           PUSH_AFTER: ${{ github.sha }}
+          PR_REF: ${{ github.head_ref }}
+          GH_TOKEN: ${{ github.token }}
           # BG-10's permanent language / size matrix (PO, COSMOS-FINAL-01 continuation, 2026-11-20, item 4; contract §30.7):
           # the reference cell, Arabic (right-to-left), and the small iPhone. A FULL scope runs every cell and every case,
           # none weakened; COSMOS_CASES runs the reference cell only.
@@ -110,6 +114,34 @@ jobs:
             echo '{"decision":"RUN","reasons":[{"file":null,"class":"NO_CHANGE_SET","reason":"manual dispatch, or no changed-file set could be read: run"}]}' > "$RUNNER_TEMP/plan.json"
           fi
           [ "$decision" = NOT_AFFECTED ] || decision=RUN
+          # Exact-input evidence (PO, 2026-11-25): a pull request's change set is cumulative, so one World gate edit made every
+          # later push run every cell again. An earlier head of THIS pull request whose run passed EVERY cell (FULL; a
+          # COSMOS_CASES or skipped run has fewer), from which nothing changed can reach this gate, has already validated these
+          # exact inputs. Any doubt — a failed read, a head outside this history, a cell not passed, a reaching change, the
+          # gate's own files changed — leaves the decision RUN. A push to main never reuses evidence.
+          evidence=""
+          if [ "$EVENT" = pull_request ] && [ "$decision" = RUN ]; then
+            full_cells="$(node -e 'process.stdout.write(String(JSON.parse(process.argv[1]).length))' "$CELLS_FULL")" || full_cells=""
+            for row in $(gh run list --repo "$GITHUB_REPOSITORY" --workflow cosmos-ios-world-gate.yml --branch "$PR_REF" --event pull_request --status success --limit 30 --json headSha,databaseId --jq '.[] | "\(.headSha):\(.databaseId)"' 2>/dev/null); do
+              h="${row%%:*}"
+              id="${row##*:}"
+              [ -n "$full_cells" ] && [ "$h" != "$PR_HEAD" ] || continue
+              git merge-base --is-ancestor "$h" "$PR_HEAD" 2>/dev/null || continue
+              passed="$(gh run view "$id" --repo "$GITHUB_REPOSITORY" --json jobs --jq '[.jobs[] | select(.name | startswith("iOS World gate — ")) | select(.conclusion == "success")] | length' 2>/dev/null)" || continue
+              [ "$passed" = "$full_cells" ] || continue
+              delta="$(git diff --name-only "$h" "$PR_HEAD" 2>/dev/null)" || continue
+              if [ -n "$delta" ]; then
+                printf '%s\n' "$delta" | node scripts/cosmos-ios-world/world-gate-impact.mjs --base "$h" > "$RUNNER_TEMP/delta-plan.json" 2>/dev/null || continue
+                node -e 'process.exit(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).decision === "NOT_AFFECTED" ? 0 : 1)' "$RUNNER_TEMP/delta-plan.json" 2>/dev/null || continue
+              fi
+              evidence="run $id passed every cell on $h, and nothing changed since then can reach this gate"
+              break
+            done
+          fi
+          if [ -n "$evidence" ]; then
+            decision=NOT_AFFECTED
+            node -e 'const fs = require("fs"); const p = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); p.decision = "NOT_AFFECTED"; p.scope = "NOT_AFFECTED"; p.reasons = [{ file: null, class: "EXACT_INPUT_EVIDENCE", decision: "NOT_AFFECTED", reason: process.argv[2] }, ...(p.reasons ?? [])]; fs.writeFileSync(process.argv[1], JSON.stringify(p))' "$RUNNER_TEMP/plan.json" "$evidence" || true
+          fi
           # The functional scope: FULL unless the plan answered exactly COSMOS_CASES (every reaching file belongs to a surface
           # with its own mandatory iOS Targeted Gate). Anything else, a failed read included, is FULL.
           scope=FULL
@@ -121,7 +153,8 @@ jobs:
           echo "cells=$cells" >> "$GITHUB_OUTPUT"
           {
             echo "### iOS World gate — impact plan: **$decision**, scope **$scope**"
-            [ "$decision" = NOT_AFFECTED ] && echo 'The World gate did NOT run (not passed): no changed file can reach what it proves.'
+            if [ -n "$evidence" ]; then echo "The World gate did NOT run again: exact-input evidence, $evidence."
+            elif [ "$decision" = NOT_AFFECTED ]; then echo 'The World gate did NOT run (not passed): no changed file can reach what it proves.'; fi
             [ "$scope" = COSMOS_CASES ] && echo 'Only the relevant COSMOS cases run (P-TAP and F1-RESOLVED, cell i17-en): the other cells, Worlds, pans and native gestures did NOT run (not passed). The changed surface is proven by its iOS Targeted Gate.'
             echo; echo '| file | class | decision | reason |'; echo '|---|---|---|---|'
             node -e 'for (const r of JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).reasons ?? []) console.log(`| ${r.file ?? "—"} | ${r.class} | ${r.decision ?? "RUN"} | ${r.reason} |`)' "$RUNNER_TEMP/plan.json" || true

@@ -73,7 +73,14 @@ export function violations({ gate, runner, world, server, flows }) {
   if (!/\[ "\$TURN" -ne 2 \] \|\| fail ITG-03 "a second connection loss/u.test(r)) out.push('a second connection loss does not fail ITG-03');
   if (!/if \[ -n "\$RECOVERED" \]; then\n\s+record ITG-03 "PASS AFTER RECOVERY"/u.test(r)) out.push('a recovered ITG-03 is not recorded PASS AFTER RECOVERY');
   if (!/wait_turn 120 03-attempt-1 "\$BEFORE"/u.test(r) || !/> "\$OUT\/host\/03-loss-1\.jsonl"/u.test(r)) out.push('the first attempt\'s evidence is not kept');
-  if (!/^start_client_diagnostics$/mu.test(r) || !/log stream --style compact --level default/u.test(r) || !/client_snapshot "failure-\$1"/u.test(r)) out.push('the client-side diagnostics are missing');
+  if (!/^start_client_diagnostics$/mu.test(r) || !/log show --style compact --start "\$CLIENT_LOG_FROM"/u.test(r) || !/^\s+collect_client_log$/mu.test(r)
+    || !/client_snapshot "failure-\$1"/u.test(r)) out.push('the client-side diagnostics are missing');
+  // Run 45601664395 (PO, 2026-11-25): the harness's own load on a runner with no idle CPU and 129 MB free.
+  if (/log stream/u.test(r)) out.push('the runner streams the app log during the cases (measured at about a third of a core)');
+  if (!/ts-node\/dist\/bin\.js" --transpile-only --project/u.test(r) || !/run: node node_modules\/typescript\/bin\/tsc -p apps\/api\/tsconfig\.scripts\.json --noEmit/u.test(g)) {
+    out.push('the proof server is not type-checked in its own step and run transpile-only beside the simulator');
+  }
+  if (!/run: sudo mdutil -a -i off/u.test(g) || g.indexOf('sudo mdutil -a -i off') > g.indexOf('-configuration Release -sdk iphonesimulator')) out.push('Spotlight is not stopped before the build');
 
   if (!/id: qandeel-call-entry/u.test(flows)) out.push('the launch flow does not wait for the production call entry');
   if (/hideKeyboard|retry:/u.test(code(flows))) out.push('a flow hides the keyboard or retries');
@@ -163,6 +170,10 @@ test('each refusal is real: planted regressions are caught', () => {
     ['the loss taken from elsewhere', plant('runner', 'if [ "$(losses)" -gt "$before" ]; then', 'if false; then')],
     ['the diagnostics dropped', plant('runner', '\nstart_client_diagnostics\n', '\n')],
     ['the loss epoch dropped', plant('server', ', epoch: this.epoch ?? null });', ' });')],
+    ['the app log streamed again', plant('runner', '  CLIENT_LOG_FROM="$(date', '  xcrun simctl spawn "$UDID" log stream --style compact &\n  CLIENT_LOG_FROM="$(date')],
+    ['the server type-checked beside the simulator', plant('runner', '/bin.js" --transpile-only --project', '/bin.js" --project')],
+    ['transpile-only without a type-check', plant('gate', '        run: node node_modules/typescript/bin/tsc -p apps/api/tsconfig.scripts.json --noEmit', '        run: true')],
+    ['Spotlight left indexing', plant('gate', '        run: sudo mdutil -a -i off', '        run: true')],
     ['the settlement dropped', plant('server', "attentionSettlement: process.env.PROOF_ATTENTION === 'ON' ? new CallAttentionRepository(serverApi) : undefined,", '')],
     ['the API re-added to the World gate', plant('world', "      - 'packages/**'\n", "      - 'packages/**'\n      - 'apps/api/**'\n")],
     ['a World gate suite removed', plant('world', 'run: npm run test:cosmos-ios-world-gate-composition-contract', 'run: true')],

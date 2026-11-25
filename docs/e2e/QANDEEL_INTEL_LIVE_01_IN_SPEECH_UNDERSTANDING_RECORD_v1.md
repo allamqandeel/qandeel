@@ -462,6 +462,69 @@ From ITG-03 on, the run also keeps lightweight client-side diagnostics in `clien
 The ITG contract pins each element and plants its regression. If the repeat succeeds, the interruption is recorded as a
 tracked, unresolved finding, and its cause is not claimed resolved.
 
+**The third simulator run.** Run 45601664395 on `17b6c296`, with the recovery rule:
+
+| Case | Result | Detail |
+|---|---|---|
+| ITG-01 / ITG-02 | PASS | |
+| ITG-03 | FAIL | first attempt `4008 SILENCE`, epoch 1, 11 797 ms after the stimulus; the call was `ACTIVE` again at epoch 2; the one repeat lost its connection `4005 OVERLOADED`, epoch 2, 10 727 ms after its stimulus |
+| ITG-04 – 06 | NOT TESTED | not reached |
+
+No further repeat exists (PO).
+
+**The root cause, from the evidence of all three runs** (artifact `15019600190`, PO-approved; its client log, host
+samples and `top` snapshots compared with the server's events).
+
+1. **The host was starved.** The 1 s samples and both snapshots cover ITG-03. Load average was 130 – 158 (1 min) and
+   203 – 220 (5 min). CPU was 0 – 3 % idle, with 46 – 56 % of it in the kernel. Memory: 129 – 145 MB free, 2.6 GB
+   compressed, 2.0 GB wired, 36 772 swap-outs. 82 processes were stuck at the failure. Even the host's own 1 s sampler
+   missed 8 of its 45 ticks.
+2. **The first loss (`4008`).** The phone sent nothing for 3.0 s, from 11:49:32.98 to 11:49:36.00. The client log shows
+   the app compiling Metal shaders through that window: 11:49:33.03, 34.99, 35.06, 35.07, about 2 s each. That is the
+   first map subject being drawn, the same moment as in runs 1 and 2, where the map's five reads also immediately
+   preceded the pause. This is ordinary app work, which a starved host makes take seconds.
+3. **The second loss (`4005`).** The condition is `live-call.connection.ts:237`: `this.queued >= frameBurst`. That means
+   150 inbound frames, three seconds of audio, were waiting in the connection's own inbox. It is not the phone's send rate
+   (`frames.take`, line 232). A run of uplink gaps of 400 – 1 127 ms preceded it. At 11:50:01.398, about 1.4 s before it,
+   the simulator's audio engine logged `HALC_ProxyIOContext::IOWorkLoop: skipping cycle due to overload`, so even the
+   real-time audio thread was starved. No shader compile was in that window.
+4. **One root cause.** Both losses are the frozen protocol's correct responses to the same thing: multi-second
+   starvation of the simulated phone and its host. Silence ≥ 3 s gives `4008`; a backlog ≥ 3 s gives `4005`. Run 1
+   passed with pauses up to 1.7 s.
+5. **What the cause is not:**
+   - **The attention lane.** Measured locally with the same proof server, the same stand-in phone and one call each,
+     lane ON vs OFF, twice:
+     - CPU on the call: 3.63 / 3.25 s vs 3.58 / 3.23 s;
+     - working set: 658 MB in all four runs;
+     - no uplink gap, loss or refusal in any of them.
+
+     On the simulator, every attention evaluation finished within 0.1 s of its FINAL. None was running during either
+     pause.
+   - **Audio transport.** It refused exactly what it is specified to refuse.
+   - **The mobile runtime.** Its work at that moment is the approved first draw of the map, which is unchanged and fine
+     on the device.
+6. **The proof harness added measured load on that starved host:**
+   - **The proof server type-checked itself in process.** Locally, one call, lane ON: 658 MB and 3.2 – 3.6 CPU-s, peak
+     0.9 – 1.3 CPU-s in a second. With `--transpile-only`: 312 MB and 2.4 CPU-s, peak 0.42.
+   - **Run 3's own continuous `log stream`.** `diagnosticd` ×2 and `log` took about 37 % of one core in both snapshots.
+   - **Spotlight was indexing:** `mds_stores` up to 13.9 %, `mds` 8.3 %, many `mdworker_shared`.
+
+**The correction is to the harness only.** No production code, assertion, frozen limit or timeout changes, and nothing
+is repeated beyond the one approved repeat:
+- the proof server is type-checked in its own step (`tsc -p apps/api/tsconfig.scripts.json`, 6 s locally), then runs
+  `--transpile-only`;
+- Spotlight indexing is switched off first on the ephemeral runner;
+- the app log is read once when the run ends (`log show --start`), never streamed;
+- each snapshot adds the largest resident processes, so a recurrence names what holds the memory;
+- the app's pid is found by its exact process name, so its CPU is sampled.
+
+The ITG contract pins each change and plants its reversal.
+
+**What this does not prove.** The remaining load is the simulator and the app themselves on a 3-core, 7 GB runner. If a
+pause still recurs, the next run's evidence will show what remains, including which processes hold the memory. The
+harness's contribution is removed. The runner's capacity is not something CP1 can change without a paid or different
+runner.
+
 **The run on the final head:** `PENDING`. It is recorded here per case. No case is reported before it ran.
 
 ## 4. Paid spend (D-7)
@@ -640,6 +703,31 @@ answers `RUN / FULL` on this head. That is correct: the gate itself changed. Its
 **Measured reduction for a live-call backend change:** 3 World gate cells of about 80 – 110 min each, about 270 runner
 minutes, become one targeted cell (its first run: 43 min for the job, 7 min for the cases). The iOS obligation is still met, by interaction with what
 changed.
+
+**Exact-input evidence (PO, 2026-11-25, after run 45601664654).** A pull request's change set is cumulative. Once one
+commit edited the gate's own files, every later push ran all three cells again, including pushes that only corrected the
+targeted gate.
+
+On a pull request, a decision of RUN now becomes NOT_AFFECTED only when all of the following hold:
+- an earlier head of the SAME pull request has a successful World gate run that passed **every** cell (a `COSMOS_CASES`
+  or skipped run has fewer);
+- that head is in the current head's history;
+- the planner itself, run on everything changed since that head, answers NOT_AFFECTED. A change to the gate's own files
+  never qualifies.
+
+Any failed read leaves the decision RUN. A push to main never reuses evidence. The summary names the run and the head
+reused, and says "did NOT run again".
+
+The impact test pins each condition and plants each regression. The plan step's own shell, run under `bash -e` with a
+stub run history, gave:
+- evidence on `8c623882` with every cell passed → NOT_AFFECTED;
+- the same evidence with one cell → RUN;
+- evidence before the gate's own edit (`6400dc37`) → RUN;
+- a head outside the history, no history, or the current head itself → RUN;
+- an ineligible row, then an eligible one → the eligible one.
+
+The change edits the gate's workflow, so its own plan answers `RUN / FULL` once. Later pushes that reach nothing reuse
+that pass.
 
 ### 6.3 Migration 0204 and the earlier verifiers' exact sets
 

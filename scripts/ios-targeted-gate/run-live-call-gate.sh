@@ -34,8 +34,9 @@
 # requirement), and the COSMOS World (the World gate's, when its own inputs change). Kept in <out-dir>: every screenshot,
 # Maestro's debug output, the server's content-free evidence (counts and THIS proof's synthetic identifiers) and the host
 # reads of the call and the attention lane. From ITG-03 on, <out-dir>/client holds lightweight client-side diagnostics, never a
-# verdict: the app's unified log at default level (this proof's synthetic data only), a once-a-second host load and app CPU
-# line, and a host `top` snapshot at each connection loss and failure.
+# verdict: the app's unified log at default level (this proof's synthetic data only; read once when the run ends, never
+# streamed), a once-a-second host load and app CPU line, and a host `top` and largest-resident snapshot at each connection
+# loss and failure.
 set -u
 if [ "$#" -ne 3 ]; then echo "usage: run-live-call-gate.sh <app-dir> <out-dir> <udid>"; exit 2; fi
 APP="$1"
@@ -91,17 +92,28 @@ read_attention() { curl -s -m 5 "$SERVER/proof/attention" || echo '{}'; }
 start_client_diagnostics() {
   mkdir -p "$OUT/client"
   local pid
-  pid="$(pgrep -f 'QANDEEL\.app/QANDEEL' | head -n 1)"
+  pid="$(pgrep -x QANDEEL | head -n 1)"
   echo "app pid: ${pid:-not found}" > "$OUT/client/app-pid.txt"
-  xcrun simctl spawn "$UDID" log stream --style compact --level default \
-    --predicate 'process == "QANDEEL" OR eventMessage CONTAINS[c] "com.qandeel.mobile"' > "$OUT/client/app-log.txt" 2>&1 &
-  DIAG_PIDS="$DIAG_PIDS $!"
+  # The app's log is read ONCE, when the run ends (collect_client_log), never streamed: run 45601664395 measured a live
+  # `log stream` at about a third of a core (diagnosticd and log) on a host with no idle CPU.
+  CLIENT_LOG_FROM="$(date '+%Y-%m-%d %H:%M:%S')"
   # epoch seconds, host load average, the app's %CPU and RSS (KiB)
   ( while :; do printf '%s\t%s\t%s\n' "$(date +%s)" "$(sysctl -n vm.loadavg)" "$([ -n "$pid" ] && ps -o %cpu=,rss= -p "$pid" | tr -s ' ')"; sleep 1; done ) \
     > "$OUT/client/load-1hz.tsv" 2>/dev/null &
   DIAG_PIDS="$DIAG_PIDS $!"
 }
-client_snapshot() { [ -d "$OUT/client" ] && { top -l 2 -s 1 -n 12 -o cpu -stats pid,command,cpu,mem > "$OUT/client/$1-top.txt" 2>&1 || true; }; }
+client_snapshot() {
+  [ -d "$OUT/client" ] || return 0
+  top -l 2 -s 1 -n 12 -o cpu -stats pid,command,cpu,mem > "$OUT/client/$1-top.txt" 2>&1 || true
+  { echo; echo '# the largest resident processes'; ps -axm -o rss,pcpu,comm | head -n 16; } >> "$OUT/client/$1-top.txt" 2>&1 || true
+}
+# collect_client_log: the app's unified log (default level and above) from ITG-03 on, read once at the end of the run.
+CLIENT_LOG_FROM=""
+collect_client_log() {
+  [ -n "$CLIENT_LOG_FROM" ] && [ -d "$OUT/client" ] || return 0
+  $BOUND --seconds 180 --label client-log --out "$OUT" --quiet -- xcrun simctl spawn "$UDID" log show --style compact --start "$CLIENT_LOG_FROM" \
+    --predicate 'process == "QANDEEL" OR eventMessage CONTAINS[c] "com.qandeel.mobile"' > "$OUT/client/app-log.txt" 2>&1 || true
+}
 # ITG-03's recovery record: the server's own connection-loss lines.
 losses() { grep -c '"kind":"connection-lose"' "$EVENTS" 2>/dev/null || true; }
 # loss_detail <losses before>: the next loss's code, reason and epoch, and how long after the latest stimulus it came.
@@ -154,13 +166,20 @@ wait_json() {
   return 1
 }
 
-# The S8B-06 CP3 proof server, with the attention lane ON. It refuses anything but a loopback database.
+# The S8B-06 CP3 proof server, with the attention lane ON. It refuses anything but a loopback database. It runs
+# --transpile-only: the workflow type-checks it in its own step before the build. Measured locally (one call, the lane ON):
+# type-checking in process held 658 MB and spent 3.2 – 3.6 CPU-s on the call, transpile-only 312 MB and 2.4 CPU-s, on a
+# runner that had 129 MB free during run 45601664395.
 PROOF_ATTENTION=ON PROOF_EVENTS_FILE="$EVENTS" PORT=8806 NODE_ENV=development \
-  node "$REPO/node_modules/ts-node/dist/bin.js" --project "$REPO/apps/api/tsconfig.scripts.json" \
+  node "$REPO/node_modules/ts-node/dist/bin.js" --transpile-only --project "$REPO/apps/api/tsconfig.scripts.json" \
   "$REPO/apps/api/scripts/s8b-06-cp3-device-proof-server.ts" > "$OUT/host/server.log" 2>&1 &
 SERVER_PID=$!
 DIAG_PIDS=""
-trap 'kill $SERVER_PID $DIAG_PIDS 2>/dev/null || true' EXIT
+finish() {
+  kill $SERVER_PID $DIAG_PIDS 2>/dev/null || true
+  collect_client_log
+}
+trap finish EXIT
 for _ in $(seq 1 120); do grep -q '"kind":"listening"' "$EVENTS" 2>/dev/null && break; sleep 2; done
 grep -q '"kind":"listening"' "$EVENTS" || infrastructure "the proof server did not start (host/server.log)"
 grep -q '"kind":"attention-lane","state":"ON"' "$EVENTS" || infrastructure "the proof server's attention lane is not ON"

@@ -86,6 +86,10 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/itg
     steps:
       - {name: Checkout, uses: actions/checkout@v4}
+      # Run 45601664395: during ITG-03 the runner had 0 – 3 % idle CPU and 129 MB free, and Spotlight (mds_stores, mds,
+      # mdworker_shared) was indexing. This ephemeral runner needs no index; switched off before anything is built.
+      - name: Stop Spotlight indexing on this ephemeral runner (it competed with the cases)
+        run: sudo mdutil -a -i off || echo "mdutil did not answer; indexing is unchanged"
       - name: Select Xcode 26.6 explicitly (never the runner default)
         run: |
           sudo xcode-select -s /Applications/Xcode_26.6.app
@@ -97,6 +101,9 @@ jobs:
         uses: actions/setup-java@v6
         with: {distribution: temurin, java-version: '17'}
       - {name: Install dependencies from the root lockfile, run: npm ci}
+      # The proof server then runs --transpile-only: type-checking it in process held 658 MB beside the simulator.
+      - name: Type-check the proof server (the gate runs it transpile-only)
+        run: node node_modules/typescript/bin/tsc -p apps/api/tsconfig.scripts.json --noEmit
       - name: Start a throwaway PostgreSQL 17 and apply the canonical bootstrap and every migration
         run: |
           brew install postgresql@17
