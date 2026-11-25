@@ -1,5 +1,10 @@
 # QANDEEL S8B-07 — Original Audio Replay, Media Rendering & Distribution: Implementation Record v1
 
+**Slice (2026-11-25):** REPLAY-COSMOS-01 RB-2 / S4 + S4-CORRECTION-01 — **MERGED through PR #413 as `aa6fc0c8`** (§18, §19,
+§19.9; the tests on the final head `b5acae2a` passed; no deployment; `0201` – `0203` not hosted). The next task is
+INTEL-LIVE-01 (`QAN-BL-INTEL-06`); its CP0 contract is delivered for review (§19.9). S5 stays open. S8B-07 is not closed.
+*(The 2026-11-24 slice line below is kept as written.)*
+
 **Slice (2026-11-24):** REPLAY-COSMOS-01 RB-2 / S4 — **DELIVERED / READY FOR PO REVIEW — NOT MERGED** (§18; one Draft
 PR from `main` at `aed79e7c`; no migration). RB-2 / S3 merged through PR #408 as `9fe16a55` (§16; `0202`, not hosted);
 RB-2 / M-2 merged through PR #409 as `aed79e7c` (§17; `0203`, not hosted); RB-2 / S1 merged through PR #405 as `f45400a8`
@@ -1906,3 +1911,24 @@ rules; no history-wire field for the source-window digest.
 - **Closed by this correction:** the end-of-Replay policy (the closing display, §19.2).
 - **Open, unchanged:** assistant-final moments wait for their sealing commit (§16); P99 under contention, First Audio M1
   and WAL (§17); iOS certification, 4G, other Android devices; the HONOR device proof.
+
+
+### 19.9 Merge status and hand-over (a dated addendum, 2026-11-25; §18 and §19 kept as written)
+
+- **Merged.** The Product Owner merged Draft PR #413 (S4 + S4-CORRECTION-01, final head `b5acae2a`, tests green) into `main`
+  as `aa6fc0c8cd2fe023070df9bc8c19505b00bf783f` on 2026-11-25. Nothing is deployed; `0201` – `0203` are **not hosted**; the
+  next migration is still `0204`. The whole RB-2 chain (S1 `f45400a8`, S3 `9fe16a55`, M-2 `aed79e7c`, S4 `aa6fc0c8`) is in
+  `main`. The §19.8 residue stands unchanged.
+- **Next task.** INTEL-LIVE-01 — Incremental In-Speech Understanding & Living Map Attention (`QAN-BL-INTEL-06`). Its CP0
+  (execution contract and engineering readiness, 2026-11-25) is delivered for the Product Owner's review outside the
+  repository, `E:/QANDEEL_REPORTS/INTEL-LIVE-01/CP0/INTEL_LIVE_01_CP0_EXECUTION_CONTRACT_v1.0.md`, and enters `docs/e2e/`
+  at CP1 once approved. For this record it proposes, without implementing anything: a producer of real in-speech attention
+  events during the call (FINAL segments only, never INTERIM; bounded DeepSeek evaluations; append-only rows whose commit is
+  certified by the M-2 snapshots exactly as the 0201 ledger is); Lane B (§18.4, `event-track.ts`) as their consumer, with one
+  required re-anchor — Lane B still carries the pre-correction rule "UNRECORDED refuses the track, AFTER_END stays outside",
+  which CP3 must align with §19.2 (an uncertified event is placed at its anchor by source order, never dropped); a sibling
+  read beside S3's answer (a declared S7-01 re-anchor to three Replay routes); and one new field on the frame's scene. Lane A
+  (`timeline.ts`, `stage-timeline.ts`, `presentation-clock.ts`, the availability decoder and binding) is not edited by it.
+  The video (S5 / CP2-A) consumes the same track and reducer later; nothing is analysed at export.
+- **Sequence (unchanged):** INTEL-LIVE-01 → HONOR Live + Replay proof → CP2-A → CP2-B. HONOR ALI-NX1 and iOS remain
+  **NOT TESTED** for S4.

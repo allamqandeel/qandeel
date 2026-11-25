@@ -4000,6 +4000,17 @@ may briefly re-place a disclosure already drawn (LOW, new). The Product Owner's 
 (`QAN-BL-INTEL-06`, Draft PR #410, unmerged) → HONOR Live + Replay proof → CP2-A → CP2-B. S3 #408 and M-2 #409 are merged;
 the HONOR device proof and iOS are not tested; no migration; nothing hosted. The item stays `OPEN — UNASSIGNED`.
 
+Progress note (2026-11-25, S4 merged; INTEL-LIVE-01 CP0, not a disposition): S4 + S4-CORRECTION-01 merged through PR #413
+as `aa6fc0c8` (§19.9 of the [S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md)); no deployment;
+`0201` – `0203` not hosted. The Replay COSMOS timeline now draws every eligible historical moment (certified placement or
+source order; NOT_FOUND alone neutral; the closing display). Lane B (in-speech attention) is still the empty typed boundary;
+its producer is the next task, INTEL-LIVE-01 (`QAN-BL-INTEL-06`, an item that exists today only on the unmerged Draft PR
+#410), whose CP0 execution contract is delivered for the Product Owner's review outside the repository
+(`E:/QANDEEL_REPORTS/INTEL-LIVE-01/CP0/`). That contract plans, at its CP1, the admission of `QAN-BL-INTEL-06` on `main` and
+the disposition of #410, and at its CP3 the alignment of Lane B with §19's placement policy. The §19.8 residue stands (the
+source-window digest pin MEDIUM; one request per opening LOW; a late certified answer re-placing a drawn disclosure LOW); the
+HONOR device proof and iOS are not tested. The item stays `OPEN — UNASSIGNED`.
+
 ### `QAN-BL-NAV-04` — No Full Personal Detail Surface Beyond the PEEK (PERSONAL-DETAIL-01)
 
 - **Title / Finding:** the Personal Detail Sheet is PEEK-only (G-7, V1). There is no full Personal detail surface for a
