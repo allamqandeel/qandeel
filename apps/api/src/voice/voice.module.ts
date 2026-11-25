@@ -12,6 +12,7 @@ import { callFailureLine, LIVE_CALL_FAILURE_LINE } from './call-turn/call-failur
 import { CALL_TURN_STORE } from './call-turn/call-turn.store';
 import { LiveCallAnalysisSignal } from './call-turn/live-call-analysis.signal';
 import { LiveCallConversationBinding } from './call-turn/live-call-conversation.port';
+import { LiveCallAttentionBinding } from './call-turn/live-call-attention.port';
 import { LIVE_CALL_RECOGNITION, LIVE_CALL_SYNTHESIS_ROUTE, LiveCallTurnEngine } from './call-turn/live-call-turn.engine';
 import { liveCallFetch } from '../http-transport/live-call-keep-alive-fetch';
 import { LiveCallTruthController } from './call/live-call-truth.controller';
@@ -138,6 +139,8 @@ import {
     { provide: LIVE_CALL_STORE, useClass: LiveCallRepository },
     { provide: CALL_TURN_STORE, useClass: CallTurnRepository },
     LiveCallConversationBinding,
+    // INTEL-LIVE-01 CP1: the provisional attention lane's binding; its owner (ConversationModule) registers into it at start.
+    LiveCallAttentionBinding,
     // S8B-05 CP3: the call analysis worker's kick; the worker (ConversationModule) registers into it at start.
     LiveCallAnalysisSignal,
     {
@@ -163,6 +166,6 @@ import {
     LiveCallService,
     LiveCallGateway,
   ],
-  exports: [VoiceMediaModule, LiveCallConversationBinding, LiveCallAnalysisSignal, LiveCallTurnEngine],
+  exports: [VoiceMediaModule, LiveCallConversationBinding, LiveCallAttentionBinding, LiveCallAnalysisSignal, LiveCallTurnEngine],
 })
 export class VoiceModule {}

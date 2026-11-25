@@ -473,7 +473,18 @@ test('T-03B2a itself shipped no migration, no Thread row, no service_role grant 
   assert.equal((readingGate.match(/conversation_threads/gu) ?? []).length, 1, `${READING_GATE_MIGRATION} names the Thread table exactly once: the 0198 ownership read`);
   assert.match(readingGate, /JOIN public\.conversation_threads t ON t\.id = \(e\.value ->> 'id'\)::uuid AND t\.user_id = caller/u,
     `${READING_GATE_MIGRATION} reads the caller's own Thread, as 0198 does`);
-  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION && candidate !== ERASURE_MIGRATION && candidate !== RETRY_MIGRATION && candidate !== RELATION_MIGRATION && candidate !== THREAD_NAMES_MIGRATION && candidate !== CURRENT_WORLD_MIGRATION && candidate !== READING_GATE_MIGRATION)) {
+  // INTEL-LIVE-01 CP1 (the PO's "INTEL-LIVE-01 — Final PO Execution Authorization", 2026-11-25, D-4): migration 0204, the
+  // call's provisional attention, READS the person's own durable Threads by id - an attention event's optional reference is
+  // checked against the owner's Thread, settlement reads the Threads a committed turn's units were bound to (the semantic
+  // unit results, the focus bindings, the establishing unit), and the evaluator's Thread list re-states 0198's name read
+  // (the newest alias, else the grounding wording). It creates, alters, writes or deletes no Thread / Home row, names no
+  // Home and defines no placement; it is exempt on exactly those terms and pinned by its own contract
+  // (database/tests/live-call-attention-v1.test.mjs).
+  const ATTENTION_MIGRATION = '0204_intel_live_01_call_attention_v1.sql';
+  const attention = read(`database/migrations/${ATTENTION_MIGRATION}`);
+  assert.doesNotMatch(attention, /(?:CREATE|ALTER|DROP)s+TABLEs+public.conversation_thread|(?:INSERTs+INTO|UPDATE|DELETEs+FROM)s+public.conversation_thread|conversation_thread_homes|thread_home|osdap|home_placement|home_anchor|canonical_spatial|thread_establish/iu,
+    `${ATTENTION_MIGRATION} creates, writes or restructures no Thread / Home table and computes no placement`);
+  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION && candidate !== ERASURE_MIGRATION && candidate !== RETRY_MIGRATION && candidate !== RELATION_MIGRATION && candidate !== THREAD_NAMES_MIGRATION && candidate !== CURRENT_WORLD_MIGRATION && candidate !== READING_GATE_MIGRATION && candidate !== ATTENTION_MIGRATION)) {
     const text = name === VOICE_MIGRATION ? withoutVoiceRecreations(read(`database/migrations/${name}`))
       // (0191's half coordinator checks and reads the World Thread-identity clock exactly as the FINAL 0071 coordinator
       // does - its stale-token contract - and touches no Thread or Home row; that clock's name is all it carries.)

@@ -129,7 +129,11 @@ test('0184: the TypeScript mirrors equal the CHECKs, the text registries keep th
   const kindCheck = /ai_provider_call_usage_kind_check CHECK \(usage_kind IN \(([^)]*)\)\)/u.exec(v0184);
   assert.deepEqual(list(kindCheck[1]), [...tsArray(types, 'AI_USAGE_KINDS'), ...tsArray(types, 'AI_VOICE_USAGE_KINDS')]);
   const familyCheck = /ai_provider_calls_feature_family_check CHECK \(feature_family IN \(([^)]*)\)\)/u.exec(v0184);
-  assert.deepEqual(list(familyCheck[1]), [...tsArray(types, 'AI_FEATURE_FAMILIES'), ...tsArray(types, 'AI_VOICE_FEATURE_FAMILIES')]);
+  // RE-ANCHORED by INTEL-LIVE-01 CP1 (2026-11-25): 0204 widens the family CHECK by LIVE_ATTENTION_EVALUATION; the TypeScript
+  // mirror equals the LATEST CHECK (0204's), and 0184's is that list without the one family 0204 added.
+  const family0204 = /ai_provider_calls_feature_family_check CHECK \(feature_family IN \(([^)]*)\)\)/u.exec(read(`${MIGRATIONS}/${file('0204_')}`));
+  assert.deepEqual(list(family0204[1]), [...tsArray(types, 'AI_FEATURE_FAMILIES'), ...tsArray(types, 'AI_VOICE_FEATURE_FAMILIES')]);
+  assert.deepEqual(list(familyCheck[1]), list(family0204[1]).filter((f) => f !== 'LIVE_ATTENTION_EVALUATION'));
   assert.deepEqual(tsArray(types, 'AI_VOICE_FEATURE_FAMILIES'), [...VOICE_FAMILIES]);
   assert.deepEqual(tsArray(types, 'AI_PROVIDERS'), ['OPENAI', 'ANTHROPIC', 'GEMINI', 'DEEPSEEK'], 'the text providers are unchanged');
   assert.deepEqual(tsArray(types, 'AI_USAGE_KINDS'), ['INPUT_TOKEN', 'OUTPUT_TOKEN', 'CACHE_READ_INPUT_TOKEN', 'CACHE_WRITE_INPUT_TOKEN']);

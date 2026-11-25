@@ -1,4 +1,7 @@
-import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Optional, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import { CallAttentionRepository } from '../live-attention/call-attention.repository';
+import { LIVE_CALL_ATTENTION } from '../live-attention/live-attention.provider';
+import type { LiveCallAttention } from '../voice/call-turn/live-call-attention.port';
 import { LiveCallReplyService } from '../conversation/live-call-reply.service';
 import { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
 import { ConversationSemanticEstablishmentService } from '../live-focus/conversation-semantic-establishment.service';
@@ -30,6 +33,8 @@ export class CallAnalysisWorkerHost implements OnModuleInit, OnModuleDestroy {
     @Inject(BACKGROUND_PERMIT_GATE) private readonly permits: BackgroundPermitGate,
     private readonly reply: LiveCallReplyService,
     private readonly signal: LiveCallAnalysisSignal,
+    // INTEL-LIVE-01 CP1: present only while the provisional attention lane is ON; its halves are then settled here.
+    @Optional() @Inject(LIVE_CALL_ATTENTION) private readonly attention?: LiveCallAttention | null,
   ) {}
 
   onModuleInit(): void {
@@ -40,6 +45,7 @@ export class CallAnalysisWorkerHost implements OnModuleInit, OnModuleDestroy {
       permits: this.permits,
       safety: this.reply,
       start: callAnalysisStart(),
+      attentionSettlement: this.attention ? new CallAttentionRepository(this.serviceApi) : undefined,
     });
     this.signal.bind(this.worker);
     this.worker.start();

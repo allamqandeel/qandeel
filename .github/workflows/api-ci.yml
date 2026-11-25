@@ -268,6 +268,7 @@ jobs:
       - {name: "Verify S8B-07 RB-2 S1 semantic commit instants contract (0201 forward-only, one table and four functions, nothing replaced; the deferred row constraint trigger reading the clock as it stands and folding by transaction identity; the guard; service_role observer and sweeper, unwired; no handler, no dynamic SQL, no retryable SQLSTATE; the verifier wired after 0200)", run: npm run test:semantic-commit-instants-contract}
       - {name: "Verify S8B-07 RB-2 S3 Replay historical availability contract (0202 forward-only after 0201, 0201 byte-frozen, the completing row seals TC, no projection sequence / observed_at / trigger_at as a time, the read to the Replay pool only, the seam NULL until M-2)", run: npm run test:replay-historical-availability-contract}
       - {name: "Verify S8B-07 RB-2 M-2 live call clock marks contract (0203 forward-only after 0202, 0201 byte-frozen, snapshot visibility of the writer xact, contiguous prefix, write-on-change, min-echo seam, service_role reaches the slot batch only, marks and ranges ACCOUNT_CASCADE)", run: npm run test:live-call-clock-marks-contract}
+      - {name: "Verify INTEL-LIVE-01 provisional attention contract (0204 forward-only after 0203, one writer, no durable write, service_role reaches five functions only, ACCOUNT_CASCADE; FINAL-only evidence, no time or word threshold, the evaluator behind its port and the cost ledger)", run: npm run test:live-call-attention-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1470,6 +1471,12 @@ jobs:
       # data, compaction, isolation, collection, erasure, WAL and 6 planted defects.
       - name: Verify S8B-07 RB-2 M-2 live call clock marks (0203) against real PostgreSQL
         run: npm run verify:live-call-clock-marks:integration
+      # INTEL-LIVE-01 CP1 (the PO's "INTEL-LIVE-01 — Final PO Execution Authorization", 2026-11-25): migration 0204, the
+      # call's provisional attention - the coverage ledger, the attention events and their settlement. The one writer's
+      # atomicity, idempotency, staleness and fence; the two lock-serialised writers; the readers; settlement by Thread id;
+      # the crash-window sweep; the erasure cascade.
+      - name: Verify INTEL-LIVE-01 call provisional attention (0204) against real PostgreSQL
+        run: npm run verify:live-call-attention:integration
       # S8B-07 CP1-B (D-06.6): the Replay pool's ffmpeg - BtbN's 9.0.2 LGPL build, from its own release asset at a pinned
       # autobuild tag, refused unless its sha256 is the one pinned here (the rclone and PostgREST pattern: no registry, no
       # image, no package manager). FFMPEG_BIN / FFPROBE_BIN name it for the media proofs; nothing else uses it.

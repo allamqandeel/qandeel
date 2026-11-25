@@ -6,6 +6,7 @@ import { FakeCallTurnChannel } from './testing/fake-call-turn-channel';
 import { FAKE_CALL_INTERIM, FakeCallRecognizer, type FakeCallLine } from './testing/fake-call-recognizer';
 import type { CallFailureLine } from './call-failure-line';
 import type { LiveCallSpeechStream } from '../call/live-call-speech.port';
+import { LiveCallAttentionBinding, type LiveCallAttention } from './live-call-attention.port';
 
 const FRAME = 640;
 const loud = (): Buffer => {
@@ -24,9 +25,16 @@ async function until(condition: () => boolean, ms = 4_000): Promise<void> {
   }
 }
 
+function attentionBinding(attention: LiveCallAttention | undefined): LiveCallAttentionBinding | undefined {
+  if (!attention) return undefined;
+  const binding = new LiveCallAttentionBinding();
+  binding.bind(attention);
+  return binding;
+}
+
 function harness(script: Array<string | FakeCallLine>, options: {
   disposition?: 'ALLOW' | 'GUIDED' | 'BLOCK'; bind?: boolean; finalDelayMs?: number; conversation?: LiveCallConversation;
-  failureLine?: CallFailureLine | null; store?: InMemoryCallTurnStore; epoch?: number;
+  failureLine?: CallFailureLine | null; store?: InMemoryCallTurnStore; epoch?: number; attention?: LiveCallAttention;
 } = {}) {
   const store = options.store ?? new InMemoryCallTurnStore();
   const binding = new LiveCallConversationBinding();
@@ -55,7 +63,7 @@ function harness(script: Array<string | FakeCallLine>, options: {
     });
   }
   const recognizer = new FakeCallRecognizer(script.map((line) => (typeof line === 'string' ? { text: line } : line)), { finalDelayMs: options.finalDelayMs ?? 5 });
-  const engine = new LiveCallTurnEngine(store, binding, recognizer, fakeCallSynthesisRoute(new FakeCallSynthesis()), undefined, undefined, options.failureLine ?? null);
+  const engine = new LiveCallTurnEngine(store, binding, recognizer, fakeCallSynthesisRoute(new FakeCallSynthesis()), undefined, undefined, options.failureLine ?? null, attentionBinding(options.attention));
   const observed: CallTurnObservation[] = [];
   engine.observe((o) => observed.push(o));
   const channel = new FakeCallTurnChannel(undefined, undefined, undefined, options.epoch ?? 1);
@@ -476,5 +484,98 @@ describe('S8B-05 CP4 the call turn engine: barge-in, typed turns, drain, resume 
     expect(h.channel.replyAudio).toEqual([]);
     expect(h.channel.of('REPLY_END')[0]).toEqual({ type: 'REPLY_END', callTurnIndex: 1, chunks: 0, deliveryState: 'FAILED' });
     h.stream.close();
+  });
+});
+
+describe('INTEL-LIVE-01 CP1 the call turn engine hands the provisional attention lane its evidence', () => {
+  interface Handed { readonly track: string; readonly text: string; readonly startMs: number; readonly endMs: number; readonly commits: number }
+  function recorder(store: InMemoryCallTurnStore) {
+    const handed: Handed[] = [];
+    const events: string[] = [];
+    const attention: LiveCallAttention = {
+      open: (channel) => {
+        events.push(`open:${channel.callId}:${channel.epoch}`);
+        return {
+          evidence: (track, text, startMs, endMs) => handed.push({ track, text, startMs, endMs, commits: store.commits.length }),
+          turnCommitted: () => events.push('committed'),
+          handover: async () => { events.push('handover'); },
+          close: () => events.push('close'),
+        };
+      },
+    };
+    return { handed, events, attention };
+  }
+
+  it('each FINAL is handed at once, before the commit (in-speech), on the call clock; an INTERIM never is', async () => {
+    const store = new InMemoryCallTurnStore();
+    const r = recorder(store);
+    const h = harness([{ text: 'مرحبا يا قنديل', startMs: 0, endMs: 600 }], { store, attention: r.attention });
+    await h.speak('loud', 600);
+    await h.speak('quiet', 1_000);
+    await until(() => r.handed.length === 1);
+    // Handed as soon as the recognizer made it FINAL: before the turn was committed.
+    expect(r.handed[0]).toMatchObject({ track: 'USER', text: 'مرحبا يا قنديل', startMs: 0, endMs: 600, commits: 0 });
+    await until(() => h.channel.of('TURN_COMMITTED').length === 1);
+    await until(() => r.events.includes('committed'));
+    expect(JSON.stringify(r.handed)).not.toContain(FAKE_CALL_INTERIM);
+    h.stream.close();
+    expect(r.events[0]).toBe(`open:${h.channel.callId}:1`);
+    expect(r.events.at(-1)).toBe('close');
+  });
+
+  it('a piece of QANDEEL\'s speech is handed only once the phone confirmed it played, in order, on the call clock', async () => {
+    const store = new InMemoryCallTurnStore();
+    const r = recorder(store);
+    const h = harness(['احكيلي'], { store, attention: r.attention });
+    await h.speak('loud', 400);
+    await h.speak('quiet', 1_000);
+    await until(() => h.store.calls.includes('finishGeneration'));
+    expect(r.handed.filter((x) => x.track === 'QANDEEL')).toEqual([]);
+    await h.playAll(1);
+    await until(() => r.handed.filter((x) => x.track === 'QANDEEL').length === REPLY.length);
+    const q = r.handed.filter((x) => x.track === 'QANDEEL');
+    expect(q.map((x) => x.text)).toEqual(REPLY);
+    expect(q[0]!.startMs).toBeGreaterThanOrEqual(400);
+    expect(q[1]!.startMs).toBeGreaterThanOrEqual(q[0]!.endMs);
+    h.stream.close();
+  });
+
+  it('echo held while QANDEEL plays is never the person\'s: a barge-in excludes what ended before its onset; the rest is released', async () => {
+    const store = new InMemoryCallTurnStore();
+    const r = recorder(store);
+    const h = harness(['احكيلي عن يومك', [
+      { text: 'قل لي أكثر', startMs: 1_400, endMs: 1_480 },
+      { text: 'استنى لحظة', startMs: 1_500, endMs: 1_780 },
+    ]], { store, attention: r.attention });
+    await h.speak('loud', 400);
+    await h.speak('quiet', 1_000);
+    await until(() => h.channel.replyAudio.some((p) => p.callTurnIndex === 1));
+    await h.stream.playout({ callTurnIndex: 1, chunkSeq: 0, playedMs: 20 });
+    await h.speak('loud', 100);
+    expect(await h.stream.bargeIn({ callTurnIndex: 1, captureMs: 1_500 })).toBe('APPLIED');
+    await h.speak('loud', 300);
+    await h.speak('quiet', 1_000);
+    await until(() => r.handed.some((x) => x.text === 'استنى لحظة'));
+    expect(r.handed.filter((x) => x.track === 'USER').map((x) => x.text)).toEqual(['احكيلي عن يومك', 'استنى لحظة']);
+    h.stream.close();
+  });
+
+  it('the hand-over flush ends the connection\'s attention under its epoch; a lane that fails to open never breaks the call', async () => {
+    const store = new InMemoryCallTurnStore();
+    const r = recorder(store);
+    const h = harness(['مرحبا', 'كنت بقول'], { store, attention: r.attention });
+    await h.speak('loud', 400);
+    await h.speak('quiet', 1_000);
+    await until(() => h.channel.of('TURN_COMMITTED').length === 1);
+    await h.speak('loud', 300);
+    await h.stream.drain();
+    expect(r.events).toContain('handover');
+    h.stream.close();
+
+    const broken = harness(['مرحبا'], { attention: { open: () => { throw new Error('lane'); } } });
+    await broken.speak('loud', 400);
+    await broken.speak('quiet', 1_000);
+    await until(() => broken.channel.of('TURN_COMMITTED').length === 1);
+    broken.stream.close();
   });
 });

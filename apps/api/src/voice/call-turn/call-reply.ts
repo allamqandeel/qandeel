@@ -55,6 +55,11 @@ export interface CallReplyDeps {
    * installed (D-05-02): then nothing is played. Never synthesized, never reply speech.
    */
   readonly failureLine?: () => readonly Buffer[] | null;
+  /**
+   * INTEL-LIVE-01 CP1: one whole piece of this reply, its VISIBLE text and its range on the call clock, once the phone
+   * confirmed it played to its end (only what was heard is evidence). Synchronous; never awaited.
+   */
+  readonly heard?: (text: string, clockStartMs: number, clockEndMs: number) => void;
 }
 
 type Segment = { readonly text: string; readonly style: string; readonly piece: number; readonly first: boolean; readonly last: boolean };
@@ -123,6 +128,9 @@ export class CallReply {
   private readonly failurePackets: Buffer[] = [];
   private failureClockStartMs: number | null = null;
   private failureWritten = 0;
+  /** INTEL-LIVE-01 CP1: each produced piece's range in the reply, and how many were reported heard. */
+  private readonly pieceRanges: Array<{ readonly piece: number; readonly startMs: number; readonly endMs: number }> = [];
+  private heardPieces = 0;
   private resolveSafety!: () => void;
   private safetyKnown = false;
   private safetyRecovery: Promise<boolean> | null = null;
@@ -149,6 +157,11 @@ export class CallReply {
    */
   get bargedPlayback(): { readonly startMs: number; readonly onsetMs: number } | null {
     return this.onsetMs === null || this.clockStartMs === null ? null : { startMs: this.clockStartMs, onsetMs: this.onsetMs };
+  }
+
+  /** INTEL-LIVE-01 CP1: where this reply began playing on the call clock while it still plays (not closed, not stopped). */
+  get playingFromMs(): number | null {
+    return this.closedState === null && !this.interrupted && this.clockStartMs !== null ? this.clockStartMs : null;
   }
 
   safetyStored(): void {
@@ -256,6 +269,7 @@ export class CallReply {
     this.markMs = result.markMs;
     this.clockStartMs = result.clockStartMs;
     this.writeHeard();
+    this.reportHeard();
     void this.maybeClosePlayedOut();
     return 'APPLIED';
   }
@@ -504,8 +518,25 @@ export class CallReply {
     this.deps.channel.sendReplyAudio({ callTurnIndex: this.callTurnIndex, chunkSeq, offsetMs: chunkSeq * AUDIO_PACKET_MS, packet });
   }
 
+  /** INTEL-LIVE-01 CP1: the produced pieces the phone confirmed it played to their end, each once, in order. */
+  private reportHeard(): void {
+    const heard = this.deps.heard;
+    if (!heard || this.clockStartMs === null) return;
+    for (; this.heardPieces < this.pieceRanges.length; this.heardPieces += 1) {
+      const range = this.pieceRanges[this.heardPieces]!;
+      if (range.endMs > this.markMs) return;
+      try {
+        heard(this.pieceTexts[range.piece]!, this.clockStartMs + range.startMs, this.clockStartMs + range.endMs);
+      } catch {
+        // The attention lane never breaks the reply.
+      }
+    }
+  }
+
   /** A whole piece was produced: its visible text and its range in the reply, registered in order. */
   private register(piece: number, startMs: number, endMs: number): void {
+    if (endMs > startMs) this.pieceRanges.push({ piece, startMs, endMs });
+    this.reportHeard();
     const text = this.pieceTexts[piece]!;
     const channel = this.deps.channel;
     this.registrations = this.registrations.then(async () => {

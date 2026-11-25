@@ -49,6 +49,8 @@ import type { ModelRouter } from '../model-router/model-router.types';
 import { TelemetryService } from '../observability/telemetry.service';
 import { LIVE_CALL_MODEL_ROUTER, LiveCallReplyService } from './live-call-reply.service';
 import { productionLiveCallRouter } from './live-call-model-router';
+import { LIVE_CALL_ATTENTION, LiveAttentionHost, productionLiveCallAttention } from '../live-attention/live-attention.provider';
+import type { LiveCallAttention } from '../voice/call-turn/live-call-attention.port';
 
 /**
  * T-03A2: the LAZY CU segmentation binding.
@@ -218,6 +220,15 @@ export const THREAD_CONTINUITY_BINDING_FACTORY = Symbol('THREAD_CONTINUITY_BINDI
     LiveCallReplyService,
     // S8B-05 CP3: the Durable Ordered Analysis Worker - Live Analysis DURING the call, one half at a time, in 0191's order.
     CallAnalysisWorkerHost,
+    // INTEL-LIVE-01 CP1: the call's provisional attention lane - OFF unless LIVE_CALL_PROVISIONAL_ATTENTION is ON; a test
+    // process binds none. The host registers it into VoiceModule's LiveCallAttentionBinding at start.
+    {
+      provide: LIVE_CALL_ATTENTION,
+      useFactory: (serviceApi: SupabaseServiceRoleApiService, permits: BackgroundPermitGate): LiveCallAttention | null =>
+        (process.env.NODE_ENV === 'test' ? null : productionLiveCallAttention(process.env, serviceApi, permits)),
+      inject: [SupabaseServiceRoleApiService, BACKGROUND_PERMIT_GATE],
+    },
+    LiveAttentionHost,
   ],
 })
 export class ConversationModule {}

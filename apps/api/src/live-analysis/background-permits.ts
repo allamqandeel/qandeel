@@ -13,7 +13,9 @@
 import { randomUUID } from 'node:crypto';
 import type { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
 
-export type BackgroundWorkKind = 'CALL_ANALYSIS' | 'TEXT_SEMANTIC_ANALYSIS' | 'POST_RESPONSE_INTELLIGENCE';
+// INTEL-LIVE-01 CP1 (migration 0204): PROVISIONAL_ATTENTION, the live call's in-speech evaluations — asked with no wait and
+// L2 respected; a refused permit is a recorded DEFERRED_PERMIT, never a wait on the voice path.
+export type BackgroundWorkKind = 'CALL_ANALYSIS' | 'TEXT_SEMANTIC_ANALYSIS' | 'POST_RESPONSE_INTELLIGENCE' | 'PROVISIONAL_ATTENTION';
 
 export interface BackgroundPermitRequest {
   /** L2: wait while this person's live reply is generating with nothing heard yet (call analysis and post-response). */

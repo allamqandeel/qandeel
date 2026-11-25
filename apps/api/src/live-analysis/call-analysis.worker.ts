@@ -21,6 +21,11 @@
 // context reader, stores it once, then closes the exchange (CALL_ENDING), which queues the reply's half and writes the
 // turn's one completion event. A context that cannot be read leaves it for the next scan: never a default ALLOW / BLOCK.
 //
+// INTEL-LIVE-01 CP1 (A1 §3 rule 5): when the call's provisional attention lane is ON, a USER or ASSISTANT half that this
+// worker settled is followed by the attention settlement of that half (0204: what the durable half established confirms
+// or expires the provisional subjects of its window). Best effort: a lost settlement is found by the scan's sweep
+// (`settleDue`); no model is called and nothing waits on the voice path.
+//
 // Nothing here logs. Observations carry identifiers, instants and counts, never words.
 
 import { randomUUID } from 'node:crypto';
@@ -87,6 +92,14 @@ export interface CallAnalysisWorkerDeps {
   readonly start: CallAnalysisStart;
   readonly observe?: (observation: CallAnalysisObservation) => void;
   readonly now?: () => number;
+  /** INTEL-LIVE-01 CP1: the attention settlement (0204), present only while the lane is ON. */
+  readonly attentionSettlement?: CallAttentionSettlement;
+}
+
+/** INTEL-LIVE-01 CP1: the two 0204 settlement commands the worker uses. */
+export interface CallAttentionSettlement {
+  settle(userId: string, callId: string, callTurnIndex: number, half: 'USER' | 'ASSISTANT'): Promise<unknown>;
+  settleDue(limit: number): Promise<number>;
 }
 
 /** A failure code the queue accepts (`^[A-Z][A-Z0-9_]{0,63}$`). */
@@ -161,6 +174,7 @@ export class CallAnalysisWorker implements LiveCallAnalysisListener {
     this.scanning = true;
     try {
       await this.sweep();
+      await this.deps.attentionSettlement?.settleDue(CALL_ANALYSIS_POLICY.sweepLimit).catch(() => 0);
       const sessions = await this.deps.store.listSessions(CALL_ANALYSIS_POLICY.scanLimit);
       for (const { sessionId } of sessions) this.kick(sessionId, 'SCAN');
     } catch {
@@ -240,6 +254,14 @@ export class CallAnalysisWorker implements LiveCallAnalysisListener {
     } finally {
       await (released ?? permit.release());
     }
+    this.settleAttention(claim);
+  }
+
+  /** INTEL-LIVE-01 CP1: the half's attention settlement, never awaited by the queue (NOT_READY writes nothing; the sweep retries). */
+  private settleAttention(claim: Extract<CallAnalysisClaim, { outcome: 'CLAIMED' }>): void {
+    const attention = this.deps.attentionSettlement;
+    if (!attention || claim.half === 'EXCHANGE') return;
+    this.track(attention.settle(claim.userId, claim.callId, claim.callTurnIndex, claim.half).then(() => undefined, () => undefined));
   }
 
   /** Establishes the claimed item; null when it is established (now or already), else how to settle it. */
