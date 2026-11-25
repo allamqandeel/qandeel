@@ -1,0 +1,12 @@
+# INTEL-LIVE-01 CP1 — iOS Targeted Gate (live call): a reader's tap on one production call control (ID), then wait for the
+# element that exists only after the tap took effect (WAIT_ID): the call line's End once a call is open, the call entry
+# again once it ended. VALIDATION ONLY. Input: PREFIX, ID, WAIT_ID, SHOT.
+appId: com.qandeel.mobile
+---
+- tapOn:
+    id: ${ID}
+- extendedWaitUntil:
+    visible:
+      id: ${WAIT_ID}
+    timeout: 60000
+- takeScreenshot: ${PREFIX}-${SHOT}

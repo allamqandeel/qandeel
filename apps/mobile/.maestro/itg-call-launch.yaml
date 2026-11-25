@@ -1,0 +1,17 @@
+# INTEL-LIVE-01 CP1 — iOS Targeted Gate (live call; PO directive 2026-11-25 §3): launch the S8B-06 CP3 proof build with
+# the microphone allowed (granted by `simctl privacy` before; stated again so Maestro's launch keeps it) and wait for the
+# Conversation's call entry, which the production runtime draws only after it reached the proof server (the voice
+# capability, the Session, its history). VALIDATION ONLY. Driven by scripts/ios-targeted-gate/run-live-call-gate.sh.
+# Input: PREFIX, SHOT.
+appId: com.qandeel.mobile
+---
+- launchApp:
+    clearState: true
+    stopApp: true
+    permissions:
+      microphone: allow
+- extendedWaitUntil:
+    visible:
+      id: qandeel-call-entry
+    timeout: 180000
+- takeScreenshot: ${PREFIX}-${SHOT}

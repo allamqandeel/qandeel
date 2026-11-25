@@ -1,6 +1,6 @@
 # INTEL-LIVE-01 — Incremental In-Speech Understanding & Living Map Attention: Execution Record v1
 
-**Status:** `INTEL-LIVE-01 CP1 DELIVERED / READY FOR PO REVIEW — A8′ SEMANTIC GATE: RECALL MET (21 / 21), FALSE-UPDATE CLAUSE AWAITS THE HUMAN ADJUDICATION (14 unannotated events) — NOT MERGED — NOT DEPLOYED — CP2 – CP4 NOT STARTED`
+**Status:** `INTEL-LIVE-01 CP1 RESOLVED UNDER THE PO DIRECTIVE OF 2026-11-25 / READY FOR PO REVIEW — A8′: RECALL 21 / 21 (PROMPT v5), THE UNANNOTATED EVENTS ADJUDICATED BY THE DIRECTIVE'S CATEGORIES (§3.2) — iOS TARGETED GATE (LIVE CALL): SEE §3.6 — API CI T-03B1b1 FAILURE CORRECTED — NOT MERGED — NOT DEPLOYED — CP2 NEXT, CP3 – CP4 NOT STARTED`
 - Draft PR "INTEL-LIVE-01 CP1 — continuous in-speech understanding (provisional attention lane)" from `intel/intel-live-01`,
   stacked on Draft PR #414 (the CP0 docs commit `53429017`, itself on `main` at `aa6fc0c8`).
 - Merging needs the Product Owner's explicit «ادمج». Migration `0204` is **not hosted**; the next migration is `0205`.
@@ -15,6 +15,14 @@ sequence, step 3).
 proof recorded. CP4 moves it to `VALIDATION — OPEN`. No other item is admitted, re-owned or closed at CP1.
 
 **Authority (binding in this order):**
+- The Product Owner's "INTEL-LIVE-01 — Binding PO Directive: Semantic Freedom & Targeted Cross-Platform Validation"
+  (2026-11-25). It supersedes the previous CP1 review and the proposed blanket iOS exemption:
+  - §1: DeepSeek is the semantic authority; the restrictive importance and granularity instructions are removed.
+  - §2: the unannotated events are judged by what they are, never by the annotation list.
+  - §3 / §4: iOS stays mandatory through a change-aware iOS Targeted Gate; validation scope is proportional to impact
+    (the backlog's BG-10 clarification).
+  - §5: impact-based CI, and the T-03B1b1 API CI failure corrected without weakening its assertions.
+  - §6: one task, one PR (#415), four checkpoints.
 - The Product Owner's "INTEL-LIVE-01 — Final PO Execution Authorization" (2026-11-25): D-2 and D-4 approved; D-7 paid
   ceilings Speechmatics USD 0.30, DeepSeek USD 0.30, combined USD 0.60; D-12 and D-13 as amended in A2; "Begin CP1
   immediately"; and its mandatory acceptance interpretations (§0.1 below).
@@ -37,8 +45,8 @@ credential, transcript of a real person or hosted identifier. Every conversation
 
 | Checkpoint | Scope (contract) | State |
 |---|---|---|
-| **CP1** | The producer: migration `0204`, the lane, its wiring, the proofs A0 – A12 and A8′ | **DELIVERED / READY FOR PO REVIEW** (this record) |
-| CP2 | The live map: Live Call protocol v3 (additive), the phone's consumption, B5′ / B6 (successful live disclosure) | not started |
+| **CP1** | The producer: migration `0204`, the lane, its wiring, the proofs A0 – A12 and A8′, the iOS Targeted Gate (live call) | **RESOLVED UNDER THE DIRECTIVE / READY FOR PO REVIEW** (this record) |
+| CP2 | The live map: Live Call protocol v3 (additive), the phone's consumption, B5′ / B6 (successful live disclosure); iOS Targeted Gate: v3 with v1 / v2 fallback, updates and withdrawals visible, reconnect / restore, COSMOS compatibility | next |
 | CP3 | Replay Lane B: the producer's events on Replay's clock, the §19 placement policy | not started |
 | CP4 | Closure (BG-08 / BG-09), measured cost restated, `QAN-BL-INTEL-06` → `VALIDATION — OPEN` | not started |
 
@@ -55,7 +63,11 @@ credential, transcript of a real person or hosted identifier. Every conversation
 | Semantic recall and responsiveness on USER and QANDEEL evidence | A8′ on both tracks (§3.2); T1 – T3 and word-end → understanding (§3.3) |
 | Protect Live Voice, First Audio, COSMOS | A3, A4 (§3.4); no mobile or COSMOS file changed |
 | Truthful Replay timing | `anchor ≤ evidence ≤ produced` on the call clock, never backdated (A7); Replay consumes nothing before CP3 |
-| The paid ceiling | Speechmatics ≈ USD 0.150, DeepSeek ≈ USD 0.121, combined ≈ USD 0.271 of 0.60 (§4) |
+| The paid ceiling | Speechmatics ≈ USD 0.150, DeepSeek ≈ USD 0.266, combined ≈ USD 0.416 of 0.60 (§4) |
+| Directive §1 — semantic freedom | prompt v5 (§1.2): what the conversation is about, its relations, placement, continuity and evolution, judged by DeepSeek; no fixed granularity, importance or category; grounding, privacy, identity, transport and chronology kept |
+| Directive §2 — grounded discoveries are not false updates | §3.2: each unannotated event classed by the directive's categories; the original measurements kept |
+| Directive §3 / §4 — iOS mandatory, proportional | the iOS Targeted Gate (live call), §3.6; the World gate no longer re-runs for the API or the database, which its app cannot reach (§6.1) |
+| Directive §5 — CI | §6.1: impact-based triggers with written justification, measured times; the T-03B1b1 failure corrected (§6) |
 
 ---
 
@@ -89,7 +101,24 @@ credential, transcript of a real person or hosted identifier. Every conversation
   records `MISSED_HANDOVER` under the old epoch; a new connection starts from the database watermark.
 - **`DeepSeekAttentionEvaluator`** — DeepSeek Flash behind `SYNTHETIC_ONLY`, one accounted client
   (`costLedgerDecorator('LIVE_ATTENTION_EVALUATION')` in production), the prompt in the prefix-stable order (A1 §2.3), a
-  fail-closed parser (exactly the schema or `REFUSED`). Prompt version `intel-live-01-provisional-attention-v3` (§3.2).
+  fail-closed parser (exactly the schema or `REFUSED`). Prompt version `intel-live-01-provisional-attention-v5` (§3.2).
+  Under directive §1, v5 asks only how the understanding of what the conversation is about develops:
+  - its principal axes, the relations between its subjects, where each belongs, and its continuity and evolution;
+  - how broad or fine a subject is, and how much it matters, is DeepSeek's to judge in context;
+  - `kind` serves presentation and never limits what a subject may be.
+
+  The v2 / v3 restrictions are removed: the granularity rule, "details belong to their subject", the closed list of
+  development types, and the mandatory WITHDRAW. Kept from the canonical understanding guidance, Live Focus and INTEL-04:
+  - understanding rests on what was said; nothing is inferred about the speaker;
+  - identity is semantic sameness of the referent, never wording;
+  - a reframing subject is its own subject;
+  - an incidental mention is not attention; reported speech stays the speaker's;
+  - a label is a short neutral name, never a quotation, judgement, diagnosis or advice.
+
+  The schema and parser are unchanged.
+- **Mechanical duplication** (directive §2): `withoutRepeatedSets` in the tracker drops a SET identical to the subject
+  already open (same key, label, kind, confidence and Thread). It never touches a WITHDRAW or a changed subject. A result
+  left with nothing is recorded `NONE`, and it covers its span exactly as before.
 - **`CallAttentionRepository`** (0204 RPCs only) and **`productionLiveCallAttention`** (OFF unless
   `LIVE_CALL_PROVISIONAL_ATTENTION=ON`; never bound under `NODE_ENV=test`).
 
@@ -112,11 +141,21 @@ credential, transcript of a real person or hosted identifier. Every conversation
   FAKE (the annotation oracle) or DEEPSEEK (paid, metered, ceiling-stopped).
 - `cp1-first-audio-proof.ts` — A4 in real time on the S8B-05 CP3 pattern.
 - `cp1-cadence-proof.ts` — A0 through the production Speechmatics adapter (paid, metered).
+- The iOS Targeted Gate (§3.6) reuses S8B-06 CP3's proof server (`apps/api/scripts/s8b-06-cp3-device-proof-server.ts`),
+  which gains four things, all inert unless the gate asks for them:
+  - with `PROOF_ATTENTION=ON`, the production lane composition (`liveCallAttentionOf`) over a fake evaluator, and the
+    worker's attention settlement;
+  - `POST /proof/speak?ms=`, a synthetic voiced signal over THIS proof's uplink (a runner has no microphone);
+  - `GET /proof/attention`, counts only;
+  - the FINALs of its scripted recognizer placed on the stream's clock.
 
 ## 2. What is deliberately not implemented
 
 - No protocol message, no phone change, no map change (CP2). No Replay read (CP3). No COSMOS, Lane A, endpointer or
-  First Audio path change.
+  First Audio path change. The iOS Targeted Gate adds validation files only (a workflow, a runner script, three Maestro
+  flows); no Product mobile file changed.
+- No relation field between subjects: relations are expressed through the subjects and their labels. A field would be a
+  contract change, which the directive excludes.
 - INTERIM is never evaluated (D-1b not chosen).
 - No hosted migration, no deployment, no gate opened, no merge.
 
@@ -126,8 +165,9 @@ credential, transcript of a real person or hosted identifier. Every conversation
 
 ### 3.1 Mechanism — the fake evaluator (free; local PostgreSQL, `0204` applied to a fresh clone)
 
-13 scenarios, every assertion passed (run `cp1-fake-r3`). Zero false updates and zero ordering errors in every scenario;
-zero events unbound to their evidence.
+13 scenarios, every assertion passed. The first run was `cp1-fake-r3`; after the duplication filter it was re-run as
+`cp1-fake-r4`, again 13 / 13. Zero false updates and zero ordering errors in every scenario; zero events unbound to their
+evidence.
 
 | Item | Result |
 |---|---|
@@ -148,40 +188,92 @@ zero events unbound to their evidence.
 
 ### 3.2 A8′ — semantic recall with the real evaluator (paid; the recall gate a – g, j)
 
-DeepSeek Flash, the production prompt and parser, its own latencies placed on the virtual clock. Three runs, each
-recorded; the prompt was iterated twice inside the ceiling as A2 allows. The table is the agent's **provisional** reading
-of the adjudication tables (`E:/QANDEEL_REPORTS/INTEL-LIVE-01/CP1/cp1-a8-r*/adjudication.md`); **the gate is judged by the
-human reviewer** (subject identity is semantic; no label-matching script decides it).
+DeepSeek Flash, the production prompt and parser, its own latencies placed on the virtual clock. Five runs, each
+recorded and none overwritten (directive §2: the original measurements are kept). The reading is the agent's, from the
+adjudication tables (`E:/QANDEEL_REPORTS/INTEL-LIVE-01/CP1/cp1-a8-r*/adjudication.md`); subject identity is semantic, so no
+label-matching script decides it, and the Product Owner reviews it.
 
-| Run | Prompt | Recall (annotated developments emitted) | Corrections / negations reflected | No-change scenario (b) | Emitted, not in the annotation | Spend (peak list price) |
+| Run | Prompt | Recall (annotated developments emitted) | Corrections / negations reflected | Events in all | Not in the annotation | Spend (peak list price) |
 |---|---|---|---|---|---|---|
-| `cp1-a8-r1` | v1 | 20 / 21 — (d)'s gym negation emitted no WITHDRAW | 3 / 4 | 0 | 36 (one subject per sentence) | USD 0.0412 |
-| `cp1-a8-r2-v2` | v2: subjects at the level a person names a topic of their life; a negation MUST WITHDRAW the open subject | 20 / 21 — QANDEEL's question about Alexandria emitted nothing | 4 / 4 | 0 | 14 | USD 0.0405 |
-| `cp1-a8-r3-v3` | v3: QANDEEL's own track; steps, arrangements, requests and people of an open subject belong to it | **21 / 21** | **4 / 4**, each WITHDRAW before its replacing SET | **0** | **14** | USD 0.0392 |
+| `cp1-a8-r1` | v1 | 20 / 21 — (d)'s gym negation emitted no WITHDRAW | 3 / 4 | — | 36 (one subject per sentence) | USD 0.0412 |
+| `cp1-a8-r2-v2` | v2: subjects at the level a person names a topic of their life; a negation MUST WITHDRAW the open subject | 20 / 21 — QANDEEL's question about Alexandria emitted nothing | 4 / 4 | — | 14 | USD 0.0405 |
+| `cp1-a8-r3-v3` | v3: QANDEEL's own track; steps, arrangements, requests and people of an open subject belong to it | 21 / 21 | 4 / 4, each WITHDRAW before its replacing SET | 35 | 14 | USD 0.0392 |
+| `cp1-a8-r4-v4` | v4: directive §1, the restrictions removed (first wording) | not adjudicated: the run failed on expression (below) | the cancelled gym plan re-SET, not withdrawn | 169 | — | USD 0.0741 |
+| **`cp1-a8-r5-v5`** (shipped) | **v5**: directive §1, expression rules restored | **21 / 21** | **4 / 4**: Cairo → Alexandria; the gym cancelled, with the leg pain; Canada → the visa refused, with a grounded WITHDRAW of the awaited answer | 117 | 96 | USD 0.0705 |
 
-- **Evidence accounting in every run:** 100 % of FINAL spans `DEVELOPMENTS` / `NONE`; 0 missed; 0 uncovered.
-- **The 14 v3 events the annotation does not have**, for the reviewer: (a) the work subject re-labelled at its second
-  sentence, "exhaustion at home", "wedding preparations", "help booking the venue and photographer", and QANDEEL's own
-  reflection "a busy week of work and wedding preparations"; (c) "watching the football match"; (d) "a job interview next
-  week", "change the train booking", "two weeks without the gym"; (f) "study and exams" and a same-key re-SET; (g) "the doctor
-  visit for the back"; (j) "cousin Ahmed" beside the Canada plan, and "the family knew about the emigration". None is
-  unsupported by the speech; whether each is an important development the annotation omitted or a false update is the
-  reviewer's decision. **Under the contract's literal definition (A1 §6: emitted developments absent from the annotation)
-  the false-update clause is not met; CP1 is not accepted until the Product Owner rules on it** (accept the events as
-  annotation omissions, or require another prompt iteration inside the remaining DeepSeek ceiling of ≈ USD 0.18).
-- **Tokens (v3):** 241 272 prompt tokens over 147 calls, cache hits 45 – 76 % per scenario (45 % on the 761-word (j),
-  where the window slides), 4 723 completion tokens. Evaluation latency T3 P50 0.77 – 1.09 s, P95 1.09 – 1.80 s.
+- **Evidence accounting in every run:** every FINAL span is covered (`DEVELOPMENTS` / `NONE`), except where noted:
+  - v4: 2 spans of (f) left `UNCOVERED_AT_END`, from 15 `REFUSED` evaluations;
+  - v5: 1 `REFUSED`, its span covered by the next admission; v5's outcomes were 105 `DEVELOPMENTS`, 41 `NONE`, 1 `REFUSED`.
+
+  v5's only failing check is the mechanism condition "(f) the development arrived while an evaluation was in flight" (F-3).
+- **v4 was an expression failure of my prompt, not a semantic one.** It kept no rules on how a judgement is written down:
+  - labels accumulated details past 40 characters, which the parser refused (15 times);
+  - 58 SETs repeated the subject already open, unchanged;
+  - some labels assumed the speaker's gender, for example «المتحدثة», although the speaker used the masculine «معجب»;
+  - the cancelled gym plan was re-SET as «إلغاء الذهاب للجيم» instead of withdrawn.
+
+  v5 restored the expression rules only, and v4's evidence is kept:
+  - a label is the subject's new short name, never an accumulation of its details;
+  - an unchanged open subject is not SET again;
+  - nothing is inferred about who the speaker is;
+  - a corrected or cancelled subject is withdrawn under its key.
+
+  None of these limits what DeepSeek may judge.
+- **The revised acceptance interpretation (directive §2).** A1 §6's literal false-update clause counted every emitted
+  development absent from the annotation. Under the directive, an unannotated event is a false update only when it is one
+  of the following; a grounded discovery is not, whatever the annotation lists:
+  - a fabricated interpretation;
+  - a factual contradiction;
+  - an attribution error;
+  - a meaningful omission;
+  - actual mechanical duplication.
+
+  The annotation's role is now recall only: every annotated development must be emitted. It is not the ceiling of what
+  may be understood.
+- **v5 adjudication against those categories** (agent's reading, every row in `cp1-a8-r5-v5/adjudication.md`):
+
+  | Category | v5 |
+  |---|---|
+  | Fabricated interpretation | **0** |
+  | Factual contradiction | **0**: each correction replaces its subject; no event states what a later FINAL contradicts while it stays open |
+  | Attribution error | **0**: the person's subjects are first person or «المستخدم»; QANDEEL's own track carries QANDEEL's subjects; no speaker gender is inferred |
+  | Meaningful omission | **0**: recall 21 / 21; every correction and negation reflected |
+  | Mechanical duplication | **0 left**: 4 re-SETs differ only in confidence, which the filter keeps by design (a changed judgement); identical re-SETs are dropped before the write |
+
+  The remaining unannotated events are grounded discoveries or evolutions of subjects the person spoke about. Examples:
+  - (a) the late office hours, eating at the desk, the colleagues under the same pressure, the mother busy with the
+    wedding preparations;
+  - (b) the dishes cooked, and the person's view of themselves as a cook. Ten such events in the "no meaningful change"
+    scenario are details of the one open subject, not false updates under the directive;
+  - (j) cousin Ahmed and the family knowing.
+
+  The v3 events are classed the same way:
+  - 12 of its 14 unannotated events are grounded discoveries or evolutions;
+  - one is mechanical duplication: (f) #4 «وهيسافر بعد شهرين», a re-SET of `friend_scholarship_germany`, now dropped by the
+    filter;
+  - one is the extra event on (j) #1's annotated segment.
+- **Expression notes for CP2's presentation (not false updates):**
+  - Some v5 labels nearly quote the speech, against "never a quotation of the speech". Examples: (a) #1
+    «المدير بيطلب حاجات كتير في نفس الوقت», (a) #16, (d) #2.
+  - One label is a grounded implication: (j) #8 «تغيّر الوضع قريبًا», from «لحد قريب».
+  - The map's presentation (CP2) decides how a subject is shown; no further paid iteration was run for wording
+    (directive: "no unnecessary paid prompt iterations").
+- **Granularity is now DeepSeek's.** v5 emits about one subject per meaningful sentence: 98 new keys against v3's 30.
+  Whether the map shows all of them, or how it groups them, is CP2's presentation, not the producer's.
+- **Tokens (v5):** 328 981 prompt tokens over 147 calls, 141 440 of them cache hits; cache hit 31 – 78 % per scenario (31 %
+  on the 761-word (j), where the window slides); 11 131 completion tokens. Evaluation latency T3 P50 1.03 – 1.34 s, P95
+  1.29 – 1.94 s. For v3 the figures were 241 272 prompt and 4 723 completion tokens, T3 P50 0.77 – 1.09 s, P95 1.09 – 1.80 s.
 
 ### 3.3 Responsiveness, and in-speech vs tail (A2 §2's three metrics kept apart)
 
 | Measure | Value | Source |
 |---|---|---|
 | T1 word end → FINAL at the server (Speechmatics, measured) | P50 722 – 756 ms, P95 900 – 939 ms per session | A0 |
-| T3 admission → interpretation produced (DeepSeek, v3) | P50 0.77 – 1.09 s, P95 ≤ 1.80 s | A8′ |
-| Word end → interpretation produced, the 21 matched developments (v3) | P50 2 055 ms, P95 2 797 ms | A8′ |
-| **In-speech understanding** (produced before the turn's speech end) | **15 of 20 USER developments** | A8′ v3 |
-| **Tail** (produced after the speech end; reported separately, not in-speech disclosure) | **5**: (d) ×2, (g), (j) ×2 — each a development in the turn's LAST FINAL, so it cannot precede the speech end | A8′ v3 |
-| QANDEEL-side developments | 1 of 1 | A8′ v3 |
+| T3 admission → interpretation produced (DeepSeek) | v5: P50 1.03 – 1.34 s, P95 ≤ 1.94 s (v3: P50 0.77 – 1.09 s, P95 ≤ 1.80 s) | A8′ |
+| Word end → interpretation produced, the 21 matched developments | v5: P50 2 072 ms, P95 2 602 ms (v3: 2 055 / 2 797 ms) | A8′ |
+| **In-speech understanding** (produced before the turn's speech end) | **v5: 14 of 20 USER developments** (v3: 15 of 20) | A8′ |
+| **Tail** (produced after the speech end; reported separately, not in-speech disclosure) | **v5: 6** — (a), (d) ×2, (g), (j) ×2. v3: 5, without (a). (a)'s Alexandria plan was produced 110 ms after its turn's speech end; the others are each in the turn's LAST FINAL, so they cannot precede the speech end | A8′ |
+| QANDEEL-side developments | 1 of 1 (v3 and v5) | A8′ |
 | Successful live disclosure (on the phone's stage before Lane A) | **not measured at CP1**: CP2's metric (B5′ / B6) | — |
 
 ### 3.4 Protection of the voice path
@@ -223,13 +315,60 @@ Six sessions of ≈ 110 s of continuous synthetic Arabic (S8B-01's TTS corpus, A
 **STOP rule (A1 §5): L-P95 > 5 s or any gap > 20 s while speaking — not triggered.** In-speech evidence is available: a
 FINAL about every 0.65 s, under a second after its words. D-1 (FINAL-only) stands; D-1b is not needed.
 
+### 3.6 The iOS Targeted Gate — live call (directive §3; BG-10 clarification)
+
+The gate is `.github/workflows/ios-targeted-gate.yml`, which runs `scripts/ios-targeted-gate/run-live-call-gate.sh` and
+the Maestro flows `apps/mobile/.maestro/itg-call-*.yaml`.
+
+**When it runs.** It is change-aware: the live-call backend (voice, voice media, call analysis, the attention lane, the
+live-call reply), the migrations, the shared packages, the mobile call client and native call module, and its own files.
+It also runs on every push to main.
+
+**What it reuses.** The existing infrastructure, unchanged:
+- the S8B-06 CP3 proof build: the PRODUCTION runtime, Conversation and call surfaces, and the REAL native call engine;
+- the S8B-06 CP3 proof server: the REAL S8B-05 live call, over a fresh PostgreSQL carrying every migration through `0204`,
+  with the attention lane ON;
+- the S8B-03 iOS proof pattern: Xcode 26.6, iPhone 17 / iOS 26.5, Maestro 2.10.0 pinned by SHA-256, `bounded-run`, and the
+  driver diagnostics.
+
+**What it does not cover.** The real microphone, echo cancellation, CallKit, Bluetooth and a physical iPhone, which is a
+separate future requirement; and CP2's map. One language and size: CP1 changes no UI (BG-10).
+
+| Case | Asserts (real interaction on the simulator, host reads of the server) |
+|---|---|
+| ITG-01 launch | the proof build installs and launches; the Conversation's call entry (`qandeel-call-entry`) is drawn, which needs the runtime to have reached the server |
+| ITG-02 connect | a tap on the call entry draws the call line's End; the server holds the call `ACTIVE` (the `qandeel.live-call.v1` HELLO accepted) |
+| ITG-03 turn | `/proof/speak` arms a synthetic voiced signal; the endpointer commits, the reply is generated and closes `PLAYED_OUT`, which only the iOS engine's PLAYOUT confirmations produce; the call line is still drawn |
+| ITG-04 end | a tap on End draws the call entry again; the server ends the call `USER_ENDED` |
+| ITG-05 attention | the lane evaluated both tracks (`DEVELOPMENTS`), wrote `SET` events and settled both halves `COMPLETE`; no write failed |
+| ITG-06 stability | the app is still running; no crash report names it |
+
+**Local proof of the server half (Windows host, no simulator).** A loopback stand-in client ran one call against the
+proof server, using the same protocol and PLAYOUT pacing:
+- stimulus → endpointer → commit → reply 600 frames `PLAYED_OUT` → END `USER_ENDED`;
+- `/proof/attention`: USER `DEVELOPMENTS` 1, QANDEEL `DEVELOPMENTS` 1 and `NONE` 1, `SET` 1 per track, settlements
+  `COMPLETE` per track;
+- 0 write failures.
+
+That run proved three proof-harness defects were fixed:
+- the RPC shim passed the events as a PG array instead of jsonb;
+- the scripted FINALs sat at 0 – 0 ms;
+- a stimulus armed before any call opened.
+
+The gate's three host predicates were checked against that run's reads.
+
+**The simulator run:** `PENDING — the first run on this change's head`. Its result is recorded here as PASS / FAIL /
+NOT TESTED per case. No case is reported before it ran.
+
 ## 4. Paid spend (D-7)
 
 | Provider | Ceiling | Spent (estimated at list price) | Basis |
 |---|---|---|---|
 | Speechmatics realtime Enhanced | USD 0.30 | **≈ USD 0.150** | 675 s of audio at USD 0.80 / h |
-| DeepSeek Flash | USD 0.30 | **≈ USD 0.121** (3 runs) | provider usage fields at the PEAK list price (0.006 / 0.30 / 1.20 per M) |
-| **Combined** | USD 0.60 | **≈ USD 0.271** | |
+| DeepSeek Flash | USD 0.30 | **≈ USD 0.266** (5 runs: 0.0412 + 0.0405 + 0.0392 + 0.0741 + 0.0705) | provider usage fields at the PEAK list price (0.006 / 0.30 / 1.20 per M) |
+| **Combined** | USD 0.60 | **≈ USD 0.416** | |
+
+DeepSeek's remaining ≈ USD 0.034 does not cover another full A8′ run (≈ USD 0.07), so no further paid run is planned at CP1.
 
 No cost ledger row was written (the proofs reach no hosted service). Keys were read from local files into memory only.
 
@@ -241,7 +380,11 @@ No cost ledger row was written (the proofs reach no hosted service). Keys were r
   the established capacity (8 slots, §3.4) the lane is within noise. The lane's demand is about one provider call in flight per
   speaking call; GCR-01-A's capacity proof (`QAN-BL-VOICE-07`'s gate, the +50 / +100 ms First Audio rule) must count it. No
   mechanism was added: reclaiming a slot from an in-flight evaluation would be a contract change.
-- **F-2 — A8′'s false-update clause (§3.2)** awaits the human adjudication; recall is met.
+  F-1 is retained under GCR-01-A (directive §6).
+- **F-2 — A8′'s false-update clause (§3.2):** resolved by directive §2's interpretation. Under it, v5 has 0 fabricated
+  interpretations, 0 factual contradictions, 0 attribution errors and 0 meaningful omissions, and no mechanical
+  duplication is left. Recall is 21 / 21. The Product Owner reviews the reading.
+- **F-4 — labels that nearly quote the speech (§3.2):** a presentation note for CP2. No paid iteration was spent on it.
 - **F-3 — (f)'s "in flight" check** depends on the evaluator's latency: with the real evaluator (faster than the oracle's
   slowed evaluation) the development arrived when nothing was in flight. The mechanism is proven with the fake (§3.1).
 
@@ -254,7 +397,7 @@ npm run verify:live-call-attention:integration
 npm run test:task-closure-governance-contract
 ```
 
-- API jest (local, this machine): **350 suites, 7 898 passed, 1 skipped, 0 failed** (full `apps/api` suite, 2026-11-25).
+- API jest (local, this machine): **350 suites, 7 898 passed, 1 skipped, 0 failed** (full `apps/api` suite, 2026-11-25, CP1 head `0cd3380b`); after the directive's changes, 7 901 passed (below).
 - The lane's static contract and the touched contracts (AI-COST-01, S8B-02, S8B-05, canonical home placement, Thread
   establishment), the six files in one run: 139 / 139; `test:live-call-attention-contract` 15 / 15;
   `test:task-closure-governance-contract` 25 / 25.
@@ -262,6 +405,52 @@ npm run test:task-closure-governance-contract
 - The proofs: `cp1-corpus-proof.ts` (FAKE: 13 / 13 scenarios), `cp1-first-audio-proof.ts` (A4), `cp1-cadence-proof.ts`
   (A0), `cp1-corpus-proof.ts` (DEEPSEEK: A8′).
 - The forward-safety suite has ten known local failures on this Windows machine; CI judges it.
+
+**Directive §5: the T-03B1b1 API CI failure, corrected.** API CI run 45551333606 on `0cd3380b` failed two contracts:
+- `tests/durable-reference-emerging-focus-sp-substrate-contract.test.mjs`: "the new writer, coordinator and context read
+  are production-inert";
+- `tests/durable-thread-home-same-sp-substrate-contract.test.mjs`.
+
+**Cause.** Both scan every script for the substrate's tables. CP1's local corpus proof
+(`apps/api/scripts/intel-live-01/cp1-corpus-proof.ts`) seeds its throwaway clone with one emerging-focus row and one
+Thread row. INTEL-04's proof already had the same need, and an exact allowance for it.
+
+**Correction, on INTEL-04's pattern.** The proof's two INSERT texts are pinned verbatim. Each must:
+- occur exactly once;
+- be a plain INSERT into its table;
+- carry no UPDATE, DELETE, SELECT, CALL or `_v1(` call;
+- sit beside the proof's loopback refusal.
+
+The rest of the file is scanned exactly as before. No forbidden expression was loosened or removed. Negative test: a
+substrate line appended to the proof makes both contracts fail; it was reverted in place.
+
+**After the correction:**
+- both contracts 10 / 10;
+- every root contract `node --test tests/*.test.mjs`: **1 873 / 1 873** (811 s, this machine);
+- the gate's own contract `tests/intel-live-01-ios-targeted-gate-contract.test.mjs` 4 / 4, wired into
+  `test:live-call-attention-contract`; its planted regressions are each refused;
+- the lane, call-turn and analysis suites 97 / 97; the full API jest **350 suites, 7 901 passed, 1 skipped, 0 failed**.
+
+### 6.1 Impact-based CI (directive §4 / §5)
+
+| Gate | Before (CP1 head `0cd3380b`) | Now | Skip justification |
+|---|---|---|---|
+| iOS World gate (3 cells × full COSMOS matrix) | ran for the API change: run 45551333609, **108.8 min** wall; cells SE 84.2 min (success), ar 80.8 min (**failure**: the Personal Analysis did not open, its cases NOT TESTED), en cancelled by me at 108.8 min | not triggered by `apps/api/**` or `database/**` | its app is the S401 proof build over the SYNTHETIC network: it reaches no API and no database (CI-SPEED-01), so no backend change can change one of its cases. Every suite, case and assertion is kept, and a push to main runs it in full |
+| iOS Targeted Gate (live call) | did not exist | one cell (iPhone 17, iOS 26.5), triggered by the live-call backend and client; its time is PENDING its first run on this head | — |
+| API CI `verify-api` | 2.3 min (failed early) | PENDING its run on this head | unchanged: VAL-01's planner already carries a green, unchanged result forward |
+| Mobile CI | 7.0 min (no mobile change: VAL-01 carried the native gates forward) | unchanged | VAL-01 |
+
+The World gate's ar failure on `0cd3380b` is not CP1's. CP1 changed no mobile file, and the gate cannot reach the API.
+The same instability is on `main`: run 45525952531 on `aa6fc0c8` failed en and SE and passed ar. This is
+`QAN-BL-CI-04`, which stays open and unowned.
+
+On this change's head, the World gate runs once more, because the change edits the gate's own workflow file (its
+triggers only). That run is cancelled where justified, and recorded either way; an unexecuted suite is never reported as
+passed.
+
+**Measured reduction for a live-call backend change:** 3 World gate cells of about 80 – 110 min each, about 270 runner
+minutes, become one targeted cell (its measured time PENDING its first run). The iOS obligation is still met, by interaction with what
+changed.
 
 ## 7. Draft PR #410 — transfer (CP0 v1.1 §8.3)
 
@@ -276,5 +465,11 @@ npm run test:task-closure-governance-contract
 
 ## 8. Reports (outside the repository)
 
-`E:/QANDEEL_REPORTS/INTEL-LIVE-01/CP1/`: `cp1-fake-r3` (mechanism), `cp1-a8-r1`, `cp1-a8-r2-v2`, `cp1-a8-r3-v3`
-(adjudication tables, rows, inputs), `cp1-a0-r1` (cadence), `cp1-a4-r1` (stress, 2 slots), `cp1-a4-r2-slots8` (A4).
+`E:/QANDEEL_REPORTS/INTEL-LIVE-01/CP1/`, all kept as measured:
+- the mechanism runs: `cp1-fake-r3`, and `cp1-fake-r4` after the duplication filter;
+- A8′, with their adjudication tables, rows and inputs: `cp1-a8-r1`, `cp1-a8-r2-v2`, `cp1-a8-r3-v3`, `cp1-a8-r4-v4`,
+  `cp1-a8-r5-v5`;
+- the cadence: `cp1-a0-r1`;
+- A4: `cp1-a4-r1` (stress, 2 slots) and `cp1-a4-r2-slots8`.
+
+The iOS Targeted Gate's evidence is the workflow artifact `ios-targeted-gate-live-call-<sha>`.

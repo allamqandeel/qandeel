@@ -11,17 +11,20 @@ name: iOS World gate (COSMOS stages, touch)
 # double tap, a two-finger pinch — from the SAME build (scripts/cosmos-ios-world/xcuitest; PO, 2026-11-18). Every case
 # is PASS / FAIL / NOT TESTED in results.tsv; the job fails unless every case passed. Nothing retries a failed case.
 #
-# Change-aware: it runs for a pull request that changes the mobile application, its shared packages, the API, the
-# database, the dependency lock, or this gate; for a push to main; and on manual dispatch.
+# Change-aware: it runs for a pull request that changes the mobile application, its shared packages, the dependency lock,
+# or this gate; for a push to main; and on manual dispatch.
 on:
   pull_request:
     paths:
       - 'apps/mobile/**'
       - 'packages/**'
-      # COSMOS-FINAL-01 (BG-10 backend scope, contract §21.2): the API, the database and its migrations — what the iOS
-      # client reads — run the same simulator interaction (the shared packages above carry the wire contracts).
-      - 'apps/api/**'
-      - 'database/**'
+      # The API and the database are no longer inputs (PO directive 2026-11-25 §4; BG-10 clarification of the same date).
+      # COSMOS-FINAL-01 added them (BG-10 backend scope, contract §21.2), but this gate's app is the S401 proof build over
+      # the labelled SYNTHETIC proof network: it reaches no API and no database (CI-SPEED-01's finding), so a backend change
+      # cannot change one case here and re-running the full matrix for it proves nothing. A backend change that can affect
+      # iOS behaviour is proven by the change-aware iOS Targeted Gate of the path it reaches (ios-targeted-gate.yml for the
+      # live call), recorded separately. The suites, their cases and their assertions are unchanged, and a push to main
+      # still runs every one of them.
       - 'package.json'
       - 'package-lock.json'
       - 'scripts/cosmos-ios-world/**'

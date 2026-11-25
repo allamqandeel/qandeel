@@ -83,6 +83,11 @@ import { LIVE_CALL_STORE } from '../src/voice/call/live-call.store';
 import type { CallFailureLine } from '../src/voice/call-turn/call-failure-line';
 import { CallTurnRepository } from '../src/voice/call-turn/call-turn.repository';
 import { LiveCallAnalysisSignal } from '../src/voice/call-turn/live-call-analysis.signal';
+import { CallAttentionRepository } from '../src/live-attention/call-attention.repository';
+import { liveCallAttentionOf } from '../src/live-attention/live-attention.provider';
+import type { AttentionEvaluationInput, AttentionEvaluationResult } from '../src/live-attention/provisional-attention.types';
+import { FakeAttentionEvaluator } from '../src/live-attention/testing/fake-attention-evaluator';
+import { LiveCallAttentionBinding } from '../src/voice/call-turn/live-call-attention.port';
 import { LiveCallConversationBinding } from '../src/voice/call-turn/live-call-conversation.port';
 import { LiveCallTurnEngine, type CallTurnObservation } from '../src/voice/call-turn/live-call-turn.engine';
 import { fakeCallSynthesisRoute } from '../src/voice/call-turn/testing/fake-call-synthesis';
@@ -125,6 +130,29 @@ function evidence(kind: string, detail: Record<string, unknown>): void {
 }
 
 /**
+ * INTEL-LIVE-01 CP1 — the iOS Targeted Gate's stimulus. A GitHub macOS runner has no microphone, so the simulator's
+ * uplink is silence and no turn could ever end. `POST /proof/speak?ms=` arms a synthetic VOICED signal (three harmonics
+ * under a syllable envelope: energy, never speech) over what the endpointer hears of THIS proof's connection for that
+ * long: the REAL endpointer then ends a REAL turn, the scripted recognizer answers its FINAL, the REAL engine commits it
+ * and the reply plays on the phone. The phone's own packets still arrive, are still recorded and are still counted; only
+ * the decoded frames the turn engine is handed are replaced while armed. Off unless armed; the device proof never arms it.
+ */
+let stimulusFrames = 0;
+let openStreams = 0;
+let stimulusSample = 0;
+function stimulusFrame(bytes: number): Buffer {
+  const out = Buffer.alloc(bytes);
+  for (let i = 0; i < Math.floor(bytes / 2); i += 1) {
+    const t = (stimulusSample + i) / 16000;
+    const envelope = 0.6 + 0.4 * Math.sin(2 * Math.PI * 4 * t);
+    const v = envelope * 2600 * (Math.sin(2 * Math.PI * 180 * t) + 0.5 * Math.sin(2 * Math.PI * 360 * t) + 0.25 * Math.sin(2 * Math.PI * 540 * t));
+    out.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(v))), i * 2);
+  }
+  stimulusSample += Math.floor(bytes / 2);
+  return out;
+}
+
+/**
  * R4 / F-F: the speech sink as composed, with each PLAYOUT the engine judged a VIOLATION reported in numbers only: the
  * reply it names, the chunk and instant the phone confirmed, what this connection sent for that reply, and the rule's
  * chunk bound. Nothing is changed: the verdict is the engine's.
@@ -135,6 +163,7 @@ function watchedSink(sink: LiveCallSpeechSink): LiveCallSpeechSink {
       const sent = new Map<number, { count: number; maxSeq: number }>();
       const last = new Map<number, { chunkSeq: number; playedMs: number; verdict: string }>();
       let lastPushAt: number | null = null;
+      openStreams += 1;
       const stream = sink.open({
         ...channel,
         accessToken: () => channel.accessToken(), latestCaptureMs: () => channel.latestCaptureMs(),
@@ -154,10 +183,20 @@ function watchedSink(sink: LiveCallSpeechSink): LiveCallSpeechSink {
           const at = Date.now();
           if (lastPushAt !== null && at - lastPushAt >= 400) evidence('uplink-gap', { epoch: channel.epoch, ms: at - lastPushAt, captureMs });
           lastPushAt = at;
+          if (stimulusFrames > 0) {
+            stimulusFrames -= 1;
+            if (stimulusFrames === 0) evidence('stimulus-end', { epoch: channel.epoch, captureMs });
+            stream.push(stimulusFrame(pcm.length), captureMs);
+            return;
+          }
           stream.push(pcm, captureMs);
         },
         bargeIn: (input) => stream.bargeIn(input), textTurn: (input) => stream.textTurn(input),
-        drain: () => stream.drain(), close: () => stream.close(),
+        drain: () => stream.drain(),
+        close: () => {
+          openStreams -= 1;
+          stream.close();
+        },
         playout: async (input) => {
           const verdict = await stream.playout(input);
           if (verdict === 'VIOLATION') {
@@ -177,6 +216,41 @@ function watchedSink(sink: LiveCallSpeechSink): LiveCallSpeechSink {
   };
 }
 
+/**
+ * INTEL-LIVE-01 CP1 (the iOS Targeted Gate): the scripted recognizer's FINAL carries no position (0 – 0), which the turn's
+ * words never needed. The attention lane places evidence on the call clock, so here each FINAL is placed where the stream
+ * stood when the engine forced it, its last 500 ms being the finalize silence (CALL_ENDPOINTING), as a real recognizer's
+ * word times would place it. Nothing else of the recognizer changes.
+ */
+function placedRecognition(inner: RealtimeRecognition): RealtimeRecognition {
+  return {
+    openStream: async (request) => {
+      const session = await inner.openStream(request);
+      let streamMs = 0;
+      const events = session.events[Symbol.asyncIterator]();
+      return {
+        send: async (chunk: Buffer) => {
+          streamMs += chunk.length / 32;
+          await session.send(chunk);
+        },
+        events: {
+          [Symbol.asyncIterator]: () => ({
+            next: async () => {
+              const next = await events.next();
+              if (next.done || next.value.kind !== 'FINAL' || next.value.speech.endMs > 0) return next;
+              const endMs = Math.max(20, Math.round(streamMs) - 500);
+              return { done: false as const, value: { kind: 'FINAL' as const, speech: { ...next.value.speech, startMs: Math.max(0, endMs - 1_000), endMs } } };
+            },
+          }),
+        },
+        finalize: () => session.finalize(),
+        end: () => session.end(),
+        abort: () => session.abort(),
+      };
+    },
+  };
+}
+
 /** R2: the semantic establishment's RPCs (the S8B-05 CP3 analysis proof's allowlist), beside the server_* functions. */
 const SEMANTIC_RPC = /^(?:commit_conversation_units_call_half_v1|commit_finalized_exchange_with_full_semantic_chain_v1|get_conversation_full_semantic_integrated_batch_snapshot_v1|get_conversation_full_semantic_runtime_context_v1|get_conversation_thread_identity_dossier_page_v1)$/u;
 
@@ -185,6 +259,8 @@ function rpcValue(name: string, v: unknown): unknown {
   if (SEMANTIC_RPC.test(name)) {
     return Array.isArray(v) && v.length > 0 && v.every((e) => typeof e === 'string') ? v : v !== null && typeof v === 'object' ? JSON.stringify(v) : v;
   }
+  // INTEL-LIVE-01 CP1: 0204's writer takes its events as jsonb (an array of objects), as PostgREST sends any JSON value.
+  if (name === 'server_record_call_attention_evaluation_v1') return v !== null && typeof v === 'object' ? JSON.stringify(v) : v;
   return v !== null && typeof v === 'object' && !Array.isArray(v) ? JSON.stringify(v) : v;
 }
 
@@ -390,12 +466,26 @@ async function main(): Promise<void> {
   // The scripted recognizer: each end of an utterance is the next numbered synthetic line (never the person's words).
   const script: FakeCallLine[] = Array.from({ length: 400 }, (_, i) => ({ text: `جملة اختبارية رقم ${i + 1}` }));
   const recognizer = new FakeCallRecognizer(script, { finalDelayMs: 150 });
-  const recognition: RealtimeRecognition = { openStream: (request) => recognizer.openStream(request) };
+  const recognition: RealtimeRecognition = placedRecognition({ openStream: (request) => recognizer.openStream(request) });
   const failureLine: CallFailureLine = { ar: [], en: [] };
   // R2: the analysis's one in-process signal: the engine kicks it at a commit, the first audio and an exchange's close, and
   // LiveCallService at the call's activation (S8B-05 CP3).
   const signal = new LiveCallAnalysisSignal();
-  const engine = new LiveCallTurnEngine(new CallTurnRepository(serverApi), binding, recognition, fakeCallSynthesisRoute(new ProofToneSynthesis()), telemetry, signal, failureLine);
+  // INTEL-LIVE-01 CP1 (the iOS Targeted Gate): the provisional attention lane, ON only with PROOF_ATTENTION=ON, composed by
+  // its ONE adapter (liveCallAttentionOf) over 0204's REAL writer and 0191's REAL background permits, bound into the REAL
+  // engine as the API binds it. Only the evaluator is a stand-in, so no model is called: shown evidence of a track whose
+  // proof subject is not open yet, it sets that one subject; otherwise it answers NONE.
+  const attentionBinding = new LiveCallAttentionBinding();
+  const attentionEvaluator = new FakeAttentionEvaluator((input: AttentionEvaluationInput): AttentionEvaluationResult => {
+    const key = `proof_${input.track.toLowerCase()}_subject`;
+    const first = input.newEvidence[0];
+    if (!first || input.openSubjects.some((s) => s.subjectKey === key)) return { kind: 'NONE', developments: [], contextCarry: null, usage: null, providerMs: 0 };
+    return {
+      kind: 'DEVELOPMENTS', contextCarry: null, usage: null, providerMs: 0,
+      developments: [{ op: 'SET', subjectKey: key, label: 'موضوع اختباري', kind: 'TOPIC', confidence: 'HIGH', threadRef: null, dependsOnSeq: first.seq }],
+    };
+  });
+  const engine = new LiveCallTurnEngine(new CallTurnRepository(serverApi), binding, recognition, fakeCallSynthesisRoute(new ProofToneSynthesis()), telemetry, signal, failureLine, attentionBinding);
   engine.observe((o: CallTurnObservation) => evidence('turn', o as unknown as Record<string, unknown>));
 
   // ---------------------------------------------------------------- R2: the live analysis (S8B-05 CP3), real, over fakes
@@ -458,6 +548,15 @@ async function main(): Promise<void> {
   };
   const continuity = FakeThreadContinuityProvider.nominatingAll({ decision: 'DISTINCT_NEW', threadId: null, candidateThreadIds: [], currentEvidenceReferenceIndexes: [], priorEvidenceRefs: [] });
   const permits = new DatabaseBackgroundPermitGate(serverApi);
+  if (process.env.PROOF_ATTENTION === 'ON') {
+    attentionBinding.bind(liveCallAttentionOf({
+      evaluator: attentionEvaluator, store: new CallAttentionRepository(serverApi), permits,
+      // Kinds, tracks and outcomes only: never a word or a label.
+      observe: (_callId, o) => evidence('attention', { observation: o.kind, track: 'track' in o ? o.track : null, outcome: 'outcome' in o ? o.outcome : null, reason: 'reason' in o ? o.reason : null }),
+      signal: (op, outcome) => evidence('attention-signal', { op, outcome }),
+    }));
+    evidence('attention-lane', { state: 'ON' });
+  }
   const synthetic = { providerName: 'OPENAI', providerModel: 'gpt-5-mini' } as const;
   const semantic = new ConversationSemanticEstablishmentService(
     new ConversationSemanticRuntimeRepository(serverApi),
@@ -469,6 +568,8 @@ async function main(): Promise<void> {
   );
   const worker = new CallAnalysisWorker({
     store: new CallAnalysisRepository(serverApi), semantic, permits, safety: replyService, start: callAnalysisStart(),
+    // INTEL-LIVE-01 CP1: the attention settlement, composed as CallAnalysisWorkerHost composes it, only while the lane is ON.
+    attentionSettlement: process.env.PROOF_ATTENTION === 'ON' ? new CallAttentionRepository(serverApi) : undefined,
     // Ids, counts and outcomes only; the periodic scan's kicks are left out.
     observe: (o: CallAnalysisObservation) => {
       if (o.kind === 'KICK' && o.reason === 'SCAN') return;
@@ -636,6 +737,30 @@ async function main(): Promise<void> {
       } finally {
         client.release();
       }
+    }
+    /** INTEL-LIVE-01 CP1: arms the stimulus for `ms` of uplink (see stimulusFrame). */
+    @Post('speak')
+    speak(@Query('ms') ms: string) {
+      const n = Number(ms);
+      if (!Number.isInteger(n) || n < 200 || n > 5000) throw new HttpException('ms 200..5000', 400);
+      if (openStreams === 0) throw new HttpException('no call connection is open', 409);
+      stimulusFrames = Math.ceil(n / 20);
+      evidence('stimulus', { ms: n });
+      return { frames: stimulusFrames };
+    }
+
+    /** INTEL-LIVE-01 CP1: what 0204 recorded of THIS proof's latest call, in counts only (never a label or a word). */
+    @Get('attention')
+    async attention() {
+      const call = (await sql('SELECT id FROM voice_private.calls WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1', [PROOF_USER]))[0] ?? null;
+      if (!call) return { call: null };
+      const evaluations = await sql(`SELECT track, outcome, count(*)::int AS n FROM voice_private.call_attention_evaluations
+          WHERE call_id = $1 GROUP BY track, outcome ORDER BY track, outcome`, [call.id]);
+      const events = await sql(`SELECT track, op, count(*)::int AS n FROM voice_private.call_attention_events
+          WHERE call_id = $1 GROUP BY track, op ORDER BY track, op`, [call.id]);
+      const settlements = await sql(`SELECT track, half_state, count(*)::int AS n FROM voice_private.call_attention_settlements
+          WHERE call_id = $1 GROUP BY track, half_state ORDER BY track, half_state`, [call.id]);
+      return { call: call.id, evaluatorCalls: attentionEvaluator.inputs.length, evaluations, events, settlements };
     }
   }
 

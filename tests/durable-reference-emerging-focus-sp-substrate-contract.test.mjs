@@ -79,6 +79,28 @@ const INTEL_04_PROOF_READS = Object.freeze([
   'SELECT thread_id t, bound_sp sp, emerging_focus_id f FROM public.conversation_thread_focus_bindings WHERE session_id = $1 ORDER BY bound_sp',
 ]);
 const SCRIPT_SUBSTRATE = /with_focus_v1|focus_runtime_context|durable-focus|emerging_focus/u;
+
+// INTEL-LIVE-01 RE-ANCHOR (PO directive "Semantic Freedom & Targeted Cross-Platform Validation", 2026-11-25, §5): the CP1
+// corpus proof seeds ONE synthetic Thread for its scenario (e) "a reference to an existing Thread", by the same fixture
+// surgery database/verify-migration-0204.mjs performs, on a loopback throwaway clone it refuses to leave. Exactly these two
+// INSERT texts are allowed, each exactly once; they call no function. The rest of the file is held to the same rule as every
+// other script: another write, any read, a 0066 writer, the context read or the canonicalizer still fails. The forbidden
+// expression itself is unchanged.
+const INTEL_LIVE_01_CORPUS_PROOF = 'apps/api/scripts/intel-live-01/cp1-corpus-proof.ts';
+const INTEL_LIVE_01_CORPUS_PROOF_FIXTURE = Object.freeze([
+  "INSERT INTO public.conversation_emerging_focuses (id, user_id, session_id, grounding_handle_id, started_cu_id, started_sp,\n        started_event_sequence) VALUES ($1, $2, $3, gen_random_uuid(), $4, $5, 1)",
+  "INSERT INTO public.conversation_threads (id, user_id, grounding_emerging_focus_id, established_session_id, established_cu_id,\n        established_sp, established_event_sequence, establishment_path) VALUES ($1, $2, $3, $4, $5, $6, 2, 'TE-01')",
+]);
+/** The INTEL-LIVE-01 corpus proof reaches the substrate through its two fixture inserts alone, on a loopback clone. Throws otherwise. */
+function assertIntelLive01ProofReachesOnlyItsFixture(text) {
+  assert.match(text, /DATABASE_URL must name a loopback throwaway database/u, `${INTEL_LIVE_01_CORPUS_PROOF} refuses anything but a loopback database`);
+  for (const query of INTEL_LIVE_01_CORPUS_PROOF_FIXTURE) {
+    assert.ok(/^INSERT INTO public\.conversation_(?:emerging_focuses|threads) \(/u.test(query) && !/\b(?:UPDATE|DELETE|TRUNCATE|MERGE|CALL|SELECT)\b|_v1\(/iu.test(query), 'an allowed text is a plain fixture INSERT that calls no function');
+    assert.equal(text.split(query).length - 1, 1, `${INTEL_LIVE_01_CORPUS_PROOF} carries the allowed fixture insert exactly once: ${query.split('\n')[0]}`);
+  }
+  const rest = INTEL_LIVE_01_CORPUS_PROOF_FIXTURE.reduce((remaining, query) => remaining.replace(query, ''), text);
+  assert.doesNotMatch(rest, SCRIPT_SUBSTRATE, `${INTEL_LIVE_01_CORPUS_PROOF} does not reach the substrate outside its two fixture inserts`);
+}
 /** The INTEL-04 proof reaches the substrate through its two allowed reads alone. Throws otherwise. */
 function assertIntel04ProofReachesOnlyItsReads(text) {
   for (const query of INTEL_04_PROOF_READS) {
@@ -263,6 +285,10 @@ test('the new writer, coordinator and context read are production-inert; the T-0
     }
     if (file === INTEL_04_PROOF) {
       assertIntel04ProofReachesOnlyItsReads(read(file));
+      continue;
+    }
+    if (file === INTEL_LIVE_01_CORPUS_PROOF) {
+      assertIntelLive01ProofReachesOnlyItsFixture(read(file));
       continue;
     }
     assert.doesNotMatch(read(file), SCRIPT_SUBSTRATE, `${file} does not reach the substrate`);

@@ -1,5 +1,5 @@
 import type { BackgroundPermitGate } from '../live-analysis/background-permits';
-import { CallAttentionTracker } from './call-attention.tracker';
+import { CallAttentionTracker, withoutRepeatedSets } from './call-attention.tracker';
 import type { AttentionObservation, ProvisionalAttentionConfig } from './provisional-attention.types';
 import { FakeAttentionEvaluator, InMemoryAttentionStore, none, set, usage } from './testing/fake-attention-evaluator';
 
@@ -325,5 +325,44 @@ describe('INTEL-LIVE-01 CP1: the provisional attention tracker', () => {
     h.tracker.evidence('USER', 'very private words', 0, 100);
     await flush();
     expect(JSON.stringify(h.observations)).not.toMatch(/private|secret/u);
+  });
+});
+
+describe('INTEL-LIVE-01 CP1: mechanical duplication (PO directive 2026-11-25 §2)', () => {
+  const open = new Map([['job', { subjectKey: 'job', label: 'الشغل', kind: 'TOPIC' as const, confidence: 'HIGH' as const, threadRef: null }]]);
+
+  it('drops a SET that names an open subject exactly as it is open; an answer left empty is a NONE', () => {
+    const out = withoutRepeatedSets(open, set('job', 1, 'الشغل'));
+    expect(out).toMatchObject({ kind: 'NONE', developments: [] });
+  });
+
+  it('keeps a SET that changes anything, a WITHDRAW, and a SET after a WITHDRAW of the same key', () => {
+    expect(withoutRepeatedSets(open, set('job', 1, 'الشغل الجديد')).kind).toBe('DEVELOPMENTS');
+    expect(withoutRepeatedSets(open, set('job', 1, 'الشغل', 'CONCERN')).kind).toBe('DEVELOPMENTS');
+    const both = withoutRepeatedSets(open, {
+      kind: 'DEVELOPMENTS', contextCarry: null, usage: null, providerMs: 1,
+      developments: [
+        { op: 'WITHDRAW', subjectKey: 'job', label: 'الشغل', kind: 'TOPIC', confidence: 'HIGH', threadRef: null, dependsOnSeq: 1 },
+        { op: 'SET', subjectKey: 'job', label: 'الشغل', kind: 'TOPIC', confidence: 'HIGH', threadRef: null, dependsOnSeq: 1 },
+      ],
+    });
+    expect(both.kind === 'DEVELOPMENTS' && both.developments.map((d) => d.op)).toEqual(['WITHDRAW', 'SET']);
+  });
+
+  it('records the repeat as NONE: the span is covered and no event is written', async () => {
+    const evaluator = new FakeAttentionEvaluator('MANUAL');
+    const h = harness({ evaluator });
+    await h.tracker.start();
+    h.tracker.evidence('USER', 'first', 0, 500);
+    await flush();
+    evaluator.answer((input) => set('job', input.newEvidence[0]!.seq, 'الشغل'));
+    await flush();
+    h.tracker.evidence('USER', 'second', 600, 900);
+    await flush();
+    evaluator.answer((input) => set('job', input.newEvidence[0]!.seq, 'الشغل'));
+    await flush();
+    expect(h.store.records.map((r) => r.outcome)).toEqual(['DEVELOPMENTS', 'NONE']);
+    expect(h.store.events).toHaveLength(1);
+    expect(h.tracker.snapshot().tracks.USER).toMatchObject({ coveredTo: 900, pending: 0, open: ['job'] });
   });
 });

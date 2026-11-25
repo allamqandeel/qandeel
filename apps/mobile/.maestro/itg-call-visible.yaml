@@ -1,0 +1,9 @@
+# INTEL-LIVE-01 CP1 — iOS Targeted Gate (live call): one production element (ID) is still on screen — the app did not
+# crash or leave the call — without sending anything. VALIDATION ONLY. Input: PREFIX, ID, SHOT.
+appId: com.qandeel.mobile
+---
+- extendedWaitUntil:
+    visible:
+      id: ${ID}
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-${SHOT}

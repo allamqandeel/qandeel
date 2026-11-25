@@ -63,6 +63,29 @@ type Stop = 'FENCED' | 'NOT_FOUND' | 'CALL_ENDED' | 'CLOSED' | 'HANDOVER';
 
 const wordsOf = (text: string): string[] => text.trim().split(/\s+/u).filter((w) => w !== '');
 
+/**
+ * PO directive "Semantic Freedom & Targeted Cross-Platform Validation" (2026-11-25) §2, actual mechanical duplication: a
+ * SET naming an open subject exactly as it is already open (the same key, label, kind, confidence and Thread) changes
+ * nothing, so it is not a development and is not written; an answer left with none is a NONE. It compares the answer with
+ * the ledger field by field and judges no meaning: a WITHDRAW and a SET that changes anything always stand.
+ */
+export function withoutRepeatedSets(open: ReadonlyMap<string, OpenSubject>, result: AttentionEvaluationResult): AttentionEvaluationResult {
+  if (result.kind !== 'DEVELOPMENTS') return result;
+  const now = new Map(open);
+  const kept = result.developments.filter((d) => {
+    const was = now.get(d.subjectKey);
+    if (d.op === 'WITHDRAW') {
+      now.delete(d.subjectKey);
+      return true;
+    }
+    if (was && was.label === d.label && was.kind === d.kind && was.confidence === d.confidence && was.threadRef === d.threadRef) return false;
+    now.set(d.subjectKey, { subjectKey: d.subjectKey, label: d.label, kind: d.kind, confidence: d.confidence, threadRef: d.threadRef });
+    return true;
+  });
+  if (kept.length === result.developments.length) return result;
+  return { ...result, kind: kept.length > 0 ? 'DEVELOPMENTS' : 'NONE', developments: kept };
+}
+
 export class CallAttentionTracker {
   private readonly config: ProvisionalAttentionConfig;
   private readonly now: () => number;
@@ -279,6 +302,7 @@ export class CallAttentionTracker {
       if (this.stopped) return; // abandoned: its span is recorded as missed by the hand-over, or uncovered at the end
       const produced = Math.max(this.deps.captureClock(), admitted);
       if (result.usage) this.spendUsd += estimatedSpendUsd(result.usage);
+      result = withoutRepeatedSets(ledger.open, result);
       await this.write(ledger, { from, to, outcome: result.kind, units, admitted, produced, result, ordinal, words });
     } finally {
       await permit?.release().catch(() => undefined);

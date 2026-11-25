@@ -159,6 +159,27 @@ recorded as not yet enforced, never claimed.
 It was recorded by COSMOS-INT-01 Slice E, whose iOS baseline found a Personal stage defect (D-1)
 that Android, Jest and the iOS boot smoke had all passed. It relaxes nothing in BG-01 – BG-09.
 
+**BG-10 clarification — validation proportional to impact (PO directive, 2026-11-25; recorded by
+INTEL-LIVE-01 CP1).** iOS compatibility stays mandatory and no blanket exemption exists. A required
+iOS case is never marked NOT TESTED to avoid its cost. What changes is only the scope, which is
+proportional to the change's impact:
+- A change is validated by a lightweight, change-aware **iOS Targeted Gate**. It proves the changed
+  functionality by real application interaction on a simulator; a build alone is insufficient. For
+  the live call this is `.github/workflows/ios-targeted-gate.yml`.
+- The full **iOS World Gate** covers COSMOS: zoom, pan, camera, every World and every device size. It
+  runs when its own inputs change: the mobile application, the shared packages, the dependency lock
+  or the gate itself. It also runs on every push to main. It is not re-run for a backend change that
+  cannot reach it, because its app reaches no API and no database. Its suites, cases and assertions
+  are never deleted or weakened.
+- An expensive regression suite runs when the change, or a dependency analysis, shows it is affected.
+  Each skip is justified in writing, in the workflow or in the checkpoint's record.
+- Targeted validation is recorded separately from the World Gate. A suite that did not run is
+  reported as not run, never as passed.
+- Android real-device validation stays on HONOR. A physical iPhone is a separate future requirement.
+
+This supersedes COSMOS-FINAL-01's backend trigger scope for the World Gate (COSMOS-INT-01 contract
+§21.2 / §29.7, a closed record kept as written). It relaxes nothing else in BG-10.
+
 ---
 
 ## 4. Index
