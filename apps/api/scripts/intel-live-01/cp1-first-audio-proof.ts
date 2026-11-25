@@ -6,7 +6,8 @@
  * close), the lane's tracker, 0204's writer and 0191's shared background permits — the permit's L2 critical window is the
  * database's own (from the commit until the reply's first segment is registered) — over a REAL local PostgreSQL through 0204.
  * Stand-ins: the PostgREST hop (a pg shim as service_role) and the providers. The live reply's first token and the lane's
- * evaluations share ONE fake provider capacity of two slots (the contention a real account has), with seeded latencies;
+ * evaluations share ONE fake provider capacity (INTEL_LIVE_01_A4_SLOTS: 8 by default, the S8B-05 CP3 harness's; 2 is the stress
+ * setting A4 also reports), with seeded latencies;
  * the reply's draws are the SAME sequence in every mode, so a mode's First Audio differs only by what the lane did to it.
  * Real time (the contention is wall-clock), no paid API, no person, no audio: random UUIDs and fixed synthetic Arabic.
  *
@@ -46,7 +47,8 @@ const WORKLOAD = Object.freeze({
   rounds: Number(process.env.INTEL_LIVE_01_A4_ROUNDS ?? 4),
   calls: Number(process.env.INTEL_LIVE_01_A4_CALLS ?? 4),
   turns: Number(process.env.INTEL_LIVE_01_A4_TURNS ?? 6),
-  providerSlots: 2,
+  // The shared provider capacity: 8 is the S8B-05 CP3 harness's (its six calls); 2 is a stress setting (A4 reports both).
+  providerSlots: Number(process.env.INTEL_LIVE_01_A4_SLOTS ?? 8),
   userSpeakMs: 4_200,
   finalsPerTurn: 4,
   commitAfterSpeechMs: 800,

@@ -19,7 +19,11 @@ import {
 } from './provisional-attention.types';
 
 /** Recorded with every measurement of this evaluator; changes whenever the instructions or the schema change. */
-export const ATTENTION_PROMPT_VERSION = 'intel-live-01-provisional-attention-v1';
+// v2 (CP1 A8′ iteration 1, recorded in the execution record): subjects at the level a person names a topic of their life,
+// and a negation or cancellation always WITHDRAWs the open subject it reverses.
+// v3 (CP1 A8′ iteration 2): QANDEEL's own track (what its words turned attention to), and the steps, arrangements, requests
+// and people that serve an open subject belong to it.
+export const ATTENTION_PROMPT_VERSION = 'intel-live-01-provisional-attention-v3';
 export const ATTENTION_MAX_OUTPUT_TOKENS = 1_024;
 export const MAX_DEVELOPMENTS_PER_EVALUATION = 24;
 export const MAX_LABEL_CHARS = 40;
@@ -53,7 +57,11 @@ export const ATTENTION_INSTRUCTIONS = [
   'openSubjects are the subjects of attention currently open, with their keys; foldedSubjects are older open subjects, still open and equally valid.',
   'threads are the person\'s own established topics, each with its id and the name the person knows it by.',
   'newEvidence is the newest speech, in order, each item with its seq. Judge ONLY whether newEvidence is a meaningful development, given everything before it.',
+  'A subject of attention is what the person would name as one topic of their life or of this conversation (a pressure at work, a sister\'s wedding, a plan to move, a worry about health): never a single sentence, detail or example.',
+  'Details, causes, consequences, feelings, examples, circumstances and scene-setting about an open subject belong to that subject, and so do the steps, arrangements, requests and people involved in it: they are not new subjects and are not developments, unless they materially change its framing. Merely introducing who a story will be about, before anything is said about them, is not yet a development.',
+  'When speaker is QANDEEL, openSubjects are the subjects of QANDEEL\'s own speech: a development is a subject QANDEEL\'s words newly turned the conversation\'s attention to (one it named, reflected back or asked the person about) that is not already among them.',
   'A development is exactly one of: a new subject of attention; a shift to another subject; a correction or negation of an earlier subject (WITHDRAW it, and SET the corrected subject when there is one); a reference to one of the threads (set threadRef to that thread id, and only to an id in threads); a materially changed framing of an open subject (SET it again with the new label).',
+  'When the speech cancels, denies, reverses or abandons an open subject (a plan that will no longer happen, a fact the speaker corrects), you MUST WITHDRAW that open subject with its exact subjectKey from openSubjects or foldedSubjects, then SET what replaces it when the speech names one. A new subject never silently replaces an open one it contradicts.',
   'No development for restatement, filler, hesitation, small talk, agreement, elaboration that changes nothing, or a subject already open with the same meaning: then return an empty developments array.',
   'To continue an open subject use its existing subjectKey. A new subjectKey is lower-case ascii letters, digits, - and _, at most 64 characters, stable and descriptive.',
   'label is a short neutral phrase of at most 40 characters naming the subject in the language spoken, never a quotation of the speech, never a judgement, diagnosis or advice.',

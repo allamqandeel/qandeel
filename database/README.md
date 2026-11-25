@@ -5363,3 +5363,39 @@ npm run test:live-call-clock-marks-contract
 The verifier needs `DATABASE_URL` pointing at a FULLY migrated database. It commits fixtures (the ledger exists only
 across real commits), models lost, delayed, reordered and duplicated echoes and a reconnect against a reference, measures
 WAL, and removes every fixture person through the account erasure. Its six planted defects each have a canonical control.
+
+## INTEL-LIVE-01 CP1 - Live call provisional attention (migration 0204)
+
+`0204_intel_live_01_call_attention_v1.sql` is INTEL-LIVE-01's producer of continuous in-speech understanding, under the
+Product Owner's "INTEL-LIVE-01 — Final PO Execution Authorization" (2026-11-25) on the CP0 contract stack v1.0 → v1.1 → A1 → A2
+(D-2, D-4 approved). Forward-only, one transaction; nothing earlier is dropped or redefined except 0191's permit grant (one
+kind added). Record: the [INTEL-LIVE-01 record](../docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md).
+
+- **Relations** (`voice_private`): `call_attention_evaluations` (the coverage ledger: one row per admission or recorded miss,
+  the evidence span it accounts for on the call clock, its outcome and measurements, no text), `call_attention_events`
+  (SET / WITHDRAW from an evaluation, CONFIRMED / EXPIRED from settlement: a subject key, a label of at most 40 characters, a
+  kind, a confidence and an optional reference to one of the person's own Threads; never a transcript, an INTERIM or audio)
+  and `call_attention_settlements` (one marker per settled half). Erasure coverage is registered for all three.
+- **The one writer** (`server_record_call_attention_evaluation_v1`) writes the coverage row, its events and the watermark's
+  advance in one transaction under the call's lock, fenced by the connection epoch (`FENCED`), idempotent
+  (`ALREADY_COVERED`), and refuses a late or overlapping result while recording it (`STALE_RESULT`,
+  `STALE_AFTER_SETTLEMENT`, `STALE_AFTER_END`). Only `DEVELOPMENTS` / `NONE` and the explicit misses `MISSED_HANDOVER` /
+  `DEGRADED_SUSPENDED` advance the watermark; `TIMEOUT` / `REFUSED` / `PROVIDER_FAILED` / `DEFERRED_PERMIT` leave the span
+  pending. Every producer event carries `anchor ≤ evidence ≤ produced` on the call clock.
+- **Readers.** `server_read_call_attention_state_v1` (per-track watermark and open subjects; a resumed or moved connection
+  starts from it) and `server_read_call_attention_threads_v1` (the person's named Threads of the session, by id).
+- **Settlement.** `server_settle_call_attention_v1` after a half's durable completion, `server_settle_due_call_attention_v1`
+  for a crash in between: every subject still open on that track up to the turn's end is CONFIRMED when its Thread reference
+  is one the durable half bound (identity by id, never by text), otherwise EXPIRED. Idempotent; no model.
+- **Widenings.** The background permit kind `PROVISIONAL_ATTENTION` (0191's shared permits) and the cost family
+  `LIVE_ATTENTION_EVALUATION` (0135 / 0184).
+- **Not here.** Nothing provisional reaches CUs, Threads, Live Focus, Memory, the semantic clock or 0201's ledger; no Replay
+  read (CP3), no protocol message (CP2). **Deployment:** not deployed. **The next migration is 0205.**
+
+```sh
+npm run verify:live-call-attention:integration
+npm run test:live-call-attention-contract
+```
+
+The verifier needs `DATABASE_URL` pointing at a FULLY migrated database. It proves the writer's coverage, fencing,
+idempotency, staleness and atomicity, the readers, settlement by identity, the permit kind and erasure.

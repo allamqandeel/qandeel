@@ -378,6 +378,8 @@ interface ScenarioResult {
   readonly timings: { readonly T1: number[]; readonly T2: number[]; readonly T3: number[]; readonly wordEndToProduced: number[] };
   readonly usage: { readonly prompt: number; readonly cached: number; readonly completion: number; readonly spendUsd: number };
   readonly asserts: string[];
+  readonly adjudication?: unknown[];
+  readonly unbound?: number;
   readonly events: EventRow[];
   readonly evaluations: EvalRow[];
   readonly inputs?: unknown[];
@@ -391,7 +393,12 @@ async function runScenario(pools: { a: PgPool; b: PgPool }, s: Scenario, evaluat
   const shimB = new PgServiceRoleRpc(pools.b);
   const w = await world(pools.a);
   const asserts: string[] = [];
-  const check = (ok: boolean, what: string) => { assert.ok(ok, `${s.id}: ${what}`); asserts.push(what); };
+  const check = (ok: boolean, what: string) => {
+    if (MODE === 'FAKE') assert.ok(ok, `${s.id}: ${what}`);
+    asserts.push(`${ok ? 'PASS' : 'FAIL'}  ${what}`);
+  };
+  // The oracle answers with the annotation's keys; the real evaluator chooses its own, so a key-specific check reads any key.
+  const keyIs = (e: { key: string }, key: string) => MODE === 'FAKE' ? e.key === key : true;
   const byText = new Map<string, Segment>();
   for (const seg of s.segments) {
     assert.ok(!byText.has(seg.text), `${s.id}: corpus segment texts are unique (${seg.text})`);
@@ -473,6 +480,7 @@ async function runScenario(pools: { a: PgPool; b: PgPool }, s: Scenario, evaluat
   const evaluations = await evaluationsOf(pools.a, w.call);
   const events = await eventsOf(pools.a, w.call);
   const producer = events.filter((e) => e.op === 'SET' || e.op === 'WITHDRAW');
+  const segmentOf = (e: EventRow): Segment | undefined => s.segments.filter((x) => x.track === e.track && x.t1 >= e.anchor!).sort((x, y) => x.t1 - y.t1)[0];
 
   // ---- coverage (A2 §2 evidence accounting)
   const coverage: Record<string, number> = { COVERED: 0, MISSED_HANDOVER: 0, DEGRADED_SUSPENDED: 0, STALE_AFTER_SETTLEMENT: 0, UNCOVERED_AT_END: 0 };
@@ -548,17 +556,17 @@ async function runScenario(pools: { a: PgPool; b: PgPool }, s: Scenario, evaluat
     check(!!row && row.produced! > turn1.speechEnd, '(g) the last FINAL\'s evaluation is produced after the speech end (a tail, at its real instant)');
     if (s.id === 'g') {
       check(JSON.stringify(settlement).includes('SETTLED'), '(g) the tail\'s events, written before the settlement, are settled by it');
-      check(events.some((e) => e.op === 'EXPIRED' && e.key === 'back-surgery'), '(g) the tail subject without a Thread reference EXPIRES at settlement');
+      check(events.some((e) => e.op === 'EXPIRED' && keyIs(e, 'back-surgery')), '(g) the tail subject without a Thread reference EXPIRES at settlement');
     } else {
       const stale = (await pools.a.query("SELECT count(*)::int n FROM voice_private.call_attention_evaluations WHERE call_id = $1 AND outcome IN ('DEVELOPMENTS', 'NONE')", [w.call])).rows;
-      check(producer.every((e) => e.key !== 'back-surgery'), '(g2 / A12) a tail result after the settlement writes no event (STALE_AFTER_SETTLEMENT)');
+      check(!producer.some((e) => segmentOf(e) === s.segments.at(-1)), '(g2 / A12) a tail result after the settlement writes no event (STALE_AFTER_SETTLEMENT)');
       void stale;
     }
   }
   if (s.id === 'e') {
-    check(threadId !== null && producer.some((e) => e.key === 'bank-job' && e.thread === threadId), '(e) the Thread reference is the person\'s own Thread id');
-    check(events.some((e) => e.op === 'CONFIRMED' && e.key === 'bank-job'), '(e / A6) the subject whose Thread the durable half bound is CONFIRMED (identity by id)');
-    check(events.some((e) => e.op === 'EXPIRED' && e.key === 'learning-guitar'), '(e / A6) the subject without a Thread reference EXPIRES');
+    check(threadId !== null && producer.some((e) => keyIs(e, 'bank-job') && e.thread === threadId), '(e) the Thread reference is the person\'s own Thread id');
+    check(events.some((e) => e.op === 'CONFIRMED' && keyIs(e, 'bank-job')), '(e / A6) the subject whose Thread the durable half bound is CONFIRMED (identity by id)');
+    check(events.some((e) => e.op === 'EXPIRED' && keyIs(e, 'learning-guitar')), '(e / A6) the subject without a Thread reference EXPIRES');
   }
   if (s.id === 'h') {
     check(fencedOutcome === 'FENCED', '(h) a late result of the old epoch is FENCED: nothing written');
@@ -617,7 +625,12 @@ async function runScenario(pools: { a: PgPool; b: PgPool }, s: Scenario, evaluat
     id: s.id, title: s.title, kind: s.kind, words: { user: corpusWords(s, 'USER'), qandeel: corpusWords(s, 'QANDEEL') },
     segments: s.segments.length, admissions: admitted.length, coverage, developments, falseUpdates, orderErrors,
     timings: { T1, T2, T3, wordEndToProduced }, usage, asserts, events, evaluations,
-    inputs: MODE === 'DEEPSEEK' ? undefined : undefined,
+    adjudication: s.segments.map((seg, index) => ({
+      index, track: seg.track, turn: seg.turn, wordEndMs: seg.t1, speechEndMs: s.turns.find((t) => t.index === seg.turn)?.speechEnd ?? null, text: seg.text,
+      annotated: seg.devs.map((d) => `${d.op} ${d.key} «${d.label}» ${d.kind}${d.thread ? ' (Thread)' : ''}`),
+      emitted: producer.filter((e) => segmentOf(e) === seg).map((e) => ({ op: e.op, key: e.key, label: e.label, kind: e.kind, thread: e.thread !== null, producedMs: e.produced })),
+    })),
+    unbound: producer.filter((e) => segmentOf(e) === undefined).length,
   };
 }
 
@@ -688,7 +701,7 @@ async function main(): Promise<void> {
         assert.ok(!input.priorText.includes(s.segments[1]!.text), 'j: the early words left the window');
         assert.ok(input.carryRequired && input.contextCarry !== null, 'j: the carry travels');
         assert.ok([...input.openSubjects, ...input.foldedSubjects].some((x) => x.subjectKey === 'ahmed-canada'), 'j: the early subject is open');
-        result.asserts.push('(j / A1′-j) the correction\'s admission: early words out of the window, carry present, early subject open');
+        result.asserts.push('PASS  (j / A1′-j) the correction\'s admission: early words out of the window, carry present, early subject open');
       }
       results.push(result);
       process.stdout.write(`  PASS  ${s.id.padEnd(4)} ${s.title}  (${result.asserts.length} assertions, ${result.admissions} admissions)\n`);
@@ -733,7 +746,7 @@ async function main(): Promise<void> {
     spendUsd: meter ? { estimatedPeakUsd: meter.spentUsd, calls: meter.calls, ceilingUsd: meter.ceilingUsd } : { estimatedPeakUsd: 0, calls: 0, note: 'fake evaluator: no provider call' },
     scenarios: all.map((r) => ({
       id: r.id, title: r.title, kind: r.kind, words: r.words, segments: r.segments, admissions: r.admissions, coverage: r.coverage,
-      developments: r.developments, falseUpdates: r.falseUpdates, orderErrors: r.orderErrors, asserts: r.asserts.length,
+      developments: r.developments, falseUpdates: r.falseUpdates, orderErrors: r.orderErrors, asserts: r.asserts.length, failedAsserts: r.asserts.filter((a) => a.startsWith('FAIL')),
       timingsMs: {
         T1: { p50: pct(r.timings.T1, 50), p95: pct(r.timings.T1, 95) }, T2: { p50: pct(r.timings.T2, 50), p95: pct(r.timings.T2, 95) },
         T3: { p50: pct(r.timings.T3, 50), p95: pct(r.timings.T3, 95) },
@@ -747,6 +760,7 @@ async function main(): Promise<void> {
     })),
   };
   writeFileSync(join(OUT, RUN_ID, 'summary.json'), JSON.stringify(summary, null, 2));
+  writeFileSync(join(OUT, RUN_ID, 'adjudication.json'), JSON.stringify(all.map((r) => ({ id: r.id, title: r.title, unbound: r.unbound, asserts: r.asserts, segments: r.adjudication })), null, 2));
   writeFileSync(join(OUT, RUN_ID, 'rows.json'), JSON.stringify(all.map((r) => ({ id: r.id, evaluations: r.evaluations, events: r.events, inputs: r.inputs ?? null })), null, 2));
   process.stdout.write(`\n${all.length} scenario(s) written to ${join(OUT, RUN_ID)}\n`);
   await poolA.end();

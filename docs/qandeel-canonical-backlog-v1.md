@@ -266,6 +266,7 @@ that Android, Jest and the iOS boot smoke had all passed. It relaxes nothing in 
 | `QAN-BL-MOB-02` | Written Composer on Android: the Last Composing Word Returns at the Start of the Next Message | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-VOICE-09` | Live Call 60-Minute Notice After a Late Rejoin: No CALL_ENDING Is Repeated on a Connection That Resumes Inside the Last Minute | `UNASSIGNED` | `LOW` | `OPEN — UNASSIGNED` |
 | `QAN-BL-INTEL-05` | Analysis Refusal Handling: a Deterministic Semantic-Establishment Refusal Is Treated as Transient (a Call Item Parks and Retries With No Terminal State; a Written Exchange's Chain Is Silently Skipped) | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
+| `QAN-BL-INTEL-06` | In-Speech Incremental Understanding: long continuous speech receives no semantic/map updates before the call turn commits | `INTEL-LIVE-01 — Incremental In-Speech Understanding & Living Map Attention` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-NAV-03` | Shared / Public World Replay Surface | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-MOB-03` | Conversation History Order on an Equal Timestamp: Two Exchanges Whose User Turns Share One `createdAt` Are Ordered by Their Random Id, Not by Write Order | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-PROD-11` | Replay Generation Hand-over: the Phone's Content-free `TRANSIENT_HANDOVER_DEGRADED` Has No Receiver, and the Server Cannot Tell a Degraded Switch From an Ordinary End | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `MEDIUM` | `DEFERRED — OWNED` |
@@ -3736,6 +3737,22 @@ Admitted by `S8B-06` CP3 at the Product Owner's Copy Gate approval and final dev
 
 Admitted by `INTEL-04` at its closing change (2026-11-04) under BG-06. Nothing here authorizes implementation (BG-07).
 
+### `QAN-BL-INTEL-06` — In-Speech Incremental Understanding and Evolving Map Attention
+
+- **Title / Finding:** during a long uninterrupted personal live-call monologue, QANDEEL's recognizer receives partial/interim text, but the call engine does not forward it to semantic analysis. User-turn commitment waits for an endpointer silence boundary; the ordered analysis worker begins from already-committed halves and its default background permit respects the First Audio critical window. The Living Analysis Map therefore has no established in-speech semantic progression to present during a continuously spoken turn, and Replay/video cannot reconstruct such progression from the subsequent durable commit.
+- **Source:** [INTEL-LIVE-INCREMENTAL-01 canonical gap record](e2e/QANDEEL_INTEL_LIVE_INCREMENTAL_UNDERSTANDING_GAP_v1.md) §1–§5; Product Owner's explicit finding dated 2026-11-24, verified against `apps/api/src/voice/call-turn/live-call-turn.engine.ts`, `call-endpointer.ts` and `apps/api/src/live-analysis/call-analysis.worker.ts` on `main` at `f45400a8`.
+- **Why not current work:** RB-2/S3 + M-2 are committed-analysis historical timing infrastructure, not an incremental speech-analysis producer. The current S4 scope is presentation consumption, not new provisional knowledge semantics. The Producer/Presentation/Replay contract is not yet authorized. Existing approved S8B-05 and COSMOS changes stay frozen.
+- **Owner task:** `INTEL-LIVE-01 — Incremental In-Speech Understanding & Living Map Attention`, assigned by the Product Owner's "INTEL-LIVE-01 — Final PO Execution Authorization" (2026-11-25).
+- **Severity:** `HIGH` — the intended core conversation experience (a person feels heard and sees the map evolve while confiding) is not achieved when the person speaks continuously.
+- **Reopen condition:** INTEL-LIVE-01 CP4 delivered (CP0 contract v1.1 §8.2). **Close condition:** the HONOR Live + Replay proof recorded (the Product Owner's sequence, step 3). CP4 moves this item to `VALIDATION — OPEN`, never to a tombstone.
+- **Required future properties:** while one person speaks for 90–120 seconds without turn-end, at least two significant in-speech attention/map developments can occur before their final utterance or QANDEEL's reply; provisional signals remain distinct from durable semantic truth, and corrections/negations retract or revise them; no backdating of later commits in Replay/video; measured First Audio/Live Focus non-regression; privacy/consent, capture-clock provenance, and no fabricated interpretation.
+- **Product Owner priority:** real, important gap to resolve, not a decorative polish item or a reason to reopen RB-2/S3, M-2, or COSMOS. Technical S4 integration may proceed without claiming that it closes this item.
+- **Current truth (INTEL-LIVE-01 CP1, 2026-11-25):** the producer exists: FINAL segments (never INTERIM) and heard QANDEEL pieces are evaluated by DeepSeek during the speech into the call's private provisional attention ledger (migration `0204`), settled by identity against the durable commit ([execution record](e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md)). Nothing a person sees changes before CP2 (live map) and CP3 (Replay Lane B). DeepSeek is `SYNTHETIC_ONLY`; synthetic acceptance proves the mechanism, not the product.
+- **Status:** `DEFERRED — OWNED`.
+
+Admitted as a documentation-only Product Owner-designated cross-task gap (2026-11-24; BG-06 / BG-07). No runtime or implementation authorization is implied.
+Transferred to `main` and admitted by `INTEL-LIVE-01` CP1 (2026-11-25, CP0 contract v1.1 §8.2 / §8.3). The entry above is Draft PR #410's (head `55d016b6`) verbatim, except four lines set by the contract: **Owner task** (on #410: "`UNASSIGNED`. `INTEL-LIVE-01` is only a *candidate* future task label, not an approved owner."), **Reopen condition** (on #410: "before declaring in-speech living understanding or evolving map behavior complete for users, or before accepting Replay/video as a truthful reconstruction of that in-speech behavior; PO explicitly assigns a future task and approves the product semantics."), the added **Current truth**, and **Status** (on #410: "`OPEN — UNASSIGNED`."). Nothing here authorizes implementation beyond INTEL-LIVE-01's own authorization (BG-07).
+
 ### `QAN-BL-NAV-03` — Shared / Public World Replay Surface
 
 - **Title / Finding:** Replay exists only for the Personal World. No Shared or Public World Replay surface exists, and none
@@ -4944,15 +4961,15 @@ Tombstoned by `S8B-07` CP1-B under the Product Owner's order of 2026-11-08 (BG-0
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 54 |
+| `DEFERRED — OWNED` | 55 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 17 |
 | `CLOSED — TOMBSTONE` | 37 |
-| **Total** | **112** |
+| **Total** | **113** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 63 |
+| `HIGH` | 64 |
 | `MEDIUM` | 46 |
 | `LOW` | 3 |
 
@@ -6594,6 +6611,8 @@ This closure change is documentation only.
 - **BG-09:** the contract carries `ACCEPTED / MERGED / CLOSED` (v1.24, §31.11), and the locators are updated in the same
   change.
 - **Index after the COSMOS closure: 112 items; 54 / 4 / 17 / 37 by status, 63 / 46 / 3 by severity.**
+- **Index after the INTEL-LIVE-01 CP1 admission of `QAN-BL-INTEL-06` (2026-11-25): 113 items; 55 / 4 / 17 / 37 by status,
+  64 / 46 / 3 by severity.**
 
 ## 8. What is deliberately not in this backlog
 
