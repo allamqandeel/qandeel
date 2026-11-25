@@ -15,6 +15,11 @@
  *   NOT_AFFECTED  every changed file is outside the binary's inputs (the API, the database, documentation, other
  *                 workflows, Jest tests, Android-only native code), or a mobile source no protected surface imports.
  *
+ * A RUN carries a SCOPE: FULL (every cell, World and native gesture) or COSMOS_CASES, when every reaching file belongs
+ * to a surface with its own mandatory iOS Targeted Gate (TARGETED_SURFACES, below) and so needs only the COSMOS cases
+ * that surface can affect. Reachability decides whether COSMOS can be affected; the functional classification decides
+ * how much of the gate that warrants.
+ *
  * The protected surfaces (PROTECTED_ROOTS) are COSMOS itself, the composition that navigates into and out of the Analysis
  * and the stages, the orientation and return chrome, temporal navigation, the map layer COSMOS draws through, and the
  * gate's synthetic proof world. The import graph follows SYMBOLS through barrels: `import { A } from '../x'` reaches the
@@ -26,7 +31,7 @@
  * any doubt answers RUN. The gate's suites, cases and assertions are unchanged; this decides only whether they run.
  *
  * CLI: node scripts/cosmos-ios-world/world-gate-impact.mjs [--base <rev>] <file> [<file> ...]   (or the files on stdin)
- *      prints one JSON object {decision, reasons:[{file, class, reason}]}; it exits 0 either way.
+ *      prints one JSON object {decision, scope, reasons:[{file, class, reason, decision, scope}]}; it exits 0 either way.
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
@@ -96,6 +101,27 @@ export const SHARED_DEPENDENCIES = Object.freeze({
   // The native module's iOS half is compiled into the binary; its Android half and its Android tests are not.
   nativeIos: /^apps\/mobile\/modules\/[^/]+\/(?!android\/)/u,
 });
+
+/**
+ * Functional impact classification (PO, 2026-11-25, after the CP1 report: reachability alone is too broad a scope). A
+ * mobile surface that has its OWN mandatory iOS Targeted Gate is proven there; COSMOS meets it only where the Analysis
+ * mounts it. A change confined to such a surface runs the relevant COSMOS cases (COSMOS_CASES: the Analysis entered with
+ * the surface mounted, a stage tap and its PEEK, in the reference cell), never the full matrix. `paths` are the targeted
+ * gate's own pull_request paths, which the impact test holds. A protected surface itself, a shared dependency, the gate's
+ * own inputs and any doubt still run the full gate.
+ */
+export const TARGETED_SURFACES = Object.freeze([
+  {
+    name: 'the live call',
+    gate: '.github/workflows/ios-targeted-gate.yml',
+    paths: ['apps/mobile/src/call/**', 'apps/mobile/src/voice-call/**', 'apps/mobile/modules/qandeel-voice-call/**'],
+    sources: /^apps\/mobile\/src\/(?:call|voice-call)\//u,
+    // The call engine's own Swift. The vendored codec and the module's build files change how the binary builds: FULL.
+    native: /^apps\/mobile\/modules\/qandeel-voice-call\/ios\/(?:Core|Expo)\/[^/]+\.swift$/u,
+  },
+]);
+const targetedSurface = (file) => TARGETED_SURFACES.find((s) => s.sources.test(file) || s.native.test(file)) ?? null;
+const SCOPE_OF = (decision, cls) => (decision === 'NOT_AFFECTED' ? 'NOT_AFFECTED' : cls === 'TARGETED_SURFACE' ? 'COSMOS_CASES' : 'FULL');
 
 /** What cannot reach the iOS binary or the gate. */
 const OUTSIDE = /^(?:apps\/api\/|database\/|docs\/|tests\/|\.github\/|scripts\/(?!cosmos-ios-world\/))/u;
@@ -256,7 +282,7 @@ export function protectedClosure(roots = PROTECTED_ROOTS) {
  */
 export function planWorldGate(changed, { closure, readBase } = {}) {
   const files = [...new Set(changed.map((f) => f.trim()).filter(Boolean))];
-  if (files.length === 0) return { decision: 'RUN', reasons: [{ file: null, class: 'NO_CHANGE_SET', reason: 'no changed-file set: run' }] };
+  if (files.length === 0) return { decision: 'RUN', scope: 'FULL', reasons: [{ file: null, class: 'NO_CHANGE_SET', reason: 'no changed-file set: run' }] };
   let reach = closure ?? null;
   const reasons = [];
   for (const file of files) {
@@ -267,6 +293,8 @@ export function planWorldGate(changed, { closure, readBase } = {}) {
       verdict = ['NOT_AFFECTED', 'MANIFEST_SCRIPTS_ONLY', 'only the manifest\'s `scripts` changed (read against the base): no dependency, entry or config of the binary'];
     } else if (SHARED_DEPENDENCIES.files.includes(file) || SHARED_DEPENDENCIES.prefixes.some((p) => file.startsWith(p))) {
       verdict = ['RUN', 'SHARED_DEPENDENCY', 'a shared dependency of the iOS binary'];
+    } else if (targetedSurface(file)?.native.test(file)) {
+      verdict = ['RUN', 'TARGETED_SURFACE', `the native engine of ${targetedSurface(file).name}: proven by ${targetedSurface(file).gate}; COSMOS runs its relevant cases with it linked`];
     } else if (SHARED_DEPENDENCIES.nativeIos.test(file)) {
       verdict = ['RUN', 'SHARED_DEPENDENCY', 'native code compiled into the iOS binary'];
     } else if (isProse(file)) {
@@ -280,18 +308,19 @@ export function planWorldGate(changed, { closure, readBase } = {}) {
           try {
             reach = protectedClosure();
           } catch (error) {
-            return { decision: 'RUN', reasons: [{ file, class: 'ANALYSIS_FAILED', reason: `the import analysis failed (${error.message}): run` }] };
+            return { decision: 'RUN', scope: 'FULL', reasons: [{ file, class: 'ANALYSIS_FAILED', reason: `the import analysis failed (${error.message}): run` }] };
           }
         }
         let reached;
         try {
           reached = reach.has(file);
         } catch (error) {
-          return { decision: 'RUN', reasons: [{ file, class: 'ANALYSIS_FAILED', reason: `the import analysis failed (${error.message}): run` }] };
+          return { decision: 'RUN', scope: 'FULL', reasons: [{ file, class: 'ANALYSIS_FAILED', reason: `the import analysis failed (${error.message}): run` }] };
         }
-        verdict = reached
-          ? ['RUN', 'PROTECTED_SURFACE', 'imported by a protected surface (COSMOS rendering, camera, gestures or navigation)']
-          : ['NOT_AFFECTED', 'UNREACHED_SOURCE', 'no protected surface imports it, directly or through any chain of imports'];
+        const owner = targetedSurface(file);
+        if (!reached) verdict = ['NOT_AFFECTED', 'UNREACHED_SOURCE', 'no protected surface imports it, directly or through any chain of imports'];
+        else if (owner) verdict = ['RUN', 'TARGETED_SURFACE', `${owner.name}, mounted by the Analysis: proven by ${owner.gate}; COSMOS runs its relevant cases`];
+        else verdict = ['RUN', 'PROTECTED_SURFACE', 'imported by a protected surface (COSMOS rendering, camera, gestures or navigation)'];
       }
     } else if (MOBILE_NOT_IN_BINARY.test(file)) {
       verdict = ['NOT_AFFECTED', 'NOT_IN_BINARY', 'not an input of the iOS binary or of this gate'];
@@ -302,9 +331,11 @@ export function planWorldGate(changed, { closure, readBase } = {}) {
     } else {
       verdict = ['RUN', 'UNKNOWN', 'a path this analysis does not classify: run'];
     }
-    reasons.push({ file, class: verdict[1], reason: verdict[2], decision: verdict[0] });
+    reasons.push({ file, class: verdict[1], reason: verdict[2], decision: verdict[0], scope: SCOPE_OF(verdict[0], verdict[1]) });
   }
-  return { decision: reasons.some((r) => r.decision === 'RUN') ? 'RUN' : 'NOT_AFFECTED', reasons };
+  // The widest scope any file needs: FULL over COSMOS_CASES over NOT_AFFECTED.
+  const scope = ['FULL', 'COSMOS_CASES'].find((s) => reasons.some((r) => r.scope === s)) ?? 'NOT_AFFECTED';
+  return { decision: scope === 'NOT_AFFECTED' ? 'NOT_AFFECTED' : 'RUN', scope, reasons };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
@@ -326,7 +357,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   try {
     result = planWorldGate(files, { readBase });
   } catch (error) {
-    result = { decision: 'RUN', reasons: [{ file: null, class: 'ANALYSIS_FAILED', reason: `${error.message}: run` }] };
+    result = { decision: 'RUN', scope: 'FULL', reasons: [{ file: null, class: 'ANALYSIS_FAILED', reason: `${error.message}: run` }] };
   }
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }

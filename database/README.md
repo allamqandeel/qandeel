@@ -5389,6 +5389,14 @@ kind added). Record: the [INTEL-LIVE-01 record](../docs/e2e/QANDEEL_INTEL_LIVE_0
   is one the durable half bound (identity by id, never by text), otherwise EXPIRED. Idempotent; no model.
 - **Widenings.** The background permit kind `PROVISIONAL_ATTENTION` (0191's shared permits) and the cost family
   `LIVE_ATTENTION_EVALUATION` (0135 / 0184).
+- **Earlier verifiers re-anchored** (declared, migration-aware; no assertion removed, no migration changed). API CI on
+  `6400dc37` failed in `verify-migration-0171` C-1 (`20 !== 19`), the first of the earlier verifiers that pin what 0204
+  widens. Each one now adds exactly 0204's part once 0204 is applied, and holds it to its own rules:
+  - the cost family: 0171, 0174, 0175, 0176, 0181 and 0182, through `live-attention-cost-family-0204.mjs`, in the 0184
+    voice-family style;
+  - the seven new `voice_private` internals: 0183 S0b, 0185 C0 and 0186 C0b, through `replay-rb2-census.mjs`
+    (`voiceInternals0204()`, derived from the migration's ACL block, never copied);
+  - the migration order: 0194, 0195 and 0196, where exactly 0204 follows 0203.
 - **Not here.** Nothing provisional reaches CUs, Threads, Live Focus, Memory, the semantic clock or 0201's ledger; no Replay
   read (CP3), no protocol message (CP2). **Deployment:** not deployed. **The next migration is 0205.**
 

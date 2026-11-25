@@ -32,6 +32,7 @@ import { randomUUID } from 'node:crypto';
 import process from 'node:process';
 import pg from 'pg';
 import { VOICE_COST_PROBE, VOICE_FAMILIES } from './voice-cost-families-0184.mjs';
+import { ATTENTION_COST_PROBE, ATTENTION_FAMILIES } from './live-attention-cost-family-0204.mjs';
 
 const { Client } = pg;
 const databaseUrl = process.env.DATABASE_URL;
@@ -233,7 +234,9 @@ async function verifyCatalog() {
   // (0182's own verifier pins the full list).
   // RE-ANCHORED by S8B-02 CP1 (migration 0184, 2026-10-30): 0184 adds exactly the four voice families (0184's own verifier pins the full list), so nineteen.
   const { voice } = await one(VOICE_COST_PROBE);
-  assert.equal((await constraintDef('public.ai_provider_calls', 'ai_provider_calls_feature_family_check')).match(/'[A-Z_]+'::text/gu).length, 15 + (voice ? VOICE_FAMILIES.length : 0));
+  // RE-ANCHORED by INTEL-LIVE-01 CP1 (migration 0204, 2026-11-25): 0204 adds exactly LIVE_ATTENTION_EVALUATION (0204's own verifier proves it admitted), so twenty.
+  const { attention } = await one(ATTENTION_COST_PROBE);
+  assert.equal((await constraintDef('public.ai_provider_calls', 'ai_provider_calls_feature_family_check')).match(/'[A-Z_]+'::text/gu).length, 15 + (voice ? VOICE_FAMILIES.length : 0) + (attention ? ATTENTION_FAMILIES.length : 0));
   assert.match(await constraintDef('public.memory_subject_attributions', 'memory_subject_attributions_basis_check'), /'MODEL_ASSISTED_CAPTURE'::text/u);
   assert.match(await constraintDef('public.memory_subject_attributions', 'memory_subject_attributions_capture_self_check'), /MODEL_ASSISTED_CAPTURE.*OR \(subject = 'SELF'::text\)/u);
 }

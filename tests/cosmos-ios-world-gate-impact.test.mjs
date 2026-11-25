@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-import { parseModule, planWorldGate, protectedClosure, PROTECTED_ROOTS } from '../scripts/cosmos-ios-world/world-gate-impact.mjs';
+import { parseModule, planWorldGate, protectedClosure, PROTECTED_ROOTS, TARGETED_SURFACES } from '../scripts/cosmos-ios-world/world-gate-impact.mjs';
 import { references } from '../scripts/validation/change-planner.mjs';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -106,8 +106,60 @@ test('the workflow skips the gate only on the plan\'s literal NOT_AFFECTED, for 
   assert.doesNotMatch(wf.replace(/^\s*#[^\n]*$/gmu, ''), /'apps\/api\/\*\*'|'database\/\*\*'/u);
   // The gate itself is unchanged: its cases, its native run and its pass rule.
   for (const kept of [/run: bash scripts\/cosmos-ios-world\/run-world-gate\.sh/u, /run: npm run test:cosmos-ios-world-gate-composition-contract/u,
-    /xcodebuild test-without-building -xctestrun/u, /\[ -f "\$f" \] && ! tail -n \+2 "\$f" \| awk -F'\\t' '\$2 != "PASS"' \| grep -q \./u,
-    /cell: i17-en/u, /cell: i17-ar/u, /cell: small-en/u]) assert.match(wf, kept);
+    /xcodebuild test-without-building -xctestrun/u, /\[ -f "\$f" \] && ! tail -n \+2 "\$f" \| awk -F'\\t' '\$2 != "PASS"' \| grep -q \./u]) assert.match(wf, kept);
+  // BG-10's permanent matrix: defined once in the plan step, and the matrix's fallback (a plan that answered nothing) is
+  // exactly that full list.
+  const full = JSON.parse(/CELLS_FULL: >-\n((?:\s+[^\n]+\n)+?)\s+run: \|/u.exec(wf)[1].replace(/\s*\n\s*/gu, ' '));
+  assert.deepEqual(full.map((c) => c.cell), ['i17-en', 'i17-ar', 'small-en']);
+  assert.equal(full.find((c) => c.cell === 'i17-ar').langtag, 'ar-EG', 'the right-to-left cell is kept');
+  const fallback = JSON.parse(/include: \$\{\{ fromJSON\(needs\.plan\.outputs\.cells \|\| '([^']+)'\) \}\}/u.exec(wf)[1]);
+  assert.deepEqual(fallback, full, 'a plan that answered nothing runs every cell');
+});
+
+test('the functional scope: a surface with its own targeted gate runs only the COSMOS cases it can affect', () => {
+  const call = 'apps/mobile/src/call/CallViews.tsx';
+  const cosmos = 'apps/mobile/src/cosmos/product/CosmosWorldView.tsx';
+  const closure = new Set([call, cosmos]);
+  const scope = (files) => decide(files, closure).scope;
+  assert.equal(scope([call]), 'COSMOS_CASES', 'a call client the Analysis mounts');
+  assert.equal(decide([call], closure).decision, 'RUN', 'COSMOS_CASES is a run, never a skip');
+  assert.equal(scope(['apps/mobile/modules/qandeel-voice-call/ios/Core/CallCoordinator.swift']), 'COSMOS_CASES', "the call engine's own Swift");
+  assert.equal(scope(['apps/mobile/modules/qandeel-voice-call/ios/opus/celt/bands.c']), 'FULL', 'the vendored codec changes how the binary builds');
+  assert.equal(scope(['apps/mobile/src/call/call-text-transport.ts']), 'NOT_AFFECTED', 'a call source no protected surface reaches');
+  // The widest scope wins: a protected surface, a shared dependency or any doubt alongside it is FULL.
+  for (const other of [cosmos, 'package-lock.json', 'apps/mobile/some-new-config.cfg', 'apps/mobile/src/cosmos/removed-in-this-change.ts']) {
+    assert.equal(scope([call, other]), 'FULL', `${other} alongside the call is FULL`);
+  }
+  assert.equal(scope([cosmos]), 'FULL');
+  assert.equal(scope(['docs/x.md']), 'NOT_AFFECTED');
+  assert.equal(decide([]).scope, 'FULL');
+  assert.equal(planWorldGate([cosmos], { closure: { has: () => { throw new Error('planted'); } } }).scope, 'FULL');
+
+  // Every targeted surface is really proven by its own gate: the gate's pull_request AND push paths carry its paths.
+  for (const surface of TARGETED_SURFACES) {
+    const gate = read(surface.gate);
+    for (const event of ['pull_request', 'push']) {
+      const block = new RegExp(`\\n  ${event}:\\n[\\s\\S]*?\\n    paths:\\n((?:\\s+(?:-\\s+'[^']+'|#[^\\n]*)\\n)+)`, 'u').exec(gate);
+      const paths = block ? [...block[1].matchAll(/-\s+'([^']+)'/gu)].map((m) => m[1]) : [];
+      for (const p of surface.paths) assert.ok(paths.includes(p), `${surface.gate} ${event} runs for ${p}`);
+    }
+  }
+
+  // The workflow and the runner: COSMOS_CASES is the reference cell, P-TAP and F1-RESOLVED, no native gesture run.
+  const wf = read('.github/workflows/cosmos-ios-world-gate.yml');
+  assert.match(wf, /scope=FULL\n/u, 'the scope defaults to FULL');
+  assert.match(wf, /\.scope === "COSMOS_CASES" \? 0 : 1/u, 'only the literal COSMOS_CASES narrows it');
+  assert.match(wf, /c\.filter\(\(x\) => x\.cell === "i17-en"\)/u, 'COSMOS_CASES runs the reference cell');
+  assert.match(wf, /WORLD_GATE_SCOPE: "\$\{\{ needs\.plan\.outputs\.scope \|\| 'FULL' \}\}"/u);
+  assert.equal((wf.match(/&& needs\.plan\.outputs\.scope != 'COSMOS_CASES' \}\}/gu) ?? []).length, 2, 'the native gestures and their classification are skipped only for COSMOS_CASES');
+  assert.match(wf, /the other cells, Worlds, pans and native gestures did NOT run \(not passed\)/u);
+  const runner = read('scripts/cosmos-ios-world/run-world-gate.sh');
+  const block = /if \[ "\$\{WORLD_GATE_SCOPE:-FULL\}" = COSMOS_CASES \]; then\n([\s\S]*?)\n {2}exit \$\?\nfi\n/u.exec(runner)?.[1] ?? '';
+  assert.match(block, /! enter pc;/u);
+  assert.match(block, /elif sleep 5; ! initstage pc; then\n\s+for c in P-TAP F1-RESOLVED; do result "\$c" 'NOT TESTED'/u, 'the stage is initialized first: P-TAP is never its first touch');
+  assert.ok(block.indexOf('initstage pc') < block.indexOf('tapcase P-TAP pc-tap "$pt" f1'), 'the initialization precedes the tap case');
+  assert.match(block, /grep -q \$'\^P-TAP\\tPASS' "\$RES" && grep -q \$'\^F1-RESOLVED\\tPASS' "\$RES"/u, 'both cases must PASS');
+  assert.doesNotMatch(block, /pancase|landcase|shared_enter/u, 'no pan, landscape or other World in the COSMOS cases');
 });
 
 test('the analysis classifies prose without naming it, so a docs-only delta keeps its VAL-01 carry-forward', () => {
@@ -134,4 +186,8 @@ test('each refusal is real: planted regressions are caught', () => {
   const weakened = wf.replace("if: ${{ !cancelled() && needs.plan.outputs.decision != 'NOT_AFFECTED' }}", "if: ${{ needs.plan.outputs.decision == 'RUN' }}");
   assert.notEqual(weakened, wf, 'the plant anchor exists');
   assert.doesNotMatch(weakened, /needs\.plan\.outputs\.decision != 'NOT_AFFECTED'/u, 'a gate that runs only on RUN would skip on a failed plan; the wiring test refuses it');
+  // A protected surface can never be narrowed to COSMOS_CASES, and neither can a call change beside one.
+  const closureWith = new Set(['apps/mobile/src/call/CallViews.tsx', 'apps/mobile/src/cosmos/product/CosmosWorldView.tsx']);
+  assert.notEqual(planWorldGate(['apps/mobile/src/cosmos/product/CosmosWorldView.tsx'], { closure: closureWith }).scope, 'COSMOS_CASES');
+  assert.notEqual(planWorldGate(['apps/mobile/src/call/CallViews.tsx', 'apps/mobile/src/cosmos/product/CosmosWorldView.tsx'], { closure: closureWith }).scope, 'COSMOS_CASES');
 });

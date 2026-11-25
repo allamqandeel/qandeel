@@ -126,6 +126,25 @@ pancase() {
   mt "$2" "$3"; sleep 2; dump "$2"; shot "$2"
   if backOn "$2"; then result "$1" PASS "the pan ($3) moved the camera off the centre (Back available)"; else result "$1" FAIL "after the pan ($3), Back is not available"; fi
 }
+# WORLD_GATE_SCOPE=COSMOS_CASES (the impact plan's functional scope, world-gate-impact.mjs): the change is confined to a
+# surface the Analysis mounts that has its own mandatory iOS Targeted Gate (the live call). Only the COSMOS cases it can
+# affect run, with the same functions and the same assertions: the Analysis entered with it mounted, then P-TAP and
+# F1-RESOLVED on the initialized stage. Both must PASS. The other cases are not run: no row, so none is reported passed.
+if [ "${WORLD_GATE_SCOPE:-FULL}" = COSMOS_CASES ]; then
+  say "scope COSMOS_CASES: P-TAP and F1-RESOLVED only; the other Worlds, the pans and the native gestures do not run"
+  # Its own evidence names (pc-*), so its dumps never mix with the full run's p-* ones.
+  if ! enter pc; then
+    for c in P-TAP F1-RESOLVED; do result "$c" 'NOT TESTED' 'the Personal Analysis did not open'; done
+  elif sleep 5; ! initstage pc; then
+    for c in P-TAP F1-RESOLVED; do result "$c" 'NOT TESTED' "the stage's initialization: $INIT_WHY"; done
+  else
+    shot pc-1; pt="$(node_at pc-1)"
+    if [ "$pt" = none ]; then result P-TAP 'NOT TESTED' 'no node core visible on the Personal stage'; result F1-RESOLVED 'NOT TESTED' 'no node core to inspect'; else tapcase P-TAP pc-tap "$pt" f1; fi
+  fi
+  say "done (scope COSMOS_CASES)"; cat "$RES" | tee -a "$LOG"
+  ! grep -qv -e $'\tPASS\t' -e '^case' "$RES" && grep -q $'^P-TAP\tPASS' "$RES" && grep -q $'^F1-RESOLVED\tPASS' "$RES"
+  exit $?
+fi
 if ! enter p; then
   for c in P-TAP-RAIL P-TAP F1-RESOLVED P-PAN P-PAN-RAIL; do result "$c" 'NOT TESTED' 'the Personal Analysis did not open'; done
 elif sleep 5; ! initstage p; then

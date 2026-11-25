@@ -26,6 +26,7 @@
 //   6. concurrency: a second session's publication-time placement waits on the World singleton the first holds.
 import assert from 'node:assert/strict';
 import { VOICE_COST_PROBE, VOICE_FAMILIES } from './voice-cost-families-0184.mjs';
+import { ATTENTION_COST_PROBE, ATTENTION_FAMILIES } from './live-attention-cost-family-0204.mjs';
 import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import process from 'node:process';
@@ -208,7 +209,9 @@ async function verifyBoundary() {
   const [{ publicReply }] = await rows("SELECT to_regprocedure('public.read_public_qandeel_context_v2(uuid, uuid)') IS NOT NULL \"publicReply\"");
   assert.deepEqual([...def.matchAll(/'([A-Z_]+)'::text/gu)].map((m) => m[1]).sort(), [...FAMILIES, ...(publicReply ? LATER_FAMILIES : []),
     // RE-ANCHORED by S8B-02 CP1 (migration 0184, 2026-10-30): 0184 adds exactly the four voice families (0184's own verifier pins the full list); nothing else in this list changes.
-    ...((await first(VOICE_COST_PROBE)).voice ? VOICE_FAMILIES : [])].sort(), 'B05 the family list');
+    ...((await first(VOICE_COST_PROBE)).voice ? VOICE_FAMILIES : []),
+    // RE-ANCHORED by INTEL-LIVE-01 CP1 (migration 0204, 2026-11-25): 0204 adds exactly LIVE_ATTENTION_EVALUATION (0204's own verifier proves it admitted); nothing else in this list changes.
+    ...((await first(ATTENTION_COST_PROBE)).attention ? ATTENTION_FAMILIES : [])].sort(), 'B05 the family list');
   // B06 the only writer of a coordinate is still the 0145 commit; still five lifecycle movers; the seam is closed.
   const writers = await rows(`SELECT n.nspname || '.' || p.proname fn FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE p.prosrc ~* 'INSERT INTO public_spatial_private\\.spatial_placements' ORDER BY 1`);

@@ -168,18 +168,22 @@ proportional to the change's impact:
   the live call this is `.github/workflows/ios-targeted-gate.yml`.
 - The full **iOS World Gate** covers COSMOS: zoom, pan, camera, every World and every device size. It
   is impact-aware for pull requests and for pushes to main alike (PO, 2026-11-25, on the CP1
-  resolution). It runs whenever a dependency analysis of the change finds anything that can reach
-  what it proves:
-  - its own inputs;
-  - a shared dependency of the iOS binary: the lock, the manifests beyond their `scripts`, the app
-    config, the plugins, the assets, native iOS code or the shared packages;
-  - a mobile source that COSMOS rendering, the camera, gestures or navigation import, directly or
-    through any chain of imports.
+  resolution). Reachability alone is too broad a scope (PO, 2026-11-25, on the CP1 report), so a
+  conservative dependency analysis decides whether COSMOS can be affected, and a functional
+  classification decides how much of the gate that warrants:
+  - **the full gate**, every cell, World and native gesture: for its own inputs; for a shared
+    dependency of the iOS binary (the lock, the manifests beyond their `scripts`, the app config, the
+    plugins, the assets, native iOS code, the shared packages); for a protected surface itself, or a
+    source it imports that no targeted gate owns; and for any doubt;
+  - **the relevant COSMOS cases only**: when every file that reaches COSMOS belongs to a surface the
+    Analysis mounts that has its own mandatory iOS Targeted Gate (the live call). That means the
+    Analysis entered with the surface mounted, a stage tap and its PEEK (P-TAP, F1-RESOLVED), in the
+    reference cell. Zoom, pan, the other Worlds and the other cells are not repeated for it;
+  - **nothing**: the API and the database (its app reaches neither), documentation, Jest tests, other
+    suites' flows, or a mobile source no protected surface reaches.
 
-  It is not re-run for anything else: the API and the database (its app reaches neither),
-  documentation, Jest tests, other suites' flows, or a mobile source no protected surface reaches. Any
-  doubt runs it; manual dispatch always runs it. Its suites, cases and assertions are never deleted
-  or weakened.
+  Manual dispatch always runs the full gate. Its suites, cases and assertions are never deleted or
+  weakened; a case that did not run is reported as not run.
 - An expensive regression suite runs when the change, or a dependency analysis, shows it is affected.
   Each skip is justified in writing, in the workflow or in the checkpoint's record.
 - Targeted validation is recorded separately from the World Gate. A suite that did not run is

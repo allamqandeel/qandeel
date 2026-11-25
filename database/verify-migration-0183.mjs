@@ -47,7 +47,7 @@ import { liveCallTurnsApplied, substitutedBody as liveCallBody, voiceInternals01
 import { liveCallHalvesApplied, substitutedBody as liveCallHalfBody, voiceInternals0191 } from './live-call-0191-substitutions.mjs';
 import { liveCallTextTurnApplied, voiceInternals0192 } from './live-call-0192-substitutions.mjs';
 import { transientMediaApplied, voiceInternals0196 } from './transient-media-0196-census.mjs';
-import { clockMarksApplied, historicalAvailabilityApplied, voiceInternals0202, voiceInternals0203 } from './replay-rb2-census.mjs';
+import { callAttentionApplied, clockMarksApplied, historicalAvailabilityApplied, voiceInternals0202, voiceInternals0203, voiceInternals0204 } from './replay-rb2-census.mjs';
 
 // S8B-03 re-anchor (migration 0186): the approved consent text 0186 installs, and the one current text after any run.
 const NOTES_CONSENT_VERSION = 'VOICE_RECORDING_V1';
@@ -461,6 +461,13 @@ async function verifyCatalogue(report) {
     if (await clockMarksApplied(rows)) {
       const internals = voiceInternals0203();
       assert.equal(internals.length, 3, 'S0b 0203 names three new voice_private internals');
+      declared.push(...internals);
+    }
+    // RE-ANCHORED by INTEL-LIVE-01 CP1 (migration 0204, 2026-11-25): 0204 adds seven voice_private internals (the call's
+    // provisional attention), executable by no role, held to the same rules; verify-migration-0204 proves their shape.
+    if (await callAttentionApplied(rows)) {
+      const internals = voiceInternals0204();
+      assert.equal(internals.length, 7, 'S0b 0204 names seven new voice_private internals');
       declared.push(...internals);
     }
     const functions = await rows(`SELECT p.oid::regprocedure::text AS sig, n.nspname AS schema, p.proname AS name, p.prosecdef AS definer,

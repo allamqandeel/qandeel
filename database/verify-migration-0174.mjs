@@ -16,6 +16,7 @@ import { randomUUID } from 'node:crypto';
 import process from 'node:process';
 import pg from 'pg';
 import { VOICE_COST_PROBE, VOICE_FAMILIES } from './voice-cost-families-0184.mjs';
+import { ATTENTION_COST_PROBE, ATTENTION_FAMILIES } from './live-attention-cost-family-0204.mjs';
 
 const { Client } = pg;
 const databaseUrl = process.env.DATABASE_URL;
@@ -55,7 +56,9 @@ async function verify() {
   const expected = [...FAMILIES, ...(later ? ['SHARED_KNOWLEDGE_RECALL', 'SHARED_SPATIAL_PLACEMENT'] : []), ...(judged ? ['SHARED_DISCLOSURE_JUDGE'] : []),
     ...(publicReading ? ['PUBLIC_SEMANTIC_INTERPRETATION'] : []), ...(publicReply ? ['PUBLIC_QANDEEL_REPLY'] : []),
     // RE-ANCHORED by S8B-02 CP1 (migration 0184, 2026-10-30): 0184 adds exactly the four voice families (0184's own verifier pins the full list); nothing else in this list changes.
-    ...((await one(VOICE_COST_PROBE)).voice ? VOICE_FAMILIES : [])];
+    ...((await one(VOICE_COST_PROBE)).voice ? VOICE_FAMILIES : []),
+    // RE-ANCHORED by INTEL-LIVE-01 CP1 (migration 0204, 2026-11-25): 0204 adds exactly LIVE_ATTENTION_EVALUATION (0204's own verifier proves it admitted); nothing else in this list changes.
+    ...((await one(ATTENTION_COST_PROBE)).attention ? ATTENTION_FAMILIES : [])];
   assert.deepEqual([...def.matchAll(/'([A-Z_]+)'::text/gu)].map((match) => match[1]).sort(), [...expected].sort());
 
   await q('BEGIN');

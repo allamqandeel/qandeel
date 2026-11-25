@@ -72,6 +72,8 @@ jobs:
     timeout-minutes: 10
     outputs:
       decision: ${{ steps.plan.outputs.decision }}
+      scope: ${{ steps.plan.outputs.scope }}
+      cells: ${{ steps.plan.outputs.cells }}
     steps:
       - {name: Checkout, uses: actions/checkout@v4, with: {fetch-depth: 0}}
       - name: Setup Node.js 22
@@ -85,6 +87,13 @@ jobs:
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
           PUSH_BEFORE: ${{ github.event.before }}
           PUSH_AFTER: ${{ github.sha }}
+          # BG-10's permanent language / size matrix (PO, COSMOS-FINAL-01 continuation, 2026-11-20, item 4; contract §30.7):
+          # the reference cell, Arabic (right-to-left), and the small iPhone. A FULL scope runs every cell and every case,
+          # none weakened; COSMOS_CASES runs the reference cell only.
+          CELLS_FULL: >-
+            [{"cell": "i17-en", "device": "iPhone 17", "lang": "en", "langtag": "en-US", "langloc": "en_US"},
+            {"cell": "i17-ar", "device": "iPhone 17", "lang": "ar", "langtag": "ar-EG", "langloc": "ar_EG"},
+            {"cell": "small-en", "device": "iPhone SE (3rd generation)|iPhone 16e", "lang": "en", "langtag": "en-US", "langloc": "en_US"}]
         run: |
           decision=RUN
           files=""
@@ -101,10 +110,19 @@ jobs:
             echo '{"decision":"RUN","reasons":[{"file":null,"class":"NO_CHANGE_SET","reason":"manual dispatch, or no changed-file set could be read: run"}]}' > "$RUNNER_TEMP/plan.json"
           fi
           [ "$decision" = NOT_AFFECTED ] || decision=RUN
+          # The functional scope: FULL unless the plan answered exactly COSMOS_CASES (every reaching file belongs to a surface
+          # with its own mandatory iOS Targeted Gate). Anything else, a failed read included, is FULL.
+          scope=FULL
+          if [ "$decision" = NOT_AFFECTED ]; then scope=NOT_AFFECTED
+          elif node -e 'process.exit(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).scope === "COSMOS_CASES" ? 0 : 1)' "$RUNNER_TEMP/plan.json" 2>/dev/null; then scope=COSMOS_CASES; fi
+          cells="$(node -e 'const c = JSON.parse(process.argv[1]); process.stdout.write(JSON.stringify(process.argv[2] === "COSMOS_CASES" ? c.filter((x) => x.cell === "i17-en") : c))' "$CELLS_FULL" "$scope")" || cells="$(printf '%s' "$CELLS_FULL" | tr -d '\n')"
           echo "decision=$decision" >> "$GITHUB_OUTPUT"
+          echo "scope=$scope" >> "$GITHUB_OUTPUT"
+          echo "cells=$cells" >> "$GITHUB_OUTPUT"
           {
-            echo "### iOS World gate — impact plan: **$decision**"
+            echo "### iOS World gate — impact plan: **$decision**, scope **$scope**"
             [ "$decision" = NOT_AFFECTED ] && echo 'The World gate did NOT run (not passed): no changed file can reach what it proves.'
+            [ "$scope" = COSMOS_CASES ] && echo 'Only the relevant COSMOS cases run (P-TAP and F1-RESOLVED, cell i17-en): the other cells, Worlds, pans and native gestures did NOT run (not passed). The changed surface is proven by its iOS Targeted Gate.'
             echo; echo '| file | class | decision | reason |'; echo '|---|---|---|---|'
             node -e 'for (const r of JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).reasons ?? []) console.log(`| ${r.file ?? "—"} | ${r.class} | ${r.decision ?? "RUN"} | ${r.reason} |`)' "$RUNNER_TEMP/plan.json" || true
           } >> "$GITHUB_STEP_SUMMARY"
@@ -120,12 +138,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # BG-10's permanent language / size matrix (PO, COSMOS-FINAL-01 continuation, 2026-11-20, item 4; contract §30.7):
-        # the reference cell, Arabic (right-to-left), and the small iPhone. Every cell runs every case; none is weakened.
-        include:
-          - {cell: i17-en, device: 'iPhone 17', lang: en, langtag: en-US, langloc: en_US}
-          - {cell: i17-ar, device: 'iPhone 17', lang: ar, langtag: ar-EG, langloc: ar_EG}
-          - {cell: small-en, device: 'iPhone SE (3rd generation)|iPhone 16e', lang: en, langtag: en-US, langloc: en_US}
+        # The cells come from the plan (CELLS_FULL, defined once in its step). A plan that answered nothing runs them all.
+        include: ${{ fromJSON(needs.plan.outputs.cells || '[{"cell":"i17-en","device":"iPhone 17","lang":"en","langtag":"en-US","langloc":"en_US"},{"cell":"i17-ar","device":"iPhone 17","lang":"ar","langtag":"ar-EG","langloc":"ar_EG"},{"cell":"small-en","device":"iPhone SE (3rd generation)|iPhone 16e","lang":"en","langtag":"en-US","langloc":"en_US"}]') }}
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
@@ -189,10 +203,12 @@ jobs:
       - name: World gate (Personal, Shared, Public; real touch; assertions)
         # 60 (was 40): run 44707574152 took 38.5 min in i17-ar and was cut at 40 in i17-en (contract §30).
         timeout-minutes: 60
+        env: {WORLD_GATE_SCOPE: "${{ needs.plan.outputs.scope || 'FULL' }}"}
         run: bash scripts/cosmos-ios-world/run-world-gate.sh "$RUNNER_TEMP/evidence/gate" "$IOS_SIM_UDID"
       - name: Native gestures (XCUITest; double tap, pinch, the current depth bead, focal anchoring, pan; D-3 overlays and layout)
         # Runs even when a World gate case failed, so every case is classified. The same build's runner, no rebuild.
-        if: ${{ !cancelled() && env.XCTESTRUN != '' }}
+        # Not for the COSMOS_CASES scope: zoom, pinch and pan are not cases a targeted surface can affect.
+        if: ${{ !cancelled() && env.XCTESTRUN != '' && needs.plan.outputs.scope != 'COSMOS_CASES' }}
         timeout-minutes: 40
         run: |
           E="$RUNNER_TEMP/evidence"; X="$E/xcui"; mkdir -p "$X" "$E/gate"
@@ -221,7 +237,7 @@ jobs:
           # Compact evidence: the attachments and the log are kept; the result bundle (which repeats them) is not.
           rm -rf "${X:?}/gestures.xcresult"
       - name: Classify the native runs
-        if: ${{ !cancelled() && env.XCTESTRUN != '' }}
+        if: ${{ !cancelled() && env.XCTESTRUN != '' && needs.plan.outputs.scope != 'COSMOS_CASES' }}
         run: |
           E="$RUNNER_TEMP/evidence"; X="$E/xcui"; mkdir -p "$X" "$E/gate"
           [ -f "$E/gate/results.tsv" ] || printf 'case\tresult\tdetail\n' > "$E/gate/results.tsv"

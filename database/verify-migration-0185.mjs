@@ -25,7 +25,7 @@ import { liveCallTurnsApplied } from './live-call-0190-substitutions.mjs';
 import { liveCallHalvesApplied } from './live-call-0191-substitutions.mjs';
 import { liveCallTextTurnApplied } from './live-call-0192-substitutions.mjs';
 import { transientMediaApplied } from './transient-media-0196-census.mjs';
-import { clockMarksApplied, historicalAvailabilityApplied, voiceInternals0202, voiceInternals0203 } from './replay-rb2-census.mjs';
+import { callAttentionApplied, clockMarksApplied, historicalAvailabilityApplied, voiceInternals0202, voiceInternals0203, voiceInternals0204 } from './replay-rb2-census.mjs';
 
 const rt = createPersonalReplayRuntime(process.env.DATABASE_URL);
 const { q, rows, asRole } = rt;
@@ -134,7 +134,8 @@ async function verifyCatalogue(report) {
       + (await liveCallApplied(rows) ? 10 : 0) + (await liveCallTurnsApplied(rows) ? 6 : 0) + (await liveCallHalvesApplied(rows) ? 8 : 0)
       + (await liveCallTextTurnApplied(rows) ? 1 : 0) + (await transientMediaApplied(rows) ? 10 : 0)
       + (await historicalAvailabilityApplied(rows) ? voiceInternals0202().length : 0)
-      + (await clockMarksApplied(rows) ? voiceInternals0203().length : 0); // RE-ANCHORED by S8B-07 RB-2 / M-2 (0203's three)
+      + (await clockMarksApplied(rows) ? voiceInternals0203().length : 0) // RE-ANCHORED by S8B-07 RB-2 / M-2 (0203's three)
+      + (await callAttentionApplied(rows) ? voiceInternals0204().length : 0); // RE-ANCHORED by INTEL-LIVE-01 CP1 (0204's seven, 2026-11-25)
     // RE-ANCHORED by S8B-07 RB-2 / S3 (migration 0202, 2026-11-24): and the one 0202 internal (verify-migration-0202).
     // S8B-05 CP2 re-anchor (migration 0190): and six 0190 internals (verify-migration-0190).
     // S8B-05 CP3 re-anchor (migration 0191): and eight 0191 internals (verify-migration-0191).

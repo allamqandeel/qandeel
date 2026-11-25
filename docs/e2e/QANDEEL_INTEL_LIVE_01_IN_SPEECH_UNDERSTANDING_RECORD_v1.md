@@ -480,11 +480,29 @@ Analysis. On the current tree the closure is 376 of the 533 mobile sources.
 **What does not run it:** the API, the database, documentation, Jest tests, other suites' Maestro flows, mobile tooling,
 Android-only native code, and the 157 mobile sources no protected surface reaches.
 
-**What it means for CP2 and CP3.** A change to what the stage renders, or to the call client the Analysis mounts, still
-runs the full gate, because it can affect what the gate proves. That is not skipped.
+**The functional scope (PO, 2026-11-25, on the CP1 report).** 376 of 533 shows that reachability alone is too broad a
+regression scope. The analysis now decides only whether COSMOS can be affected. A functional classification of the change
+decides how much of the gate that warrants. The plan's `scope` is one of three:
 
-**Unchanged:** the gate's suites, cases, assertions, matrix and pass rule. The iOS Targeted Gate's push to main is
-impact-aware the same way: it uses the same paths as its pull requests.
+| Scope | When | What runs |
+|---|---|---|
+| `FULL` | the gate's own inputs, a shared dependency, a protected surface itself, a reached source no targeted gate owns, or any doubt (a failed, empty or unreadable plan included) | every cell, World and native gesture, unchanged |
+| `COSMOS_CASES` | every reaching file belongs to a surface the Analysis mounts that has its own mandatory iOS Targeted Gate: today the live call (`src/call/`, `src/voice-call/`, the call engine's own Swift in `modules/qandeel-voice-call/ios/Core|Expo/`) | the reference cell only (`i17-en`); the Analysis entered with the surface mounted, the stage initialized, then P-TAP and F1-RESOLVED with their unchanged assertions; both must PASS |
+| `NOT_AFFECTED` | as above | nothing; the summary says "did NOT run (not passed)" |
+
+The widest scope any file needs wins. The vendored codec and the module's build files are `FULL`, because they change how
+the binary builds. Under `COSMOS_CASES` the other cells, the other Worlds, the pans, the landscape cases and the native
+zoom / pinch / pan run are not run. They get no row, the summary states it, and none is reported passed. The changed
+surface itself is proven by its targeted gate. The test asserts that each targeted surface's paths are in its gate's
+pull_request and push triggers.
+
+**What it means for CP2 and CP3.** A change to what the stage renders still runs the full gate. A change confined to the
+call client runs the iOS Targeted Gate and the COSMOS cases above, not the full matrix. Mixed with anything wider, it runs
+the full gate.
+
+**Unchanged:** the full gate's suites, cases, assertions, matrix and pass rule; the composition contract and its planted
+regressions, as written. The iOS Targeted Gate's push to main is impact-aware the same way: it uses the same paths as its
+pull requests.
 
 **Tests.** `tests/cosmos-ios-world-gate-impact.test.mjs`, run inside `test:cosmos-ios-world-gate-composition-contract`
 (API CI, and the gate itself before it builds). It covers:
@@ -493,20 +511,56 @@ impact-aware the same way: it uses the same paths as its pull requests.
 - the real closure: COSMOS and the hubs in, no test, no other proof's entry or root;
 - the workflow's fail-safe wiring;
 - planted regressions: a lockfile or shared package never NOT_AFFECTED, a failing analysis answers RUN, a `RUN`-only
-  condition refused.
+  condition refused;
+- prose without naming it. The analysis asks VAL-01's own classifier what a doc is. Before this, the analysis's own
+  `.md` path regex made VAL-01 count it as a reader of every doc, and the full root run caught that. The forward-safety
+  mirror failed in 10 tests, because a docs-only delta lost its heavy-gate carry-forward. The test now asserts the
+  analysis binds no doc; the old text was checked to bind one.
 
-A manifest dependency edit was checked to answer RUN, and a scripts-only edit NOT_AFFECTED.
+- the functional scope: every class's scope, the widest-wins rule, the targeted gates' triggers, the cell filter, the
+  native steps skipped only for `COSMOS_CASES`, and the runner block (initialization first, both cases PASS, no pan,
+  landscape or other World). A protected surface is never narrowed.
 
-**Case-level selection is not implemented.** When the gate is affected, every cell runs every case. Splitting the cases
-by World would change how the gate runs them, which this correction does not do.
+A manifest dependency edit was checked to answer RUN, and a scripts-only edit NOT_AFFECTED. The plan step's own shell,
+run under `bash -e` on real history, answered:
+- `RUN / COSMOS_CASES` with the cell `i17-en` for `6f7c0f7b` (a `call-owner.ts` change);
+- `RUN / FULL` with all three cells for this change.
 
-**This change's own plan.** It edits the gate's workflow, and adds the analysis and its test, which are gate-own inputs,
-so the plan answers RUN on this head. Its cases cannot be affected by when it runs. The run is let start, to show the
-plan → matrix wiring on CI; it is then recorded as it actually ends.
+**Case selection exists for the targeted scope only.** `FULL` runs every case in every cell. The `COSMOS_CASES` path is
+proven by its contracts and that simulation; it has not yet run on CI. Its first real run is the first call-client-only
+change, CP2 or CP3, and it will be recorded there.
+
+**This change's own plan.** It edits the gate's workflow, runner and analysis, which are gate-own inputs, so the plan
+answers `RUN / FULL` on this head. That is correct: the gate itself changed. Its result is recorded as it actually ends.
 
 **Measured reduction for a live-call backend change:** 3 World gate cells of about 80 – 110 min each, about 270 runner
 minutes, become one targeted cell (its measured time PENDING its first run). The iOS obligation is still met, by interaction with what
 changed.
+
+### 6.3 Migration 0204 and the earlier verifiers' exact sets
+
+API CI 45571644014 on `6400dc37` failed in `verify-migration-0171` C-1 (`20 !== 19`): 0204 adds `LIVE_ATTENTION_EVALUATION`
+to the cost-family CHECK. The CI job stops at its first failure. So every verify step after it was run locally, directly,
+against a fresh clone migrated through 0204 on the local PostgreSQL (never `npm run verify:*`, never the `.env` database).
+That run found the rest.
+
+All twelve were re-anchored, migration-aware, in the repository's established forms. Each adds exactly 0204's part once
+0204 is applied (detected by its own object) and holds it to the same rules. No assertion was removed, no migration
+changed, and every rejection and integrity assertion stands.
+
+| Pinned set | Verifiers | Re-anchor |
+|---|---|---|
+| the cost-family CHECK | 0171 C-1, 0174, 0175, 0176, 0181 B05, 0182 B06 | `database/live-attention-cost-family-0204.mjs` (probe and the one family; the 0184 voice-family form) |
+| the `voice_private` function census | 0183 S0b, 0185 C0, 0186 C0b | `voiceInternals0204()` in `database/replay-rb2-census.mjs`, derived from 0204's ACL block (seven internals), never copied |
+| the migration order after 0196 | 0194 S, 0195 S4, 0196 C1d | exactly 0204 follows 0203 |
+
+**Local evidence.**
+- The six cost-family verifiers pass on a pre-0204 clone and on a post-0204 clone.
+- The census verifiers pass on the pre-0204 clone.
+- The 37 verify steps from 0171's onward pass 33 / 37 on the post-0204 clone. The four left need Redis, which this machine
+  does not run and CI provides: `post-response-dispatch`, `a2-e2e-runtime-smoke`, `full-intelligence-e2e-runtime` and
+  `integrated-brain:e2e-hardening-v2`. They are NOT TESTED locally, not passed.
+- The exact-head API CI run is the authority.
 
 ## 7. Draft PR #410 — transfer (CP0 v1.1 §8.3)
 
