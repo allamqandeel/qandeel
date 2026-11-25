@@ -9,6 +9,7 @@ import { LIVE_CALL_SPEECH_SINK, NULL_LIVE_CALL_SPEECH_SINK } from '../live-call-
 import { LiveCallService } from '../live-call.service';
 import { encodeAudioFrame, LIVE_CALL_PATH, LIVE_CALL_PROTOCOL, MAX_BINARY_FRAME_BYTES } from '../live-call.protocol';
 import { LIVE_CALL_PROTOCOL_V2 } from '../live-call.protocol-v2';
+import { LIVE_CALL_PROTOCOL_V3 } from '../live-call.protocol-v3';
 import { LIVE_CALL_STORE } from '../live-call.store';
 import { InMemoryCallAuthority } from '../testing/in-memory-call-authority';
 import { syntheticUplinkPackets } from '../testing/synthetic-voice';
@@ -184,6 +185,21 @@ describe('S8B-05 CP1 the live call gateway over a real WebSocket, with real auth
     const v1 = new Client(booted.url, 'token-b');
     expect(await v1.opened()).toBe(LIVE_CALL_PROTOCOL);
     v1.close();
+  }, 20_000);
+
+  it('INTEL-LIVE-01 CP2: selects v3 when offered (Android v3,v2,v1 and iOS v3,v1), HELLO must say v: 3; v2 and v1 unchanged', async () => {
+    const android = new Client(booted.url, 'token-a', [LIVE_CALL_PROTOCOL_V3, LIVE_CALL_PROTOCOL_V2, LIVE_CALL_PROTOCOL]);
+    expect(await android.opened()).toBe(LIVE_CALL_PROTOCOL_V3);
+    android.send({ ...hello(), v: 3 });
+    expect(await android.waitFor((m) => m.type === 'STATE')).toMatchObject({ state: 'CONNECTING', epoch: 1 });
+    android.close();
+    const ios = new Client(booted.url, 'token-a', [LIVE_CALL_PROTOCOL_V3, LIVE_CALL_PROTOCOL]);
+    expect(await ios.opened()).toBe(LIVE_CALL_PROTOCOL_V3);
+    ios.send({ ...hello(), v: 2 });
+    expect(await ios.waitFor((m) => m.type === 'REFUSED')).toMatchObject({ reason: 'PROTOCOL_VIOLATION' });
+    const v2 = new Client(booted.url, 'token-b', [LIVE_CALL_PROTOCOL_V2, LIVE_CALL_PROTOCOL]);
+    expect(await v2.opened()).toBe(LIVE_CALL_PROTOCOL_V2);
+    v2.close();
   }, 20_000);
 
   it('carries a call: HELLO, real Opus audio, ACTIVE, END; the USER track is valid Ogg Opus', async () => {

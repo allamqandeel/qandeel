@@ -54,6 +54,10 @@ export interface AttentionTrackState {
   readonly settledThroughClockMs: number;
   readonly callEnded: boolean;
   readonly openSubjects: readonly OpenSubject[];
+  /** INTEL-LIVE-01 CP2: each open subject's event_seq (its latest SET), in openSubjects' order. */
+  readonly openEventSeqs: readonly number[];
+  /** INTEL-LIVE-01 CP2: the call's highest event_seq in the same read (0 when none). */
+  readonly lastEventSeq: number;
 }
 
 export interface CallAttentionStore {
@@ -68,6 +72,14 @@ export interface CallAttentionSettlementStore {
     readonly outcome: 'SETTLED' | 'ALREADY_SETTLED' | 'NOT_READY' | 'NOT_FOUND'; readonly confirmed: number; readonly expired: number;
   }>;
   settleDue(limit: number): Promise<number>;
+}
+
+/** INTEL-LIVE-01 CP2: one half the sweep settled, by call (so the phones of that call hear of it). */
+export interface SettledDueHalf {
+  readonly callId: string;
+  readonly outcome: string;
+  readonly confirmed: number;
+  readonly expired: number;
 }
 
 const WRITE_OUTCOMES: ReadonlySet<string> = new Set<AttentionWriteOutcome>([
@@ -103,14 +115,22 @@ export class CallAttentionRepository implements CallAttentionStore, CallAttentio
 
   async readState(userId: string, callId: string): Promise<readonly AttentionTrackState[]> {
     const rows = await this.serviceApi.rpc<{
-      track: string; accounted_to_clock_ms: unknown; settled_through_clock_ms: unknown; call_ended: boolean; open_subjects: unknown;
+      track: string; accounted_to_clock_ms: unknown; settled_through_clock_ms: unknown; last_event_seq: unknown; call_ended: boolean;
+      open_subjects: unknown;
     }[]>('server_read_call_attention_state_v1', { p_user_id: userId, p_call_id: callId });
     return (Array.isArray(rows) ? rows : []).map((row) => {
       if (row.track !== 'USER' && row.track !== 'QANDEEL') throw new Error('The attention state named an unknown track.');
+      const open = Array.isArray(row.open_subjects) ? row.open_subjects : [];
       return {
         track: row.track, accountedToClockMs: num(row.accounted_to_clock_ms) ?? 0,
         settledThroughClockMs: num(row.settled_through_clock_ms) ?? -1, callEnded: row.call_ended === true,
-        openSubjects: (Array.isArray(row.open_subjects) ? row.open_subjects : []).map(openSubject),
+        openSubjects: open.map(openSubject),
+        openEventSeqs: open.map((o) => {
+          const seq = num((o as { eventSeq?: unknown } | null)?.eventSeq);
+          if (seq === null || seq < 1) throw new Error('The attention state returned a subject without its event number.');
+          return seq;
+        }),
+        lastEventSeq: num(row.last_event_seq) ?? 0,
       };
     });
   }
@@ -135,8 +155,17 @@ export class CallAttentionRepository implements CallAttentionStore, CallAttentio
   }
 
   async settleDue(limit: number): Promise<number> {
-    const rows = await this.serviceApi.rpc<unknown[]>('server_settle_due_call_attention_v1', { p_limit: limit });
-    return Array.isArray(rows) ? rows.length : 0;
+    return (await this.settleDueHalves(limit)).length;
+  }
+
+  /** INTEL-LIVE-01 CP2: the sweep, with each half it settled named by its call. */
+  async settleDueHalves(limit: number): Promise<readonly SettledDueHalf[]> {
+    const rows = await this.serviceApi.rpc<{ call_id: string; outcome: string; confirmed: number; expired: number }[]>(
+      'server_settle_due_call_attention_v1', { p_limit: limit },
+    );
+    return (Array.isArray(rows) ? rows : []).map((row) => ({
+      callId: row.call_id, outcome: row.outcome, confirmed: Number(row.confirmed) || 0, expired: Number(row.expired) || 0,
+    }));
   }
 }
 

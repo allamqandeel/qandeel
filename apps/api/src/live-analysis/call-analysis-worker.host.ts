@@ -1,6 +1,6 @@
 import { Inject, Injectable, Optional, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { CallAttentionRepository } from '../live-attention/call-attention.repository';
-import { LIVE_CALL_ATTENTION } from '../live-attention/live-attention.provider';
+import { LIVE_CALL_ATTENTION, signallingAttentionSettlement } from '../live-attention/live-attention.provider';
 import type { LiveCallAttention } from '../voice/call-turn/live-call-attention.port';
 import { LiveCallReplyService } from '../conversation/live-call-reply.service';
 import { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
@@ -45,7 +45,7 @@ export class CallAnalysisWorkerHost implements OnModuleInit, OnModuleDestroy {
       permits: this.permits,
       safety: this.reply,
       start: callAnalysisStart(),
-      attentionSettlement: this.attention ? new CallAttentionRepository(this.serviceApi) : undefined,
+      attentionSettlement: this.attention ? signallingAttentionSettlement(new CallAttentionRepository(this.serviceApi), this.attention) : undefined,
     });
     this.signal.bind(this.worker);
     this.worker.start();

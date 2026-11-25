@@ -19,6 +19,9 @@
  *     server's call truth shows no call and the history shows the call did not commit it: never twice, never lost.
  *   - **The map follows.** Every committed turn and every reply's end asks the Analysis owners to catch up, and the
  *     conversation to read its newest page; the phone analyses nothing.
+ *   - **The call's provisional attention (INTEL-LIVE-01 CP2).** The call offers protocol v3; what the server's ATTENTION /
+ *     ATTENTION_STATE frames say the database committed is held as this call's layer ({@link ProvisionalAttention}), read
+ *     by the Personal map. It is the call's only: a new call starts empty, the end drops it, nothing of it persists.
  *   - **J3 / J7.** An end the person did not choose says why (the approved notice) and sends the reader back to the
  *     Conversation, where writing is; a finished call leaves a record (its length, from the server's history when known).
  *
@@ -36,6 +39,7 @@ import type { LiveCallClientEvent, LiveCallSocketFactory, LiveCallTimers } from 
 import { LiveCallController, LiveCallStartError, type LiveCallControllerEvent, type LiveCallOutcome } from '../voice-call/live-call-controller';
 import { liveCallSurfaceCopy, type LiveCallNotice } from '../voice-call/live-call-copy';
 import type { CallPlatform, VoiceCallEngine } from '../voice-call/voice-call-engine';
+import { EMPTY_ATTENTION_LAYER, ProvisionalAttention, type ProvisionalAttentionLayer } from './provisional-attention';
 
 export type CallStage = 'IDLE' | 'PREPARING' | 'CONNECTING' | 'ACTIVE' | 'HELD' | 'RECONNECTING' | 'ENDING';
 
@@ -82,6 +86,9 @@ export interface CallOwner {
    * it, and the answer is the conversation's ordinary outcome — or WRITE_NORMALLY once it is proven the call did not.
    */
   carryText(submission: ConversationTurnSubmission): Promise<CarriedTextOutcome> | null;
+  /** INTEL-LIVE-01 CP2: the running call's provisional attention (empty when no call runs). */
+  getAttention(): ProvisionalAttentionLayer;
+  subscribeAttention(listener: () => void): () => void;
   retire(): void;
 }
 
@@ -218,6 +225,9 @@ export function createCallOwner(options: CallOwnerOptions): CallOwner {
   const settleAttempts = options.settleAttempts ?? 10;
   const settleIntervalMs = options.settleIntervalMs ?? 1000;
   const listeners = new Set<() => void>();
+  const attentionListeners = new Set<() => void>();
+  /** INTEL-LIVE-01 CP2: the running call's layer; null when no call runs. */
+  let attention: ProvisionalAttention | null = null;
   let state: CallOwnerState = IDLE_STATE;
   let retired = false;
   let preparing = false;
@@ -250,6 +260,10 @@ export function createCallOwner(options: CallOwnerOptions): CallOwner {
     if (keys.every((key) => next[key] === state[key])) return;
     state = Object.freeze(next);
     for (const listener of Array.from(listeners)) listener();
+  }
+
+  function attentionChanged(): void {
+    for (const listener of Array.from(attentionListeners)) listener();
   }
 
   function stageOf(): CallStage {
@@ -387,6 +401,12 @@ export function createCallOwner(options: CallOwnerOptions): CallOwner {
       case 'replyEnd':
         options.onCallTurn();
         return;
+      case 'attention':
+        if (attention?.event(event.message)) attentionChanged();
+        return;
+      case 'attentionState':
+        if (attention?.state(event.message)) attentionChanged();
+        return;
       case 'ack': {
         // A resend's ACK can arrive without its TURN_COMMITTED (that went out on the connection that was lost).
         const text = textOfMsg(event.msgId);
@@ -456,6 +476,11 @@ export function createCallOwner(options: CallOwnerOptions): CallOwner {
     endsAtMs = null;
     controller = null;
     currentCallId = null;
+    if (attention !== null) {
+      const shown = attention.current.marks.length > 0;
+      attention = null;
+      if (shown) attentionChanged();
+    }
     activeSince = null;
     route = null;
     preparing = false;
@@ -483,6 +508,7 @@ export function createCallOwner(options: CallOwnerOptions): CallOwner {
     }
     const callId = options.newId();
     currentCallId = callId;
+    attention = new ProvisionalAttention(now);
     lastToken = bearerToken(options.authorization());
     lastTokenCheck = now();
     controller = new LiveCallController({
@@ -496,6 +522,8 @@ export function createCallOwner(options: CallOwnerOptions): CallOwner {
         clientInstanceId: options.newId(),
         socketFactory: options.socketFactory,
         insecureLoopbackForProof: options.insecureLoopbackForProof === true,
+        // INTEL-LIVE-01 CP2 (D-3): v3 first on both platforms; the session adds v2 only where the engine has clock marks.
+        offerAttention: true,
       },
       // G1.2: the call starts on the loudspeaker (CANDIDATE J4); the platform owns the route from then on.
       engineOptions: { route: 'SPEAKER', capture: 'VOICE_COMMUNICATION', aec: true, bargeIn: 'STOP' },
@@ -520,6 +548,11 @@ export function createCallOwner(options: CallOwnerOptions): CallOwner {
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
+    },
+    getAttention: () => attention?.current ?? EMPTY_ATTENTION_LAYER,
+    subscribeAttention(listener) {
+      attentionListeners.add(listener);
+      return () => attentionListeners.delete(listener);
     },
     async start() {
       if (!live() || controller !== null || preparing) return;
@@ -585,6 +618,8 @@ export function createCallOwner(options: CallOwnerOptions): CallOwner {
       retired = true;
       releaseBack?.();
       listeners.clear();
+      attentionListeners.clear();
+      attention = null;
     },
   };
 

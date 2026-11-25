@@ -18,6 +18,11 @@
  * listed as `unplaced` and never given a place; the host shows it in a register the reader can inspect from, with the
  * T-08 family word and nothing invented. The Personal map names nothing (N4 is not authorised): the accessible label of
  * a mark is the family word alone.
+ *
+ * INTEL-LIVE-01 CP2 (D-5): while a call runs, its provisional attention (the call owner's layer, from what the server
+ * disclosed) is folded into every rung's scene as `attention`: a subject on one of the person's Threads names that body;
+ * any other is an ember. The person's attention and QANDEEL's stay distinct subjects. No call, or an empty layer, leaves the
+ * scenes exactly as before.
  */
 
 import { analysisCopy, type AnalysisLanguage } from '../../../analysis-language';
@@ -29,7 +34,8 @@ import { mapProjectionRequest } from '../../../map/projection';
 import type { CameraIntent } from '../../../state';
 import { PERSONAL_DEPTHS, personalDrawList, personalScene } from '../../core/adapters';
 import type { NasijView } from '../../core/camera';
-import { rungScale, type SceneInput, type Stage } from '../../core/stage';
+import { rungScale, type AttentionMark, type SceneInput, type Stage } from '../../core/stage';
+import type { ProvisionalAttentionLayer } from '../../../call/provisional-attention';
 import {
   EMPTY_LIST, HOME, ORIGIN, aimFixedPoint, cosmosCameraOf, emitter, gestureFixedPoint, memo, nearestHit, soleHit, viewOf,
   type CosmosPoint, type CosmosUnplaced, type CosmosWorldOwner, type CosmosWorldSnapshot,
@@ -62,6 +68,14 @@ export function inspectionRequestOf(markId: string): { family: 'THREAD' | 'EMERG
 }
 
 /** The names the server disclosed for this context's Threads (COSMOS E-2 Slice A): alias or grounding wording, never invented. */
+/** INTEL-LIVE-01 CP2: the call's layer as stage marks (oldest first; the stage draws the newest it can). */
+export function attentionMarksOf(layer: ProvisionalAttentionLayer): readonly AttentionMark[] | undefined {
+  if (layer.marks.length === 0) return undefined;
+  return layer.marks.map((m) => ({
+    subjectKey: `${m.track}:${m.subjectKey}`, label: m.label, entityId: m.threadRef === null ? null : `THREAD:${m.threadRef}`, confidence: m.confidence,
+  }));
+}
+
 function threadNames(context: MapInspectionContext): ReadonlyMap<string, string> {
   const names = new Map<string, string>();
   for (const thread of context.disclosure.world.threads) if (thread.name.text !== null) names.set(thread.id, thread.name.text);
@@ -72,7 +86,7 @@ export function createPersonalCosmosOwner({ runtime, language, onOutcome, spatia
   const copy = analysisCopy(language);
   const rtl = language === 'ar';
   const changes = emitter();
-  const { store, projection, bundle } = runtime;
+  const { store, projection, bundle, call } = runtime;
   let glass: ViewportEnvelope | null = null;
   let snapshot: CosmosWorldSnapshot | null = null;
   let lastCameraIntent: CameraIntent | null = store.getState().camera;
@@ -104,6 +118,7 @@ export function createPersonalCosmosOwner({ runtime, language, onOutcome, spatia
       invalidate();
     }),
     projection.subscribe(invalidate),
+    call.subscribeAttention(invalidate),
   ];
   ensureOthers();
 
@@ -125,7 +140,12 @@ export function createPersonalCosmosOwner({ runtime, language, onOutcome, spatia
     const { request, byRung } = contexts();
     const ref = decodeInspectionRef(store.getState().inspection);
     const inspected = ref === null ? null : `${ref.family}:${ref.id}${ref.appearance === null ? '' : `@${ref.appearance.bindingId}`}`;
-    const inputs = byRung.map((context) => (context === null ? null : personalScene(context.scene, inspected, rtl, ORIGIN, threadNames(context))));
+    const attention = attentionMarksOf(call.getAttention());
+    const inputs = byRung.map((context) => {
+      if (context === null) return null;
+      const scene = personalScene(context.scene, inspected, rtl, ORIGIN, threadNames(context));
+      return attention === undefined ? scene : { ...scene, attention };
+    });
     const here = request === null ? null : byRung[PERSONAL_DEPTHS.indexOf(request.depth)];
     const unplaced: CosmosUnplaced[] = here === null ? [] : here.scene.objects.filter((object) => object.loci.length === 0).map((object) => ({ id: object.key, family: object.family }));
     return { ...personalDrawList(inputs), inputs, unplaced };
@@ -145,7 +165,7 @@ export function createPersonalCosmosOwner({ runtime, language, onOutcome, spatia
     // A read not held is LOADING to the stage, which says nothing for it either way: the production chrome (T-08) is
     // what tells a reader that a read failed, exactly as before.
     const status: CosmosWorldSnapshot['status'] = entry.status === 'FETCHED' ? 'READY' : entry.status === 'UNAVAILABLE' ? 'UNAVAILABLE' : 'LOADING';
-    const { list, held, inputs, unplaced } = compiled([projection.revision(), state.inspection, request.sessionId, request.tc, request.depth]);
+    const { list, held, inputs, unplaced } = compiled([projection.revision(), state.inspection, request.sessionId, request.tc, request.depth, call.getAttention().marks]);
     const rung = PERSONAL_DEPTHS.indexOf(request.depth);
     const points = (input: SceneInput | null): CosmosPoint[] => (input === null ? [] : input.entities.map((e) => ({ id: e.id, x: e.x, y: e.y })));
     const ref = decodeInspectionRef(state.inspection);

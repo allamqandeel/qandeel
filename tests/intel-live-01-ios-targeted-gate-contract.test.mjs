@@ -18,8 +18,10 @@ const WORLD = '.github/workflows/cosmos-ios-world-gate.yml';
 const SERVER = 'apps/api/scripts/s8b-06-cp3-device-proof-server.ts';
 const COMMANDS = 'apps/mobile/src/voice-call/__validation__/s806cp3-call-commands.ts';
 const ROOT = 'apps/mobile/src/voice-call/__validation__/S806Cp3ProofRoot.tsx';
+const PROBE = 'apps/mobile/src/voice-call/__validation__/s806cp3-attention-probe.ts';
+const CHECKS = 'scripts/ios-targeted-gate/attention-checks.mjs';
 const FLOWS = ['itg-call-launch.yaml', 'itg-call-tap.yaml', 'itg-call-visible.yaml', 'itg-call-gone.yaml'];
-const CASES = ['ITG-01', 'ITG-02', 'ITG-03', 'ITG-04', 'ITG-05', 'ITG-06'];
+const CASES = ['ITG-01', 'ITG-02', 'ITG-03', 'ITG-07', 'ITG-08', 'ITG-04', 'ITG-09', 'ITG-05', 'ITG-06'];
 
 const tree = () => ({
   gate: read(GATE),
@@ -28,6 +30,8 @@ const tree = () => ({
   server: read(SERVER),
   commands: read(COMMANDS),
   root: read(ROOT),
+  probe: read(PROBE),
+  checks: read(CHECKS),
   flows: FLOWS.map((f) => read(`apps/mobile/.maestro/${f}`)).join('\n---\n'),
 });
 
@@ -37,8 +41,9 @@ function prPaths(workflow) {
   return block ? [...block[1].matchAll(/-\s+'([^']+)'/gu)].map((m) => m[1]) : [];
 }
 
-export function violations({ gate, runner, world, server, flows, commands, root }) {
+export function violations({ gate, runner, world, server, flows, commands, root, probe, checks }) {
   const out = [];
+  const s = server;
   const paths = prPaths(gate);
   for (const p of ['apps/api/src/voice/**', 'apps/api/src/live-analysis/**', 'apps/api/src/live-attention/**', 'database/migrations/**', 'packages/**',
     'apps/mobile/src/call/**', 'apps/mobile/modules/qandeel-voice-call/**', SERVER, 'scripts/ios-targeted-gate/**', 'apps/mobile/.maestro/itg-*.yaml', GATE]) {
@@ -67,7 +72,7 @@ export function violations({ gate, runner, world, server, flows, commands, root 
   if (!/half_state === "COMPLETE"/u.test(r) || !/\["USER", "QANDEEL"\]\.every/u.test(r)) out.push('ITG-05 does not require both tracks settled');
   if (!/end_reason === "USER_ENDED"/u.test(r)) out.push('ITG-04 does not require USER_ENDED');
   // PO 2026-11-25, option 1: ONE recorded repeat of ITG-03's spoken turn, only after a server-confirmed loss before PLAYED_OUT.
-  if ((r.match(/-X POST "\$SERVER\/proof\/speak/gu) ?? []).length !== 2) out.push('ITG-03 arms the stimulus other than once plus the one recovery repeat');
+  if ((r.match(/-X POST "\$SERVER\/proof\/speak\?/gu) ?? []).length !== 2) out.push('ITG-03 arms the stimulus other than once plus the one recovery repeat');
   const lossAt = r.indexOf('if [ "$TURN" -eq 2 ]; then');
   const repeatAt = r.indexOf('wait_turn 120 03-repeat "$BEFORE"');
   const elseAt = r.indexOf('\nelse\n', repeatAt);
@@ -117,6 +122,35 @@ export function violations({ gate, runner, world, server, flows, commands, root 
       out.push("the proof root does not follow the call commands on the session's own CallOwner");
     }
   }
+  // INTEL-LIVE-01 CP2 (PO, 2026-11-25, §8): the gate extended only for protocol v3: negotiation (and v2's clock marks inside
+  // it, answered NOCLOCK), disclosure and its updates, a restore after a cut connection, and the end's cleanup, read from the
+  // proof app's probe, which only watches the production layer and the production Personal owner.
+  {
+    if (!/PROOF_ATTENTION=ON PROOF_ATTENTION_SCENARIO=d PROOF_PROBE=ON /u.test(r)) out.push('the runner does not run the v3 cases over scenario (d) with the probe ON');
+    const order = ['record ITG-03 PASS ', 'record ITG-07 PASS ', 'record ITG-08 PASS ', 'record ITG-04 PASS ', 'record ITG-09 PASS ', 'record ITG-05 PASS '].map((m) => r.indexOf(m));
+    if (order.some((at, i) => at < 0 || (i > 0 && at < order[i - 1]))) out.push('the v3 cases do not run inside the call, between its turn and its end, and the cleanup after the end');
+    for (const [what, re] of [
+      ["ITG-07 does not require v3 negotiated on the call's connection", /wait_check 10 07-v3 v3 "\$EPOCH" \|\| fail ITG-07/u],
+      ['ITG-07 does not require NOCLOCK echoes inside v3', /wait_check 30 07-noclock noclock \|\| fail ITG-07/u],
+      ['ITG-07 does not require the phone to hold exactly the open subjects', /wait_check 60 07-applied applied \|\| fail ITG-07/u],
+      ['ITG-07 does not require a COSMOS stage with the mark', /wait_check 10 07-cosmos cosmos 0 \|\| fail ITG-07/u],
+      ['ITG-08 does not withhold the frames before speaking', /proof\/attention-hold\?on=1"[^\n]*\n[^\n]*proof\/speak-scenario\?turn=1&from=6&to=9/u],
+      ['ITG-08 does not prove the phone stayed behind', /behind > "\$OUT\/host\/08-behind\.txt" 2>&1 \\\n\s+\|\| fail ITG-08/u],
+      ['ITG-08 does not cut the connection', /-X POST "\$SERVER\/proof\/drop"[^\n]*\|\| fail ITG-08/u],
+      ['ITG-08 does not require the restore on a later connection', /wait_check 60 08-restored restored "\$EPOCH" "\$DROP_AT" \|\| fail ITG-08/u],
+      ['ITG-09 does not require the cleanup after the end', /END_AT="\$\(now_ms\)"\ncall_command end 04-command[\s\S]*wait_check 30 09-cleanup cleanup "\$END_AT" \|\| fail ITG-09/u],
+    ]) if (!re.test(r)) out.push(what);
+    const k = code(checks ?? '');
+    if (!k.includes('const ok = latest !== null && latest.seq >= a.lastSeq && latest.marks === openTotal(a);')) out.push("the applied check does not compare the phone with the database's open subjects at its latest event");
+    if (!k.includes('done(noclock > 0 && noclock === echoes.length,')) out.push('the NOCLOCK check accepts a clock echo other than null');
+    const pr = code(probe ?? '');
+    if (!pr.includes('if (body?.on !== true) return;')) out.push('the probe runs although the proof server did not ask for it');
+    if (/ProvisionalAttention\b|\.event\(|\.state\(|dispatch\(/u.test(pr)) out.push("the probe feeds the phone's layer or the map");
+    if (!pr.includes('call.subscribeAttention(') || !pr.includes('createPersonalCosmosOwner({ runtime, language })')) out.push('the probe does not watch the production layer and the production Personal owner');
+    if (!(root ?? '').includes('const stopProbe = followAttentionProbe({')) out.push('the proof root does not mount the probe');
+    if (!s.includes("return { on: process.env.PROOF_PROBE === 'ON',")) out.push('the proof server turns the probe on by default');
+    if (!s.includes('if (heldEpochs.has(channel.epoch)) {') || !s.includes('else for (const epoch of openEpochs) heldEpochs.add(epoch);')) out.push('the hold is not limited to the connections open when it was asked');
+  }
   // Run 45601664395 (PO, 2026-11-25): the harness's own load on a runner with no idle CPU and 129 MB free.
   if (/log stream/u.test(r)) out.push('the runner streams the app log during the cases (measured at about a third of a core)');
   if (!/ts-node\/dist\/bin\.js" --transpile-only --project/u.test(r) || !/run: node node_modules\/typescript\/bin\/tsc -p apps\/api\/tsconfig\.scripts\.json --noEmit/u.test(g)) {
@@ -127,9 +161,11 @@ export function violations({ gate, runner, world, server, flows, commands, root 
   if (!/id: qandeel-call-entry/u.test(flows)) out.push('the launch flow does not wait for the production call entry');
   if (/hideKeyboard|retry:/u.test(code(flows))) out.push('a flow hides the keyboard or retries');
 
-  const s = server;
-  if (!/if \(process\.env\.PROOF_ATTENTION === 'ON'\) \{\n\s+attentionBinding\.bind\(liveCallAttentionOf\(/u.test(s)) out.push('the proof server does not compose the production attention lane under PROOF_ATTENTION=ON');
-  if (!/attentionSettlement: process\.env\.PROOF_ATTENTION === 'ON' \? new CallAttentionRepository\(serverApi\) : undefined/u.test(s)) out.push('the proof server does not settle the attention lane at the call\'s end');
+  // INTEL-LIVE-01 CP2: the lane is composed once, bound into the engine, and told of the worker's settlements.
+  if (!/const attentionLane = process\.env\.PROOF_ATTENTION === 'ON' \? liveCallAttentionOf\(/u.test(s) || !/if \(attentionLane\) \{\n\s+attentionBinding\.bind\(attentionLane\);/u.test(s)) {
+    out.push('the proof server does not compose the production attention lane under PROOF_ATTENTION=ON');
+  }
+  if (!/attentionSettlement: attentionLane \? signallingAttentionSettlement\(new CallAttentionRepository\(serverApi\), attentionLane\) : undefined/u.test(s)) out.push('the proof server does not settle the attention lane at the call\'s end');
   if (!/if \(openStreams === 0\) throw new HttpException/u.test(s)) out.push('/proof/speak arms a stimulus with no open uplink');
   if (!/evidence\('connection-lose', \{ code: args\[0\] \?\? null, reason: args\[1\] \?\? null, phase: this\.phase \?\? null, epoch: this\.epoch \?\? null \}\)/u.test(s)) out.push('a connection loss is recorded without its epoch');
   if (!/evidence\('http', \{ method: req\.method, path: req\.url\.split\('\?'\)\[0\], status: res\.statusCode, ms: Date\.now\(\) - started \}\)/u.test(s)) {
@@ -191,13 +227,13 @@ test('ITG-04 asserts the approved end (S8B-06 CP3 J3): the call line goes and th
     'the behaviour asserted is the approved one');
 });
 
-test('the call commands are proof-only: no Product module reaches them, and the Product entry is unchanged', () => {
+test('the call commands and the attention probe are proof-only: no Product module reaches them, and the Product entry is unchanged', () => {
   const walk = (dir) => readdirSync(new URL('../' + dir, import.meta.url), { withFileTypes: true }).flatMap((e) => {
     const p = dir + '/' + e.name;
     if (e.isDirectory()) return ['__validation__', '__tests__', 'node_modules'].includes(e.name) ? [] : walk(p);
     return /\.(ts|tsx|js|jsx)$/u.test(e.name) ? [p] : [];
   });
-  const reaching = [...walk('apps/mobile/src'), ...walk('apps/api/src')].filter((p) => /s806cp3-call-commands|\/proof\/call/u.test(read(p)));
+  const reaching = [...walk('apps/mobile/src'), ...walk('apps/api/src')].filter((p) => /s806cp3-call-commands|s806cp3-attention-probe|\/proof\/(call|probe|clock)/u.test(read(p)));
   assert.deepEqual(reaching, []);
   assert.match(read('apps/mobile/package.json'), /"main": "expo-router\/entry"/u);
 });
@@ -221,7 +257,19 @@ test('each refusal is real: planted regressions are caught', () => {
   for (const [what, mutated] of [
     ['the attention lane trigger removed', plant('gate', "      - 'apps/api/src/live-attention/**'\n", '')],
     ['a retry added', plant('gate', '        run: bash scripts/ios-targeted-gate/run-live-call-gate.sh', '        continue-on-error: true\n        run: bash scripts/ios-targeted-gate/run-live-call-gate.sh')],
-    ['the lane left OFF', plant('runner', 'PROOF_ATTENTION=ON PROOF_EVENTS_FILE', 'PROOF_EVENTS_FILE')],
+    ['the lane left OFF', plant('runner', 'PROOF_ATTENTION=ON PROOF_ATTENTION_SCENARIO=d', 'PROOF_ATTENTION_SCENARIO=d')],
+    ['the probe left OFF', plant('runner', 'PROOF_ATTENTION_SCENARIO=d PROOF_PROBE=ON ', 'PROOF_ATTENTION_SCENARIO=d ')],
+    ['v3 negotiation not required', plant('runner', 'wait_check 10 07-v3 v3 "$EPOCH" || fail ITG-07', 'wait_check 10 07-v3 v3 "$EPOCH" || true')],
+    ['the phone not compared with the database', plant('checks', 'latest.seq >= a.lastSeq && latest.marks === openTotal(a)', 'latest.seq >= 0')],
+    ['a clock echo other than null accepted', plant('checks', 'noclock > 0 && noclock === echoes.length', 'noclock >= 0')],
+    ['the restore not checked', plant('runner', 'wait_check 60 08-restored restored "$EPOCH" "$DROP_AT" || fail ITG-08', 'true || fail ITG-08')],
+    ['frames not withheld before the restore', plant('runner', 'curl -s -m 5 -f -X POST "$SERVER/proof/attention-hold?on=1"', 'true')],
+    ['the cleanup not checked', plant('runner', 'wait_check 30 09-cleanup cleanup "$END_AT" || fail ITG-09', 'true || fail ITG-09')],
+    ['the probe on by default', plant('server', "return { on: process.env.PROOF_PROBE === 'ON',", 'return { on: true,')],
+    ['the probe ignoring the server', plant('probe', 'if (body?.on !== true) return;', '')],
+    ['the probe feeding the layer', plant('probe', '    const call: CallOwner = runtime.call;', '    const call: CallOwner = runtime.call;\n    void dispatch();')],
+    ['the probe dropped from the proof root', plant('root', 'const stopProbe = followAttentionProbe({', 'const stopProbe = (({}) => () => undefined)({')],
+    ['every new connection held', plant('server', 'if (heldEpochs.has(channel.epoch)) {', 'if (heldEpochs.size > 0) {')],
     ['an unrun case made PASS', plant('runner', 'record "$c" "NOT TESTED" "$1"', 'record "$c" PASS "$1"')],
     ['playout not required', plant('runner', 'e.close_reason === "PLAYED_OUT"', 'true')],
     ['a recovery recorded as PASS', plant('runner', 'record ITG-03 "PASS AFTER RECOVERY"', 'record ITG-03 PASS')],
@@ -255,7 +303,7 @@ test('each refusal is real: planted regressions are caught', () => {
     ['the server type-checked beside the simulator', plant('runner', '/bin.js" --transpile-only --project', '/bin.js" --project')],
     ['transpile-only without a type-check', plant('gate', '        run: node node_modules/typescript/bin/tsc -p apps/api/tsconfig.scripts.json --noEmit', '        run: true')],
     ['Spotlight left indexing', plant('gate', '        run: sudo mdutil -a -i off', '        run: true')],
-    ['the settlement dropped', plant('server', "attentionSettlement: process.env.PROOF_ATTENTION === 'ON' ? new CallAttentionRepository(serverApi) : undefined,", '')],
+    ['the settlement dropped', plant('server', 'attentionSettlement: attentionLane ? signallingAttentionSettlement(new CallAttentionRepository(serverApi), attentionLane) : undefined,', '')],
     ['the API re-added to the World gate', plant('world', "      - 'packages/**'\n", "      - 'packages/**'\n      - 'apps/api/**'\n")],
     ['a World gate suite removed', plant('world', 'run: npm run test:cosmos-ios-world-gate-composition-contract', 'run: true')],
   ]) {

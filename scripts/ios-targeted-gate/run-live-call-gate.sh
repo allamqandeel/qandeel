@@ -41,6 +41,24 @@
 #   UT-1 the door back to the Conversation, by a tap: the call entry is drawn again
 #   UT-2 a tap on the call entry opens a second call the server holds ACTIVE; the call line's End is drawn
 #   UT-3 a tap on End ends that call USER_ENDED; the call entry is drawn again
+#   ITG-07 v3         INTEL-LIVE-01 CP2 (protocol v3, D-3): the iOS phone negotiated v3 (the lane SENT it an
+#                     ATTENTION_STATE on the call's connection, which only a v3 connection ACTIVE on that call is sent) and
+#                     answered v2's clock marks inside v3 with null (NOCLOCK); corpus scenario (d)'s segments 2–6 (a SET,
+#                     then its correction: WITHDRAW and a new SET) reach the phone, which applies the database's latest
+#                     event and then holds exactly its open subjects; the production Personal COSMOS owner compiles a stage
+#                     with the mark (a new digest)
+#   ITG-08 restore    with the connection's attention frames withheld (as if lost in transit), segments 7–10 (a SET, then
+#                     its negation: WITHDRAW and a new SET) are written while the phone stays behind; the live-call
+#                     sockets are cut, the phone resumes on a new connection, which is sent an ATTENTION_STATE, and the
+#                     phone again holds exactly the database's open subjects at its latest event
+#   ITG-09 cleanup    after the end, the phone holds no mark (any still shown at the end dropped with the call no longer
+#                     ACTIVE) and the stage it compiles has none
+# ITG-07 – ITG-09 read the proof app's attention probe (`s806cp3-attention-probe.ts`, ON only with PROOF_PROBE=ON): it
+# watches the session's own CallOwner and a mirror of the production Personal owner and reports instants; nothing is
+# injected into the phone's layer or the map, which the REAL v3 frames alone feed. Corpus scenario (d) runs with the
+# annotation oracle (PROOF_ATTENTION_SCENARIO=d): ITG-03's one utterance is its first segment (no development); QANDEEL's
+# side is CP1's proof subject (the scenario has no QANDEEL annotation). v1 and v2 compatibility is the API gateway's e2e
+# and the client's tests (an iOS build offers v3 and v1 only and cannot be a v1 client here).
 #   ITG-05 attention  the provisional attention lane evaluated and wrote both tracks (SET events) and settled both halves
 #                     COMPLETE at the call's end; no write failed
 #   ITG-06 stability  the app is still running and no crash report names it
@@ -69,7 +87,7 @@ EVENTS="$OUT/host/server-events.jsonl"
 printf 'case\tresult\tdetail\n' > "$RESULTS"
 : > "$SUMMARY"
 : > "$EVENTS"
-CASES="ITG-01 ITG-02 ITG-03 ITG-04 ITG-05 ITG-06"
+CASES="ITG-01 ITG-02 ITG-03 ITG-07 ITG-08 ITG-04 ITG-09 ITG-05 ITG-06"
 RECORDED=" "
 note() { echo "$1" | tee -a "$SUMMARY"; }
 record() {
@@ -197,12 +215,46 @@ wait_json() {
   echo "$body" > "$OUT/host/$saved.json"
   return 1
 }
+# INTEL-LIVE-01 CP2: the v3 attention checks (attention-checks.mjs over the server's evidence and a fresh /proof/attention).
+ATT_CHECKS="$REPO/scripts/ios-targeted-gate/attention-checks.mjs"
+now_ms() { node -e 'process.stdout.write(String(Date.now()))'; }
+# The epoch of the call's ACTIVE connection, from the server (empty when none).
+active_epoch() {
+  read_state | node -e 'let s = ""; process.stdin.on("data", (d) => { s += d; }).on("end", () => { try { const j = JSON.parse(s); if (j.call && j.call.state === "ACTIVE" && Number.isInteger(j.call.epoch)) process.stdout.write(String(j.call.epoch)); } catch {} });'
+}
+# How many spoken replies have PLAYED_OUT so far.
+played_count() {
+  read_state | node -e 'let s = ""; process.stdin.on("data", (d) => { s += d; }).on("end", () => { let n = 0; try { n = (JSON.parse(s).exchanges || []).filter((e) => e.turn_channel === "SPEECH" && ["PLAYED_OUT"].includes(e.close_reason)).length; } catch {} process.stdout.write(String(n)); });'
+}
+# wait_check <seconds> <saved-name> <check> [args]: the check over the evidence and a fresh /proof/attention read
+# (host/<saved>.json) every 2 s; its last answer is kept in host/<saved>.txt either way.
+wait_check() {
+  local seconds="$1" saved="$2" waited=0
+  shift 2
+  while [ "$waited" -le "$seconds" ]; do
+    read_attention > "$OUT/host/$saved.json"
+    if node "$ATT_CHECKS" "$EVENTS" "$OUT/host/$saved.json" "$@" > "$OUT/host/$saved.txt" 2>&1; then return 0; fi
+    sleep 2
+    waited=$((waited + 2))
+  done
+  return 1
+}
+# wait_event <seconds> <fixed string>: a server evidence line containing it.
+wait_event() {
+  local seconds="$1" needle="$2" waited=0
+  while [ "$waited" -le "$seconds" ]; do
+    grep -qF "$needle" "$EVENTS" 2>/dev/null && return 0
+    sleep 1
+    waited=$((waited + 1))
+  done
+  return 1
+}
 
 # The S8B-06 CP3 proof server, with the attention lane ON. It refuses anything but a loopback database. It runs
 # --transpile-only: the workflow type-checks it in its own step before the build. Measured locally (one call, the lane ON):
 # type-checking in process held 658 MB and spent 3.2 – 3.6 CPU-s on the call, transpile-only 312 MB and 2.4 CPU-s, on a
 # runner that had 129 MB free during run 45601664395.
-PROOF_ATTENTION=ON PROOF_EVENTS_FILE="$EVENTS" PORT=8806 NODE_ENV=development \
+PROOF_ATTENTION=ON PROOF_ATTENTION_SCENARIO=d PROOF_PROBE=ON PROOF_EVENTS_FILE="$EVENTS" PORT=8806 NODE_ENV=development \
   node "$REPO/node_modules/ts-node/dist/bin.js" --transpile-only --project "$REPO/apps/api/tsconfig.scripts.json" \
   "$REPO/apps/api/scripts/s8b-06-cp3-device-proof-server.ts" > "$OUT/host/server.log" 2>&1 &
 SERVER_PID=$!
@@ -289,8 +341,58 @@ else
   record ITG-03 PASS "a spoken turn committed, its reply PLAYED_OUT through the iOS engine's playout confirmations; the call line is still drawn"
 fi
 
+# ITG-07 — protocol v3 on iOS (INTEL-LIVE-01 CP2): negotiation, v2's clock marks inside v3, live disclosure and its
+# correction, and the production Personal COSMOS owner's stage.
+EPOCH="$(active_epoch)"
+[ -n "$EPOCH" ] || fail ITG-07 "the server holds no ACTIVE call connection after ITG-03"
+wait_check 10 07-v3 v3 "$EPOCH" || fail ITG-07 "no ATTENTION_STATE was sent on the call's connection: v3 was not negotiated ($(cat "$OUT/host/07-v3.txt"))"
+wait_check 30 07-noclock noclock || fail ITG-07 "v2's clock marks inside v3 were not answered NOCLOCK only ($(cat "$OUT/host/07-noclock.txt"))"
+PLAYED_BEFORE="$(played_count)"
+curl -s -m 5 -f -X POST "$SERVER/proof/speak-scenario?turn=1&from=1&to=5" > "$OUT/host/07-speak.json" || fail ITG-07 "the server refused /proof/speak-scenario (no open uplink)"
+wait_event 120 '"kind":"scenario-turn-end","scenario":"d","turn":1,"from":1' || fail ITG-07 "scenario (d) segments 2–6 were not spoken within 120 s"
+wait_json 60 read_attention 07-written 's => (s.events || []).some((r) => r.track === "USER" && r.op === "SET") && (s.events || []).some((r) => r.track === "USER" && r.op === "WITHDRAW")' \
+  || fail ITG-07 "the lane did not write the scenario's SET and its correction (host/07-written.json)"
+wait_check 60 07-applied applied || fail ITG-07 "the phone did not apply the latest event and hold exactly the open subjects ($(cat "$OUT/host/07-applied.txt"))"
+wait_check 10 07-cosmos cosmos 0 || fail ITG-07 "the Personal COSMOS owner compiled no stage with a mark ($(cat "$OUT/host/07-cosmos.txt"))"
+xcrun simctl io "$UDID" screenshot "$OUT/shots/itg-07-disclosed.png" >/dev/null 2>&1 || true
+wait_json 120 read_state 07-played-out "s => (s.exchanges || []).filter((e) => e.turn_channel === \"SPEECH\" && e.close_reason === \"PLAYED_OUT\").length > $PLAYED_BEFORE" \
+  || fail ITG-07 "the scenario turn's reply was not PLAYED_OUT within 120 s (host/07-played-out.json)"
+record ITG-07 PASS "v3 negotiated on iOS ($(cat "$OUT/host/07-v3.txt")); $(cat "$OUT/host/07-noclock.txt"); a SET and its correction reached the phone, which $(cat "$OUT/host/07-applied.txt"); $(cat "$OUT/host/07-cosmos.txt"); the turn's reply PLAYED_OUT"
+
+# ITG-08 — restore: frames withheld (lost in transit), the connection cut, the state restored on the resumed connection.
+EPOCH="$(active_epoch)"
+[ -n "$EPOCH" ] || fail ITG-08 "the server holds no ACTIVE call connection after ITG-07"
+curl -s -m 5 -f -X POST "$SERVER/proof/attention-hold?on=1" > "$OUT/host/08-hold.json" || fail ITG-08 "the server refused /proof/attention-hold"
+curl -s -m 5 -f -X POST "$SERVER/proof/speak-scenario?turn=1&from=6&to=9" > "$OUT/host/08-speak.json" || fail ITG-08 "the server refused /proof/speak-scenario (no open uplink)"
+# The negation (segment 9: a WITHDRAW and a new SET) written, read every 0.5 s: the connection is cut at once, while the
+# last segment is still spoken and before the turn commits, so the restore carries what the phone missed (a settlement
+# reaching it first would leave nothing to restore; the local rehearsal showed exactly that with a 2 s read).
+NEGATED=1
+for _ in $(seq 1 240); do
+  read_attention > "$OUT/host/08-written.json"
+  if node -e 'const s = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")); process.exit((s.events || []).filter((r) => r.track === "USER" && r.op === "WITHDRAW").reduce((n, r) => n + r.n, 0) >= 2 ? 0 : 1)' "$OUT/host/08-written.json" 2>/dev/null; then
+    NEGATED=0
+    break
+  fi
+  sleep 0.5
+done
+[ "$NEGATED" -eq 0 ] || fail ITG-08 "the lane did not write the scenario's negation within 120 s (host/08-written.json)"
+node "$ATT_CHECKS" "$EVENTS" "$OUT/host/08-written.json" behind > "$OUT/host/08-behind.txt" 2>&1 \
+  || fail ITG-08 "the phone applied the withheld events: nothing was withheld ($(cat "$OUT/host/08-behind.txt"))"
+DROP_AT="$(now_ms)"
+curl -s -m 5 -f -X POST "$SERVER/proof/drop" > "$OUT/host/08-drop.json" || fail ITG-08 "the server refused /proof/drop"
+wait_json 60 read_state 08-resumed "s => s.call != null && s.call.state === \"ACTIVE\" && s.call.epoch > $EPOCH" \
+  || fail ITG-08 "the call was not ACTIVE again on a later connection within 60 s after the cut (host/08-resumed.json)"
+curl -s -m 5 -f -X POST "$SERVER/proof/attention-hold?on=0" > "$OUT/host/08-release.json" || true
+wait_check 60 08-restored restored "$EPOCH" "$DROP_AT" || fail ITG-08 "the resumed connection did not restore the phone's attention ($(cat "$OUT/host/08-restored.txt"))"
+xcrun simctl io "$UDID" screenshot "$OUT/shots/itg-08-restored.png" >/dev/null 2>&1 || true
+# The last segment's stimulus is used up on the resumed connection; its end is evidence only.
+wait_event 60 '"kind":"scenario-turn-end","scenario":"d","turn":1,"from":6' || note "ITG-08: the last segment's stimulus was not used up within 60 s (evidence only)"
+record ITG-08 PASS "with the connection's frames withheld the phone stayed behind ($(cat "$OUT/host/08-behind.txt")); after the cut it resumed and $(cat "$OUT/host/08-restored.txt")"
+
 # ITG-04 — end, by the end command (no touch): End's own owner.end(). The person's own End does not move them (S8B-06
 # CP3 J3): the call line goes and the Analysis stays.
+END_AT="$(now_ms)"
 call_command end 04-command \
   || fail ITG-04 "the app did not take and execute the end command within 30 s (host/04-command.jsonl)"
 flow itg-call-gone.yaml end -e ID=qandeel-call-rail:end -e STAY_ID=qandeel-depth-to-conversation -e SHOT=04-ended \
@@ -298,6 +400,10 @@ flow itg-call-gone.yaml end -e ID=qandeel-call-rail:end -e STAY_ID=qandeel-depth
 wait_json 60 read_state 04-call-ended 's => s.call != null && s.call.state === "ENDED" && s.call.end_reason === "USER_ENDED"' \
   || fail ITG-04 "the server did not end the call USER_ENDED (host/04-call-ended.json)"
 record ITG-04 PASS "the end command (End's own owner.end(), no touch; host/04-command.jsonl) ended the call USER_ENDED; the call line went and the Analysis stayed (J3)"
+
+# ITG-09 — the call's attention leaves with it.
+wait_check 30 09-cleanup cleanup "$END_AT" || fail ITG-09 "the phone or its stage still holds attention after the end ($(cat "$OUT/host/09-cleanup.txt"))"
+record ITG-09 PASS "after the end: $(cat "$OUT/host/09-cleanup.txt")"
 
 # ITG-05 — the provisional attention lane on both tracks, settled at the call's end.
 wait_json 60 read_attention 05-attention \

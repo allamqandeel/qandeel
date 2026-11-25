@@ -18,9 +18,18 @@
 // call is background work, and nothing awaits it on the way to QANDEEL's voice.
 //
 // Nothing is logged: no text, no label, no identifier. Observations carry instants and counts only.
+//
+// INTEL-LIVE-01 CP2 (D-3, protocol v3): the tracker also tells the phone what the database committed, and nothing else —
+// each written event the moment its write committed (ATTENTION), and the call's open attention from ONE read of the
+// database (ATTENTION_STATE) when it starts on a connection, when a settlement of this call was signalled on this instance,
+// while a committed turn's settlement is awaited (a bounded watch, for a settlement written on another instance), and after
+// a frame the connection had to drop. A state older than an event already sent is never sent (it is read again), so the
+// phone, which applies only seq above its snapshot's, can never lose an event to a snapshot. Disclosure never changes what
+// the tracker evaluates, and nothing of it is awaited by the voice path.
 
 import type { BackgroundPermit, BackgroundPermitGate } from '../live-analysis/background-permits';
-import type { AttentionEventInput, AttentionRecordResult, CallAttentionStore } from './call-attention.repository';
+import type { LiveCallAttentionDelivery, LiveCallAttentionDisclosure } from '../voice/call-turn/live-call-attention.port';
+import type { AttentionEventInput, AttentionRecordResult, AttentionTrackState, CallAttentionStore } from './call-attention.repository';
 import {
   DEFAULT_PROVISIONAL_ATTENTION_CONFIG, estimatedSpendUsd, type AttentionEvaluationInput, type AttentionEvaluationResult,
   type AttentionEvaluator, type AttentionObservation, type AttentionThread, type AttentionTrack, type EvidenceUnit,
@@ -41,7 +50,22 @@ export interface CallAttentionTrackerDeps {
   readonly observe?: (observation: AttentionObservation) => void;
   readonly signal?: (op: string, outcome: string) => void;
   readonly timers?: { readonly set: (fn: () => void, ms: number) => unknown; readonly clear: (handle: unknown) => void };
+  /** INTEL-LIVE-01 CP2: towards the phone (protocol v3); absent where nothing listens. */
+  readonly disclose?: (disclosure: LiveCallAttentionDisclosure) => LiveCallAttentionDelivery;
 }
+
+/**
+ * INTEL-LIVE-01 CP2: when the database's attention is told to the phone again. None of these delays an event: an event is
+ * sent the moment its write committed. They bound only the re-reads that carry what no event carries (a settlement).
+ */
+export const ATTENTION_DISCLOSURE_POLICY = Object.freeze({
+  /** After a frame the connection dropped (audio first), the state is read and sent again this much later. */
+  resendAfterDropMs: 1_000,
+  /** While the phone holds open subjects after a commit, the state is read this often (a settlement on another instance). */
+  settlementWatchEveryMs: 5_000,
+  /** ... for at most this long after the latest commit. */
+  settlementWatchForMs: 120_000,
+});
 
 interface TrackLedger {
   readonly track: AttentionTrack;
@@ -103,6 +127,15 @@ export class CallAttentionTracker {
   private degraded: 'EMERGENCY_SPEND' | 'PROVIDER_OVERLOADED' | null = null;
   private spendUsd = 0;
   private overloadedInARow = 0;
+  /** CP2: the highest event_seq the phone was told on this connection (by an event or a state). */
+  private sentSeq = 0;
+  /** CP2: the subjects open in what the phone was told (`track:subjectKey`). */
+  private readonly phoneOpen = new Set<string>();
+  private rereading = false;
+  private rereadAgain = false;
+  private rereadTimer: unknown = null;
+  private watchTimer: unknown = null;
+  private watchUntil = 0;
 
   constructor(private readonly deps: CallAttentionTrackerDeps) {
     this.config = { ...DEFAULT_PROVISIONAL_ATTENTION_CONFIG, ...(deps.config ?? {}) };
@@ -143,6 +176,14 @@ export class CallAttentionTracker {
     if (this.stopped || !this.ready) return;
     void this.refreshThreads();
     if (this.degraded) void this.flushDegraded();
+    // CP2: the turn's settlement will close what the phone shows of it; on this instance it is signalled (`settled`).
+    this.watchUntil = this.now() + ATTENTION_DISCLOSURE_POLICY.settlementWatchForMs;
+    this.armWatch();
+  }
+
+  /** CP2: a half of this call was settled on this instance: the phone is told the database's attention again. */
+  settled(): void {
+    this.reread();
   }
 
   /**
@@ -194,6 +235,9 @@ export class CallAttentionTracker {
         }
         for (const s of state) this.adopt(s.track, s.accountedToClockMs, s.openSubjects);
         await this.refreshThreads();
+        if (this.stopped) return;
+        // CP2: the phone starts from the database (after STATE ACTIVE: the connection sent it before this read resolved).
+        this.discloseState(state);
         this.ready = true;
         this.kick();
         return;
@@ -369,6 +413,9 @@ export class CallAttentionTracker {
       this.later(this.config.permitRetryMs);
       return;
     }
+    if (written.outcome === 'RECORDED' && events !== null && written.firstEventSeq !== null) {
+      this.discloseEvents(ledger.track, events, written.firstEventSeq, produced);
+    }
     if (w.ordinal !== undefined) {
       this.observe({
         kind: 'ATTENTION_RESOLVED', track: ledger.track, evalOrdinal: w.ordinal, outcome: w.outcome, written: written.outcome,
@@ -395,6 +442,7 @@ export class CallAttentionTracker {
       case 'STALE_RESULT':
         // Another write already covered this position (a lost acknowledgement, another connection): adopt the database.
         await this.resync();
+        this.reread(); // CP2: what that write committed reaches the phone as the database's state
         return;
       case 'STALE_AFTER_SETTLEMENT':
         // A late result for evidence whose turn is already settled: recorded, its events refused; it is not re-admitted.
@@ -503,12 +551,101 @@ export class CallAttentionTracker {
     }
   }
 
+  // ------------------------------------------------------------------ disclosure (CP2, protocol v3)
+  /** Each event the writer just committed, in its numbered order. A frame not sent ends the run: the state follows. */
+  private discloseEvents(track: AttentionTrack, events: readonly AttentionEventInput[], firstEventSeq: number, produced: number | null): void {
+    const disclose = this.deps.disclose;
+    if (!disclose) return;
+    for (let i = 0; i < events.length; i += 1) {
+      const e = events[i]!;
+      const seq = firstEventSeq + i;
+      const delivery = disclose({
+        kind: 'EVENT', seq, op: e.op, producedClockMs: produced,
+        subject: { track, subjectKey: e.subjectKey, label: e.label, kind: e.kind, confidence: e.confidence, threadRef: e.threadRef },
+      });
+      if (delivery !== 'SENT') {
+        if (delivery === 'DROPPED') this.rereadLater(ATTENTION_DISCLOSURE_POLICY.resendAfterDropMs);
+        return;
+      }
+      this.sentSeq = Math.max(this.sentSeq, seq);
+      if (e.op === 'SET') this.phoneOpen.add(`${track}:${e.subjectKey}`);
+      else this.phoneOpen.delete(`${track}:${e.subjectKey}`);
+    }
+  }
+
+  /**
+   * One read of the database as the phone's state. False when it is older than an event already sent (it would undo it):
+   * the caller reads again.
+   */
+  private discloseState(state: readonly AttentionTrackState[]): boolean {
+    const disclose = this.deps.disclose;
+    if (!disclose) return true;
+    const seq = Math.max(0, ...state.map((s) => s.lastEventSeq));
+    if (seq < this.sentSeq) return false;
+    const entries = state
+      .flatMap((s) => s.openSubjects.map((subject, i) => ({ track: s.track, ...subject, seq: s.openEventSeqs[i]! })))
+      .sort((a, b) => a.seq - b.seq);
+    const delivery = disclose({ kind: 'STATE', seq, entries });
+    if (delivery === 'DROPPED') this.rereadLater(ATTENTION_DISCLOSURE_POLICY.resendAfterDropMs);
+    if (delivery !== 'SENT') return true;
+    this.sentSeq = seq;
+    this.phoneOpen.clear();
+    for (const e of entries) this.phoneOpen.add(`${e.track}:${e.subjectKey}`);
+    return true;
+  }
+
+  /** The database's attention, read again and told to the phone (one read at a time; a request meanwhile reads once more). */
+  private reread(): void {
+    if (!this.deps.disclose || !this.ready || this.stopped) return;
+    if (this.rereading) {
+      this.rereadAgain = true;
+      return;
+    }
+    this.rereading = true;
+    void this.deps.store.readState(this.deps.userId, this.deps.callId).then(
+      (state) => {
+        if (this.stopped || state.length === 0 || state.some((s) => s.callEnded)) return;
+        if (!this.discloseState(state)) this.rereadAgain = true;
+      },
+      () => this.deps.signal?.('attention', 'state_unavailable'),
+    ).finally(() => {
+      this.rereading = false;
+      if (this.rereadAgain) {
+        this.rereadAgain = false;
+        this.reread();
+      }
+    });
+  }
+
+  private rereadLater(ms: number): void {
+    if (this.rereadTimer !== null || this.stopped) return;
+    this.rereadTimer = this.timers.set(() => {
+      this.rereadTimer = null;
+      this.reread();
+    }, ms);
+  }
+
+  /** While the phone holds open subjects after a commit (bounded), the state is read again for a settlement made elsewhere. */
+  private armWatch(): void {
+    if (this.watchTimer !== null || this.stopped || !this.deps.disclose) return;
+    this.watchTimer = this.timers.set(() => {
+      this.watchTimer = null;
+      if (this.stopped || this.now() >= this.watchUntil || this.phoneOpen.size === 0) return;
+      this.reread();
+      this.armWatch();
+    }, ATTENTION_DISCLOSURE_POLICY.settlementWatchEveryMs);
+  }
+
   private stop(reason: Stop): void {
     if (this.stopped) return;
     this.stopped = reason;
     this.inFlight?.controller.abort();
     if (this.retry !== null) this.timers.clear(this.retry);
     this.retry = null;
+    if (this.rereadTimer !== null) this.timers.clear(this.rereadTimer);
+    if (this.watchTimer !== null) this.timers.clear(this.watchTimer);
+    this.rereadTimer = null;
+    this.watchTimer = null;
     this.observe({ kind: 'ATTENTION_STOPPED', reason, at: this.now() });
   }
 

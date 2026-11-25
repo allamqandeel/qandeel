@@ -14,7 +14,7 @@ import { createDeepSeekClient } from '../model-router/providers/deepseek/deepsee
 import {
   LiveCallAttentionBinding, type LiveCallAttention, type LiveCallAttentionChannel, type LiveCallAttentionSession,
 } from '../voice/call-turn/live-call-attention.port';
-import { CallAttentionRepository, type CallAttentionStore } from './call-attention.repository';
+import { CallAttentionRepository, type CallAttentionStore, type SettledDueHalf } from './call-attention.repository';
 import { CallAttentionTracker } from './call-attention.tracker';
 import { DeepSeekAttentionEvaluator, loadAttentionDeepSeekConfig } from './deepseek-attention-evaluator';
 import type { AttentionEvaluator, AttentionObservation, ProvisionalAttentionConfig } from './provisional-attention.types';
@@ -41,15 +41,27 @@ export interface LiveAttentionParts {
   readonly signal?: (op: string, outcome: string) => void;
 }
 
-/** The lane over its parts: one tracker per call connection, adapted to the engine's port. */
+/**
+ * The lane over its parts: one tracker per call connection, adapted to the engine's port. CP2: each tracker discloses to
+ * its own connection (protocol v3), and the trackers of a call on this instance are told when a half of it was settled here.
+ */
 export function liveCallAttentionOf(parts: LiveAttentionParts): LiveCallAttention {
+  const byCall = new Map<string, Set<CallAttentionTracker>>();
   return {
     open(channel: LiveCallAttentionChannel): LiveCallAttentionSession {
       const tracker = new CallAttentionTracker({
         userId: channel.userId, callId: channel.callId, epoch: channel.epoch, evaluator: parts.evaluator, store: parts.store,
         permits: parts.permits, captureClock: () => channel.latestCaptureMs(), config: parts.config,
         observe: parts.observe ? (o) => parts.observe!(channel.callId, o) : undefined, signal: parts.signal,
+        disclose: channel.discloseAttention ? (d) => channel.discloseAttention!(d) : undefined,
       });
+      const here = byCall.get(channel.callId) ?? new Set<CallAttentionTracker>();
+      here.add(tracker);
+      byCall.set(channel.callId, here);
+      const forget = (): void => {
+        here.delete(tracker);
+        if (here.size === 0 && byCall.get(channel.callId) === here) byCall.delete(channel.callId);
+      };
       void tracker.start();
       return {
         evidence: (track, text, clockStartMs, clockEndMs) => {
@@ -58,9 +70,48 @@ export function liveCallAttentionOf(parts: LiveAttentionParts): LiveCallAttentio
         turnCommitted: () => {
           try { tracker.turnCommitted(); } catch { parts.signal?.('attention', 'integrity_failure'); }
         },
-        handover: () => tracker.handover().catch(() => undefined),
-        close: () => { void tracker.close().catch(() => undefined); },
+        handover: () => {
+          forget();
+          return tracker.handover().catch(() => undefined);
+        },
+        close: () => {
+          forget();
+          void tracker.close().catch(() => undefined);
+        },
       };
+    },
+    settled(callId: string): void {
+      for (const tracker of byCall.get(callId) ?? []) {
+        try { tracker.settled(); } catch { parts.signal?.('attention', 'integrity_failure'); }
+      }
+    },
+  };
+}
+
+/**
+ * INTEL-LIVE-01 CP2: 0204's settlement commands as the analysis worker uses them, telling this instance's lane which call a
+ * settlement changed (so its phones are told the database's attention again). The settlement itself is unchanged.
+ */
+export function signallingAttentionSettlement(
+  store: {
+    settle: CallAttentionRepository['settle'];
+    settleDueHalves(limit: number): Promise<readonly SettledDueHalf[]>;
+  },
+  attention: Pick<LiveCallAttention, 'settled'>,
+): { settle: CallAttentionRepository['settle']; settleDue(limit: number): Promise<number> } {
+  const tell = (callId: string, confirmed: number, expired: number): void => {
+    if (confirmed + expired > 0) attention.settled?.(callId);
+  };
+  return {
+    async settle(userId, callId, callTurnIndex, half) {
+      const result = await store.settle(userId, callId, callTurnIndex, half);
+      if (result.outcome === 'SETTLED') tell(callId, result.confirmed, result.expired);
+      return result;
+    },
+    async settleDue(limit) {
+      const halves = await store.settleDueHalves(limit);
+      for (const h of halves) tell(h.callId, h.confirmed, h.expired);
+      return halves.length;
     },
   };
 }

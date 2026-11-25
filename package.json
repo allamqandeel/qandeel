@@ -328,7 +328,7 @@
     "test:semantic-commit-instants-contract": "node --test database/tests/session-semantic-commit-instants-v1.test.mjs",
     "test:replay-historical-availability-contract": "node --test database/tests/replay-historical-availability-v1.test.mjs",
     "test:live-call-clock-marks-contract": "node --test database/tests/live-call-clock-marks-v1.test.mjs tests/rb2-m2-live-call-protocol-v2-contract.test.mjs",
-    "test:live-call-attention-contract": "node --test database/tests/live-call-attention-v1.test.mjs tests/intel-live-01-provisional-attention-contract.test.mjs tests/intel-live-01-ios-targeted-gate-contract.test.mjs",
+    "test:live-call-attention-contract": "node --test database/tests/live-call-attention-v1.test.mjs tests/intel-live-01-provisional-attention-contract.test.mjs tests/intel-live-01-ios-targeted-gate-contract.test.mjs tests/intel-live-01-live-call-protocol-v3-contract.test.mjs",
     "test:cosmos-e2-conversation-catalog-contract": "node --test database/tests/cosmos-e2-conversation-catalog-v1.test.mjs",
     "prove:s8b-07-media-worker:integration": "node --env-file-if-exists=.env database/prove-0196-media-worker.mjs",
     "prove:s8b-07-media-service:integration": "node --env-file-if-exists=.env database/prove-0196-media-service.mjs",

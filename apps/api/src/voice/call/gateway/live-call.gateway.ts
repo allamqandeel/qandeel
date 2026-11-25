@@ -10,6 +10,7 @@ import { LiveCallService } from '../live-call.service';
 import { tokenDeadline, type CallTransport } from '../live-call.connection';
 import { LIVE_CALL_CLOSE, LIVE_CALL_PATH, LIVE_CALL_PROTOCOL } from '../live-call.protocol';
 import { LIVE_CALL_PROTOCOL_V2 } from '../live-call.protocol-v2';
+import { LIVE_CALL_PROTOCOL_V3 } from '../live-call.protocol-v3';
 import { acceptKey, encodeClose, encodeFrame, FrameParser, OPCODE } from './websocket-frames';
 
 /** Engineering safety bounds of the upgrade (code, not configuration; a change is a reviewed change). */
@@ -145,9 +146,10 @@ export class LiveCallGateway implements OnApplicationBootstrap, OnModuleDestroy 
       return refuse(socket, 400, 'BAD_REQUEST');
     }
     if (header(request, 'sec-websocket-version') !== '13') return refuse(socket, 426, 'UPGRADE_REQUIRED', { 'Sec-WebSocket-Version': '13' });
-    // RB-2 / M-2: v2 when the phone offers it, else exactly v1 (a v1 phone is answered exactly as before).
+    // RB-2 / M-2: v2 when the phone offers it, else exactly v1 (a v1 phone is answered exactly as before). INTEL-LIVE-01 CP2
+    // (D-3): v3 above both, when offered; a phone that does not offer it is answered exactly as before.
     const offered = tokens(header(request, 'sec-websocket-protocol'));
-    const selected = offered.includes(LIVE_CALL_PROTOCOL_V2) ? LIVE_CALL_PROTOCOL_V2 : offered.includes(LIVE_CALL_PROTOCOL) ? LIVE_CALL_PROTOCOL : null;
+    const selected = offered.includes(LIVE_CALL_PROTOCOL_V3) ? LIVE_CALL_PROTOCOL_V3 : offered.includes(LIVE_CALL_PROTOCOL_V2) ? LIVE_CALL_PROTOCOL_V2 : offered.includes(LIVE_CALL_PROTOCOL) ? LIVE_CALL_PROTOCOL : null;
     if (selected === null) return refuse(socket, 400, 'BAD_REQUEST');
     if (!this.admitAddress(request, socket)) {
       this.calls.signal('upgrade', 'overloaded');

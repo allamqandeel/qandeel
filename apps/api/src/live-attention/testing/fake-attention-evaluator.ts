@@ -51,9 +51,11 @@ export function set(subjectKey: string, dependsOnSeq: number, label = subjectKey
 /** 0204's coverage rules in memory: contiguity, ALREADY_COVERED, the epoch fence, the call end. */
 export class InMemoryAttentionStore implements CallAttentionStore {
   readonly records: AttentionRecordInput[] = [];
-  readonly events: Array<AttentionEventInput & { readonly track: AttentionTrack; readonly seq: number }> = [];
+  readonly events: Array<Omit<AttentionEventInput, 'op'> & { readonly op: AttentionEventInput['op'] | 'CONFIRMED' | 'EXPIRED'; readonly track: AttentionTrack; readonly seq: number }> = [];
   readonly accounted: Record<AttentionTrack, number> = { USER: 0, QANDEEL: 0 };
   readonly open: Record<AttentionTrack, Map<string, OpenSubject>> = { USER: new Map(), QANDEEL: new Map() };
+  /** CP2: each open subject's event number (its latest SET). */
+  readonly openSeq: Record<AttentionTrack, Map<string, number>> = { USER: new Map(), QANDEEL: new Map() };
   epoch = 1;
   ended = false;
   exists = true;
@@ -81,8 +83,12 @@ export class InMemoryAttentionStore implements CallAttentionStore {
       first ??= seq;
       last = seq;
       this.events.push({ ...e, track: input.track, seq });
-      if (e.op === 'SET') this.open[input.track].set(e.subjectKey, { subjectKey: e.subjectKey, label: e.label, kind: e.kind, confidence: e.confidence, threadRef: e.threadRef });
-      else this.open[input.track].delete(e.subjectKey);
+      this.open[input.track].delete(e.subjectKey);
+      this.openSeq[input.track].delete(e.subjectKey);
+      if (e.op === 'SET') {
+        this.open[input.track].set(e.subjectKey, { subjectKey: e.subjectKey, label: e.label, kind: e.kind, confidence: e.confidence, threadRef: e.threadRef });
+        this.openSeq[input.track].set(e.subjectKey, seq);
+      }
     }
     return { outcome: 'RECORDED', accountedToClockMs: this.accounted[input.track], firstEventSeq: first, lastEventSeq: last };
   }
@@ -91,7 +97,19 @@ export class InMemoryAttentionStore implements CallAttentionStore {
     if (!this.exists) return [];
     return (['USER', 'QANDEEL'] as const).map((track) => ({
       track, accountedToClockMs: this.accounted[track], settledThroughClockMs: -1, callEnded: this.ended, openSubjects: [...this.open[track].values()],
+      openEventSeqs: [...this.open[track].keys()].map((key) => this.openSeq[track].get(key)!), lastEventSeq: this.events.length,
     }));
+  }
+
+  /** CP2: 0204's settlement of open subjects, as the worker's settle writes it (CONFIRMED / EXPIRED events, numbered). */
+  settle(track: AttentionTrack, outcome: 'CONFIRMED' | 'EXPIRED', keys: readonly string[] = [...this.open[track].keys()]): void {
+    for (const key of keys) {
+      const subject = this.open[track].get(key);
+      if (!subject) continue;
+      this.events.push({ ...subject, op: outcome, anchorClockMs: 0, evidenceClockMs: 0, track, seq: this.events.length + 1 });
+      this.open[track].delete(key);
+      this.openSeq[track].delete(key);
+    }
   }
 
   async readThreads(): Promise<readonly AttentionThread[]> {

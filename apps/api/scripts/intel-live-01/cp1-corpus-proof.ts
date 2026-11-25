@@ -38,6 +38,7 @@ import {
   type AttentionObservation, type AttentionUsage, type ProvisionalAttentionConfig,
 } from '../../src/live-attention/provisional-attention.types';
 import { createDeepSeekClient } from '../../src/model-router/providers/deepseek/deepseek-client';
+import type { LiveCallAttentionDisclosure } from '../../src/voice/call-turn/live-call-attention.port';
 import { CORPUS, RECALL_GATE, corpusWords, type Scenario, type Segment, type Track } from './corpus';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -415,10 +416,13 @@ async function runScenario(pools: { a: PgPool; b: PgPool }, s: Scenario, evaluat
 
   const observations: AttentionObservation[] = [];
   const evidenceAt = new Map<string, number>();
+  // INTEL-LIVE-01 CP2 (B2): what each connection told its phone (protocol v3), with the connection's epoch.
+  const told: Array<{ readonly epoch: number; readonly d: LiveCallAttentionDisclosure }> = [];
   const makeTracker = (epoch: number, shim: PgServiceRoleRpc) => new CallAttentionTracker({
     userId: w.user, callId: w.call, epoch, evaluator: new VirtualTimeEvaluator(evaluatorOf(w, threadId)),
     store: new CallAttentionRepository(shim), permits: new DatabaseBackgroundPermitGate(shim),
     captureClock: () => vc.now, now: () => vc.now, timers: vc, config, observe: (o) => observations.push(o),
+    disclose: (d) => { told.push({ epoch, d }); return 'SENT'; },
   });
   let epoch = 1;
   let tracker = makeTracker(epoch, shimA);
@@ -467,7 +471,12 @@ async function runScenario(pools: { a: PgPool; b: PgPool }, s: Scenario, evaluat
     } });
   }
   const lastAt = Math.max(...actions.map((x) => x.at));
-  actions.push({ at: lastAt + 30_000, label: 'close', run: async () => { await tracker.close(); } });
+  let openAtClose: Map<string, number> | null = null;
+  actions.push({ at: lastAt + 30_000, label: 'close', run: async () => {
+    const state = await new CallAttentionRepository(shimA).readState(w.user, w.call);
+    openAtClose = new Map(state.flatMap((t) => t.openSubjects.map((o, i) => [`${t.track}:${o.subjectKey}`, t.openEventSeqs[i]!] as const)));
+    await tracker.close();
+  } });
   await runTimeline(actions);
 
   // Settlement through the worker's command (A6): e confirms the Thread subject by id; g settles the tail's events.
@@ -577,6 +586,47 @@ async function runScenario(pools: { a: PgPool; b: PgPool }, s: Scenario, evaluat
     const firstOfB = evaluations.find((r) => r.epoch === 2 && ['DEVELOPMENTS', 'NONE'].includes(r.outcome));
     const missA = evaluations.filter((r) => r.epoch === 1 && r.outcome === 'MISSED_HANDOVER').at(-1)!;
     check(!firstOfB || firstOfB.from >= missA.to, '(h) the new tracker continues from the database watermark');
+  }
+  // ---- INTEL-LIVE-01 CP2 B2: the phone is told only the database's rows, every connection starts from the database, the
+  // told numbers never move backwards, and a phone fed exactly these frames holds the database's open attention.
+  {
+    const epochs = [...new Set(told.map((t) => t.epoch))];
+    check(epochs.every((e) => told.find((t) => t.epoch === e)!.d.kind === 'STATE'), 'B2 every connection starts its phone from the database (ATTENTION_STATE first)');
+    check(epochs.every((e) => told.filter((t) => t.epoch === e).every((t, i, a) => i === 0 || t.d.seq >= a[i - 1]!.d.seq)), 'B2 what one connection tells never moves backwards (seq non-decreasing)');
+    const toldEvents = told.flatMap((t) => (t.d.kind === 'EVENT' ? [t.d] : []));
+    check(toldEvents.every((d) => { const row = events.find((e) => e.seq === d.seq); return !!row && row.op === d.op && row.key === d.subject.subjectKey && row.track === d.subject.track && row.produced === d.producedClockMs; }),
+      "B2 each disclosed event is the database's own committed row (seq, op, key, track, produced)");
+    check(toldEvents.every((d, i) => i === 0 || d.seq > toldEvents[i - 1]!.seq), 'B2 event_seq strictly rises across every connection and hand-over');
+    check(producer.every((e) => toldEvents.some((d) => d.seq === e.seq) || told.some((t) => t.d.kind === 'STATE' && t.d.seq >= e.seq)), 'B2 no committed development is lost to the phone (told as an event, or reflected by a later state)');
+    let seq = 0;
+    const phone = new Map<string, number>();
+    for (const { d } of told) {
+      if (d.kind === 'STATE') {
+        if (d.seq < seq) continue;
+        phone.clear();
+        for (const e of d.entries) phone.set(`${e.track}:${e.subjectKey}`, e.seq);
+        seq = d.seq;
+      } else if (d.seq > seq) {
+        const key = `${d.subject.track}:${d.subject.subjectKey}`;
+        if (d.op === 'SET') phone.set(key, d.seq); else phone.delete(key);
+        seq = d.seq;
+      }
+    }
+    const expected = openAtClose ?? new Map<string, number>();
+    check(phone.size === expected.size && [...expected].every(([k, v]) => phone.get(k) === v), "B2 a phone fed exactly these frames holds the database's open attention (no duplicate, no stale entry)");
+    if (s.id === 'h') {
+      const resume = told.find((t) => t.epoch === 2)!.d;
+      const openAt = (upTo: number) => {
+        const open = new Map<string, number>();
+        for (const e of events.filter((x) => x.seq <= upTo)) { const k = `${e.track}:${e.key}`; if (e.op === 'SET') open.set(k, e.seq); else open.delete(k); }
+        return open;
+      };
+      const want = openAt(resume.seq);
+      check(resume.kind === 'STATE' && resume.entries.length === want.size && resume.entries.every((e) => want.get(`${e.track}:${e.subjectKey}`) === e.seq),
+        '(h / B2) the resume on the other instance got ATTENTION_STATE from the database: every subject open at the hand-over, at its own seq');
+      check(resume.seq === Math.max(0, ...events.filter((e) => e.seq <= resume.seq).map((e) => e.seq)) && told.filter((t) => t.epoch === 1).every((t) => t.d.seq <= resume.seq),
+        '(h / B2) the resumed snapshot is at least as new as everything the old connection told');
+    }
   }
   if (s.id === 'i') {
     const outage = { from: (s.expect as { outageFrom: number }).outageFrom, to: (s.expect as { outageFrom: number }).outageFrom + 15_000 };

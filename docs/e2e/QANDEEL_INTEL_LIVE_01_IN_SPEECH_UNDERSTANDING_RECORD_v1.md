@@ -1,6 +1,6 @@
 # INTEL-LIVE-01 — Incremental In-Speech Understanding & Living Map Attention: Execution Record v1
 
-**Status:** `INTEL-LIVE-01 CP1 RESOLVED UNDER THE PO DIRECTIVE OF 2026-11-25 / READY FOR PO REVIEW — A8′: RECALL 21 / 21 (PROMPT v5), THE UNANNOTATED EVENTS ADJUDICATED BY THE DIRECTIVE'S CATEGORIES (§3.2) — iOS TARGETED GATE (LIVE CALL): SEE §3.6 — API CI T-03B1b1 FAILURE CORRECTED — NOT MERGED — NOT DEPLOYED — CP2 NEXT, CP3 – CP4 NOT STARTED`
+**Status:** `INTEL-LIVE-01 CP1 ACCEPTED (PRODUCT OWNER, 2026-11-25, HEAD 0044f56e; §3.6) — CP2 LIVE MAP DISCLOSURE DELIVERED / READY FOR PO REVIEW (§9) — NOT MERGED — NOT DEPLOYED — CP3 – CP4 NOT STARTED`
 - Draft PR "INTEL-LIVE-01 CP1 — continuous in-speech understanding (provisional attention lane)" from `intel/intel-live-01`,
   stacked on Draft PR #414 (the CP0 docs commit `53429017`, itself on `main` at `aa6fc0c8`).
 - Merging needs the Product Owner's explicit «ادمج». Migration `0204` is **not hosted**; the next migration is `0205`.
@@ -41,12 +41,12 @@ credential, transcript of a real person or hosted identifier. Every conversation
 
 ---
 
-## 0. The checkpoint plan and where CP1 stands
+## 0. The checkpoint plan and where each checkpoint stands
 
 | Checkpoint | Scope (contract) | State |
 |---|---|---|
-| **CP1** | The producer: migration `0204`, the lane, its wiring, the proofs A0 – A12 and A8′, the iOS Targeted Gate (live call) | **RESOLVED UNDER THE DIRECTIVE / READY FOR PO REVIEW** (this record) |
-| CP2 | The live map: Live Call protocol v3 (additive), the phone's consumption, B5′ / B6 (successful live disclosure); iOS Targeted Gate: v3 with v1 / v2 fallback, updates and withdrawals visible, reconnect / restore, COSMOS compatibility | next |
+| **CP1** | The producer: migration `0204`, the lane, its wiring, the proofs A0 – A12 and A8′, the iOS Targeted Gate (live call) | **ACCEPTED** by the Product Owner at checkpoint level (2026-11-25, head `0044f56e`; §3.6) |
+| CP2 | The live map: Live Call protocol v3 (additive), the phone's consumption, B5′ / B6 (successful live disclosure); iOS Targeted Gate: v3 with v1 / v2 fallback, updates and withdrawals visible, reconnect / restore, COSMOS compatibility | **DELIVERED / READY FOR PO REVIEW** (§9) |
 | CP3 | Replay Lane B: the producer's events on Replay's clock, the §19 placement policy | not started |
 | CP4 | Closure (BG-08 / BG-09), measured cost restated, `QAN-BL-INTEL-06` → `VALIDATION — OPEN` | not started |
 
@@ -715,7 +715,18 @@ own heading.
   section, and the removed exception. It plants fourteen new reversals.
 - **Every root contract** (1 883 / 1 883) and the task-closure governance contract (25 / 25).
 
-**The run on the final head:** `PENDING`. It is recorded here per case. No case is reported before it ran.
+**The run on the final head — CP1 ACCEPTED at checkpoint level (Product Owner, "INTEL-LIVE-01 — CP1 Acceptance & CP2
+Execution Authorization", 2026-11-25), on head `0044f56e` of #415:**
+
+| Run | Result |
+|---|---|
+| iOS Targeted Gate `45678917888` | SUCCESS: ITG-01 – ITG-06 **6 / 6 PASS** |
+| UI touch (separate, exit-neutral) | UT-1 **FAIL** (infrastructure: the simulator flow's timeout); UT-2 and UT-3 **NOT TESTED** (not reached). Kept as reported; never functional evidence |
+| API CI `45678917950` | SUCCESS |
+| Mobile CI `45678917980` | SUCCESS |
+| World gate `45678918023` | **CANCELLED** under the Product Owner's CP1-only exception (never reported as passed). The exception ended with CP1: CP2 applies BG-10 and the impact planner (§6.2) |
+
+The evidence of every CP1 run is kept. CP1's tests are not re-run unless CP2 has a real impact on them.
 
 ## 4. Paid spend (D-7)
 
@@ -1021,3 +1032,194 @@ changed, and every rejection and integrity assertion stands.
 - A4: `cp1-a4-r1` (stress, 2 slots) and `cp1-a4-r2-slots8`.
 
 The iOS Targeted Gate's evidence is the workflow artifact `ios-targeted-gate-live-call-<sha>`.
+
+---
+
+## 9. CP2 — Live Map Disclosure
+
+**Authority:** the Product Owner's "INTEL-LIVE-01 — CP1 Acceptance & CP2 Execution Authorization" (2026-11-25): D-3 (an
+additive protocol v3) and D-5 (the COSMOS presentation) approved, the B5′ / B6′ / B7 gates, the iOS Targeted Gate
+extension, and the end of the CP1-only World gate exception. CP1's acceptance is recorded in §3.6 in this same change (no
+documentation-only push).
+
+**State:** `INTEL-LIVE-01 CP2 — DELIVERED / READY FOR PO REVIEW`. Not merged, not deployed. No product-readiness claim:
+the product gate stays the HONOR Live + Replay proof. CP3 is not started.
+
+### 9.1 What CP2 delivers
+
+**Protocol v3** ([QANDEEL_LIVE_CALL_PROTOCOL_v3.md](../voice/QANDEEL_LIVE_CALL_PROTOCOL_v3.md)): v2 plus two server messages,
+`ATTENTION` (one committed 0204 event) and `ATTENTION_STATE` (the call's open attention from one read of
+`server_read_call_attention_state_v1`, in parts of at most 12). v1 and v2 are unchanged byte for byte; a phone that offers
+only v2 or v1 is never sent a v3 frame. Android offers v3, v2, v1; iOS offers v3, v1 and answers every clock mark `null`.
+
+**Server** (`apps/api/src/voice/call/live-call.protocol-v3.ts`, `live-call.connection.ts`, `live-call.gateway.ts`,
+`live-attention/call-attention.tracker.ts`, `call-attention.repository.ts`, `live-attention.provider.ts`, the analysis
+worker's settlement signal):
+- the gateway selects v3 > v2 > v1 and accepts HELLO `v: 3` only on a v3 connection;
+- after every `STATE ACTIVE` (fresh or resumed, any instance) the connection sends the database's attention state; the
+  snapshot carries the call's highest `event_seq` in that read;
+- every committed event is sent once, in `event_seq` order, the moment its write committed (`sentSeq` guard: never twice,
+  never a snapshot older than an event already sent — such a read is discarded and read again);
+- the state is re-read after a settlement written on this instance (the worker's signal), every 5 s for at most 120 s while
+  open subjects remain after a committed turn (a settlement written by another instance), and 1 s after a dropped frame;
+- **audio first:** an attention frame is never queued behind more than 64 KiB towards the phone; it is dropped and the
+  state re-sent later. Nothing on the voice path awaits the disclosure;
+- with the lane OFF, or on v1 / v2, nothing is sent (`NOT_LISTENING`).
+
+**Phone** (`apps/mobile/src/voice-call/live-call-protocol-v3.ts`, `live-call-client.ts`,
+`apps/mobile/src/call/provisional-attention.ts`, `call-owner.ts`):
+- the client offers v3 (`offerAttention`), parses v3 frames strictly, and passes them to the call owner;
+- `ProvisionalAttention` holds the call's layer: part 0 of a snapshot replaces it once the snapshot is whole and not older;
+  afterwards only events with a higher `seq` apply; `SET` opens or updates, `WITHDRAW` / `CONFIRMED` / `EXPIRED` remove;
+  a subject is `track` + `subjectKey` (USER and QANDEEL never merged);
+- no debounce, no timer, no count gate, no meaning on the phone;
+- the owner drops the layer at the call's end (a new call starts empty); after a reconnect the server's snapshot restores it.
+
+**COSMOS (D-5)** (`apps/mobile/src/cosmos/core/stage.ts`, `product/owners/personal.ts`):
+- `SceneInput.attention` (undefined: the stage is byte-identical to before — a golden pins every rung's digest);
+- a subject on a Thread drawn at the rung is a **glow**: one PUFF in the body's own dye, alpha 0.28, 1.6× its halo;
+- any other subject is an **ember**: one WARM SPARK, alpha 0.6, size 14, with an ordinary label, placed about the rung's
+  drawn centroid by the stage's own `orbitOf` (a presentation position that carries no meaning);
+- no hit target, no line, no new draw pass; at most 12 marks per rung (the newest); the Personal owner folds the call's
+  layer into every rung's scene and recompiles only when the layer changes (it is part of the memo key);
+- AR / EN and RTL / LTR follow the stage as before; protected assets, gestures and the Shared and Public worlds unchanged.
+
+**Proof-only (never in a Product build):**
+- `apps/mobile/src/voice-call/__validation__/s806cp3-attention-probe.ts`, mounted only by the S8B-06 CP3 proof root.
+  It is OFF unless the proof server answers `{ on: true }` and only watches: the owner's attention notifications, a mirror
+  of the Personal COSMOS owner's stage digest, and a 2 s tick of the layer's seq while a call runs. It reports numbers
+  (instants on the server's clock, seq, mark count, digest) — never a label or a word. Nothing is injected into the layer,
+  the reducer or the map.
+- the proof server (`apps/api/scripts/s8b-06-cp3-device-proof-server.ts`): scenarios (a) and (d) from the CP1 corpus
+  with the fake evaluator (`PROOF_ATTENTION=ON`), an optional CP1 latency model, `speak-scenario`, an attention hold for
+  the open epochs, a socket drop, and the probe's endpoints.
+- `scripts/ios-targeted-gate/attention-checks.mjs` and ITG-07 / ITG-08 / ITG-09 (§9.4).
+
+**Not changed:** Prompt v5, the evaluator, semantic freedom, the producer's thresholds (none), migrations (no new
+migration; `0204` unchanged), Lane A, Replay, the voice path, the endpointer, ASR, the model, any hosted resource.
+
+### 9.2 B1 – B4
+
+| Gate | Evidence |
+|---|---|
+| B1 — v3 additive; v1 / v2 unchanged | `live-call.protocol-v3.spec.ts`; the gateway e2e (v3 selected, v2 / v1 answered exactly as before, HELLO `v` checked); the static contract `tests/intel-live-01-live-call-protocol-v3-contract.test.mjs` |
+| B2 — only committed events; snapshot after ACTIVE replaces; then only newer seqs; snapshot / event race | `call-attention.disclosure.spec.ts` (an event committed while a snapshot read is in flight: the older read is discarded and re-read; never a duplicate, never a regression); `provisional-attention.test.ts`; the CP1 corpus proof's B2 checks (FAKE) |
+| B3 — bounded transport, First Audio priority | the 64 KiB bound and the dropped-frame re-read (`call-attention.disclosure.spec.ts`); no `await` of disclosure on the voice path (static contract) |
+| B4 — phone: SET / WITHDRAW / EXPIRED / CONFIRMED, no gate, cleanup at end, restore after reconnect, no cross-call leakage, USER ≠ QANDEEL | `provisional-attention.test.ts`, `call-views.test.tsx`, `finished-call-record.test.tsx`, `cosmos-personal-attention.test.ts`, `attention-marks.test.ts` (and its golden) |
+
+### 9.3 B5′ / B6′ — Android emulator evidence (fake providers, local)
+
+Recipe: a local PostgreSQL clone with `0204`, the proof server with the fake evaluator, the proof APK
+(`com.qandeel.mobile.s806proof`, x86_64 release, cleartext to the loopback reverse port only) on the emulator
+`QANDEEL_API36` (720 × 1600), the per-app locale for AR / EN. These runs used proof APK `6cbafde8…`, built before the probe's 2 s tick was added (§9.4); the tick adds a row and changes no T4 measurement. The phone's stage digest is timed by the probe on the server's
+clock (offset from the fastest of five round trips; the server's own handling ≈ 1 ms). T4 = server send → the phone's stage
+digest change. A development is a **successful live disclosure** when it was on the phone's stage before the durable Lane A
+disclosure of its subject while the call continued — or, for a subject withdrawn within the call, while it was open.
+
+| Run | Language | Class | n | T4 P50 / P95 (ms) | On the stage before Lane A |
+|---|---|---|---|---|---|
+| (a) fake | EN / LTR | IN_SPEECH | 3 | 3 / 4 | 8.4 – 85.3 s |
+| (a) fake | EN / LTR | QANDEEL | 1 | 3 | 11.6 s |
+| (d) fake | AR / RTL | IN_SPEECH | 6 | 3 / 55 | 21.2 s and 8.1 s for the two that settled; the four others withdrawn within the call |
+| (d) fake | AR / RTL | QANDEEL | 1 | 15 | 11.5 s |
+| (a) CP1 latency | AR / RTL | IN_SPEECH / QANDEEL | 3 / 1 | 5 / 6; 6 | all |
+| (d) CP1 latency | EN / LTR | IN_SPEECH / QANDEEL | 6 / 1 | 5 / 46; 4 | all |
+| (d) speech ended on the negation | AR / RTL | IN_SPEECH | 4 | 5 / 19 | all |
+| (d) speech ended on the negation | AR / RTL | **TAIL_AFTER_SPEECH_END** | 2 | 5 / 34 | 4.8 s |
+| (d) speech ended on the negation | AR / RTL | QANDEEL | 1 | 5 | all |
+
+Every development in every run was a successful live disclosure; 0 frames dropped. The upper bound of T4 (the report's
+arrival) was 9 – 113 ms. The P95 tail (34 – 55 ms) is the second frame of a correction (its SET after its WITHDRAW, two
+frames of one write).
+
+Screens (`E:/QANDEEL_REPORTS/INTEL-LIVE-01/CP2/b5/<run>/shots/`, each frame with its time, the digest that triggered it,
+the pixel diff against the previous frame, and a contact sheet): before the call; the call active; after each development;
+after each correction or withdrawal; the QANDEEL-side mark; after the reply; after the settlements; after the end (the map
+as before the call). In (a), each development changed 1 491 – 3 649 pixels within the map; the settlements removed the
+marks (7 111 pixels); the end restored the pre-call map. In (d), the person's correction (Cairo → Alexandria) and the
+negation (gym tomorrow → leg pain) each replaced one ember with another; the QANDEEL ember appeared and left on its own.
+
+**B6′ and TAIL:** with the fake evaluator (0 ms) and the CP1 latency model (650 – 1 500 ms), every USER development of a
+full scenario was produced while the person was still speaking: TAIL arises only when speech ends right after the
+development's words. It was exercised by ending the speech on the negation segment (the last row). IN_SPEECH and TAIL are
+reported separately, never merged.
+
+### 9.4 The iOS Targeted Gate — CP2 extension
+
+Its server now runs `PROOF_ATTENTION=ON`, scenario (d), with the probe on. The command-driven start and end are reused;
+the UI touch section stays separate and exit-neutral. Three cases are added, in this order:
+`ITG-01 ITG-02 ITG-03 ITG-07 ITG-08 ITG-04 ITG-09 ITG-05 ITG-06`.
+- **ITG-07 — v3 and disclosure:** v3 selected on the call's epoch (the snapshot sent); every clock mark answered `null`
+  (iOS); scenario (d)'s first five segments spoken; the person's SET and WITHDRAW committed; the phone's layer reached the
+  database's `seq` with its open subjects; the Personal stage's digest changed with marks; the reply still played out.
+- **ITG-08 — reconnect and restore:** the attention frames of the open epoch are held (proof-only), the negation is spoken
+  and committed; the phone is proven behind; the socket is dropped; the call resumes on a new epoch, the hold is lifted,
+  and the snapshot restores the phone to the database's `seq` and open subjects.
+- **ITG-09 — end cleanup:** after the command-driven end, the phone holds no mark, the stage digest has no mark, and the
+  first applied row after the end is not ACTIVE.
+- **v1 / v2 compatibility** stays proven by the API gateway e2e and the static contracts (the iOS app offers v3, v1 only).
+- COSMOS compatibility is the World gate's (§9.6).
+
+The gate's contract (`tests/intel-live-01-ios-targeted-gate-contract.test.mjs`) pins the case order, the checks and the
+probe's limits (it reads, never dispatches; off by default; the hold limited to the open epochs) and plants 13 new
+reversals.
+
+**Rehearsed locally on Android before the push** (the same server, checks and sequence on the emulator, proof APK
+`e5aea815…`; `E:/QANDEEL_REPORTS/INTEL-LIVE-01/CP2/itg-local-android-r2/`): v3 OK (the state sent on epoch 1); applied OK
+(database `lastSeq` 5, open 1; the phone at seq 5 holding 1); COSMOS OK (the digest changed with a mark); behind OK (the
+phone at seq 6, the database at 9); dropped, resumed on epoch 2; restored OK (the state of seq 9 sent on epoch 2; the
+phone at seq 9 holding 1); cleanup OK (no mark held or drawn after the end). `noclock` does not hold on Android, as
+expected: Android answers marks with real positions; the check is iOS's. A first rehearsal failed `restored` because the
+settlement reached the database before the resume, so the restored state equalled what the phone showed and nothing was
+notified: the probe now reports the layer's seq every 2 s while a call runs (a tick), and ITG-08 drops the socket as soon as
+the negation is written. The iOS run on the pushed head is the gate's evidence; nothing is reported for it before it ran.
+
+### 9.5 B7 — performance
+
+| B7 requirement | Evidence |
+|---|---|
+| No await on the audio path | the disclosure is fire-and-forget behind the 64 KiB bound; the v3 static contract fails on an await of it in `voice/`; the A4 measurement (§3.4) is unchanged in kind: CP2 adds no provider call and no permit |
+| COSMOS open time | with no call (attention undefined) the stage is byte-identical (the golden pins every rung's digest), so opening the map compiles exactly what it did |
+| No gesture regression; no render loop | the Personal owner recompiles only when the layer's marks change (the marks are its memo key; a re-read or the glass returns the same compiled list — `cosmos-personal-attention.test.ts`); the layer notifies only when its marks change |
+| `drawOpsAtRest` with 12 marks | a temporary benchmark (never committed; `E:/QANDEEL_REPORTS/INTEL-LIVE-01/CP2/bench/b7-compile.json`), 24 / 72 entities per rung, 6 glows + 6 embers on every rung: `drawOpsAtRest` **1 / 25 / 25 / 25 / 25 with and without the marks**; sprites +12 per rung; hits unchanged; the five rungs' compile P50 311.9 → 316.4 ms, P95 349.2 → 360.6 ms (+1.4 % / +3.3 %, Node under jest, once per layer change) |
+| F-1 | not claimed solved; unchanged (§5) |
+
+The emulator runs (§9.3) played every reply out with the disclosure on; they are not a First Audio measurement (fake
+providers on an emulator), and none is claimed.
+
+### 9.6 CI on the CP2 head
+
+The run on the pushed head (API CI, Mobile CI, the iOS Targeted Gate with ITG-07 – ITG-09, and the World gate, which the
+impact planner sends to FULL because CP2 changes `cosmos/`) is reported in PR #415 and the delivery report with its run IDs
+and each failure classified (product, harness or infrastructure). It is written into this record at the next executable
+change, never by a documentation-only push.
+
+**Local verification before the push:** API jest for the touched suites (`live-attention`, `voice/call`, `voice/call-turn`,
+`live-analysis`): 17 suites, 193 / 193; API and API scripts type-check clean; mobile type-check and lint clean; mobile jest
+for `call`, `cosmos`, `voice-call`, `integration`: 773 / 776 in one parallel run, the three failures being jest's 5 s
+per-test timeout on `proof-root-deep-link` (2) and `cosmos-personal-centring` (1) under that run's load; each suite passes
+alone, and the centring test's slowest case takes the same time with the base `personal.ts` (4.77 s) as with CP2's
+(4.41 – 4.78 s); Mobile CI is the authority. The static contracts: v3 6 / 6, the lane 7 / 7, `test:live-call-attention-contract`
+27 / 27, the ITG contract 6 / 6, the task-closure governance contract 25 / 25; every root contract `node --test tests/*.test.mjs`: 1 878 / 1 889. One failure was CP2's and is corrected: the T-12 barrel contract refused the probe's deep type import of `integration/runtime`; the probe now takes the runtime type from the Personal owner it mirrors (T-12 32 / 32). The other ten are the forward-safety mirror's known failures on this Windows machine (§6); CI judges them.
+
+### 9.7 Findings (CP2)
+
+- **CP2-F1 — settlements are EXPIRED in every synthetic run.** The synthetic Lane A does not confirm a subject; `CONFIRMED`
+  removes a mark exactly as `EXPIRED` does and is covered by the unit tests, not by the emulator.
+- **CP2-F2 — a correction is two frames.** The WITHDRAW and the SET of one write arrive 14 – 53 ms apart; with no debounce
+  (directive), the stage shows the intermediate state for that long. The screenshots, taken 400 ms after a digest change,
+  show the state after the second frame (a frame's file name is the digest that triggered it).
+- **CP2-F3 — TAIL is rare under the measured latency** (§9.3); it was exercised, not inferred.
+- **CP2-F4 — long labels are shortened** by the stage's frozen label rule (`LABEL_MAX_CHARS`), e.g. "الانتقال لإ…".
+- **CP2-F5 — an ember label follows the frozen label placement.** Ember labels are ordinary labels: the greedy overlap,
+  floor and edge rules may leave one out (observed in (d) with two embers open: both embers drawn, one label). The
+  placement rules are protected; they were not changed.
+- **CP2-F6 — no Live Focus Thread centre.** An ember is placed about the rung's drawn centroid, not a live focus.
+- **CP2-F7 — the probe's mirror doubles the stage compile** in the proof build only (never in a Product build).
+- **F-1 is not claimed solved** (B7): CP2 adds no provider call and leaves F-1 under GCR-01-A.
+
+### 9.8 Reports (outside the repository)
+
+`E:/QANDEEL_REPORTS/INTEL-LIVE-01/CP2/`: `b5/` (every run: server events, screenshots with their times, the driver log, the
+database's events, the analysis and the contact sheet; the first attempt kept as `scenario-a-attempt0`, the proof APK
+without cleartext), `itg-local-android/`, `bench/`, `apk/` (the proof APK and its build logs).

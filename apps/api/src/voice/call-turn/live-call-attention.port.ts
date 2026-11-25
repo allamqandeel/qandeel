@@ -14,6 +14,31 @@ import { Injectable } from '@nestjs/common';
  */
 export type LiveCallAttentionTrack = 'USER' | 'QANDEEL';
 
+/** INTEL-LIVE-01 CP2: one attention subject as the phone is told it (0204's columns; never a transcript). */
+export interface LiveCallAttentionSubject {
+  readonly track: LiveCallAttentionTrack;
+  readonly subjectKey: string;
+  readonly label: string;
+  readonly kind: 'TOPIC' | 'PERSON' | 'PLACE' | 'EXPERIENCE' | 'CONCERN' | 'PLAN';
+  readonly confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  readonly threadRef: string | null;
+}
+
+/**
+ * INTEL-LIVE-01 CP2 (D-3, protocol v3): what the lane discloses to the phone, only ever from rows the database committed.
+ * EVENT is one attention event (`seq` = its 0204 event_seq); STATE is the call's open attention as ONE read of the
+ * database holds it (`seq` = the call's highest event_seq in that read).
+ */
+export type LiveCallAttentionDisclosure =
+  | {
+    readonly kind: 'EVENT'; readonly seq: number; readonly op: 'SET' | 'WITHDRAW' | 'CONFIRMED' | 'EXPIRED';
+    readonly subject: LiveCallAttentionSubject; readonly producedClockMs: number | null;
+  }
+  | { readonly kind: 'STATE'; readonly seq: number; readonly entries: readonly (LiveCallAttentionSubject & { readonly seq: number })[] };
+
+/** SENT; DROPPED (the phone is a slow consumer: audio first, the state is sent again later); NOT_LISTENING (not v3, not ACTIVE). */
+export type LiveCallAttentionDelivery = 'SENT' | 'DROPPED' | 'NOT_LISTENING';
+
 export interface LiveCallAttentionChannel {
   readonly userId: string;
   readonly sessionId: string;
@@ -21,6 +46,8 @@ export interface LiveCallAttentionChannel {
   readonly epoch: number;
   /** The capture position the server has ingested, on the call clock. */
   latestCaptureMs(): number;
+  /** INTEL-LIVE-01 CP2: towards the phone (protocol v3 only). Synchronous; never awaited; absent where nothing listens. */
+  discloseAttention?(disclosure: LiveCallAttentionDisclosure): LiveCallAttentionDelivery;
 }
 
 export interface LiveCallAttentionSession {
@@ -36,6 +63,11 @@ export interface LiveCallAttentionSession {
 
 export interface LiveCallAttention {
   open(channel: LiveCallAttentionChannel): LiveCallAttentionSession;
+  /**
+   * INTEL-LIVE-01 CP2: a half of this call was settled on THIS instance (0204's settlement rows were written): its sessions
+   * here tell their phones the database's attention again. In memory; a lost signal is covered by the sessions' own watch.
+   */
+  settled?(callId: string): void;
 }
 
 @Injectable()

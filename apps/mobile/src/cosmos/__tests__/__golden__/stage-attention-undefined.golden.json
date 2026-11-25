@@ -1,0 +1,18 @@
+{
+ "personal": {
+  "digest": "13bb1d22deb89460deb89460deb89460deb89460",
+  "sha256": "07e5555f793acb2803905da1ec41e66dabc0598d31779e246310a2eb21eeb757"
+ },
+ "personalInspected": {
+  "digest": "5290cb6c714b82a8714b82a8714b82a8714b82a8",
+  "sha256": "2f5ba921ac7ab67d62091cf81acdb52dd54fb182f86225c4f84a6e12da9da0dc"
+ },
+ "publicField": {
+  "digest": "c5f2ab36",
+  "sha256": "04b8498f192112693d3a448b274fdaad6d15fa13e5c98bb80cb2486b14a9101f"
+ },
+ "shared": {
+  "digest": "81fbc3ba",
+  "sha256": "85265fc7df78e688ba002a709df8f98d70189a437f5cfc54da79a2d992aca415"
+ }
+}
