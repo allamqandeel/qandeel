@@ -3976,6 +3976,30 @@ capture-clock marker certify a committed moment's capture position on Android ca
 [S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md)). iOS stays fail-closed (`AFTER_END`); 4G is not
 tested; devices other than the HONOR ALI-NX1 are not tested; P99 certification reached 2119 ms in one of three contended local runs (MEDIUM, to be measured on a production-like database); First Audio M1 P95 +28 ms (LOW); WAL +34 % while calls run (LOW). `0203` is not hosted. The item stays `OPEN — UNASSIGNED`.
 
+Progress note (2026-11-24, RB-2 / S4, not a disposition): S3 merged through PR #408 as `9fe16a55` and M-2 through PR #409
+as `aed79e7c`. Under the Product Owner's "REPLAY RB-2 / S4" directive (one Draft PR, §18 of the
+[S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md)), the phone fetches and strictly binds S3's answer,
+and the Replay COSMOS timeline draws only certified knowledge; anything uncertified is the neutral stage. Lane B
+(in-speech attention) is a typed boundary only, empty; `QAN-BL-INTEL-06` (Draft PR #410) is not touched. Residue admitted
+here: the source-window digest is pinned across answers, not independently checked (MEDIUM; a history-wire field is a PO
+decision); one uncertified moment makes a Replay neutral and one `AFTER_END` moment holds every later one — so an
+iOS-recorded call shows no analysis during its Replay (MEDIUM; correct by contract v1.1 §7, a per-moment policy is a PO
+decision); one availability request per opening, no retry (LOW). The HONOR device proof and iOS are not tested. No
+migration; nothing hosted. The item stays `OPEN — UNASSIGNED`.
+
+Progress note (2026-11-24, S4-CORRECTION-01, not a disposition): by the Product Owner's decision on PR #413 and the
+execution direction "S4-CORRECTION-01" (§19 of the [S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md)),
+S4's display policy is superseded on the same Draft PR: eligible historical analysis is shown whether or not its instant is
+certified. A certified instant places it exactly (CERTIFIED); AFTER_END, UNESTABLISHED / BROKEN / ORDINAL_ONLY, a moment not
+named, an answer pending, refused or unavailable, no source (iOS) and no map are placed by SOURCE ORDER — after the moment's
+own speech, after the knowledge before it, labelled non-exact, never a recorded instant; NOT_FOUND alone stays neutral; the
+last speech's knowledge is the closing display at the presentation's end (the end-of-Replay policy, now decided). The
+§18 residue "one uncertified moment makes a Replay neutral and one AFTER_END moment holds every later one" is closed by
+this correction; the source-window digest pin (MEDIUM) and the one-request-per-opening (LOW) stand; a late certified answer
+may briefly re-place a disclosure already drawn (LOW, new). The Product Owner's sequence: S4-CORRECTION-01 → INTEL-LIVE-01
+(`QAN-BL-INTEL-06`, Draft PR #410, unmerged) → HONOR Live + Replay proof → CP2-A → CP2-B. S3 #408 and M-2 #409 are merged;
+the HONOR device proof and iOS are not tested; no migration; nothing hosted. The item stays `OPEN — UNASSIGNED`.
+
 ### `QAN-BL-NAV-04` — No Full Personal Detail Surface Beyond the PEEK (PERSONAL-DETAIL-01)
 
 - **Title / Finding:** the Personal Detail Sheet is PEEK-only (G-7, V1). There is no full Personal detail surface for a

@@ -10,7 +10,10 @@ import type { ReplayMomentClockSource } from '../replay-player';
 import type { ForegroundSignal } from '../runtime-entry';
 import type { VoiceNotePlayerPort } from '../voice-note/voice-note-playback';
 import type { PlaybackOwner } from './playback-owner';
+import type { ReplayStageClock } from '../replay-cosmos/presentation-clock';
 import { createReplayAudioClock, type ReplayAudioAnnouncement, type ReplayAudioClock } from './replay-audio-clock';
+import type { ReplayAvailabilityBinding } from './replay-availability';
+import { createReplayAvailabilitySource, type ReplayAvailabilitySource } from './replay-availability-source';
 import type { TransientMediaApiClient, TransientRequestResult } from './transient-media-api';
 import { createTransientPlayback, type TransientPlaybackEvent } from './transient-playback';
 
@@ -28,6 +31,11 @@ export interface ReplayAudioOptions {
 export interface ReplayAudio {
   readonly clockSource: ReplayMomentClockSource;
   clockOf(versionId: string): ReplayAudioClock | null;
+  /**
+   * RB-2 / S4: what the Replay's stage reads for this version — its audio clock, and the historical availability bound to
+   * the map that clock holds (one request per opening; see `replay-availability-source.ts`). Null: no clock for it.
+   */
+  stageClockOf(versionId: string): ReplayStageClock | null;
   /** Changes when a clock is made or let go, or when a clock's state (not its position) changes. */
   subscribe(listener: () => void): () => void;
   revision(): number;
@@ -42,7 +50,11 @@ const BUSY: Promise<TransientRequestResult> = Promise.resolve({ kind: 'BUSY' });
 
 export function createReplayAudio(options: ReplayAudioOptions): ReplayAudio {
   const { api } = options;
-  const clocks = new Map<string, { readonly clock: ReplayAudioClock; readonly unsubscribe: () => void }>();
+  const clocks = new Map<string, {
+    readonly clock: ReplayAudioClock; readonly stage: ReplayStageClock; readonly source: ReplayAvailabilitySource; readonly unsubscribe: () => void;
+  }>();
+  /** RB-2 / S4: the last availability binding accepted per version in this generation (pins source windows and watermark). */
+  const pins = new Map<string, ReplayAvailabilityBinding>();
   const listeners = new Set<() => void>();
   const speakers = new Set<(announcement: ReplayAudioAnnouncement) => void>();
   let revision = 0;
@@ -67,6 +79,7 @@ export function createReplayAudio(options: ReplayAudioOptions): ReplayAudio {
         const held = clocks.get(versionId);
         if (held === undefined || held.clock !== clock) return;
         held.unsubscribe();
+        held.source.retire();
         clocks.delete(versionId);
         changed();
       },
@@ -85,13 +98,39 @@ export function createReplayAudio(options: ReplayAudioOptions): ReplayAudio {
         ...(options.onEvent === undefined ? {} : { onEvent: options.onEvent }),
       }),
     });
+    const source = createReplayAvailabilitySource({
+      replayId, versionId, revision: version.revision, ordinals: moments.map((moment) => moment.ordinal),
+      fetch: () => (api === null ? Promise.resolve({ kind: 'UNAVAILABLE' as const }) : api.availability(replayId, versionId)),
+      pinned: () => pins.get(versionId) ?? null,
+      pin: (binding) => {
+        pins.set(versionId, binding);
+      },
+    });
+    const stage: ReplayStageClock = {
+      getState: () => clock.getState(),
+      subscribe(listener) {
+        const fromClock = clock.subscribe(listener);
+        const fromSource = source.subscribe(listener);
+        return () => {
+          fromClock();
+          fromSource();
+        };
+      },
+      // Both only ever grow: the sum changes whenever either does.
+      revision: () => clock.revision() + source.revision(),
+      detail: () => clock.detail(),
+      place: () => clock.place(),
+      availability: () => source.getState(),
+    };
     let seen = clock.getState();
     const unsubscribe = clock.subscribe(() => {
+      source.observe(clock.detail().plan);
       if (clock.getState() === seen) return;
       seen = clock.getState();
       changed();
     });
-    clocks.set(versionId, { clock, unsubscribe });
+    source.observe(clock.detail().plan);
+    clocks.set(versionId, { clock, stage, source, unsubscribe });
     changed();
     return clock;
   };
@@ -99,6 +138,7 @@ export function createReplayAudio(options: ReplayAudioOptions): ReplayAudio {
   return {
     clockSource,
     clockOf: (versionId) => clocks.get(versionId)?.clock ?? null,
+    stageClockOf: (versionId) => clocks.get(versionId)?.stage ?? null,
     subscribe(listener) {
       listeners.add(listener);
       return () => {
@@ -115,8 +155,12 @@ export function createReplayAudio(options: ReplayAudioOptions): ReplayAudio {
     retire() {
       if (retired) return;
       retired = true;
-      for (const { clock } of Array.from(clocks.values())) clock.retire();
+      for (const { clock, source } of Array.from(clocks.values())) {
+        source.retire();
+        clock.retire();
+      }
       clocks.clear();
+      pins.clear();
       listeners.clear();
       speakers.clear();
     },

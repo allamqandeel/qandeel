@@ -1,9 +1,9 @@
 # QANDEEL S8B-07 — Original Audio Replay, Media Rendering & Distribution: Implementation Record v1
 
-**Slice (2026-11-24):** REPLAY-COSMOS-01 RB-2 / S3 — **DELIVERED / READY FOR PO REVIEW — NOT MERGED** (§16; migration
-`0202`, not hosted); RB-2 / M-2 — **IMPLEMENTED / READY FOR PO REVIEW — NOT MERGED** (§17; migration `0203`, not hosted;
-stacked on S3). RB-2 / S1 merged through PR #405 as `f45400a8` (§15;
-`0201`, not hosted). S4 / S5 stay open. S8B-07 is not closed.
+**Slice (2026-11-24):** REPLAY-COSMOS-01 RB-2 / S4 — **DELIVERED / READY FOR PO REVIEW — NOT MERGED** (§18; one Draft
+PR from `main` at `aed79e7c`; no migration). RB-2 / S3 merged through PR #408 as `9fe16a55` (§16; `0202`, not hosted);
+RB-2 / M-2 merged through PR #409 as `aed79e7c` (§17; `0203`, not hosted); RB-2 / S1 merged through PR #405 as `f45400a8`
+(§15; `0201`, not hosted). S5 stays open. S8B-07 is not closed.
 
 **Checkpoint:** S8B-07 CP1-B — **MERGED — PR #385 — `a4b30517` — 2026-11-08** (§13). **S8B-07 is not closed.** S8B-07
 CP2-A WP0 v0.3.1 is **FINAL APPROVED — NOT APPROVED FOR EXECUTION** (2026-11-09, §14): CP2-A and CP2-B are not started,
@@ -1445,7 +1445,8 @@ one-Session observer transaction, median / p95, ms: 1.30 / 1.66
 
 ## 16. REPLAY-COSMOS-01 RB-2 / S3 — Historical Availability Read (DELIVERED, 2026-11-24)
 
-**Slice:** `RB-2 / S3 — DELIVERED / READY FOR PO REVIEW — NOT MERGED`. Draft PR on
+**Slice:** `RB-2 / S3 — DELIVERED / READY FOR PO REVIEW — NOT MERGED` *(merged through PR #408 as `9fe16a55`,
+2026-11-24; recorded by S4, §18)*. Draft PR on
 `replay/rb2-s3-historical-availability`, from `main` at `f45400a8`. **Merge only on the Product Owner's explicit «ادمج».**
 S3 is a slice, not a phase or a task closure. S8B-07 stays open. Migration `0202` is **not hosted**. Every voice gate stays
 `DISABLED`.
@@ -1522,7 +1523,8 @@ M-2 (`0203`, the v2 live-call clock marks, the Android capture clock) replaces t
 
 ## 17. REPLAY-COSMOS-01 RB-2 / M-2 — Direct Historical Binding (IMPLEMENTED, 2026-11-24)
 
-**Slice:** `RB-2 / M-2 — IMPLEMENTED / READY FOR PO REVIEW — NOT MERGED`. Draft PR on `replay/rb2-m2-clock-marks`,
+**Slice:** `RB-2 / M-2 — IMPLEMENTED / READY FOR PO REVIEW — NOT MERGED` *(merged through PR #409 as `aed79e7c`,
+2026-11-24; recorded by S4, §18)*. Draft PR on `replay/rb2-m2-clock-marks`,
 STACKED on the S3 branch (`replay/rb2-s3-historical-availability`, §16): it merges after S3 or is retargeted to `main`
 once S3 is merged. **Merge only on the Product Owner's explicit «ادمج».** A slice, not a phase or a task closure; S8B-07
 stays open. Migration `0203` is **not hosted**. Every voice gate stays `DISABLED`; nothing is deployed or activated.
@@ -1620,3 +1622,287 @@ Admitted to the backlog (progress note on the open RB-2 item); none is a disposi
 - **MEDIUM — the moment completed by an assistant final waits for its sealing commit** (S3 §16).
 - iOS: no certified placement (fail-closed, `AFTER_END`). 4G: **NOT TESTED**. Android devices other than the HONOR ALI-NX1:
   **NOT TESTED**. The Replay timeline does not consume the answer yet (S4); export and publishing (S5) not done.
+
+## 18. REPLAY-COSMOS-01 RB-2 / S4 — Historical Availability Integration & Lane B Readiness (DELIVERED, 2026-11-24)
+
+**Slice:** `RB-2 / S4 — DELIVERED / READY FOR PO REVIEW — NOT MERGED`. One Draft PR on
+`replay/rb2-s4-historical-availability-integration`, from `main` at `aed79e7c`. *(2026-11-24, later the same day: the
+display policy of §18.3 is superseded by §19, S4-CORRECTION-01, on the same Draft PR; this section is kept as written.)* **Merge only on the Product Owner's
+explicit «ادمج».** A slice, not a phase or a task closure; S8B-07 stays open. No migration: `0201` – `0203` are unchanged
+and **not hosted**. Every voice gate stays `DISABLED`; nothing is deployed or activated, and no user activation is claimed.
+
+### 18.1 Authority and baseline
+
+- **Authority:** the Product Owner's directive of 2026-11-24, "REPLAY RB-2 / S4: Historical Analysis Availability
+  Integration & Future Incremental Understanding Compatibility" (S4-A – S4-F, one Draft PR).
+- **Merged baseline:** RB-1 #404 `5ce3a70c`; S1 #405 `f45400a8`; S3 #408 `9fe16a55`; M-2 #409 `aed79e7c` (§15 – §17).
+- **Design guardrail, not merged:** Draft PR #410's compatibility annex
+  (`QANDEEL_S8B07_S4_INCREMENTAL_UNDERSTANDING_REPLAY_COMPATIBILITY_v1.md`, gap `QAN-BL-INTEL-06`). S4 reads it and does
+  not change it.
+
+### 18.2 What existed, and what S4 adds
+
+| Existed (verified at `aed79e7c`) | Added by S4 |
+|---|---|
+| S3's `GET …/availability` on the Replay Media Service, and the phone's strict decoder; **no client call** | The GET in `transient-media-api.ts` through the AC-01 seam (header bearer, no token in the URL) |
+| `presentationMapDigest` on the server only | The same digest on the phone, by the server's serialization; a golden value pinned in both suites |
+| `availableAtMs: number \| null`, always `null` in production; one named guards-only policy | Typed availability (`RECORDED{atMs}` · `AFTER_END` · `UNRECORDED`) and a named `mode`: `CERTIFIED` or the pre-RB-2 policy |
+| No binding of an answer to the held version and map | `bindReplayAvailability` and a per-opening source (`replay-availability-source.ts`) |
+| The stage drew the guards alone over the audio clock | `stage-timeline.ts`: CERTIFIED, NEUTRAL (U-N) or ORDINAL_ONLY |
+| No in-speech lane | `event-track.ts`: Lane B boundary, empty in every Replay |
+
+### 18.3 The temporal rules, as implemented
+
+- `disclosedAt(k) = max(availability(k), windowStart(k), completeAt(k), disclosedAt(k − 1))`: the guard line is unchanged.
+  `Moment.completeAt` is unchanged. IN_RECORDING `{runIndex, fileMs}` becomes `runStartMs(runIndex) + fileMs`: the server
+  already placed it AT OR AFTER the certified position (the end of a shortened HELD, never earlier); the phone re-maps
+  nothing.
+- **CERTIFIED** (a version with an audio clock): drawn only when its answer is bound to the very map the clock holds — same
+  revision, same map digest, source windows named and pinned across answers, ledger watermark never lower, exactly the
+  version's moments. One UNRECORDED moment (`UNESTABLISHED`, `BROKEN`, `ORDINAL_ONLY`, or not named) refuses the timeline.
+- **NEUTRAL (U-N):** no map yet, an answer pending, refused, not found (revoked, deleted, retired, replaced) or unavailable,
+  or a refused CERTIFIED timeline. The same clock and windows; no step, no opening knowledge, no tail. Never the last
+  answer or the snapshot. The audio plays exactly as before; a fetch failure never reaches the clock.
+- **ORDINAL_ONLY:** a version with no audio clock (V1, a V2 version of text alone) keeps the pre-RB-2 guards over its
+  reading pace, labelled `UNESTABLISHED_PRESENTATION_GUARDS_ONLY` (D-RB2-12). It is never availability evidence: CERTIFIED
+  refuses it.
+- **AFTER_END** is `+Infinity`: listed after any scope, never drawn inside the Replay, never pulled onto its last frame.
+  By monotonicity it also holds every later moment.
+- **RANGE** opens only on knowledge certified at or before its start. Frames are causal at 30 fps. Play, pause, seek and
+  restart only move t; the knowledge at t is a pure function of t. One request per opening; no per-frame access.
+
+### 18.4 Lane B (IN_SPEECH_ATTENTION): readiness only
+
+`event-track.ts` is the typed boundary a future producer would hand the Replay. A track is bound to the Replay, version,
+revision and presentation map. Its events SET or WITHDRAW one subject, from USER or QANDEEL, several per window. Each is
+disclosed at `max(availability, anchor, the previous disclosure on its subject)`, reduced purely on Lane A's clock with
+Lane A's causal frames. UNRECORDED refuses the whole lane; AFTER_END stays outside; it never reads or changes K(TC).
+
+Every Replay carries the empty lane, a no-op that returns the same state object at every t. Nothing produces, stores,
+fetches or draws Lane B events: no DeepSeek or Speechmatics change, no INTERIM analysis, no migration or worker, no
+attention UI, no Live Focus change. Its tests use labelled synthetic events. They are compatibility evidence, **not** live
+incremental understanding. `QAN-BL-INTEL-06` stays open. The frozen timeline did not need to change for it, so no
+amendment is requested; wiring it into the frame is the future producer's decision.
+
+### 18.5 Declared re-anchors
+
+- **S7-01** (`tests/s7-01-replay-secure-integration-contract.test.mjs`): the media client gains exactly one more Replay
+  route, the availability GET. Previous pin: the playback route and exactly one `/replay/`. Now both routes are pinned
+  verbatim, with exactly two `/replay/`, no other Replay word, and no token-like word in either. The negatives are kept, and
+  three plants are added: a third route, a token in the URL, and the read made a write.
+- **S7-03** (`tests/s7-03-replay-composite-visual-proof-contract.test.mjs`): the uncertified label is now the named
+  policy written out. Previous pin: `options.unrecorded`. Its plant is kept, and new pins cover the CERTIFIED refusal,
+  AFTER_END `+Infinity`, the neutral stage, audio means certified or neutral, and the world's use of `stage-timeline`.
+  Six plants are added.
+- **Mobile tests** `rb1-audio-clock`, `replay-cosmos` and the `replay-audio-world` fixture: input shape only (the typed
+  availability, `mode`, and an availability seam in the fake API). No assertion changed.
+
+### 18.6 Verification (local)
+
+The new tests:
+
+| Suite | Result | Covers |
+|---|---|---|
+| `rb2-s4-availability-binding` | 14 / 14 | digest, binding, client, source, wiring |
+| `rb2-s4-historical-availability` | 19 / 19 | the rules of §18.3, on synthetic answers |
+| `rb2-s4-lane-b-event-track` | 10 / 10 | Lane B |
+
+Each new rule was also shown failing when reverted in place: the AFTER_END mapping, and a stage that masks an unbound
+answer with the guards.
+
+The existing suites:
+
+| Suite | Result |
+|---|---|
+| Mobile jest (full, unloaded run) | 318 suites, 3983 / 3983 |
+| Mobile `tsc` | clean |
+| Mobile ESLint | 0 errors |
+| API `replay-media` jest | 8 suites, 74 / 74, including the golden digest |
+| S7-01 | 26 / 26 |
+| S7-03 | 58 / 58 |
+| S7-02 / S7-04 / S7-05 | all pass |
+| S8B-07 CP1-B (service, worker, mobile playback, First Audio isolation) | all pass |
+| RB-2 M-2 v2 protocol | pass |
+| S8B-05 | pass |
+| Return and temporal navigation | pass |
+| INTEL-04 | pass |
+| Task-closure governance | 25 / 25 |
+| The 33 other contracts that read the locators, this record or the backlog | all pass |
+
+Not run:
+- `forward-safety` locally: it is slow and environment-bound on this Windows machine. API CI judges it.
+- The M-2 1000-call experiments: not rerun, as directed. S4 changes nothing on the call path.
+- The HONOR ALI-NX1 device proof: **NOT TESTED** until the PO's phone session.
+- iOS: **NOT TESTED**.
+
+### 18.7 Deliberately not done
+
+- No S5 export or MP4.
+- No CP2-A or CP2-B.
+- No COSMOS drawing, camera or gesture change.
+- No change to Live Voice or First Audio.
+- No change to `0201` – `0203`, and no new migration.
+- No end-of-Replay policy.
+- No automatic retry of the availability read.
+- No drawing of Lane B.
+- Nothing is hosted or deployed.
+
+### 18.8 Residue and Product Owner decisions
+
+These are admitted as a progress note on `QAN-BL-VIS-02`. None of them is a disposition.
+
+- **MEDIUM — the source-window digest is pinned, not independently checked.** The history wire carries none, so the
+  phone pins it across answers. Its equality with the version is the server's guarantee: 0202 binds every row to it.
+  Adding an additive history-wire field is a PO decision.
+- **MEDIUM — one uncertified moment makes the whole Replay neutral, and one AFTER_END moment holds every later one.** This
+  follows from K(k) ⊇ K(k − 1) and CERTIFIED (contract v1.1 §7). In practice:
+  - an iOS-recorded call (M-2 iOS fail-closed: AFTER_END) shows no analysis during its Replay;
+  - so does a version whose first certified moment is AFTER_END, such as analysis that settled after the call or text
+    outside a recorded call.
+
+  This is correct by the contract. Whether a per-moment policy is wanted is a PO decision.
+- **LOW — one availability request per opening.** If it is unavailable, the opening stays neutral until the version is
+  opened again. A bounded retry is a PO decision.
+- **Open, unchanged:**
+  - the end-of-Replay policy: the last moment completes at the audio's end and is listed after it;
+  - assistant-final moments wait for their sealing commit (§16);
+  - P99 under contention, First Audio M1 and WAL (§17);
+  - iOS certification, 4G, and other Android devices.
+
+## 19. REPLAY-COSMOS-01 S4-CORRECTION-01 — Replay Analysis Display Correction (DELIVERED, 2026-11-24)
+
+**Slice:** `RB-2 / S4, corrected — DELIVERED / READY FOR PO REVIEW — NOT MERGED`, on the same Draft PR #413 and branch as §18.
+**Merge only on the Product Owner's explicit «ادمج».** A dated superseding addendum: §18 stays as written; where this
+section and §18 differ, this section binds. No migration (`0201` – `0203` unchanged, **not hosted**); every voice gate
+stays `DISABLED`; nothing is deployed or activated.
+
+### 19.1 Authority, and what it supersedes
+
+- **Authority:** the Product Owner's decision on PR #413 of 2026-11-24 ("QANDEEL Replay recovery roadmap", the product
+  north star for Replay) and the execution direction "S4-CORRECTION-01" of the same day.
+- **Superseded:** §18.3's rule that an audio clock draws only CERTIFIED knowledge and that anything less is the neutral
+  stage; §18.3's AFTER_END `+Infinity` ("never inside the Replay; by monotonicity it also holds every later moment"); the
+  §18.8 MEDIUM residue "one uncertified moment makes the whole Replay neutral, and one AFTER_END moment holds every later
+  one". The Product Owner's words: a Replay with authorised, valid historical analysis but an analysis-free stage solely
+  because timing is uncertain **fails the product contract**.
+- **Kept, in full:** authorisation, the strict decoding and binding of the availability answer (§18.2, S4-B), erasure,
+  versioning, privacy and deletion; the S1 / M-2 / S3 certified evidence as the placement of choice where it exists; the
+  speech guards (NO ANALYSIS BEFORE SPEECH); Lane B's empty typed boundary; RB-1's audio clock and presentation map; the
+  camera plan; the COSMOS scene production. Nothing is invented: every drawn fact is a governed historical snapshot
+  (S7-03), placed later or exactly, never earlier than its spoken source.
+
+### 19.2 The corrected policy
+
+Two questions, kept apart. **Eligibility** — is the analysis this authorised, viewable version's own? — is decided by the
+history read (`history.ts`, the composite controller, the version's viewing state) and by one answer of the availability
+source, NOT_FOUND (the version is not this person's current one: revoked, deleted, retired, replaced). It fails closed.
+**Placement** — when is each eligible disclosure drawn? — is where certification helps and never gates.
+
+| Case | Before (§18) | After (S4-CORRECTION-01) |
+|---|---|---|
+| A · every moment RECORDED, bound to the held map | CERTIFIED | **CERTIFIED**, unchanged: `max(availability, windowStart, completeAt, previous)` |
+| B · valid history, no certified instant (UNESTABLISHED / BROKEN / ORDINAL_ONLY) | neutral: no analysis | **SOURCE_ORDER**: each moment after its own speech (an audio window's END; a text moment's display), after the knowledge before it; labelled `UNESTABLISHED_PRESENTATION_GUARDS_ONLY` |
+| C · mixed: some certified, some not | neutral: no analysis | **SOURCE_ORDER**: every certified instant kept exactly; only the uncertified moment is placed by its speech |
+| D · AFTER_END on a moment | that moment and every later one never drawn | the moment is placed by source order (no instant is invented for it); nothing before it is erased, nothing after it is suppressed; a disclosure at the presentation's end is the **closing display** |
+| E · iOS (every moment AFTER_END: no capture certification) | a Replay with no analysis | the same **SOURCE_ORDER** map as B; nothing passed off as certified |
+| F · NOT_FOUND (revoked, deleted, retired, replaced); a refused moment in the history read; a non-viewable version | neutral / no stage | **unchanged**: neutral / no stage. A refused or stale availability answer is never used for placement (no certified instant survives it), and never withholds eligible analysis |
+| — · answer pending, refused, unavailable; no source (a bare clock); no map yet | neutral | **SOURCE_ORDER** (no map: the paced windows, t held at the moment shown) |
+| — · text-only version (V1, or V2 of text alone) | ORDINAL_ONLY | **unchanged** |
+
+The **closing display** (the end-of-Replay policy, open since RB-1): a disclosure that falls exactly at the presentation's
+end — the last speech's knowledge completes there by its window or its certified instant — is the Replay's closing
+knowledge (`timeline.closing`). It is never drawn on a frame inside the scope and never pulled into the last frame; it is
+visible at t = durationMs only. In the app the stage reaches that instant when the audio clock reports the END of its last
+run while the last moment is shown (`replayStageTime` → `END`) and the audio allowance (`REPLAY_STAGE_AUDIO_LAG_MS`,
+300 ms, FC-0) has passed — a wall-clock delay of the end report, keyed on the clock's revision so a seek or restart starts
+it over; it never advances the stage. A scope that ends before the presentation's end lists such a disclosure in
+`afterEnd`, undrawn, as before. A video that shows the closing knowledge needs a closing frame after its last audio frame
+(CP2-A's; not done here).
+
+Nothing here claims an earlier provisional live attention change was recorded. In-speech understanding (several
+developments inside a 90 – 120 s USER turn, corrections, QANDEEL-side updates) is Lane B's, produced by nothing today; it is
+the next task (INTEL-LIVE-01 / `QAN-BL-INTEL-06`), and Lane B's boundary, tests and reduction are unchanged by this
+correction.
+
+### 19.3 What changed (the smallest diff), and what did not
+
+- `timeline.ts`: CERTIFIED refuses any moment that is not RECORDED (AFTER_END included); under the named source-order
+  policy an AFTER_END moment is placed by the guards exactly as UNRECORDED is (`recorded = null`; the step labelled
+  non-exact, the moment reported in `unrecorded`); the end branch splits the **closing** knowledge (a disclosure at the
+  presentation's end) from `afterEnd`; `knowledgeAt` / `knowledgeOnFrame` return the closing knowledge at or after the
+  end and never before. The guard line `max(available, windowStart, completeAt, previous)` is untouched.
+- `stage-timeline.ts`: the four kinds `ORDINAL_ONLY` · `CERTIFIED` · `SOURCE_ORDER` · `NEUTRAL`; NOT_FOUND alone is
+  neutral; a refused CERTIFIED mode falls back to source order over the SAME typed inputs (certified instants kept).
+- `presentation-clock.ts`: `replayStageTime` reports `END` on the clock's DONE for the last presented moment; comments.
+- `ReplayCosmosWorld.tsx`: the closing settle (`useSettledAfter`, keyed on the clock's revision); the stage draws
+  `t = durationMs` only after the allowance. How t moves otherwise is unchanged.
+- Tests: `rb2-s4-historical-availability` re-anchored and extended (Cases B – F, mixed, the closing display, the in-app
+  END, seek / restart purity, the drawn-map acceptance); `rb1-audio-clock` test 6 and 8 and the Lane B 120-second case
+  re-anchored to the closing knowledge (each quotes its previous pin); the S7-03 contract re-pinned with four new plants.
+- **Unchanged:** `replay-availability.ts`, `replay-availability-source.ts`, `replay-audio.ts`, `history.ts`,
+  `event-track.ts`, the camera plan, the frame, the player, the audio clock, every migration, the API.
+
+### 19.4 Before / After scenarios
+
+| Scenario | Before | After |
+|---|---|---|
+| Android call, M-2 certified every moment | the map evolves at the certified instants | **identical** |
+| Android call, one moment's commit certified after the recording (AFTER_END) — e.g. the final assistant sealing commit | that moment and every later one never drawn; the Replay ends on earlier knowledge | earlier moments at their certified instants; the final moment as the closing display once the audio has ended and the allowance passed |
+| Android call, one moment UNESTABLISHED (ledger gap) | the whole Replay blank | every other moment at its certified instant; that moment after its own speech, labelled non-exact |
+| iOS call (no capture certification: every moment AFTER_END) | the whole Replay blank | the map evolves in source order: each disclosure after its speech window ends, the last as the closing display |
+| availability request fails (offline, BUSY) or arrives malformed / unbound | the whole Replay blank for that opening | the map evolves in source order; a later certified answer in another opening places it exactly |
+| version revoked, deleted, retired, replaced (NOT_FOUND) | neutral | **neutral**, unchanged |
+| **USER long turn (90 – 120 s continuous speech), then QANDEEL's reply** | with any uncertified moment: nothing at all | Lane A: K(USER turn) at the turn's end (certified, or by source order), K(reply) at the reply's end or as the closing display; nothing before the turn ends. **Still absent, by design:** the several understanding changes *during* the 120 s — Lane B, INTEL-LIVE-01's to produce; the empty lane and its seam are untouched |
+| RANGE selection inside any of the above | opening knowledge only if certified | opening knowledge = what is disclosed at or before the start under the same policy; an end before the presentation's end lists later disclosures after it, undrawn |
+| seek back / forward, restart | pure in t | pure in t (proved on the mixed timeline too); the closing settle restarts on a new clock revision |
+
+### 19.5 Verification (local)
+
+| Suite | Result |
+|---|---|
+| `rb2-s4-historical-availability` (re-anchored + extended) | 29 / 29 |
+| `rb1-audio-clock` (tests 6 and 8 re-anchored) | 27 / 27 |
+| `rb2-s4-lane-b-event-track` (Lane A expectation of the 120 s case re-anchored) | 10 / 10 |
+| `replay-cosmos`, `rb2-s4-availability-binding`, the original-audio and replay-player suites | 275 / 275 across 16 suites (with the above) |
+| Mobile jest (full, unloaded run) | 318 suites, 3993 / 3993 |
+| Mobile `tsc` | clean |
+| Mobile ESLint (replay-cosmos, original-audio) | 0 errors (2 pre-existing array-type warnings, untouched) |
+| S7-03 contract (re-pinned; 4 new plants, 2 retired with the superseded rule) | 62 / 62 |
+| S7-01 contract | 26 / 26 |
+
+Negative proof, in place and reverted in place: with CERTIFIED's refusal restored to `=== 'UNRECORDED'` and AFTER_END
+restored to `Infinity`, the Case D, Case E and closing-display tests fail; the S7-03 plants catch a timing gap made
+neutral again, a NOT_FOUND version drawn, an AFTER_END moment given an instant, the closing knowledge pulled into the last
+frame or shown before the end, and the closing drawn without the allowance.
+
+Not run: `forward-safety` (API CI judges it); the M-2 call experiments (nothing on the call path changed); the HONOR
+ALI-NX1 device proof and iOS — **NOT TESTED** (the HONOR Live + Replay proof is step 3 of the sequence).
+
+### 19.6 Deliberately not done
+
+No new PR chain; no migration; no hosted deploy; no live COSMOS change; no Live Voice or First Audio change; no video or
+export (CP2-A / CP2-B); no Lane B producer, no INTERIM analysis, no attention UI (INTEL-LIVE-01); no retry of the
+availability read; no broad CI repair (CI-SPEED-01 #411 / #412 untouched); no change to the history read's eligibility
+rules; no history-wire field for the source-window digest.
+
+### 19.7 The sequence fixed by the Product Owner
+
+1. **S4-CORRECTION-01** — this change, on Draft PR #413.
+2. **INTEL-LIVE-01 / `QAN-BL-INTEL-06`** — real in-speech understanding (provisional vs durable truth, ASR interim
+   correction and negation, provenance, recorded eligible event history, the Lane B seam), its own governed task.
+3. **HONOR** — one bounded Live + Replay real-device proof (a 90 – 120 s continuous Egyptian-Arabic story with ≥ 3
+   developments and a correction, QANDEEL's reply; what is proved live, recorded, synthesised in fixtures, NOT TESTED).
+4. **CP2-A** — video and synchronisation (the closing frame included).
+5. **CP2-B** — export and sharing.
+
+### 19.8 Residue (a progress note on `QAN-BL-VIS-02`; no disposition)
+
+- **MEDIUM, unchanged** — the source-window digest is pinned across answers, not independently checked (§18.8).
+- **LOW** — one availability request per opening (§18.8). Its weight is lower now: a failed request no longer blanks the
+  Replay; it only loses exact placement for that opening.
+- **LOW, new** — an answer that arrives while the Replay is already playing moves the stage from source order to
+  certified placement; a certified instant later than the speech guard can briefly retract a disclosure drawn seconds
+  earlier (honest, deterministic; typically before play reaches it, since the request is made when the map is held).
+- **Closed by this correction:** the end-of-Replay policy (the closing display, §19.2).
+- **Open, unchanged:** assistant-final moments wait for their sealing commit (§16); P99 under contention, First Audio M1
+  and WAL (§17); iOS certification, 4G, other Android devices; the HONOR device proof.

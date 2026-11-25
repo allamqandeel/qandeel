@@ -19,6 +19,16 @@
  *     text only           (no audio clock: every V1 version, a V2 version of text alone) exactly the S7-03 / S7-04
  *                        behaviour: t runs through the moment's declared reading pace while the player plays (pause
  *                        holds t; a step or a Spine commit puts t at the start of the target's window). No audio claim.
+ *
+ * RB-2 / S4 (2026-11-24): WHAT is drawn on the audio clock is decided by `replayStageTimeline`. S4-CORRECTION-01 (the
+ * Product Owner's decision of 2026-11-24 on PR #413): the CERTIFIED timeline when every moment of the version has a
+ * certified instant bound to the map the clock holds; otherwise SOURCE_ORDER — the same clock and windows, each certified
+ * instant kept, every other moment placed after its own speech in source order, labelled non-exact; the NEUTRAL stage
+ * (U-N, no analysis) only when the source withholds the version itself (NOT_FOUND). A text-only version keeps its ordinal
+ * pacing (D-RB2-12). How t moves is unchanged: the availability decides only when knowledge may appear, never where the
+ * presentation is. The CLOSING display: once the audio clock reports the end of its last run while the last moment is
+ * shown, the stage settles at the presentation's end after the audio allowance, and the closing knowledge (the last
+ * speech's) appears there — never on a frame inside the Replay, never before the end is reported heard.
  */
 import { useImage } from '@shopify/react-native-skia';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
@@ -31,10 +41,11 @@ import type { ReplayCompositeController } from '../replay-composite/composite-co
 import { buildReplayCameraPlan } from './camera-plan';
 import type { LabelTypography, ReplayCosmosScene, ReplayFrameImages, ReplayFrameStage } from './frame';
 import { replayMomentScenes } from './history';
-import { replayPresentationClock, replayStageTime, type ReplayPresentationClock, type ReplayStageClock, type ReplayStageTime } from './presentation-clock';
+import { REPLAY_STAGE_AUDIO_LAG_MS, replayPresentationClock, replayStageTime, type ReplayPresentationClock, type ReplayStageClock, type ReplayStageTime } from './presentation-clock';
 import { ReplayCosmosStage } from './ReplayCosmosStage';
 import { emptyReplayStage, type ReplayMomentStage } from './stages';
-import { buildReplayCosmosTimeline, type ReplayCosmosMomentInput, type ReplayScope } from './timeline';
+import { replayStageTimeline } from './stage-timeline';
+import { UNRECORDED_AVAILABILITY, type ReplayCosmosMomentInput, type ReplayScope } from './timeline';
 
 /** The in-app frame rate the timeline's causal frames are counted at (the video's own; the app redraws per display frame). */
 export const REPLAY_COSMOS_FPS = 30;
@@ -97,7 +108,7 @@ export function ReplayCosmosWorld(props: ReplayCosmosWorldProps) {
   const { controller, version, moments, sessionId, ordinal, playing, windowMs, scope, rtl, typography, width, height } = props;
   const stageClock = props.stageClock ?? null;
   const revision = useSyncExternalStore(controller.subscribe, controller.revision);
-  useSyncExternalStore(stageClock?.subscribe ?? noSubscription, stageClock?.revision ?? noRevision);
+  const clockRevision = useSyncExternalStore(stageClock?.subscribe ?? noSubscription, stageClock?.revision ?? noRevision);
   // The map the audio clock holds (null before it arrives, or when refused): the presentation clock is laid out from it.
   const audioPlan = stageClock?.detail().plan ?? null;
   const presentation = useMemo(() => (audioPlan === null ? null : replayPresentationClock(audioPlan, moments, windowMs)), [audioPlan, moments, windowMs]);
@@ -131,15 +142,16 @@ export function ReplayCosmosWorld(props: ReplayCosmosWorldProps) {
     const ends = moments.reduce<number[]>((acc, moment) => [...acc, (acc.at(-1) ?? 0) + Math.max(1, windowMs(moment))], []);
     return moments.map((moment, i) => {
       const windowStartMs = i === 0 ? 0 : ends[i - 1];
-      return { ordinal: moment.ordinal, tc: moment.tc, windowStartMs, windowEndMs: ends[i], completeAtMs: moment.originalMedium === 'ORIGINAL_AUDIO' ? ends[i] : windowStartMs, availableAtMs: null };
+      return { ordinal: moment.ordinal, tc: moment.tc, windowStartMs, windowEndMs: ends[i], completeAtMs: moment.originalMedium === 'ORIGINAL_AUDIO' ? ends[i] : windowStartMs, availability: UNRECORDED_AVAILABILITY };
     });
   }, [presentation, moments, windowMs]);
+  // RB-2 / S4, S4-CORRECTION-01: an audio clock draws CERTIFIED or SOURCE_ORDER knowledge (neutral only on NOT_FOUND); no
+  // audio clock: ordinal pacing.
+  const availability = stageClock === null ? null : stageClock.availability?.() ?? null;
   const timeline = useMemo(() => {
-    const built = buildReplayCosmosTimeline(windows, scope, {
-      fps: REPLAY_COSMOS_FPS, unrecorded: 'UNESTABLISHED_PRESENTATION_GUARDS_ONLY', ...(presentation === null ? {} : { durationMs: presentation.durationMs }),
-    });
-    return built.ok ? built.timeline : null;
-  }, [windows, scope, presentation]);
+    const built = replayStageTimeline(windows, scope, stageClock === null ? { kind: 'TEXT_ONLY' } : { kind: 'AUDIO', presentation, availability }, REPLAY_COSMOS_FPS);
+    return built === null ? null : built.timeline;
+  }, [windows, scope, presentation, stageClock, availability]);
   const prepared = usePrepared(stages);
   const images = useReplayCosmosImages();
   const scene = useMemo((): ReplayCosmosScene | null => {
@@ -153,6 +165,9 @@ export function ReplayCosmosWorld(props: ReplayCosmosWorldProps) {
   const startMs = timeline?.startMs ?? 0;
   const durationMs = timeline?.durationMs ?? 0;
   const followed = useAudioStageTime(presentation, stageClock, ordinal, playing);
+  // S4-CORRECTION-01: the end report leads what is heard, as every place does; the stage reaches the presentation's end —
+  // and the closing knowledge — only the audio allowance after it (a delay, never an advance; a seek or restart resets it).
+  const settled = useSettledAfter(followed?.kind === 'END' ? clockRevision : null, REPLAY_STAGE_AUDIO_LAG_MS);
   // The reading pace runs only for a text-only version, or inside a text moment's own block; an audio version whose map
   // is not held stays where the moment shown starts.
   const shownWindow = windows.find((w) => w.ordinal === ordinal) ?? null;
@@ -163,7 +178,9 @@ export function ReplayCosmosWorld(props: ReplayCosmosWorldProps) {
   // A text block inside an audio plan is drawn its stated allowance behind (a delay, never an advance); a text-only version
   // keeps its pace exactly.
   const behind = followed?.kind === 'PACED' ? followed.behindMs : 0;
-  const t = followed !== null && followed.kind !== 'PACED' ? scoped(followed.t) : pacedRange !== null ? Math.max(0, paced - behind) : scoped(shownWindow?.windowStartMs ?? 0);
+  const t = followed !== null && followed.kind !== 'PACED'
+    ? scoped(followed.kind === 'END' && !settled ? followed.t - REPLAY_STAGE_AUDIO_LAG_MS : followed.t)
+    : pacedRange !== null ? Math.max(0, paced - behind) : scoped(shownWindow?.windowStartMs ?? 0);
   if (scene === null) return null;
   return <ReplayCosmosStage scene={scene} images={images} t={t} width={width} height={height} accessibilityLabel={props.accessibilityLabel} />;
 }
@@ -191,6 +208,21 @@ function useAudioStageTime(presentation: ReplayPresentationClock | null, stageCl
   if (presentation === null || stageClock === null) return null;
   const state = stageClock.getState();
   return replayStageTime(presentation, ordinal, { phase: state.phase, ordinal: state.ordinal, place: stageClock.place() });
+}
+
+/**
+ * S4-CORRECTION-01: true once the same `key` (the clock's revision at its end report; null: no end reported) has held for
+ * `ms` — the closing settle. Another key, or none, starts over without a state write. A wall-clock delay of the end report
+ * only: it never advances the stage, and it times nothing of the presentation.
+ */
+function useSettledAfter(key: number | null, ms: number): boolean {
+  const [settled, setSettled] = useState<number | null>(null);
+  useEffect(() => {
+    if (key === null) return undefined;
+    const handle = setTimeout(() => setSettled(key), ms);
+    return () => clearTimeout(handle);
+  }, [key, ms]);
+  return key !== null && settled === key;
 }
 
 /** Scoped presentation time through a paced range (a text-only version's moment, or a text moment's block; see the header). */

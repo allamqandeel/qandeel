@@ -13,7 +13,7 @@ import { createPlaybackOwner, type LiveCallSignal } from '../playback-owner';
 import type { PresentationBoundary, PresentationSpan } from '../presentation-map';
 import { createReplayAudio } from '../replay-audio';
 import type { ReplayAudioAnnouncement } from '../replay-audio-clock';
-import type { TransientMediaApiClient } from '../transient-media-api';
+import type { TransientAvailabilityResult, TransientMediaApiClient } from '../transient-media-api';
 import { createFakePlayerPort, FakeTransientServer, MINUTE, type FakeServerOptions } from './fake-transient-world';
 
 export const SESSION = 'a0000000-0000-4000-8000-000000000001';
@@ -75,6 +75,8 @@ export interface WorldOptions {
   readonly server?: Partial<FakeServerOptions>;
   readonly contract?: typeof REPLAY_RENDER_CONTRACT_V1 | typeof REPLAY_RENDER_CONTRACT_V2;
   readonly moments?: readonly ReplayHistoryMoment[];
+  /** RB-2 / S4: the availability answer (default: UNAVAILABLE — the stage stays neutral; the audio is unaffected). */
+  readonly availability?: (replayId: string, versionId: string) => Promise<TransientAvailabilityResult>;
 }
 
 export function world(options: WorldOptions = {}) {
@@ -83,7 +85,13 @@ export function world(options: WorldOptions = {}) {
   const call = liveCallSignal();
   const owner = createPlaybackOwner(call.signal);
   const replayCalls: string[] = [];
+  const availabilityCalls: string[] = [];
   const api = {
+    // RB-2 / S4: the availability GET, kept out of `server.calls` (the playback set's own ledger).
+    availability: (replayId: string, versionId: string) => {
+      availabilityCalls.push(`${replayId} ${versionId}`);
+      return options.availability?.(replayId, versionId) ?? Promise.resolve({ kind: 'UNAVAILABLE' as const });
+    },
     requestReplay: (replayId: string, versionId: string, command: string) => {
       replayCalls.push(`${replayId} ${versionId}`);
       return server.request(command);
@@ -136,7 +144,7 @@ export function world(options: WorldOptions = {}) {
   const clock = () => audio.clockOf(VERSION);
   /** Content heard per file (artifact): [from, to] pieces in the order heard. */
   const heard = () => players.audible.map((s) => ({ run: server.sets[0]!.ids.indexOf(s.artifactId), from: s.contentStart, to: s.contentEnd, at: s.wallStart, until: s.wallEnd }));
-  return { server, players, call, owner, audio, player, open, ordinal, playing, clock, heard, announced, replayCalls, analysisReads };
+  return { server, players, call, owner, audio, player, open, ordinal, playing, clock, heard, announced, replayCalls, availabilityCalls, analysisReads };
 }
 
 export const run = (ms: number) => jest.advanceTimersByTimeAsync(ms);

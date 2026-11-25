@@ -130,4 +130,24 @@ describe('RB-2 / S3: a certified run clock position in the map, at or after it',
       .map((row) => (row.row_kind === 'WINDOW' && row.window_ordinal === 1 ? { ...row, clock_end_ms: 2900 } : row));
     expect(presentationMapDigest(buildPresentationMap(shorter)!)).not.toBe(digest);
   });
+
+  // RB-2 / S4: the phone recomputes this digest to bind an availability answer to the map it plays
+  // (apps/mobile/src/original-audio/replay-availability.ts). The SAME literal map and the SAME golden value are pinned in
+  // the mobile suite (rb2-s4-availability-binding.test.ts): a change to either serialization fails one of them.
+  it('presentationMapDigest: the cross-implementation golden value the phone binds with', () => {
+    const map = {
+      runs: [
+        { runOrdinal: 1, durationMs: 9000, spans: [
+          { kind: 'WINDOW' as const, fromMs: 0, toMs: 4000, track: 'USER' as const, momentOrdinal: 2 },
+          { kind: 'HELD' as const, fromMs: 4000, toMs: 5500, elapsedMs: 7000, shortened: true },
+          { kind: 'WINDOW' as const, fromMs: 5500, toMs: 9000, track: 'QANDEEL' as const, momentOrdinal: 3 },
+          { kind: 'MIX' as const, fromMs: 6000, toMs: 7000 },
+          { kind: 'GAP' as const, fromMs: 8000, toMs: 8500, track: 'USER' as const, gapKind: 'MUTED' as const },
+        ] },
+        { runOrdinal: 2, durationMs: 5000, spans: [{ kind: 'WINDOW' as const, fromMs: 0, toMs: 5000, track: 'USER' as const, momentOrdinal: 6 }] },
+      ],
+      boundaries: [{ kind: 'SAME_RECORDING' as const, elapsedMs: 2500, shortened: false }],
+    };
+    expect(presentationMapDigest(map)).toBe('sha256:2f290a7fcf3091994f2b2993f67af95c34b50bca1c2e97f2620be642ff931ac7');
+  });
 });

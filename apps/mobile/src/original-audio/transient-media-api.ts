@@ -9,6 +9,8 @@
  *   GET    /voice/transient/:artifactId/status                               the file's state and how long it stays readable
  *   GET    /voice/transient/:artifactId                                      the audio (Range; read by the platform player)
  *   DELETE /voice/transient/:artifactId                                      leaving: the set is released, its erasure due
+ *   GET    /replay/:replayId/versions/:versionId/availability                RB-2 / S4: when each moment may appear (S3's
+ *                                                                            answer; read only, creates nothing)
  *
  * The one ambiguity it refuses to hide: a request with no readable answer MAY have created its set. That is UNKNOWN; the
  * caller retries it with the SAME command id, which the server resolves to the same set (§14.2 step 2).
@@ -78,6 +80,11 @@ export type TransientStatusResult =
   | { readonly kind: 'NOT_FOUND' }
   /** BUSY, offline, or an answer this client cannot read: nothing is known, and nothing is concluded from it. */
   | { readonly kind: 'UNKNOWN' };
+
+export type TransientAvailabilityResult =
+  | { readonly kind: 'ANSWER'; readonly body: unknown }
+  | { readonly kind: 'NOT_FOUND' }
+  | { readonly kind: 'UNAVAILABLE' };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 const isRecord = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -187,6 +194,19 @@ export class TransientMediaApiClient {
     const reason = reasonOf(answer.body.reason);
     if (state === null || reason === undefined || !isMs(answer.body.readableForMs)) return { kind: 'UNKNOWN' };
     return { kind: 'STATUS', status: { state, readableForMs: answer.body.readableForMs, reason } };
+  }
+
+  /**
+   * RB-2 / S4: the version's availability answer, undecoded (the caller binds it to the map it holds). NOT_FOUND: the
+   * version is not this person's CURRENT one (revoked, deleted, retired, replaced) — nothing of it is used. UNAVAILABLE:
+   * BUSY, offline, or any other answer — nothing is concluded from it, and nothing older stands in for it.
+   */
+  async availability(replayId: string, versionId: string): Promise<TransientAvailabilityResult> {
+    const answer = await this.send('GET', `/replay/${encodeURIComponent(replayId)}/versions/${encodeURIComponent(versionId)}/availability`);
+    if (answer === null) return { kind: 'UNAVAILABLE' };
+    if (answer.status === 404) return { kind: 'NOT_FOUND' };
+    if (answer.status !== 200 || answer.body === undefined) return { kind: 'UNAVAILABLE' };
+    return { kind: 'ANSWER', body: answer.body };
   }
 
   /** The audio's URL for the platform player; the bearer is a header the caller adds, never a part of it. */
