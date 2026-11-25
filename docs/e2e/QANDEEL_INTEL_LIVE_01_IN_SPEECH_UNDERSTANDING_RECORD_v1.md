@@ -962,6 +962,19 @@ one run that passed every cell, so nothing is reused and the final head runs the
 - **Conclusion:** no affected application functionality is unverified in the accumulated results. Each case passed on
   equivalent inputs. This is not reported as one passing run.
 
+**The PO's decision (2026-11-25): the narrow CP1-only World gate exception is APPROVED on this evidence.** The basis:
+- 93 / 93 device-specific cases (31 cases × 3 cells) passed across equivalent-input runs;
+- zero failed functional assertions;
+- no affected COSMOS application source, native input or asset changed;
+- the remaining incomplete cases are `QAN-BL-CI-04` or runner availability.
+
+Its terms:
+- It holds only for CP1, on the per-case matrix and the protected-input equivalence above, which are preserved as they are.
+- It is not a successful World gate run and is never represented as one.
+- The permanent World gate workflow and its requirements are unchanged.
+- The full World gate run that the CP1 validation push starts automatically is cancelled under this exception. The
+  targeted gate and the other required checks are not cancelled.
+
 ### 6.3 Migration 0204 and the earlier verifiers' exact sets
 
 API CI 45571644014 on `6400dc37` failed in `verify-migration-0171` C-1 (`20 !== 19`): 0204 adds `LIVE_ATTENTION_EVALUATION`
