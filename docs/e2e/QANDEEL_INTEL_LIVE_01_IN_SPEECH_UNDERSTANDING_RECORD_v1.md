@@ -545,7 +545,7 @@ heads).
 | Did permissions or local state block it? | The microphone was granted twice (`simctl privacy grant`, and `launchApp` with `microphone: allow`). No system alert was on screen. No call notice (`qandeel-call-notice`) was drawn, which each of `start()`'s refusals (not available, already in a call, microphone) draws. The app was alive: its 5 s poll ran on until 13:02:19. | **No visible block.** |
 | Did a connection attempt reach the server? | The server's events after the tap: only `analysis-read` temporal polls. No WebSocket, no `CALL_ACTIVATED`, no refusal. | **No.** |
 
-**The cause is not established.** The point of failure lies between UIKit's delivery and `CallOwner.start()`'s
+**The cause was not established from run 4 alone** (it was after run 5; see below). The point of failure lies between UIKit's delivery and `CallOwner.start()`'s
 capability read: React Native's touch handling, the Pressable's `onPress`, or `start()`'s first guard
 (`!live() || controller !== null || preparing`), which returns without a notice. This Release proof build writes no
 JavaScript log, so the evidence cannot tell those apart. The same app source passed ITG-02 in runs 1 – 3. No production
@@ -586,6 +586,76 @@ The ITG contract pins both and plants their reversals. A local stand-in call wit
 
 The stubbed runner simulation still gives the intended result for ITG-03's five paths: first-attempt PASS, PASS AFTER
 RECOVERY, a second loss, no reconnection, and no turn. No retry or timeout was added.
+
+**The fifth simulator run.** Run 45630621237 on `4b60bc85`:
+
+| Case | Result | Detail |
+|---|---|---|
+| ITG-01 | PASS | |
+| ITG-02 | FAIL | the same failure as run 4 |
+| ITG-03 – 06 | NOT TESTED | not reached |
+
+Driver readiness took 211 s, and the host reported 0 % idle CPU, 6 818 MB used and a load average of 376.87. The new
+HTTP evidence shows the app's reads of the voice capability, pending notes and conversation turns after launch, and no
+`/voice/calls` request after the tap.
+
+**The cause of both ITG-02 failures: the simulator dropped the tap's touch.** The PO reviewed artifact `15034042942`
+independently, then authorised its download. Both failed taps are compared here with the five call-control taps that
+worked in runs 1 – 3, using backboardd's own touch log, which Maestro captures for each flow.
+
+| | Each tap that worked | Run 4 (13:01:10) and run 5 (14:51:51) |
+|---|---|---|
+| XCTest's synthetic tap: touch-down, then touch-up 0.1 s later | yes | yes |
+| backboardd takes the touch-down (`contact 2 presence: touching`) | yes | yes |
+| Later events of that path | delivered; the touch-up `presence: none` | **10 dropped**: `didn't see a previous touch down or range-in event for pathIndex:2; skipping event` |
+| When the synthetic digitizer detaches | no contact left | the contact is still `touching; locked` → `canceling paths` |
+| What the app receives | a completed tap; the call starts | a **cancelled** touch: React Native's Pressable fires no `onPress`; the call never starts |
+
+The `cancel -- digitizer did disappear` line is in every run, the passing ones included. It matters only when the
+touch-up was dropped first. The fault is in the simulator's synthetic touch delivery, below the app, the proof server and
+the attention lane.
+
+**Not replaced by XCUITest (PO).** The COSMOS native XCUITests deliver their taps through the same testmanagerd →
+backboardd path, so replacing Maestro would not remove the fault.
+
+**The ONE infrastructure-recovery exception for ITG-02 (PO, 2026-11-25, option 1).** The call-entry tap is repeated
+exactly once, and only when `scripts/ios-targeted-gate/touch-drop.mjs` confirms all of the following, read from the tap
+flow's backboardd log, the server's events and its state:
+- **T1:** exactly one touch path was touched (the one tap);
+- **T2:** later events of that path were dropped;
+- **T3:** the path never lifted, so the tap did not complete;
+- **T4:** after its touch-down, the digitizer disappeared and the simulator cancelled the path while it was touching;
+- **S1:** the server holds no call;
+- **S2:** no call initiation reached the server since the tap began: no `/voice/calls` request and no `CALL_ACTIVATED`.
+
+How the runner applies it:
+- The first attempt's evidence is kept: `host/02-touch-1.log`, `host/02-touch-1.json`, `host/02-attempt-1-state.json`,
+  a screenshot and a host snapshot.
+- A repeat that opens a call the server holds ACTIVE is recorded **PASS AFTER RECOVERY**, never PASS.
+- Each of these stays **FAIL**, with nothing repeated: a second failure, an unconfirmed or unverifiable cancellation,
+  and a completed tap that did not start the call.
+- No other case gained a repeat, and no timeout, production code or workflow changed.
+
+**Verified locally before the push:**
+- **The verifier on the real logs.** It confirms exactly the two dropped taps (runs 4 and 5) and refuses all four
+  completed ones (T2).
+- **Its refusals.** It refuses a held call (S1), a `/voice/calls/truth` request, a `CALL_ACTIVATED` (S2), two taps or
+  none (T1), a missing cancellation (T4) and an unreadable input.
+- **The runner's own ITG-02 block, with stubbed tools.**
+
+  | Path | Result |
+  |---|---|
+  | first tap works | PASS |
+  | confirmed drop, repeat works | PASS AFTER RECOVERY |
+  | confirmed drop, repeat fails | FAIL |
+  | completed tap that did not start the call | FAIL |
+  | a call-truth request | FAIL |
+  | a held call | FAIL |
+  | no log | FAIL |
+
+  Every FAIL path but the failed repeat repeats nothing.
+- **The ITG contract.** It pins the conditions, the single repeat after the confirmation, the kept evidence and PASS
+  AFTER RECOVERY, and plants seven reversals.
 
 **The run on the final head:** `PENDING`. It is recorded here per case. No case is reported before it ran.
 
@@ -801,6 +871,12 @@ Both are readiness waits that left cases NOT TESTED: the open `QAN-BL-CI-04` res
 changes no application source the gate exercises; its `apps/mobile` changes are the targeted gate's own Maestro flows.
 The rule is not relaxed for this, and the next head runs FULL again. It is not reported as passed. The iPhone SE (3rd
 generation) / iPhone 16e en cell passed every case.
+
+**The second FULL run did not pass either.** Run 45630621888 on `4b60bc85`: the SE / 16e and iPhone 17 ar cells passed
+every case. The iPhone 17 en cell left U-TAP, U-LAND and U-EMPTY NOT TESTED: the waits for the Public field
+(`u-field`) and the Public World (`ue-allow`) hung and were stopped by their bound (exit 124), the same `QAN-BL-CI-04`
+residue. No assertion failed in either run. Every case has passed in at least one of the two runs, but the rule asks for
+one run that passed every cell, so nothing is reused and the final head runs the gate FULL again.
 
 ### 6.3 Migration 0204 and the earlier verifiers' exact sets
 

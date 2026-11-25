@@ -17,10 +17,16 @@
 # spoken turn exactly once, and only after the server itself recorded the call's connection lost before PLAYED_OUT (the frozen
 # 3 s silence rule ended it, run 45586185915). The first attempt's evidence is kept; the repeat is made only once the call is
 # ACTIVE again at a later epoch; a repeat that plays out is recorded PASS AFTER RECOVERY, never PASS; a second loss fails it.
+# And ONE infrastructure-recovery exception for ITG-02 (PO, 2026-11-25, option 1 of the touch-drop review): the call-entry
+# tap is repeated exactly once, only when touch-drop.mjs confirms the simulator's own touch drop (runs 45612961224 and
+# 45630621237: the touch-down taken, every later event of its path dropped, the path cancelled while still touching when the
+# synthetic digitizer disappeared) and the server holds no call and saw no call initiation. The first attempt's evidence is
+# kept; a repeat that opens the call is PASS AFTER RECOVERY; a second failure, an unverified cancellation or a completed tap
+# that did not start the call is FAIL.
 #
 #   ITG-01 launch     the proof build installs and launches; the Conversation's call entry is drawn
 #   ITG-02 connect    a tap on the call entry opens a call the server holds ACTIVE (qandeel.live-call.v1 HELLO accepted);
-#                     the call line's End is drawn
+#                     the call line's End is drawn. PASS AFTER RECOVERY: the one repeat above opened it
 #   ITG-03 turn       one turn through the live-call backend: endpointer commit, reply, and the reply PLAYED_OUT, which
 #                     only the iOS engine's own PLAYOUT confirmations can produce; the call line is still drawn after it.
 #                     PASS AFTER RECOVERY: the one repeat above played out (the interruption stays an open finding)
@@ -33,7 +39,7 @@
 # NOT proven here: the real microphone, echo cancellation, CallKit, Bluetooth, a physical iPhone (a separate future
 # requirement), and the COSMOS World (the World gate's, when its own inputs change). Kept in <out-dir>: every screenshot,
 # Maestro's debug output, the server's content-free evidence (counts and THIS proof's synthetic identifiers) and the host
-# reads of the call and the attention lane. From ITG-03 on, <out-dir>/client holds lightweight client-side diagnostics, never a
+# reads of the call and the attention lane. From before ITG-01 on, <out-dir>/client holds lightweight client-side diagnostics, never a
 # verdict: the app's unified log at default level (this proof's synthetic data only; read once when the run ends, never
 # streamed), a once-a-second host load and app CPU line, and a host `top` and largest-resident snapshot at each connection
 # loss and failure.
@@ -207,12 +213,34 @@ start_client_diagnostics
 flow itg-call-launch.yaml launch -e SHOT=01-launch || fail ITG-01 "the Conversation's call entry was not drawn after launch"
 record ITG-01 PASS "the proof build installed and launched; the Conversation's call entry is drawn"
 
-# ITG-02 — connect.
-flow itg-call-tap.yaml connect -e ID=qandeel-call-entry -e WAIT_ID=qandeel-call-rail:end -e SHOT=02-in-call \
-  || fail ITG-02 "a tap on the call entry did not draw the call line's End"
+# ITG-02 — connect. The ONE infrastructure-recovery exception (PO, 2026-11-25, option 1; runs 45612961224, 45630621237):
+# the tap is repeated once only when touch-drop.mjs confirms the simulator's own touch drop (the touch-down taken, every
+# later event of its path dropped, the path never lifted, then cancelled when the synthetic digitizer disappeared) and the
+# server holds no call and saw no call initiation. Anything else, an unverified cancellation included, stays FAIL.
+TAP_RECOVERED=""
+TAP_SINCE="$(node -e 'process.stdout.write(String(Date.now()))')"
+if ! flow itg-call-tap.yaml connect -e ID=qandeel-call-entry -e WAIT_ID=qandeel-call-rail:end -e SHOT=02-in-call; then
+  xcrun simctl io "$UDID" screenshot "$OUT/shots/itg-02-attempt-1.png" >/dev/null 2>&1 || true
+  client_snapshot 02-attempt-1
+  read_state > "$OUT/host/02-attempt-1-state.json"
+  # The simulator log Maestro captured for this flow (every run's artifact holds backboardd's touch lines there).
+  TAP_LOG="$(ls -t "$OUT"/shots/*/itg-call-tap/logs/device-simulator.log 2>/dev/null | head -n 1)"
+  { [ -n "$TAP_LOG" ] && grep 'backboardd' "$TAP_LOG" | grep 'TouchEvents'; } > "$OUT/host/02-touch-1.log" 2>/dev/null || true
+  node "$REPO/scripts/ios-targeted-gate/touch-drop.mjs" "$OUT/host/02-touch-1.log" "$EVENTS" "$TAP_SINCE" "$OUT/host/02-attempt-1-state.json" \
+    > "$OUT/host/02-touch-1.json" \
+    || fail ITG-02 "a tap on the call entry did not draw the call line's End, and it was not the simulator's confirmed touch drop ($(cat "$OUT/host/02-touch-1.json" 2>/dev/null)); nothing was repeated"
+  TAP_RECOVERED="$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).detail)' "$OUT/host/02-touch-1.json" 2>/dev/null)"
+  note "ITG-02: the simulator dropped the tap's touch: $TAP_RECOVERED (first attempt kept: host/02-touch-1.log, host/02-touch-1.json, host/02-attempt-1-state.json, shots/itg-02-attempt-1.png); the tap is repeated once"
+  flow itg-call-tap.yaml connect-repeat -e ID=qandeel-call-entry -e WAIT_ID=qandeel-call-rail:end -e SHOT=02-in-call \
+    || fail ITG-02 "the ONE repeat of the call-entry tap, after the simulator dropped the first ($TAP_RECOVERED), did not draw the call line's End"
+fi
 wait_json 60 read_state 02-call-active 's => s.call != null && s.call.state === "ACTIVE"' \
   || fail ITG-02 "the server holds no ACTIVE call (host/02-call-active.json)"
-record ITG-02 PASS "the tap opened a call the server holds ACTIVE; the call line's End is drawn"
+if [ -n "$TAP_RECOVERED" ]; then
+  record ITG-02 "PASS AFTER RECOVERY" "the first tap's touch was dropped and cancelled by the simulator ($TAP_RECOVERED; kept in host/02-touch-1.log, host/02-touch-1.json, host/02-attempt-1-state.json); the ONE repeat opened a call the server holds ACTIVE; the call line's End is drawn"
+else
+  record ITG-02 PASS "the tap opened a call the server holds ACTIVE; the call line's End is drawn"
+fi
 
 # ITG-03 — one turn: the synthetic voiced signal, the endpointer's commit, the reply, played out by the iOS engine.
 RECOVERED=""
@@ -276,8 +304,8 @@ xcrun simctl spawn "$UDID" launchctl list 2>/dev/null | grep -q "UIKitApplicatio
 if ls "$HOME/Library/Logs/DiagnosticReports" 2>/dev/null | grep -Eiq 'qandeel'; then fail ITG-06 "a crash report names the app"; fi
 record ITG-06 PASS "the app is still running; no crash report names it"
 
-if [ -n "$RECOVERED" ]; then
-  note "iOS Targeted Gate (live call): every case passed; ITG-03 PASS AFTER RECOVERY (an unresolved interruption: $RECOVERED)"
+if [ -n "$TAP_RECOVERED$RECOVERED" ]; then
+  note "iOS Targeted Gate (live call): every case passed, with recovery:${TAP_RECOVERED:+ ITG-02 PASS AFTER RECOVERY (the simulator dropped the first tap: $TAP_RECOVERED);}${RECOVERED:+ ITG-03 PASS AFTER RECOVERY (an unresolved interruption: $RECOVERED)}"
 else
   note "iOS Targeted Gate (live call): every case PASS"
 fi

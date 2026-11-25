@@ -16,6 +16,7 @@ const GATE = '.github/workflows/ios-targeted-gate.yml';
 const RUNNER = 'scripts/ios-targeted-gate/run-live-call-gate.sh';
 const WORLD = '.github/workflows/cosmos-ios-world-gate.yml';
 const SERVER = 'apps/api/scripts/s8b-06-cp3-device-proof-server.ts';
+const TOUCH = 'scripts/ios-targeted-gate/touch-drop.mjs';
 const FLOWS = ['itg-call-launch.yaml', 'itg-call-tap.yaml', 'itg-call-visible.yaml', 'itg-call-end.yaml'];
 const CASES = ['ITG-01', 'ITG-02', 'ITG-03', 'ITG-04', 'ITG-05', 'ITG-06'];
 
@@ -24,6 +25,7 @@ const tree = () => ({
   runner: read(RUNNER),
   world: read(WORLD),
   server: read(SERVER),
+  touch: read(TOUCH),
   flows: FLOWS.map((f) => read(`apps/mobile/.maestro/${f}`)).join('\n---\n'),
 });
 
@@ -33,7 +35,7 @@ function prPaths(workflow) {
   return block ? [...block[1].matchAll(/-\s+'([^']+)'/gu)].map((m) => m[1]) : [];
 }
 
-export function violations({ gate, runner, world, server, flows }) {
+export function violations({ gate, runner, world, server, flows, touch }) {
   const out = [];
   const paths = prPaths(gate);
   for (const p of ['apps/api/src/voice/**', 'apps/api/src/live-analysis/**', 'apps/api/src/live-attention/**', 'database/migrations/**', 'packages/**',
@@ -78,6 +80,32 @@ export function violations({ gate, runner, world, server, flows }) {
   // Run 45612961224: ITG-02's tap reached the app and nothing followed, with no client evidence. They start before ITG-01.
   if (!/\nstart_client_diagnostics\nflow itg-call-launch\.yaml launch /u.test(r) || !/\( while :; do pid="\$\(pgrep -x QANDEEL \| head -n 1\)"/u.test(r)) {
     out.push('the client-side diagnostics do not cover the run from ITG-01');
+  }
+  // ITG-02's ONE infrastructure-recovery exception (PO, 2026-11-25; runs 45612961224 and 45630621237): one repeat of the
+  // call-entry tap, only after touch-drop.mjs confirmed the simulator's own touch drop with the server idle.
+  {
+    const first = r.indexOf('if ! flow itg-call-tap.yaml connect -e ID=qandeel-call-entry');
+    const verify = r.indexOf('node "$REPO/scripts/ios-targeted-gate/touch-drop.mjs" "$OUT/host/02-touch-1.log" "$EVENTS" "$TAP_SINCE" "$OUT/host/02-attempt-1-state.json"');
+    const refused = r.indexOf("|| fail ITG-02 \"a tap on the call entry did not draw the call line's End, and it was not the simulator's confirmed touch drop");
+    const repeat = r.indexOf('flow itg-call-tap.yaml connect-repeat ');
+    const count = (needle) => r.split(needle).length - 1;
+    if (first < 0 || verify < first || refused < verify || repeat < refused || count('flow itg-call-tap.yaml connect-repeat ') !== 1
+      || count('flow itg-call-tap.yaml connect') !== 2) {
+      out.push('ITG-02 repeats its tap without the confirmed touch drop, or more than once');
+    }
+    if (!r.includes('-e SHOT=02-in-call \\\n    || fail ITG-02 "the ONE repeat'))out.push('a failed ITG-02 repeat does not fail the case');
+    if (!r.includes('if [ -n "$TAP_RECOVERED" ]; then\n  record ITG-02 "PASS AFTER RECOVERY"')) out.push('a recovered ITG-02 is not recorded PASS AFTER RECOVERY');
+    if (!['> "$OUT/host/02-attempt-1-state.json"', '> "$OUT/host/02-touch-1.log"', 'shots/itg-02-attempt-1.png'].every((e) => r.includes(e))) {
+      out.push('the first tap\'s evidence is not kept');
+    }
+    for (const [rule, needle] of [
+      ['T1', 'if (touched.length !== 1) verdict(false'],
+      ['T2', 'if (dropped.length === 0) verdict(false'],
+      ['T3', 'presence: none`))) verdict(false'],
+      ['T4', 'if (disappeared < 0 || cancelled < 0) verdict(false'],
+      ['S1', "state.call !== null) verdict(false"],
+      ['S2', "e.path.startsWith('/voice/calls')) || (e.kind === 'KICK' && e.reason === 'CALL_ACTIVATED')"],
+    ]) if (!(touch ?? '').includes(needle)) out.push(`touch-drop.mjs does not hold ${rule}`);
   }
   // Run 45601664395 (PO, 2026-11-25): the harness's own load on a runner with no idle CPU and 129 MB free.
   if (/log stream/u.test(r)) out.push('the runner streams the app log during the cases (measured at about a third of a core)');
@@ -180,6 +208,13 @@ test('each refusal is real: planted regressions are caught', () => {
     ['the pid read once', plant('runner', '( while :; do pid="$(pgrep -x QANDEEL | head -n 1)"', 'pid="$(pgrep -x QANDEEL | head -n 1)"; ( while :; do')],
     ['the HTTP evidence dropped', plant('server', "evidence('http', {", 'void ({')],
     ['the HTTP evidence with its query', plant('server', "path: req.url.split('?')[0]", 'path: req.url')],
+    ['an ITG-02 recovery recorded as PASS', plant('runner', 'record ITG-02 "PASS AFTER RECOVERY"', 'record ITG-02 PASS')],
+    ['an ITG-02 repeat without the confirmed drop', plant('runner', "|| fail ITG-02 \"a tap on the call entry did not draw the call line's End, and it was not the simulator's confirmed touch drop", "|| true \"a tap on the call entry did not draw the call line's End, and it was not the simulator's confirmed touch drop")],
+    ['a second ITG-02 repeat', plant('runner', '  flow itg-call-tap.yaml connect-repeat ', '  flow itg-call-tap.yaml connect-repeat -e ID=qandeel-call-entry || flow itg-call-tap.yaml connect-repeat ')],
+    ['a failed ITG-02 repeat tolerated', plant('runner', '    || fail ITG-02 "the ONE repeat', '    || true "the ONE repeat')],
+    ['the completed-tap rule dropped (T3)', plant('touch', 'presence: none`))) verdict(false', 'presence: none`))) void (false')],
+    ['the cancellation rule dropped (T4)', plant('touch', 'if (disappeared < 0 || cancelled < 0) verdict(false', 'if (false) verdict(false')],
+    ['the idle-call rule dropped (S1)', plant('touch', 'state.call !== null) verdict(false', 'false) verdict(false')],
     ['the loss epoch dropped', plant('server', ', epoch: this.epoch ?? null });', ' });')],
     ['the app log streamed again', plant('runner', '  CLIENT_LOG_FROM="$(date', '  xcrun simctl spawn "$UDID" log stream --style compact &\n  CLIENT_LOG_FROM="$(date')],
     ['the server type-checked beside the simulator', plant('runner', '/bin.js" --transpile-only --project', '/bin.js" --project')],
