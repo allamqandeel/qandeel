@@ -20,7 +20,8 @@
 #                     the call line's End is drawn
 #   ITG-03 turn       one turn through the live-call backend: endpointer commit, reply, and the reply PLAYED_OUT, which
 #                     only the iOS engine's own PLAYOUT confirmations can produce; the call line is still drawn after it
-#   ITG-04 end        a tap on End ends the call USER_ENDED and the call entry is drawn again
+#   ITG-04 end        a tap on End ends the call USER_ENDED; the call line goes and the Analysis stays (S8B-06 CP3 J3:
+#                     the person's own End does not move them); back in the Conversation the call entry is drawn again
 #   ITG-05 attention  the provisional attention lane evaluated and wrote both tracks (SET events) and settled both halves
 #                     COMPLETE at the call's end; no write failed
 #   ITG-06 stability  the app is still running and no crash report names it
@@ -142,12 +143,13 @@ flow itg-call-visible.yaml after-turn -e ID=qandeel-call-rail:end -e SHOT=03-aft
   || fail ITG-03 "the call line was not drawn after the turn"
 record ITG-03 PASS "a spoken turn committed, its reply PLAYED_OUT through the iOS engine's playout confirmations; the call line is still drawn"
 
-# ITG-04 — end.
-flow itg-call-tap.yaml end -e ID=qandeel-call-rail:end -e WAIT_ID=qandeel-call-entry -e SHOT=04-ended \
-  || fail ITG-04 "a tap on End did not draw the call entry again"
+# ITG-04 — end. The person's own End does not move them (S8B-06 CP3 J3): the call line goes and the Analysis stays; the
+# door back to the Conversation then shows the call entry again.
+flow itg-call-end.yaml end \
+  || fail ITG-04 "after End, the call line did not go, the Analysis did not stay, or the Conversation did not draw the call entry again"
 wait_json 60 read_state 04-call-ended 's => s.call != null && s.call.state === "ENDED" && s.call.end_reason === "USER_ENDED"' \
   || fail ITG-04 "the server did not end the call USER_ENDED (host/04-call-ended.json)"
-record ITG-04 PASS "the tap on End ended the call USER_ENDED; the call entry is drawn again"
+record ITG-04 PASS "the tap on End ended the call USER_ENDED; the call line went and the Analysis stayed (J3); back in the Conversation the call entry is drawn again"
 
 # ITG-05 — the provisional attention lane on both tracks, settled at the call's end.
 wait_json 60 read_attention 05-attention \

@@ -1,0 +1,22 @@
+# INTEL-LIVE-01 CP1 — iOS Targeted Gate (live call), ITG-04: the person's own End. S8B-06 CP3 J3: an end the person chose
+# does not move them, so the call line goes and the Analysis they called from stays; then the door back to the
+# Conversation, where the call entry is drawn again. Run 45571644129 waited for the entry on the Analysis, where it is
+# never drawn. VALIDATION ONLY. Input: PREFIX.
+appId: com.qandeel.mobile
+---
+- tapOn:
+    id: qandeel-call-rail:end
+- extendedWaitUntil:
+    notVisible:
+      id: qandeel-call-rail:end
+    timeout: 30000
+- assertVisible:
+    id: qandeel-depth-to-conversation
+- takeScreenshot: ${PREFIX}-04-ended
+- tapOn:
+    id: qandeel-depth-to-conversation
+- extendedWaitUntil:
+    visible:
+      id: qandeel-call-entry
+    timeout: 60000
+- takeScreenshot: ${PREFIX}-04-entry

@@ -16,7 +16,7 @@ const GATE = '.github/workflows/ios-targeted-gate.yml';
 const RUNNER = 'scripts/ios-targeted-gate/run-live-call-gate.sh';
 const WORLD = '.github/workflows/cosmos-ios-world-gate.yml';
 const SERVER = 'apps/api/scripts/s8b-06-cp3-device-proof-server.ts';
-const FLOWS = ['itg-call-launch.yaml', 'itg-call-tap.yaml', 'itg-call-visible.yaml'];
+const FLOWS = ['itg-call-launch.yaml', 'itg-call-tap.yaml', 'itg-call-visible.yaml', 'itg-call-end.yaml'];
 const CASES = ['ITG-01', 'ITG-02', 'ITG-03', 'ITG-04', 'ITG-05', 'ITG-06'];
 
 const tree = () => ({
@@ -96,9 +96,28 @@ test('the flows tap controls the production call surfaces still carry', () => {
   assert.match(views, /export const CALL_ENTRY_TEST_ID = 'qandeel-call-entry';/u);
   assert.match(rail, /export const CALL_RAIL_TEST_ID = 'qandeel-call-rail';/u);
   assert.match(rail, /testID=\{`\$\{CALL_RAIL_TEST_ID\}:end`\}/u);
+  assert.match(read('apps/mobile/src/conversation/AnalysisReturnBar.tsx'), /testID="qandeel-depth-to-conversation"/u);
   const runner = read(RUNNER);
   assert.match(runner, /-e ID=qandeel-call-entry -e WAIT_ID=qandeel-call-rail:end/u);
-  assert.match(runner, /-e ID=qandeel-call-rail:end -e WAIT_ID=qandeel-call-entry/u);
+  assert.match(runner, /flow itg-call-end\.yaml end \\\n/u);
+});
+
+test('ITG-04 asserts the approved end (S8B-06 CP3 J3): the call line goes, the Analysis stays, the entry is back in the Conversation', () => {
+  // Run 45571644129: the call ended USER_ENDED on the server at the tap and the call line went, but the flow waited for the
+  // call entry on the Analysis, where it is never drawn. The person's own End does not move them (J3).
+  const end = code(read('apps/mobile/.maestro/itg-call-end.yaml'));
+  const steps = ['tapOn:\n    id: qandeel-call-rail:end', 'notVisible:\n      id: qandeel-call-rail:end', 'assertVisible:\n    id: qandeel-depth-to-conversation',
+    'tapOn:\n    id: qandeel-depth-to-conversation', 'visible:\n      id: qandeel-call-entry'];
+  let at = -1;
+  for (const step of steps) {
+    const next = end.indexOf(step);
+    assert.ok(next > at, `ITG-04's flow carries, in order: ${step.replace(/\n\s*/gu, ' ')}`);
+    at = next;
+  }
+  const r = read(RUNNER);
+  assert.match(r, /s\.call\.state === "ENDED" && s\.call\.end_reason === "USER_ENDED"/u, 'the server still must end the call USER_ENDED');
+  assert.match(read('docs/e2e/QANDEEL_S8B_06_CALL_UI_LIVE_MAP_DEVICE_CLOSURE_RECORD_v1.md'), /the person's own End \(app, notification, system UI\) does not move them/u,
+    'the behaviour asserted is the approved one');
 });
 
 test('BG-10 is clarified, not relaxed (PO directive 2026-11-25)', () => {

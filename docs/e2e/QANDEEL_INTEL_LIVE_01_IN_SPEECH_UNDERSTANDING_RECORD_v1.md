@@ -339,7 +339,7 @@ separate future requirement; and CP2's map. One language and size: CP1 changes n
 | ITG-01 launch | the proof build installs and launches; the Conversation's call entry (`qandeel-call-entry`) is drawn, which needs the runtime to have reached the server |
 | ITG-02 connect | a tap on the call entry draws the call line's End; the server holds the call `ACTIVE` (the `qandeel.live-call.v1` HELLO accepted) |
 | ITG-03 turn | `/proof/speak` arms a synthetic voiced signal; the endpointer commits, the reply is generated and closes `PLAYED_OUT`, which only the iOS engine's PLAYOUT confirmations produce; the call line is still drawn |
-| ITG-04 end | a tap on End draws the call entry again; the server ends the call `USER_ENDED` |
+| ITG-04 end | a tap on End removes the call line while the Analysis stays (S8B-06 CP3 J3: the person's own End does not move them); the door back to the Conversation then shows the call entry again; the server ends the call `USER_ENDED` |
 | ITG-05 attention | the lane evaluated both tracks (`DEVELOPMENTS`), wrote `SET` events and settled both halves `COMPLETE`; no write failed |
 | ITG-06 stability | the app is still running; no crash report names it |
 
@@ -357,8 +357,46 @@ That run proved three proof-harness defects were fixed:
 
 The gate's three host predicates were checked against that run's reads.
 
-**The simulator run:** `PENDING — the first run on this change's head`. Its result is recorded here as PASS / FAIL /
-NOT TESTED per case. No case is reported before it ran.
+**The first simulator run.** Run 45571644129 on `6400dc37` (iPhone 17, iOS 26.5):
+
+| Case | Result | Detail |
+|---|---|---|
+| ITG-01 | PASS | the call entry was drawn |
+| ITG-02 | PASS | the server held the call `ACTIVE` |
+| ITG-03 | PASS | the reply was `PLAYED_OUT`, 600 frames |
+| ITG-04 | FAIL | after End, `qandeel-call-entry` was not visible within 60 s |
+| ITG-05 | NOT TESTED | not reached |
+| ITG-06 | NOT TESTED | not reached |
+
+Times: the cases took about 7 min (08:27:53 → 08:35:01 UTC), the gate step 13 min and the job 43 min (mostly the native
+build).
+
+**ITG-04's diagnosis, from the run's evidence** (the artifact downloaded with the PO's approval, for this purpose only):
+- **Screenshot:** the call line is gone; the app is on the Analysis, where the call was started (ITG-02's screenshot
+  shows the call line on the Analysis).
+- **Hierarchy at the failure:** no `qandeel-call-rail:*`, no `qandeel-call-entry`; the Analysis's door
+  `qandeel-depth-to-conversation` is present.
+- **Server events:** at 08:33:31 UTC, the second of the tap, the attention lane stopped, the analysis worker drained,
+  and the history read went from `calls: 0` to `calls: 1`, the finished call's record.
+- **Contract:** S8B-06 CP3 J3 says the person's own End "does not move them"; only an unchosen end returns them to the
+  Conversation.
+
+So the application did what its approved design says. **It was a test-harness defect**, not a simulator issue and not an
+application defect: the flow waited for the call entry on a screen that never draws it.
+
+**The correction** is the narrowest one. `itg-call-end.yaml` asserts the approved end, in order:
+1. the tap on End;
+2. the call line gone;
+3. the Analysis still shown;
+4. then the door back to the Conversation, where the call entry must be drawn again.
+
+The server must still end the call `USER_ENDED`. No assertion is removed; one (J3) is added. The ITG contract pins the
+order and J3's text.
+
+Also observed in the run's events: both tracks resolved `DEVELOPMENTS` (USER 08:30:57, QANDEEL 08:31:04), so ITG-05's
+evaluation has its evidence. Its settlement half is shown by the next run.
+
+**The run on the final head:** `PENDING`. It is recorded here per case. No case is reported before it ran.
 
 ## 4. Paid spend (D-7)
 
@@ -436,7 +474,7 @@ substrate line appended to the proof makes both contracts fail; it was reverted 
 | Gate | Before (CP1 head `0cd3380b`) | Now | Skip justification |
 |---|---|---|---|
 | iOS World gate (3 cells × full COSMOS matrix) | ran for the API change: run 45551333609, **108.8 min** wall; cells SE 84.2 min (success), ar 80.8 min (**failure**: the Personal Analysis did not open, its cases NOT TESTED), en cancelled by me at 108.8 min | not triggered by `apps/api/**` or `database/**` | its app is the S401 proof build over the SYNTHETIC network: it reaches no API and no database (CI-SPEED-01), so no backend change can change one of its cases. Every suite, case and assertion is kept, and a push to main runs it in full |
-| iOS Targeted Gate (live call) | did not exist | one cell (iPhone 17, iOS 26.5), triggered by the live-call backend and client; its time is PENDING its first run on this head | — |
+| iOS Targeted Gate (live call) | did not exist | one cell (iPhone 17, iOS 26.5), triggered by the live-call backend and client; first run 45571644129: job 43 min, gate step 13 min, cases about 7 min (§3.6) | — |
 | API CI `verify-api` | 2.3 min (failed early) | PENDING its run on this head | unchanged: VAL-01's planner already carries a green, unchanged result forward |
 | Mobile CI | 7.0 min (no mobile change: VAL-01 carried the native gates forward) | unchanged | VAL-01 |
 
@@ -534,7 +572,7 @@ change, CP2 or CP3, and it will be recorded there.
 answers `RUN / FULL` on this head. That is correct: the gate itself changed. Its result is recorded as it actually ends.
 
 **Measured reduction for a live-call backend change:** 3 World gate cells of about 80 – 110 min each, about 270 runner
-minutes, become one targeted cell (its measured time PENDING its first run). The iOS obligation is still met, by interaction with what
+minutes, become one targeted cell (its first run: 43 min for the job, 7 min for the cases). The iOS obligation is still met, by interaction with what
 changed.
 
 ### 6.3 Migration 0204 and the earlier verifiers' exact sets
