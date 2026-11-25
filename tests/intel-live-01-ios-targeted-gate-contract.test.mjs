@@ -106,7 +106,7 @@ test('BG-10 is clarified, not relaxed (PO directive 2026-11-25)', () => {
   assert.match(backlog, /\*\*BG-10 clarification — validation proportional to impact \(PO directive, 2026-11-25; recorded by\nINTEL-LIVE-01 CP1\)\.\*\*/u);
   for (const clause of [/iOS compatibility stays mandatory and no blanket exemption exists/u, /never marked NOT TESTED to avoid its cost/u,
     /a build alone is insufficient/u, /are never deleted or weakened/u, /reported as not run, never as passed/u, /\.github\/workflows\/ios-targeted-gate\.yml/u]) {
-    assert.match(backlog.replace(/\n/gu, ' '), clause);
+    assert.match(backlog.replace(/\s+/gu, ' '), clause);
   }
   assert.match(read('AGENTS.md'), /BG-10 clarification, PO 2026-11-25/u);
 });

@@ -444,9 +444,65 @@ The World gate's ar failure on `0cd3380b` is not CP1's. CP1 changed no mobile fi
 The same instability is on `main`: run 45525952531 on `aa6fc0c8` failed en and SE and passed ar. This is
 `QAN-BL-CI-04`, which stays open and unowned.
 
-On this change's head, the World gate runs once more, because the change edits the gate's own workflow file (its
-triggers only). That run is cancelled where justified, and recorded either way; an unexecuted suite is never reported as
-passed.
+On `6400dc37` the World gate ran once more, because that change edited the gate's own workflow file (its triggers
+only). Run 45571643998 was cancelled, and it is recorded as cancelled, not passed.
+
+### 6.2 The World gate, impact-aware (PO, 2026-11-25, on the CP1 resolution)
+
+**The PO's correction.** Even without the API and the database, the World gate still ran for every `apps/mobile/**`
+change, and on every push to main. That would bring the same unrelated full-matrix testing back during CP2 and CP3. It
+now decides from the change itself.
+
+**How it decides.** A `plan` job runs `scripts/cosmos-ios-world/world-gate-impact.mjs` before the three cells:
+- for a pull request, on its merge-base diff;
+- for a push to main, on the push's own `before..after`;
+- for manual dispatch, it always answers RUN.
+
+The gate is skipped only on the plan's literal `NOT_AFFECTED`. A failed, empty or doubtful plan runs every cell. The
+plan's summary lists every changed file with its class and reason, and a skipped gate is stated as "did NOT run (not
+passed)".
+
+**What runs it:**
+- the gate's own inputs: its workflow, scripts, flows and XCUITest, the S401 proof entry, root and selector, its
+  composition contract, and the analysis with its test;
+- the iOS binary's shared dependencies: the lock; the manifests beyond their `scripts` (read against the base; without a
+  base, a manifest change runs it); the app config; the plugins; the assets; the locales; native iOS code; the shared
+  packages;
+- any mobile source in the **protected closure**.
+
+**The protected closure** is what the protected surfaces import, directly or through any chain of imports. The surfaces
+are COSMOS, the map layer it draws through, the orientation and return chrome, temporal navigation, the Analysis
+composition hubs (`DepthComposition`, `LivingAnalysisMap`) and the S401 proof world. The import graph follows symbols
+through barrels: importing one name from an `index.ts` reaches only the module that defines it. Type-only imports are not
+followed. The hubs are followed in full, because the hooks and components they mount run while the gate navigates the
+Analysis. On the current tree the closure is 376 of the 533 mobile sources.
+
+**What does not run it:** the API, the database, documentation, Jest tests, other suites' Maestro flows, mobile tooling,
+Android-only native code, and the 157 mobile sources no protected surface reaches.
+
+**What it means for CP2 and CP3.** A change to what the stage renders, or to the call client the Analysis mounts, still
+runs the full gate, because it can affect what the gate proves. That is not skipped.
+
+**Unchanged:** the gate's suites, cases, assertions, matrix and pass rule. The iOS Targeted Gate's push to main is
+impact-aware the same way: it uses the same paths as its pull requests.
+
+**Tests.** `tests/cosmos-ios-world-gate-impact.test.mjs`, run inside `test:cosmos-ios-world-gate-composition-contract`
+(API CI, and the gate itself before it builds). It covers:
+- the parser: type-only imports, named re-exports, star re-exports and side-effect imports;
+- every decision class;
+- the real closure: COSMOS and the hubs in, no test, no other proof's entry or root;
+- the workflow's fail-safe wiring;
+- planted regressions: a lockfile or shared package never NOT_AFFECTED, a failing analysis answers RUN, a `RUN`-only
+  condition refused.
+
+A manifest dependency edit was checked to answer RUN, and a scripts-only edit NOT_AFFECTED.
+
+**Case-level selection is not implemented.** When the gate is affected, every cell runs every case. Splitting the cases
+by World would change how the gate runs them, which this correction does not do.
+
+**This change's own plan.** It edits the gate's workflow, and adds the analysis and its test, which are gate-own inputs,
+so the plan answers RUN on this head. Its cases cannot be affected by when it runs. The run is let start, to show the
+plan → matrix wiring on CI; it is then recorded as it actually ends.
 
 **Measured reduction for a live-call backend change:** 3 World gate cells of about 80 – 110 min each, about 270 runner
 minutes, become one targeted cell (its measured time PENDING its first run). The iOS obligation is still met, by interaction with what

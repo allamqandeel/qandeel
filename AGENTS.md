@@ -72,8 +72,9 @@ Green Android, Jest or iOS-build results never substitute for it. A pure backend
 contract-compatibility check and an impact assessment. A checkpoint whose required iOS validation is unexecuted or
 failing is not closed or merge-ready without explicit PO approval. Never weaken a test or bypass the gate to get green.
 Scope is proportional to impact (BG-10 clarification, PO 2026-11-25): a change-aware iOS Targeted Gate proves the
-changed functionality; the full World Gate runs when its own inputs change; targeted validation is recorded separately,
-and an unexecuted suite is never reported as passed.
+changed functionality; the full World Gate runs whenever a dependency analysis of the change (pull request or push to
+main) finds it can reach COSMOS rendering, camera, gestures, navigation or a shared dependency, and any doubt runs it;
+targeted validation is recorded separately, and an unexecuted suite is never reported as passed.
 
 ## 8. Git / PR discipline
 - Work on a dedicated branch.

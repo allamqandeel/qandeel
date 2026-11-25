@@ -11,27 +11,47 @@ name: iOS World gate (COSMOS stages, touch)
 # double tap, a two-finger pinch — from the SAME build (scripts/cosmos-ios-world/xcuitest; PO, 2026-11-18). Every case
 # is PASS / FAIL / NOT TESTED in results.tsv; the job fails unless every case passed. Nothing retries a failed case.
 #
-# Change-aware: it runs for a pull request that changes the mobile application, its shared packages, the dependency lock,
-# or this gate; for a push to main; and on manual dispatch.
+# Impact-aware (PO direction of 2026-11-25 on INTEL-LIVE-01 CP1; backlog BG-10 clarification), for pull requests AND pushes
+# to main. The `plan` job decides from the change itself whether anything this gate proves can be affected
+# (scripts/cosmos-ios-world/world-gate-impact.mjs): the gate's own inputs, the iOS binary's shared dependencies (the lock,
+# the manifests, the app config, the plugins, the assets, the native iOS code, the shared packages), or a mobile source
+# that COSMOS rendering, the camera, gestures or navigation import, directly or through any chain of imports (a
+# symbol-level import graph through barrels). Every other change — the API, the database, documentation, Jest tests,
+# Maestro flows of other suites, mobile tooling, Android-only native code, a mobile source no protected surface reaches —
+# is NOT_AFFECTED, with the reason for each file in the plan's summary. The gate is skipped ONLY on that literal decision:
+# a failed, empty or doubtful plan runs it. Manual dispatch always runs it. The suites, cases and assertions are unchanged.
+# The path filters below are a coarse superset of what the plan can answer RUN for.
 on:
   pull_request:
     paths:
       - 'apps/mobile/**'
       - 'packages/**'
-      # The API and the database are no longer inputs (PO directive 2026-11-25 §4; BG-10 clarification of the same date).
+      # The API and the database are not inputs (PO directive 2026-11-25 §4; BG-10 clarification of the same date).
       # COSMOS-FINAL-01 added them (BG-10 backend scope, contract §21.2), but this gate's app is the S401 proof build over
       # the labelled SYNTHETIC proof network: it reaches no API and no database (CI-SPEED-01's finding), so a backend change
       # cannot change one case here and re-running the full matrix for it proves nothing. A backend change that can affect
       # iOS behaviour is proven by the change-aware iOS Targeted Gate of the path it reaches (ios-targeted-gate.yml for the
-      # live call), recorded separately. The suites, their cases and their assertions are unchanged, and a push to main
-      # still runs every one of them.
+      # live call), recorded separately.
       - 'package.json'
       - 'package-lock.json'
       - 'scripts/cosmos-ios-world/**'
       - 'scripts/validation/bounded-run.mjs'
+      - 'tests/cosmos-ios-world-gate-composition-contract.test.mjs'
+      - 'tests/cosmos-ios-world-gate-impact.test.mjs'
       - '.github/workflows/cosmos-ios-world-gate.yml'
   push:
     branches: [main]
+    # The same inputs as the pull request's; the plan then decides on the push's own change (before..after).
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/cosmos-ios-world/**'
+      - 'scripts/validation/bounded-run.mjs'
+      - 'tests/cosmos-ios-world-gate-composition-contract.test.mjs'
+      - 'tests/cosmos-ios-world-gate-impact.test.mjs'
+      - '.github/workflows/cosmos-ios-world-gate.yml'
   workflow_dispatch:
 concurrency:
   group: cosmos-ios-world-gate-${{ github.ref }}
@@ -46,8 +66,54 @@ env:
   MAESTRO_ZIP_SHA256: 29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991
   IOS_RUNTIME_SUFFIX: iOS-26-5
 jobs:
+  plan:
+    name: World gate impact plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      decision: ${{ steps.plan.outputs.decision }}
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4, with: {fetch-depth: 0}}
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Decide from the change (RUN unless every changed file provably cannot reach this gate)
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.sha }}
+        run: |
+          decision=RUN
+          files=""
+          base=""
+          case "$EVENT" in
+            pull_request) base="$(git merge-base "$PR_BASE" "$PR_HEAD" 2>/dev/null)" || base=""; files="$(git diff --name-only "$PR_BASE...$PR_HEAD" 2>/dev/null)" || files="" ;;
+            push) if [ -n "$PUSH_BEFORE" ] && [ "$PUSH_BEFORE" != "0000000000000000000000000000000000000000" ]; then base="$PUSH_BEFORE"; files="$(git diff --name-only "$PUSH_BEFORE" "$PUSH_AFTER" 2>/dev/null)" || files=""; fi ;;
+          esac
+          if [ -n "$files" ]; then
+            # The base lets a manifest change confined to its `scripts` be read as such; without it a manifest change runs.
+            printf '%s\n' "$files" | node scripts/cosmos-ios-world/world-gate-impact.mjs ${base:+--base "$base"} > "$RUNNER_TEMP/plan.json" || echo '{"decision":"RUN"}' > "$RUNNER_TEMP/plan.json"
+            decision="$(node -e 'const p = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")); process.stdout.write(p.decision === "NOT_AFFECTED" ? "NOT_AFFECTED" : "RUN")' "$RUNNER_TEMP/plan.json" 2>/dev/null)" || decision=RUN
+          else
+            echo '{"decision":"RUN","reasons":[{"file":null,"class":"NO_CHANGE_SET","reason":"manual dispatch, or no changed-file set could be read: run"}]}' > "$RUNNER_TEMP/plan.json"
+          fi
+          [ "$decision" = NOT_AFFECTED ] || decision=RUN
+          echo "decision=$decision" >> "$GITHUB_OUTPUT"
+          {
+            echo "### iOS World gate — impact plan: **$decision**"
+            [ "$decision" = NOT_AFFECTED ] && echo 'The World gate did NOT run (not passed): no changed file can reach what it proves.'
+            echo; echo '| file | class | decision | reason |'; echo '|---|---|---|---|'
+            node -e 'for (const r of JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).reasons ?? []) console.log(`| ${r.file ?? "—"} | ${r.class} | ${r.decision ?? "RUN"} | ${r.reason} |`)' "$RUNNER_TEMP/plan.json" || true
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/plan.json"
   world-gate:
     name: iOS World gate — ${{ matrix.device }} ${{ matrix.lang }}
+    needs: [plan]
+    # Skipped ONLY on the plan's literal NOT_AFFECTED: a failed or empty plan runs every cell.
+    if: ${{ !cancelled() && needs.plan.outputs.decision != 'NOT_AFFECTED' }}
     runs-on: macos-26
     # 120 holds the World gate's 60 minutes (run 44707574152: setup <= 38.5, clean native 14.4 minutes; the fresh-install step, 3.7, is no longer run here).
     timeout-minutes: 120

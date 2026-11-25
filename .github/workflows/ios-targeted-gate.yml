@@ -18,7 +18,8 @@ name: iOS Targeted Gate (live call)
 #
 # Change-aware: the live-call backend (voice, voice media, call analysis, the attention lane, the live-call reply), the
 # database's migrations, the shared packages (the wire contracts), the mobile call client and native call module, the
-# proof server, entry and flows this gate drives, the dependency lock and this gate; a push to main; manual dispatch.
+# proof server, entry and flows this gate drives, the dependency lock and this gate — for a pull request and for a push
+# to main alike; and manual dispatch.
 on:
   pull_request:
     paths:
@@ -41,6 +42,25 @@ on:
       - '.github/workflows/ios-targeted-gate.yml'
   push:
     branches: [main]
+    # Impact-aware on main too: the same inputs as a pull request.
+    paths:
+      - 'apps/api/src/voice/**'
+      - 'apps/api/src/voice-media/**'
+      - 'apps/api/src/live-analysis/**'
+      - 'apps/api/src/live-attention/**'
+      - 'apps/api/src/conversation/live-call-reply.service.ts'
+      - 'apps/api/scripts/s8b-06-cp3-device-proof-server.ts'
+      - 'database/migrations/**'
+      - 'packages/**'
+      - 'apps/mobile/src/call/**'
+      - 'apps/mobile/src/voice-call/**'
+      - 'apps/mobile/modules/qandeel-voice-call/**'
+      - 'apps/mobile/scripts/select-s806cp3-proof-entry.mjs'
+      - 'apps/mobile/.maestro/itg-*.yaml'
+      - 'scripts/ios-targeted-gate/**'
+      - 'scripts/validation/bounded-run.mjs'
+      - 'package-lock.json'
+      - '.github/workflows/ios-targeted-gate.yml'
   workflow_dispatch:
 concurrency:
   group: ios-targeted-gate-${{ github.ref }}

@@ -167,10 +167,19 @@ proportional to the change's impact:
   functionality by real application interaction on a simulator; a build alone is insufficient. For
   the live call this is `.github/workflows/ios-targeted-gate.yml`.
 - The full **iOS World Gate** covers COSMOS: zoom, pan, camera, every World and every device size. It
-  runs when its own inputs change: the mobile application, the shared packages, the dependency lock
-  or the gate itself. It also runs on every push to main. It is not re-run for a backend change that
-  cannot reach it, because its app reaches no API and no database. Its suites, cases and assertions
-  are never deleted or weakened.
+  is impact-aware for pull requests and for pushes to main alike (PO, 2026-11-25, on the CP1
+  resolution). It runs whenever a dependency analysis of the change finds anything that can reach
+  what it proves:
+  - its own inputs;
+  - a shared dependency of the iOS binary: the lock, the manifests beyond their `scripts`, the app
+    config, the plugins, the assets, native iOS code or the shared packages;
+  - a mobile source that COSMOS rendering, the camera, gestures or navigation import, directly or
+    through any chain of imports.
+
+  It is not re-run for anything else: the API and the database (its app reaches neither),
+  documentation, Jest tests, other suites' flows, or a mobile source no protected surface reaches. Any
+  doubt runs it; manual dispatch always runs it. Its suites, cases and assertions are never deleted
+  or weakened.
 - An expensive regression suite runs when the change, or a dependency analysis, shows it is affected.
   Each skip is justified in writing, in the workflow or in the checkpoint's record.
 - Targeted validation is recorded separately from the World Gate. A suite that did not run is
