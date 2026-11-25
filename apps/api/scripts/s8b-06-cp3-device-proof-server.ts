@@ -30,7 +30,7 @@ import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import { appendFileSync } from 'node:fs';
 import {
-  Body, Controller, Get, HttpCode, HttpException, Module, Param, Post, Query, UnauthorizedException, UseGuards, type INestApplication,
+  Body, Controller, Get, HttpCode, HttpException, Module, Param, Post, Query, Req, UnauthorizedException, UseGuards, type INestApplication,
 } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { accountedDeepSeekStreamingChatCompletions } from '../src/ai-usage/accounted-provider-clients';
@@ -140,6 +140,19 @@ function evidence(kind: string, detail: Record<string, unknown>): void {
 let stimulusFrames = 0;
 let openStreams = 0;
 let stimulusSample = 0;
+
+/**
+ * INTEL-LIVE-01 CP1 — the iOS Targeted Gate's call commands (PO, 2026-11-25, the final functional validation approach).
+ * The simulator's synthetic touch delivery dropped the call-entry tap (runs 45612961224, 45630621237, 45659136860), so the
+ * gate's functional cases start and end the call through the proof root instead (`s806cp3-call-commands.ts`): it calls
+ * the session's own CallOwner exactly as the call entry and End do. ONE command at a time, each consumed once:
+ * `POST /proof/call?do=` queues it, `GET /proof/call/next` hands it out once (held until one is queued or 20 s pass: one
+ * open request, no continuous polling), `POST /proof/call/ack` records what the app did with it, once.
+ */
+type CallCommand = { id: number; op: 'start' | 'end'; taken: boolean; acked: boolean };
+let callCommand: CallCommand | null = null;
+let callCommandSeq = 0;
+const callCommandWaiters = new Set<() => void>();
 function stimulusFrame(bytes: number): Buffer {
   const out = Buffer.alloc(bytes);
   for (let i = 0; i < Math.floor(bytes / 2); i += 1) {
@@ -748,6 +761,47 @@ async function main(): Promise<void> {
       stimulusFrames = Math.ceil(n / 20);
       evidence('stimulus', { ms: n });
       return { frames: stimulusFrames };
+    }
+
+    /** INTEL-LIVE-01 CP1: queues ONE call command for the proof root (see callCommand); refused while one is unanswered. */
+    @Post('call')
+    queueCallCommand(@Query('do') op: string) {
+      if (op !== 'start' && op !== 'end') throw new HttpException('do start|end', 400);
+      if (callCommand !== null && !callCommand.acked) throw new HttpException('a call command is still unanswered', 409);
+      callCommandSeq += 1;
+      callCommand = { id: callCommandSeq, op, taken: false, acked: false };
+      evidence('call-command', { step: 'queued', id: callCommand.id, op });
+      for (const wake of [...callCommandWaiters]) wake();
+      return { id: callCommand.id, op };
+    }
+
+    /**
+     * INTEL-LIVE-01 CP1: the proof root takes the queued command, once; held until one is queued or 20 s pass. A request
+     * whose connection closed while held takes nothing (a local check: a follower that went away took a command it never ran).
+     */
+    @Get('call/next')
+    async nextCallCommand(@Req() req: { socket?: { destroyed?: boolean } }) {
+      if (callCommand === null || callCommand.taken) {
+        await new Promise<void>((resolve) => {
+          const wake = () => { clearTimeout(timer); callCommandWaiters.delete(wake); resolve(); };
+          const timer = setTimeout(wake, 20_000);
+          callCommandWaiters.add(wake);
+        });
+      }
+      if (callCommand === null || callCommand.taken || req.socket?.destroyed === true) return { id: null };
+      callCommand.taken = true;
+      evidence('call-command', { step: 'taken', id: callCommand.id, op: callCommand.op });
+      return { id: callCommand.id, op: callCommand.op };
+    }
+
+    /** INTEL-LIVE-01 CP1: what the app did with the command it took (the owner's stage just after), recorded once. */
+    @Post('call/ack')
+    ackCallCommand(@Query('id') id: string, @Query('outcome') outcome: string, @Query('stage') stage: string) {
+      if (callCommand === null || String(callCommand.id) !== id || !callCommand.taken || callCommand.acked) throw new HttpException('no such taken command', 409);
+      if (!/^[A-Z_]{1,32}$/u.test(outcome ?? '') || !/^[A-Z_]{1,32}$/u.test(stage ?? '')) throw new HttpException('outcome and stage', 400);
+      callCommand.acked = true;
+      evidence('call-command', { step: 'executed', id: callCommand.id, op: callCommand.op, outcome, stage });
+      return { id: callCommand.id };
     }
 
     /** INTEL-LIVE-01 CP1: what 0204 recorded of THIS proof's latest call, in counts only (never a label or a word). */

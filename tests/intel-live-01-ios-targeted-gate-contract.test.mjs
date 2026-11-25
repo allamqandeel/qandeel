@@ -7,7 +7,7 @@
 // the API and the database are no longer its inputs; BG-10's clarification is in the backlog and AGENTS.md.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const code = (text) => text.replace(/^\s*#[^\n]*$/gmu, '');
@@ -16,8 +16,9 @@ const GATE = '.github/workflows/ios-targeted-gate.yml';
 const RUNNER = 'scripts/ios-targeted-gate/run-live-call-gate.sh';
 const WORLD = '.github/workflows/cosmos-ios-world-gate.yml';
 const SERVER = 'apps/api/scripts/s8b-06-cp3-device-proof-server.ts';
-const TOUCH = 'scripts/ios-targeted-gate/touch-drop.mjs';
-const FLOWS = ['itg-call-launch.yaml', 'itg-call-tap.yaml', 'itg-call-visible.yaml', 'itg-call-end.yaml'];
+const COMMANDS = 'apps/mobile/src/voice-call/__validation__/s806cp3-call-commands.ts';
+const ROOT = 'apps/mobile/src/voice-call/__validation__/S806Cp3ProofRoot.tsx';
+const FLOWS = ['itg-call-launch.yaml', 'itg-call-tap.yaml', 'itg-call-visible.yaml', 'itg-call-gone.yaml'];
 const CASES = ['ITG-01', 'ITG-02', 'ITG-03', 'ITG-04', 'ITG-05', 'ITG-06'];
 
 const tree = () => ({
@@ -25,7 +26,8 @@ const tree = () => ({
   runner: read(RUNNER),
   world: read(WORLD),
   server: read(SERVER),
-  touch: read(TOUCH),
+  commands: read(COMMANDS),
+  root: read(ROOT),
   flows: FLOWS.map((f) => read(`apps/mobile/.maestro/${f}`)).join('\n---\n'),
 });
 
@@ -35,7 +37,7 @@ function prPaths(workflow) {
   return block ? [...block[1].matchAll(/-\s+'([^']+)'/gu)].map((m) => m[1]) : [];
 }
 
-export function violations({ gate, runner, world, server, flows, touch }) {
+export function violations({ gate, runner, world, server, flows, commands, root }) {
   const out = [];
   const paths = prPaths(gate);
   for (const p of ['apps/api/src/voice/**', 'apps/api/src/live-analysis/**', 'apps/api/src/live-attention/**', 'database/migrations/**', 'packages/**',
@@ -81,31 +83,39 @@ export function violations({ gate, runner, world, server, flows, touch }) {
   if (!/\nstart_client_diagnostics\nflow itg-call-launch\.yaml launch /u.test(r) || !/\( while :; do pid="\$\(pgrep -x QANDEEL \| head -n 1\)"/u.test(r)) {
     out.push('the client-side diagnostics do not cover the run from ITG-01');
   }
-  // ITG-02's ONE infrastructure-recovery exception (PO, 2026-11-25; runs 45612961224 and 45630621237): one repeat of the
-  // call-entry tap, only after touch-drop.mjs confirmed the simulator's own touch drop with the server idle.
+  // The functional cases start and end the call by the proof root's call commands, never a touch (PO, 2026-11-25, the
+  // final functional validation approach; runs 45612961224, 45630621237, 45659136860 dropped the call-entry tap). The
+  // ITG-02 touch-drop recovery exception is removed with its verifier; UI touch is checked SEPARATELY after them.
   {
-    const first = r.indexOf('if ! flow itg-call-tap.yaml connect -e ID=qandeel-call-entry');
-    const verify = r.indexOf('node "$REPO/scripts/ios-targeted-gate/touch-drop.mjs" "$OUT/host/02-touch-1.log" "$EVENTS" "$TAP_SINCE" "$OUT/host/02-attempt-1-state.json"');
-    const refused = r.indexOf("|| fail ITG-02 \"a tap on the call entry did not draw the call line's End, and it was not the simulator's confirmed touch drop");
-    const repeat = r.indexOf('flow itg-call-tap.yaml connect-repeat ');
-    const count = (needle) => r.split(needle).length - 1;
-    if (first < 0 || verify < first || refused < verify || repeat < refused || count('flow itg-call-tap.yaml connect-repeat ') !== 1
-      || count('flow itg-call-tap.yaml connect') !== 2) {
-      out.push('ITG-02 repeats its tap without the confirmed touch drop, or more than once');
+    const from = runner.indexOf('# ITG-01 — launch');
+    const to = runner.indexOf('# UI touch — SEPARATE');
+    const functional = from >= 0 && to > from ? code(runner.slice(from, to)) : '';
+    if (!functional || /itg-call-tap\.yaml|tapOn/u.test(functional)) out.push('a functional case depends on a touch');
+    if (!functional.includes('call_command start 02-command \\\n  || fail ITG-02 ')) out.push('ITG-02 does not start the call by the start command');
+    if (!functional.includes('call_command end 04-command \\\n  || fail ITG-04 ')) out.push('ITG-04 does not end the call by the end command');
+    if (!functional.includes('flow itg-call-gone.yaml end -e ID=qandeel-call-rail:end -e STAY_ID=qandeel-depth-to-conversation')) out.push('ITG-04 does not see the call line go and the Analysis stay');
+    if (!functional.includes('s.call.state === "ACTIVE"\' \\\n  || fail ITG-02')) out.push('ITG-02 does not require the server to hold the call ACTIVE');
+    if (!r.includes('grep -q "\\"outcome\\":\\"$want\\"" "$OUT/host/$saved.jsonl"') || !r.includes('-X POST "$SERVER/proof/call?do=$op"')) {
+      out.push("a call command does not wait for the app's own acknowledgement of executing it");
     }
-    if (!r.includes('-e SHOT=02-in-call \\\n    || fail ITG-02 "the ONE repeat'))out.push('a failed ITG-02 repeat does not fail the case');
-    if (!r.includes('if [ -n "$TAP_RECOVERED" ]; then\n  record ITG-02 "PASS AFTER RECOVERY"')) out.push('a recovered ITG-02 is not recorded PASS AFTER RECOVERY');
-    if (!['> "$OUT/host/02-attempt-1-state.json"', '> "$OUT/host/02-touch-1.log"', 'shots/itg-02-attempt-1.png'].every((e) => r.includes(e))) {
-      out.push('the first tap\'s evidence is not kept');
+    if (/touch-drop|TAP_RECOVERED|connect-repeat/u.test(r)) out.push('the removed ITG-02 touch-drop recovery is still in the runner');
+    const ui = r.slice(r.indexOf('ui_touch() {'), r.indexOf('\nui_touch\n'));
+    if (!ui || /\b(fail|record|exit)\b/u.test(ui)) out.push('a UI touch check can change the functional results or the exit status');
+    if (['ut-1', 'ut-2', 'ut-3'].some((l) => ui.split('flow itg-call-tap.yaml ' + l + ' ').length !== 2)) out.push('a UI touch check is not made exactly once');
+    if (!r.includes('ut "$c" "NOT TESTED" "not reached') || /ut "\$c" PASS/u.test(r)) out.push('an unreached UI touch check is not NOT TESTED');
+    if (!r.includes("printf 'case\\tresult\\tdetail\\n' > \"$UI_TOUCH\"") || !r.includes('UI_TOUCH="$OUT/ui-touch.tsv"')) out.push('the UI touch checks are not recorded separately');
+    if (r.lastIndexOf('\nexit 0\n') < r.indexOf('\nui_touch\n')) out.push("the UI touch checks are not the run's last, exit-neutral step");
+    if (!g.includes('cat "$RUNNER_TEMP/itg/ui-touch.tsv"')) out.push('the job summary does not show the UI touch checks');
+  }
+  {
+    const c = code(commands ?? '');
+    if (!c.includes("export const PROOF_CALL_COMMANDS_BASE = 'http://127.0.0.1:8806';")) out.push("the call commands reach beyond the simulator's loopback proof server");
+    if (!c.includes("if (owner.getState().stage === 'PREPARING') return 'BUSY';\n  void owner.start();")) out.push("the start command is not the call entry's own call");
+    if (!c.includes("if (command === 'end') {\n    owner.end();")) out.push("the end command is not End's own call");
+    if (!c.includes('/proof/call/ack?id=')) out.push('the app does not acknowledge what it executed');
+    if (!(root ?? '').includes("followProofCallCommands({\n      owner: () => {\n        const phase = runtime.getPhase();\n        return phase.kind === 'READY' ? phase.runtime.call : null;")) {
+      out.push("the proof root does not follow the call commands on the session's own CallOwner");
     }
-    for (const [rule, needle] of [
-      ['T1', 'if (touched.length !== 1) verdict(false'],
-      ['T2', 'if (dropped.length === 0) verdict(false'],
-      ['T3', 'presence: none`))) verdict(false'],
-      ['T4', 'if (disappeared < 0 || cancelled < 0) verdict(false'],
-      ['S1', "state.call !== null) verdict(false"],
-      ['S2', "e.path.startsWith('/voice/calls')) || (e.kind === 'KICK' && e.reason === 'CALL_ACTIVATED')"],
-    ]) if (!(touch ?? '').includes(needle)) out.push(`touch-drop.mjs does not hold ${rule}`);
   }
   // Run 45601664395 (PO, 2026-11-25): the harness's own load on a runner with no idle CPU and 129 MB free.
   if (/log stream/u.test(r)) out.push('the runner streams the app log during the cases (measured at about a third of a core)');
@@ -125,6 +135,13 @@ export function violations({ gate, runner, world, server, flows, touch }) {
   if (!/evidence\('http', \{ method: req\.method, path: req\.url\.split\('\?'\)\[0\], status: res\.statusCode, ms: Date\.now\(\) - started \}\)/u.test(s)) {
     out.push('the proof server does not record each HTTP request\'s path and status, without its query');
   }
+
+  if (!s.includes("if (callCommand !== null && !callCommand.acked) throw new HttpException('a call command is still unanswered', 409);")) out.push('a call command can be queued over an unanswered one');
+  if (!s.includes('if (callCommand === null || callCommand.taken || req.socket?.destroyed === true) return { id: null };\n      callCommand.taken = true;')) {
+    out.push('a call command can be handed out more than once, or to a request whose connection closed');
+  }
+  if (!s.includes('!callCommand.taken || callCommand.acked) throw new HttpException')) out.push('a call command can be acknowledged twice or before it was taken');
+  if (!s.includes('const timer = setTimeout(wake, 20_000);')) out.push('the proof root polls instead of one held request');
 
   const worldPaths = prPaths(world);
   for (const p of ['apps/mobile/**', 'packages/**', 'package-lock.json', 'scripts/cosmos-ios-world/**', WORLD]) {
@@ -154,25 +171,35 @@ test('the flows tap controls the production call surfaces still carry', () => {
   assert.match(read('apps/mobile/src/conversation/AnalysisReturnBar.tsx'), /testID="qandeel-depth-to-conversation"/u);
   const runner = read(RUNNER);
   assert.match(runner, /-e ID=qandeel-call-entry -e WAIT_ID=qandeel-call-rail:end/u);
-  assert.match(runner, /flow itg-call-end\.yaml end \\\n/u);
+  assert.match(runner, /-e ID=qandeel-depth-to-conversation -e WAIT_ID=qandeel-call-entry/u);
+  assert.match(runner, /flow itg-call-gone\.yaml end /u);
 });
 
-test('ITG-04 asserts the approved end (S8B-06 CP3 J3): the call line goes, the Analysis stays, the entry is back in the Conversation', () => {
+test('ITG-04 asserts the approved end (S8B-06 CP3 J3): the call line goes and the Analysis stays; UT-1 taps back to the entry', () => {
   // Run 45571644129: the call ended USER_ENDED on the server at the tap and the call line went, but the flow waited for the
   // call entry on the Analysis, where it is never drawn. The person's own End does not move them (J3).
-  const end = code(read('apps/mobile/.maestro/itg-call-end.yaml'));
-  const steps = ['tapOn:\n    id: qandeel-call-rail:end', 'notVisible:\n      id: qandeel-call-rail:end', 'assertVisible:\n    id: qandeel-depth-to-conversation',
-    'tapOn:\n    id: qandeel-depth-to-conversation', 'visible:\n      id: qandeel-call-entry'];
-  let at = -1;
-  for (const step of steps) {
-    const next = end.indexOf(step);
-    assert.ok(next > at, `ITG-04's flow carries, in order: ${step.replace(/\n\s*/gu, ' ')}`);
-    at = next;
-  }
+  const gone = code(read('apps/mobile/.maestro/itg-call-gone.yaml'));
+  assert.ok(!/tapOn/u.test(gone), 'the end flow touches nothing');
+  const goes = gone.indexOf('notVisible:\n      id: ${ID}');
+  assert.ok(goes >= 0 && gone.indexOf('assertVisible:\n    id: ${STAY_ID}') > goes, 'the call line goes, then the Analysis is still there');
   const r = read(RUNNER);
   assert.match(r, /s\.call\.state === "ENDED" && s\.call\.end_reason === "USER_ENDED"/u, 'the server still must end the call USER_ENDED');
+  assert.match(r, /flow itg-call-tap\.yaml ut-1 -e ID=qandeel-depth-to-conversation -e WAIT_ID=qandeel-call-entry/u, 'the door back to the entry is a UI touch check');
+  assert.ok(!existsSync(new URL('../apps/mobile/.maestro/itg-call-end.yaml', import.meta.url)) && !existsSync(new URL('../scripts/ios-targeted-gate/touch-drop.mjs', import.meta.url)),
+    'the touch-driven end flow and the touch-drop verifier are gone');
   assert.match(read('docs/e2e/QANDEEL_S8B_06_CALL_UI_LIVE_MAP_DEVICE_CLOSURE_RECORD_v1.md'), /the person's own End \(app, notification, system UI\) does not move them/u,
     'the behaviour asserted is the approved one');
+});
+
+test('the call commands are proof-only: no Product module reaches them, and the Product entry is unchanged', () => {
+  const walk = (dir) => readdirSync(new URL('../' + dir, import.meta.url), { withFileTypes: true }).flatMap((e) => {
+    const p = dir + '/' + e.name;
+    if (e.isDirectory()) return ['__validation__', '__tests__', 'node_modules'].includes(e.name) ? [] : walk(p);
+    return /\.(ts|tsx|js|jsx)$/u.test(e.name) ? [p] : [];
+  });
+  const reaching = [...walk('apps/mobile/src'), ...walk('apps/api/src')].filter((p) => /s806cp3-call-commands|\/proof\/call/u.test(read(p)));
+  assert.deepEqual(reaching, []);
+  assert.match(read('apps/mobile/package.json'), /"main": "expo-router\/entry"/u);
 });
 
 test('BG-10 is clarified, not relaxed (PO directive 2026-11-25)', () => {
@@ -208,13 +235,21 @@ test('each refusal is real: planted regressions are caught', () => {
     ['the pid read once', plant('runner', '( while :; do pid="$(pgrep -x QANDEEL | head -n 1)"', 'pid="$(pgrep -x QANDEEL | head -n 1)"; ( while :; do')],
     ['the HTTP evidence dropped', plant('server', "evidence('http', {", 'void ({')],
     ['the HTTP evidence with its query', plant('server', "path: req.url.split('?')[0]", 'path: req.url')],
-    ['an ITG-02 recovery recorded as PASS', plant('runner', 'record ITG-02 "PASS AFTER RECOVERY"', 'record ITG-02 PASS')],
-    ['an ITG-02 repeat without the confirmed drop', plant('runner', "|| fail ITG-02 \"a tap on the call entry did not draw the call line's End, and it was not the simulator's confirmed touch drop", "|| true \"a tap on the call entry did not draw the call line's End, and it was not the simulator's confirmed touch drop")],
-    ['a second ITG-02 repeat', plant('runner', '  flow itg-call-tap.yaml connect-repeat ', '  flow itg-call-tap.yaml connect-repeat -e ID=qandeel-call-entry || flow itg-call-tap.yaml connect-repeat ')],
-    ['a failed ITG-02 repeat tolerated', plant('runner', '    || fail ITG-02 "the ONE repeat', '    || true "the ONE repeat')],
-    ['the completed-tap rule dropped (T3)', plant('touch', 'presence: none`))) verdict(false', 'presence: none`))) void (false')],
-    ['the cancellation rule dropped (T4)', plant('touch', 'if (disappeared < 0 || cancelled < 0) verdict(false', 'if (false) verdict(false')],
-    ['the idle-call rule dropped (S1)', plant('touch', 'state.call !== null) verdict(false', 'false) verdict(false')],
+    ['a functional case by touch again', plant('runner', 'call_command start 02-command \\', 'flow itg-call-tap.yaml connect -e ID=qandeel-call-entry -e WAIT_ID=qandeel-call-rail:end -e SHOT=02-in-call \\')],
+    ['the acknowledgement not awaited', plant('runner', 'grep -q "\\"outcome\\":\\"$want\\"" "$OUT/host/$saved.jsonl"', 'true')],
+    ['a UI touch failure failing the job', plant('runner', 'ut UT-2 FAIL "a tap on the call entry did not draw', 'fail ITG-02 "a tap on the call entry did not draw')],
+    ['a UI touch check repeated', plant('runner', '  FLOW_SECONDS=120 flow itg-call-tap.yaml ut-2 ', '  FLOW_SECONDS=120 flow itg-call-tap.yaml ut-2 -e ID=qandeel-call-entry || FLOW_SECONDS=120 flow itg-call-tap.yaml ut-2 ')],
+    ['an unreached UI touch check made PASS', plant('runner', 'ut "$c" "NOT TESTED" "not reached', 'ut "$c" PASS "not reached')],
+    ['the UI touch results hidden', plant('gate', 'cat "$RUNNER_TEMP/itg/ui-touch.tsv"', 'true')],
+    ['the touch-drop recovery kept', plant('runner', '# ITG-02 — connect, by the start command', 'TAP_RECOVERED=""\n# ITG-02 — connect, by the start command')],
+    ['a command handed out twice', plant('server', 'callCommand === null || callCommand.taken || req.socket', 'callCommand === null || req.socket')],
+    ['a command handed to a closed connection', plant('server', ' || req.socket?.destroyed === true) return { id: null };', ') return { id: null };')],
+    ['a command queued over an unanswered one', plant('server', "if (callCommand !== null && !callCommand.acked) throw new HttpException('a call command is still unanswered', 409);", '')],
+    ['the follower polling instead of one held request', plant('server', 'setTimeout(wake, 20_000);', 'setTimeout(wake, 0);')],
+    ["start without the entry's guard", plant('commands', "  if (owner.getState().stage === 'PREPARING') return 'BUSY';\n", '')],
+    ["end not the owner's", plant('commands', "if (command === 'end') {\n    owner.end();", "if (command === 'end') {")],
+    ['a command from off the loopback', plant('commands', "'http://127.0.0.1:8806'", "'http://10.0.2.2:8806'")],
+    ['the follower dropped from the proof root', plant('root', 'const stopCommands = followProofCallCommands({', 'const stopCommands = (({}) => () => undefined)({')],
     ['the loss epoch dropped', plant('server', ', epoch: this.epoch ?? null });', ' });')],
     ['the app log streamed again', plant('runner', '  CLIENT_LOG_FROM="$(date', '  xcrun simctl spawn "$UDID" log stream --style compact &\n  CLIENT_LOG_FROM="$(date')],
     ['the server type-checked beside the simulator', plant('runner', '/bin.js" --transpile-only --project', '/bin.js" --project')],

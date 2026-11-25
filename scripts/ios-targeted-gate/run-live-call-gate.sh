@@ -17,21 +17,30 @@
 # spoken turn exactly once, and only after the server itself recorded the call's connection lost before PLAYED_OUT (the frozen
 # 3 s silence rule ended it, run 45586185915). The first attempt's evidence is kept; the repeat is made only once the call is
 # ACTIVE again at a later epoch; a repeat that plays out is recorded PASS AFTER RECOVERY, never PASS; a second loss fails it.
-# And ONE infrastructure-recovery exception for ITG-02 (PO, 2026-11-25, option 1 of the touch-drop review): the call-entry
-# tap is repeated exactly once, only when touch-drop.mjs confirms the simulator's own touch drop (runs 45612961224 and
-# 45630621237: the touch-down taken, every later event of its path dropped, the path cancelled while still touching when the
-# synthetic digitizer disappeared) and the server holds no call and saw no call initiation. The first attempt's evidence is
-# kept; a repeat that opens the call is PASS AFTER RECOVERY; a second failure, an unverified cancellation or a completed tap
-# that did not start the call is FAIL.
+#
+# The functional cases start and end the call WITHOUT a touch (PO, 2026-11-25, the final functional validation approach):
+# the simulator's synthetic touch delivery dropped the call-entry tap three times (runs 45612961224, 45630621237,
+# 45659136860). `POST /proof/call?do=start|end` queues ONE command; the proof root takes it once and calls the session's own
+# CallOwner exactly as the call entry (`if (!preparing) void owner.start()`) and the call line's End (`owner.end()`) do
+# (apps/mobile/src/voice-call/__validation__/s806cp3-call-commands.ts), then acknowledges it; each case waits for that
+# acknowledgement in the server's evidence. Everything after it is the app's own call: capability, the server's truth, the
+# microphone, consent, the platform call, the native engine, the socket and protocol, the backend and the attention lane.
+# This proves the call, never a touch.
 #
 #   ITG-01 launch     the proof build installs and launches; the Conversation's call entry is drawn
-#   ITG-02 connect    a tap on the call entry opens a call the server holds ACTIVE (qandeel.live-call.v1 HELLO accepted);
-#                     the call line's End is drawn. PASS AFTER RECOVERY: the one repeat above opened it
+#   ITG-02 connect    the start command (the call entry's own call) opens a call the server holds ACTIVE
+#                     (qandeel.live-call.v1 HELLO accepted); the call line's End is drawn
 #   ITG-03 turn       one turn through the live-call backend: endpointer commit, reply, and the reply PLAYED_OUT, which
 #                     only the iOS engine's own PLAYOUT confirmations can produce; the call line is still drawn after it.
 #                     PASS AFTER RECOVERY: the one repeat above played out (the interruption stays an open finding)
-#   ITG-04 end        a tap on End ends the call USER_ENDED; the call line goes and the Analysis stays (S8B-06 CP3 J3:
-#                     the person's own End does not move them); back in the Conversation the call entry is drawn again
+#   ITG-04 end        the end command (End's own call) ends the call USER_ENDED; the call line goes and the Analysis stays
+#                     (S8B-06 CP3 J3: the person's own End does not move them)
+#
+# UI touch, reported SEPARATELY in <out-dir>/ui-touch.tsv after the functional cases (PASS / FAIL / NOT TESTED; it never
+# changes the exit status and never counts as functional evidence; nothing repeats):
+#   UT-1 the door back to the Conversation, by a tap: the call entry is drawn again
+#   UT-2 a tap on the call entry opens a second call the server holds ACTIVE; the call line's End is drawn
+#   UT-3 a tap on End ends that call USER_ENDED; the call entry is drawn again
 #   ITG-05 attention  the provisional attention lane evaluated and wrote both tracks (SET events) and settled both halves
 #                     COMPLETE at the call's end; no write failed
 #   ITG-06 stability  the app is still running and no crash report names it
@@ -89,8 +98,24 @@ infrastructure() {
 flow() {
   local file="$1" label="$2"
   shift 2
-  $BOUND --seconds 300 --label "flow-$label" --out "$OUT" -- maestro --device "$UDID" test --debug-output "$OUT/debug-$label" \
+  $BOUND --seconds "${FLOW_SECONDS:-300}" --label "flow-$label" --out "$OUT" -- maestro --device "$UDID" test --debug-output "$OUT/debug-$label" \
     --test-output-dir "$OUT/shots" -e PREFIX=itg "$@" "$FLOWS/$file"
+}
+# call_command <start|end> <saved-name>: queues ONE call command and waits up to 30 s for the app's acknowledgement in the
+# server's evidence (the proof root took it and called the owner: STARTED for start, ENDED for end). The command's queued,
+# taken and executed lines are kept in host/<saved-name>.jsonl either way.
+call_command() {
+  local op="$1" saved="$2" id waited=0 want=STARTED
+  [ "$op" = end ] && want=ENDED
+  id="$(curl -s -m 5 -f -X POST "$SERVER/proof/call?do=$op" | node -e 'let s = ""; process.stdin.on("data", (d) => { s += d; }).on("end", () => { try { const j = JSON.parse(s); if (Number.isInteger(j.id)) process.stdout.write(String(j.id)); } catch {} });')"
+  [ -n "$id" ] || { echo '{"refused":"the server did not queue the command"}' > "$OUT/host/$saved.jsonl"; return 1; }
+  while [ "$waited" -le 30 ]; do
+    if grep '"kind":"call-command","step":"executed"' "$EVENTS" | grep "\"id\":$id," | grep -q "\"outcome\":\"$want\""; then break; fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+  grep '"kind":"call-command"' "$EVENTS" | grep "\"id\":$id," > "$OUT/host/$saved.jsonl" 2>/dev/null || true
+  grep -q "\"outcome\":\"$want\"" "$OUT/host/$saved.jsonl"
 }
 read_state() { curl -s -m 5 "$SERVER/proof/state" || echo '{}'; }
 read_attention() { curl -s -m 5 "$SERVER/proof/attention" || echo '{}'; }
@@ -213,34 +238,14 @@ start_client_diagnostics
 flow itg-call-launch.yaml launch -e SHOT=01-launch || fail ITG-01 "the Conversation's call entry was not drawn after launch"
 record ITG-01 PASS "the proof build installed and launched; the Conversation's call entry is drawn"
 
-# ITG-02 — connect. The ONE infrastructure-recovery exception (PO, 2026-11-25, option 1; runs 45612961224, 45630621237):
-# the tap is repeated once only when touch-drop.mjs confirms the simulator's own touch drop (the touch-down taken, every
-# later event of its path dropped, the path never lifted, then cancelled when the synthetic digitizer disappeared) and the
-# server holds no call and saw no call initiation. Anything else, an unverified cancellation included, stays FAIL.
-TAP_RECOVERED=""
-TAP_SINCE="$(node -e 'process.stdout.write(String(Date.now()))')"
-if ! flow itg-call-tap.yaml connect -e ID=qandeel-call-entry -e WAIT_ID=qandeel-call-rail:end -e SHOT=02-in-call; then
-  xcrun simctl io "$UDID" screenshot "$OUT/shots/itg-02-attempt-1.png" >/dev/null 2>&1 || true
-  client_snapshot 02-attempt-1
-  read_state > "$OUT/host/02-attempt-1-state.json"
-  # The simulator log Maestro captured for this flow (every run's artifact holds backboardd's touch lines there).
-  TAP_LOG="$(ls -t "$OUT"/shots/*/itg-call-tap/logs/device-simulator.log 2>/dev/null | head -n 1)"
-  { [ -n "$TAP_LOG" ] && grep 'backboardd' "$TAP_LOG" | grep 'TouchEvents'; } > "$OUT/host/02-touch-1.log" 2>/dev/null || true
-  node "$REPO/scripts/ios-targeted-gate/touch-drop.mjs" "$OUT/host/02-touch-1.log" "$EVENTS" "$TAP_SINCE" "$OUT/host/02-attempt-1-state.json" \
-    > "$OUT/host/02-touch-1.json" \
-    || fail ITG-02 "a tap on the call entry did not draw the call line's End, and it was not the simulator's confirmed touch drop ($(cat "$OUT/host/02-touch-1.json" 2>/dev/null)); nothing was repeated"
-  TAP_RECOVERED="$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).detail)' "$OUT/host/02-touch-1.json" 2>/dev/null)"
-  note "ITG-02: the simulator dropped the tap's touch: $TAP_RECOVERED (first attempt kept: host/02-touch-1.log, host/02-touch-1.json, host/02-attempt-1-state.json, shots/itg-02-attempt-1.png); the tap is repeated once"
-  flow itg-call-tap.yaml connect-repeat -e ID=qandeel-call-entry -e WAIT_ID=qandeel-call-rail:end -e SHOT=02-in-call \
-    || fail ITG-02 "the ONE repeat of the call-entry tap, after the simulator dropped the first ($TAP_RECOVERED), did not draw the call line's End"
-fi
+# ITG-02 — connect, by the start command (no touch; see above): the call entry's own owner.start(), then the same checks.
+call_command start 02-command \
+  || fail ITG-02 "the app did not take and execute the start command within 30 s (host/02-command.jsonl)"
 wait_json 60 read_state 02-call-active 's => s.call != null && s.call.state === "ACTIVE"' \
-  || fail ITG-02 "the server holds no ACTIVE call (host/02-call-active.json)"
-if [ -n "$TAP_RECOVERED" ]; then
-  record ITG-02 "PASS AFTER RECOVERY" "the first tap's touch was dropped and cancelled by the simulator ($TAP_RECOVERED; kept in host/02-touch-1.log, host/02-touch-1.json, host/02-attempt-1-state.json); the ONE repeat opened a call the server holds ACTIVE; the call line's End is drawn"
-else
-  record ITG-02 PASS "the tap opened a call the server holds ACTIVE; the call line's End is drawn"
-fi
+  || fail ITG-02 "the start command was executed (host/02-command.jsonl), but the server holds no ACTIVE call (host/02-call-active.json)"
+flow itg-call-visible.yaml connect -e ID=qandeel-call-rail:end -e SHOT=02-in-call \
+  || fail ITG-02 "the server holds the call ACTIVE, but the call line's End was not drawn"
+record ITG-02 PASS "the start command (the call entry's own owner.start(), no touch; host/02-command.jsonl) opened a call the server holds ACTIVE; the call line's End is drawn"
 
 # ITG-03 — one turn: the synthetic voiced signal, the endpointer's commit, the reply, played out by the iOS engine.
 RECOVERED=""
@@ -284,13 +289,15 @@ else
   record ITG-03 PASS "a spoken turn committed, its reply PLAYED_OUT through the iOS engine's playout confirmations; the call line is still drawn"
 fi
 
-# ITG-04 — end. The person's own End does not move them (S8B-06 CP3 J3): the call line goes and the Analysis stays; the
-# door back to the Conversation then shows the call entry again.
-flow itg-call-end.yaml end \
-  || fail ITG-04 "after End, the call line did not go, the Analysis did not stay, or the Conversation did not draw the call entry again"
+# ITG-04 — end, by the end command (no touch): End's own owner.end(). The person's own End does not move them (S8B-06
+# CP3 J3): the call line goes and the Analysis stays.
+call_command end 04-command \
+  || fail ITG-04 "the app did not take and execute the end command within 30 s (host/04-command.jsonl)"
+flow itg-call-gone.yaml end -e ID=qandeel-call-rail:end -e STAY_ID=qandeel-depth-to-conversation -e SHOT=04-ended \
+  || fail ITG-04 "after the end command (host/04-command.jsonl), the call line did not go or the Analysis did not stay"
 wait_json 60 read_state 04-call-ended 's => s.call != null && s.call.state === "ENDED" && s.call.end_reason === "USER_ENDED"' \
   || fail ITG-04 "the server did not end the call USER_ENDED (host/04-call-ended.json)"
-record ITG-04 PASS "the tap on End ended the call USER_ENDED; the call line went and the Analysis stayed (J3); back in the Conversation the call entry is drawn again"
+record ITG-04 PASS "the end command (End's own owner.end(), no touch; host/04-command.jsonl) ended the call USER_ENDED; the call line went and the Analysis stayed (J3)"
 
 # ITG-05 — the provisional attention lane on both tracks, settled at the call's end.
 wait_json 60 read_attention 05-attention \
@@ -304,8 +311,39 @@ xcrun simctl spawn "$UDID" launchctl list 2>/dev/null | grep -q "UIKitApplicatio
 if ls "$HOME/Library/Logs/DiagnosticReports" 2>/dev/null | grep -Eiq 'qandeel'; then fail ITG-06 "a crash report names the app"; fi
 record ITG-06 PASS "the app is still running; no crash report names it"
 
-if [ -n "$TAP_RECOVERED$RECOVERED" ]; then
-  note "iOS Targeted Gate (live call): every case passed, with recovery:${TAP_RECOVERED:+ ITG-02 PASS AFTER RECOVERY (the simulator dropped the first tap: $TAP_RECOVERED);}${RECOVERED:+ ITG-03 PASS AFTER RECOVERY (an unresolved interruption: $RECOVERED)}"
+if [ -n "$RECOVERED" ]; then
+  note "iOS Targeted Gate (live call): every functional case passed, with recovery: ITG-03 PASS AFTER RECOVERY (an unresolved interruption: $RECOVERED)"
 else
-  note "iOS Targeted Gate (live call): every case PASS"
+  note "iOS Targeted Gate (live call): every functional case PASS"
 fi
+
+# UI touch — SEPARATE from the functional cases above, which all passed: real taps through the simulator's synthetic touch
+# delivery (the delivery that dropped the call-entry tap in runs 45612961224, 45630621237 and 45659136860). Each check is
+# recorded once in ui-touch.tsv as PASS / FAIL / NOT TESTED; nothing repeats; each flow is bounded to 120 s. Nothing here
+# changes the exit status, and none of it is functional evidence: a FAIL here is the touch's, reported as it is.
+UI_TOUCH="$OUT/ui-touch.tsv"
+printf 'case\tresult\tdetail\n' > "$UI_TOUCH"
+ut() {
+  printf '%s\t%s\t%s\n' "$1" "$2" "$3" >> "$UI_TOUCH"
+  note "UI TOUCH $2 $1 — $3"
+}
+ut_untested() { for c in "$@"; do ut "$c" "NOT TESTED" "not reached: an earlier UI touch check did not pass"; done; }
+FIRST_CALL="$(node -e 'try { process.stdout.write(String(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).call.id)); } catch {}' "$OUT/host/04-call-ended.json" 2>/dev/null)"
+ui_touch() {
+  FLOW_SECONDS=120 flow itg-call-tap.yaml ut-1 -e ID=qandeel-depth-to-conversation -e WAIT_ID=qandeel-call-entry -e SHOT=ut-1-conversation \
+    || { ut UT-1 FAIL "a tap on the door back to the Conversation did not draw the call entry"; ut_untested UT-2 UT-3; return 0; }
+  ut UT-1 PASS "a tap on the door back to the Conversation drew the call entry again"
+  FLOW_SECONDS=120 flow itg-call-tap.yaml ut-2 -e ID=qandeel-call-entry -e WAIT_ID=qandeel-call-rail:end -e SHOT=ut-2-in-call \
+    || { read_state > "$OUT/host/ut-2-state.json"; ut UT-2 FAIL "a tap on the call entry did not draw the call line's End (host/ut-2-state.json)"; ut_untested UT-3; return 0; }
+  wait_json 60 read_state ut-2-call-active "s => s.call != null && s.call.id !== \"$FIRST_CALL\" && s.call.state === \"ACTIVE\"" \
+    || { ut UT-2 FAIL "the call line's End was drawn, but the server holds no second ACTIVE call (host/ut-2-call-active.json)"; ut_untested UT-3; return 0; }
+  ut UT-2 PASS "a tap on the call entry opened a second call the server holds ACTIVE; the call line's End is drawn"
+  FLOW_SECONDS=120 flow itg-call-tap.yaml ut-3 -e ID=qandeel-call-rail:end -e WAIT_ID=qandeel-call-entry -e SHOT=ut-3-ended \
+    || { ut UT-3 FAIL "a tap on End did not draw the call entry again"; return 0; }
+  wait_json 60 read_state ut-3-call-ended "s => s.call != null && s.call.id !== \"$FIRST_CALL\" && s.call.state === \"ENDED\" && s.call.end_reason === \"USER_ENDED\"" \
+    || { ut UT-3 FAIL "the call entry is drawn again, but the server did not end the second call USER_ENDED (host/ut-3-call-ended.json)"; return 0; }
+  ut UT-3 PASS "a tap on End ended the second call USER_ENDED; the call entry is drawn again"
+}
+ui_touch
+note "UI touch (separate; not functional evidence): $(tail -n +2 "$UI_TOUCH" | cut -f1,2 | tr '\t' ' ' | paste -sd ',' - | sed 's/,/, /g')"
+exit 0

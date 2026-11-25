@@ -10,8 +10,10 @@ name: iOS Targeted Gate (live call)
 # simulator, against the S8B-06 CP3 proof server (the REAL S8B-05 live call over a fresh local PostgreSQL carrying every
 # migration, the INTEL-LIVE-01 provisional attention lane ON with a fake evaluator) on the runner's loopback. One call:
 # launch, connect, one spoken turn played out, End, the attention lane written and settled, no crash
-# (scripts/ios-targeted-gate/run-live-call-gate.sh). Every case is PASS / FAIL / NOT TESTED in results.tsv; the job
-# fails unless every case passed. Nothing retries. No credential, no provider, nothing paid.
+# (scripts/ios-targeted-gate/run-live-call-gate.sh). The call is started and ended by the proof root's call commands, the
+# session's own CallOwner start and end, without a touch (PO, 2026-11-25); real UI taps are checked SEPARATELY after it,
+# in ui-touch.tsv, and never decide the job. Every case is PASS / FAIL / NOT TESTED in results.tsv; the job fails unless
+# every case passed. Nothing retries but ITG-03's one recorded exception. No credential, no provider, nothing paid.
 #
 # One language and size: CP1 changes no UI, layout, navigation, gesture or presentation (BG-10's language / size matrix
 # applies when those are affected). CP2 – CP4 extend the cases here (directive §3), never the World gate's.
@@ -161,6 +163,7 @@ jobs:
         if: always()
         run: |
           { echo '### iOS Targeted Gate (live call)'; echo '```'; cat "$RUNNER_TEMP/itg/results.tsv" 2>/dev/null || echo 'no results.tsv: the gate did not run (every case NOT TESTED)'; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo '#### UI touch (separate; not functional evidence)'; echo '```'; cat "$RUNNER_TEMP/itg/ui-touch.tsv" 2>/dev/null || echo 'no ui-touch.tsv: the UI touch checks did not run (every check NOT TESTED)'; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload the gate evidence
         if: always()
         uses: actions/upload-artifact@v4

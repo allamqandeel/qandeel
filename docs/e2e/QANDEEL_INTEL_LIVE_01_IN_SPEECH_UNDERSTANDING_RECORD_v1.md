@@ -657,6 +657,64 @@ How the runner applies it:
 - **The ITG contract.** It pins the conditions, the single repeat after the confirmation, the kept evidence and PASS
   AFTER RECOVERY, and plants seven reversals.
 
+**The sixth run (45659136860, on `fdac42be`) did not pass.** The PO inspected artifact `15048156848` independently.
+
+| Case | Result |
+|---|---|
+| ITG-01 | PASS |
+| ITG-02 | **FAIL**: the tap did not draw End, and the verifier refused, `T1: 0 touch paths were touched in the window` |
+| ITG-03 – ITG-06 | NOT TESTED (not reached) |
+
+Why the exception could not operate: the native driver tapped from 17:41:27.259 to 17:41:28.558 UTC, but the simulator log
+Maestro kept for that flow begins at 17:41:28.565, after the tap. The verifier read a log that did not cover the
+interaction, so it confirmed nothing and nothing was repeated, as its rule requires. The defect was the evidence source
+chosen for it, not the rule. The server held no call and kept serving the app's routine HTTP polling.
+
+**The exception is withdrawn (PO, 2026-11-25, the final functional validation approach).** The ITG-02 touch-drop recovery
+and its verifier (`touch-drop.mjs`) are removed, because the functional call no longer depends on a synthetic touch. The
+findings above (runs 4 – 6, the touch-drop mechanism) stay as recorded. No other retry was added; ITG-03's one recorded
+exception is unchanged.
+
+**The functional cases start and end the call without a touch.** The proof root follows the proof server's call commands
+(`apps/mobile/src/voice-call/__validation__/s806cp3-call-commands.ts`):
+- `POST /proof/call?do=start|end` queues ONE command, refused while one is unanswered.
+- `GET /proof/call/next` hands it out once. The server holds that request until a command is queued or 20 s pass, so the
+  app keeps one open request and does not poll. A request whose connection closed while held takes nothing.
+- The proof root calls exactly what the Conversation's controls call on the current session's own CallOwner: the call
+  entry's `if (!preparing) void owner.start()` and the call line's End `owner.end()`.
+- It then acknowledges what it did, with the owner's stage just after (`POST /proof/call/ack`, once per command). Each
+  case waits for that acknowledgement in the server's evidence (`host/02-command.jsonl`, `host/04-command.jsonl`).
+
+Everything after the command is the app's own call: capability, the server's truth, the microphone permission, consent,
+the platform call, the native audio engine, the connection and protocol, the S8B-05 backend and the attention lane. The
+assertions are unchanged: ACTIVE (ITG-02), PLAYED_OUT (ITG-03), USER_ENDED with the call line gone and the Analysis staying
+(ITG-04), both tracks written and settled (ITG-05), and stability (ITG-06). The command mechanism is proof-only: the
+proof root is mounted only by the proof build's selected entry, no Product module reaches it (pinned by the contract), and
+the server routes live only in the proof server. It proves the call, not physical touch delivery.
+
+**UI touch, reported separately.** After the functional cases, `ui-touch.tsv` records three real taps, each once, as
+PASS / FAIL / NOT TESTED:
+- UT-1: the door back to the Conversation draws the call entry again;
+- UT-2: a tap on the call entry opens a second call the server holds ACTIVE;
+- UT-3: a tap on End ends it USER_ENDED.
+
+They never change the job's result and are never counted as functional evidence. The job summary shows them under their
+own heading.
+
+**Verified locally before the push:**
+- **The real proof server and the real follower module together** (a throwaway clone, port 8826). Each command was taken
+  and executed within about 20 ms of being queued. A second command while one was unanswered was refused (409), a replayed
+  acknowledgement was refused, and an unknown command was refused (400). The follower made no request during 3 s idle.
+- **The runner's own `call_command` helper against that server.** Start and end pass with their acknowledgements kept.
+  With no app following, it fails after its 30 s wait with nothing executed. A follower killed while its request was held
+  took nothing; the live follower then took and executed the command at once.
+- **Jest** (`s806cp3-call-commands.test.ts`, 3 tests, plus the call suites: 83/83), the mobile type-check and lint, and
+  the proof server's type-check.
+- **The ITG contract** (6/6). It pins the command-driven ITG-02 and ITG-04, no touch in any functional case, the waited
+  acknowledgement, single consumption, the loopback-only base, the proof-only reach, the separate exit-neutral UI touch
+  section, and the removed exception. It plants fourteen new reversals.
+- **Every root contract** (1 883 / 1 883) and the task-closure governance contract (25 / 25).
+
 **The run on the final head:** `PENDING`. It is recorded here per case. No case is reported before it ran.
 
 ## 4. Paid spend (D-7)
@@ -877,6 +935,32 @@ every case. The iPhone 17 en cell left U-TAP, U-LAND and U-EMPTY NOT TESTED: the
 (`u-field`) and the Public World (`ue-allow`) hung and were stopped by their bound (exit 124), the same `QAN-BL-CI-04`
 residue. No assertion failed in either run. Every case has passed in at least one of the two runs, but the rule asks for
 one run that passed every cell, so nothing is reused and the final head runs the gate FULL again.
+
+**The third FULL run did not complete.** Run 45659136585 on `fdac42be`:
+- **iPhone 17 en:** the Personal Analysis door wait (`p-door`) was not met, so P-TAP-RAIL, P-TAP, F1-RESOLVED, P-PAN and
+  P-PAN-RAIL are NOT TESTED. Every other case passed, the native Personal XCUITests included.
+- **iPhone 17 ar and SE / 16e:** never ran. GitHub reported "The job was not acquired by Runner of type hosted even after
+  multiple attempts" (macOS arm64 capacity), and cancelled both after 15 minutes with no step run. Every case in them is NOT
+  TESTED.
+
+**The accumulated evidence, for a narrow CP1-specific PO exception (not a change to the permanent rule).**
+
+| Cell | 885c89ed | 4b60bc85 | fdac42be | Every case passed in at least one run |
+|---|---|---|---|---|
+| iPhone 17 en | 26 PASS, 5 NOT TESTED (P-*) | 28 PASS, 3 NOT TESTED (U-TAP, U-LAND, U-EMPTY) | 26 PASS, 5 NOT TESTED (P-*) | yes: P-* in `4b60bc85`, U-* in `885c89ed` and `fdac42be` |
+| iPhone 17 ar | 30 PASS, 1 NOT TESTED (S-EMPTY) | **31 / 31 PASS** | not run (no runner) | yes, all in one run |
+| SE / 16e en | **31 / 31 PASS** | **31 / 31 PASS** | not run (no runner) | yes, all in one run (twice) |
+
+- **No assertion failed** in any run: 0 FAIL across the seven cell runs. The same 31 cases ran in each.
+- **Every NOT TESTED is infrastructure.** Each is a readiness wait not met or hung (`p-door` and `se-worlds` exit 1,
+  `u-field` and `ue-allow` exit 124: `QAN-BL-CI-04`), or a cell GitHub never ran.
+- **Protected-input equivalence.** The impact planner gives NOT_AFFECTED for `885c89ed..fdac42be` and
+  `4b60bc85..fdac42be`, and for this head's change over `fdac42be`. Every file between them is outside the iOS binary
+  or reached by no protected surface. Against main, the PR's only World gate inputs are the gate's own four files (its
+  workflow, runner, planner and the planner's test), identical in all three runs. No application source, native input or
+  asset the gate builds differs from main, and the root manifest differs only in its `scripts`.
+- **Conclusion:** no affected application functionality is unverified in the accumulated results. Each case passed on
+  equivalent inputs. This is not reported as one passing run.
 
 ### 6.3 Migration 0204 and the earlier verifiers' exact sets
 

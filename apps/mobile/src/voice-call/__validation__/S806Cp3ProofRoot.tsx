@@ -6,6 +6,10 @@
  * (`s806cp3-proof-world.ts`) and the REAL call device (the native platform and engine), allowed to reach the proof
  * server's plain `ws://` on the phone's loopback only. Every Product module the reader sees is the shipped one. Nothing on
  * screen is drawn by this file.
+ *
+ * INTEL-LIVE-01 CP1: it also follows the proof server's call commands (`s806cp3-call-commands.ts`), which call the
+ * current session's own CallOwner exactly as the call entry and End do, so the iOS Targeted Gate's functional cases do not
+ * depend on the simulator's synthetic touch delivery.
  */
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -16,6 +20,7 @@ import { loadCallDevice } from '../../call';
 import { PRODUCT_ROOT_TEST_ID, RuntimePhaseSurface } from '../../integration/composition/ProductRoot';
 import { createIntegrationRuntime, type IntegrationRuntime } from '../../integration/runtime/integration-runtime';
 import { createEphemeralProductRecoveryStorage } from '../../recovery';
+import { followProofCallCommands } from './s806cp3-call-commands';
 import { createS806Cp3ProofWorld } from './s806cp3-proof-world';
 
 function buildProofRuntime(): IntegrationRuntime {
@@ -35,7 +40,16 @@ function ProofRuntime() {
   const [runtime] = useState<IntegrationRuntime>(() => buildProofRuntime());
   useEffect(() => {
     void runtime.start();
-    return () => runtime.dispose();
+    const stopCommands = followProofCallCommands({
+      owner: () => {
+        const phase = runtime.getPhase();
+        return phase.kind === 'READY' ? phase.runtime.call : null;
+      },
+    });
+    return () => {
+      stopCommands();
+      runtime.dispose();
+    };
   }, [runtime]);
   return <RuntimePhaseSurface runtime={runtime} />;
 }

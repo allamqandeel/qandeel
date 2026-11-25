@@ -1,0 +1,12 @@
+# INTEL-LIVE-01 CP1 — iOS Targeted Gate (live call), ITG-04 after the end command (no touch): one production element (ID,
+# the call line's End) goes and another (STAY_ID, the Analysis's door back) stays. S8B-06 CP3 J3: an end the person chose
+# does not move them. It touches nothing. VALIDATION ONLY. Input: PREFIX, ID, STAY_ID, SHOT.
+appId: com.qandeel.mobile
+---
+- extendedWaitUntil:
+    notVisible:
+      id: ${ID}
+    timeout: 30000
+- assertVisible:
+    id: ${STAY_ID}
+- takeScreenshot: ${PREFIX}-${SHOT}
