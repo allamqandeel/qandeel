@@ -13,13 +13,17 @@
 # (energy, never speech) so the endpointer can end a turn. Nothing paid, no provider, no account, no credential.
 #
 # Cases, each PASS / FAIL / NOT TESTED in <out-dir>/results.tsv. A case after a failure is NOT TESTED, never PASS; the
-# script exits non-zero unless every case passed. Nothing retries.
+# script exits non-zero unless every case passed. Nothing retries, with ONE exception (PO, 2026-11-25, option 1): ITG-03 repeats its
+# spoken turn exactly once, and only after the server itself recorded the call's connection lost before PLAYED_OUT (the frozen
+# 3 s silence rule ended it, run 45586185915). The first attempt's evidence is kept; the repeat is made only once the call is
+# ACTIVE again at a later epoch; a repeat that plays out is recorded PASS AFTER RECOVERY, never PASS; a second loss fails it.
 #
 #   ITG-01 launch     the proof build installs and launches; the Conversation's call entry is drawn
 #   ITG-02 connect    a tap on the call entry opens a call the server holds ACTIVE (qandeel.live-call.v1 HELLO accepted);
 #                     the call line's End is drawn
 #   ITG-03 turn       one turn through the live-call backend: endpointer commit, reply, and the reply PLAYED_OUT, which
-#                     only the iOS engine's own PLAYOUT confirmations can produce; the call line is still drawn after it
+#                     only the iOS engine's own PLAYOUT confirmations can produce; the call line is still drawn after it.
+#                     PASS AFTER RECOVERY: the one repeat above played out (the interruption stays an open finding)
 #   ITG-04 end        a tap on End ends the call USER_ENDED; the call line goes and the Analysis stays (S8B-06 CP3 J3:
 #                     the person's own End does not move them); back in the Conversation the call entry is drawn again
 #   ITG-05 attention  the provisional attention lane evaluated and wrote both tracks (SET events) and settled both halves
@@ -29,7 +33,9 @@
 # NOT proven here: the real microphone, echo cancellation, CallKit, Bluetooth, a physical iPhone (a separate future
 # requirement), and the COSMOS World (the World gate's, when its own inputs change). Kept in <out-dir>: every screenshot,
 # Maestro's debug output, the server's content-free evidence (counts and THIS proof's synthetic identifiers) and the host
-# reads of the call and the attention lane.
+# reads of the call and the attention lane. From ITG-03 on, <out-dir>/client holds lightweight client-side diagnostics, never a
+# verdict: the app's unified log at default level (this proof's synthetic data only), a once-a-second host load and app CPU
+# line, and a host `top` snapshot at each connection loss and failure.
 set -u
 if [ "$#" -ne 3 ]; then echo "usage: run-live-call-gate.sh <app-dir> <out-dir> <udid>"; exit 2; fi
 APP="$1"
@@ -64,6 +70,7 @@ untested() {
 fail() {
   record "$1" FAIL "$2"
   xcrun simctl io "$UDID" screenshot "$OUT/shots/failure-$1.png" >/dev/null 2>&1 || true
+  client_snapshot "failure-$1"
   untested "not reached: $1 failed"
   exit 1
 }
@@ -80,6 +87,57 @@ flow() {
 }
 read_state() { curl -s -m 5 "$SERVER/proof/state" || echo '{}'; }
 read_attention() { curl -s -m 5 "$SERVER/proof/attention" || echo '{}'; }
+# Client-side diagnostics (PO, 2026-11-25): evidence only, never a verdict, and nothing here can fail a case.
+start_client_diagnostics() {
+  mkdir -p "$OUT/client"
+  local pid
+  pid="$(pgrep -f 'QANDEEL\.app/QANDEEL' | head -n 1)"
+  echo "app pid: ${pid:-not found}" > "$OUT/client/app-pid.txt"
+  xcrun simctl spawn "$UDID" log stream --style compact --level default \
+    --predicate 'process == "QANDEEL" OR eventMessage CONTAINS[c] "com.qandeel.mobile"' > "$OUT/client/app-log.txt" 2>&1 &
+  DIAG_PIDS="$DIAG_PIDS $!"
+  # epoch seconds, host load average, the app's %CPU and RSS (KiB)
+  ( while :; do printf '%s\t%s\t%s\n' "$(date +%s)" "$(sysctl -n vm.loadavg)" "$([ -n "$pid" ] && ps -o %cpu=,rss= -p "$pid" | tr -s ' ')"; sleep 1; done ) \
+    > "$OUT/client/load-1hz.tsv" 2>/dev/null &
+  DIAG_PIDS="$DIAG_PIDS $!"
+}
+client_snapshot() { [ -d "$OUT/client" ] && { top -l 2 -s 1 -n 12 -o cpu -stats pid,command,cpu,mem > "$OUT/client/$1-top.txt" 2>&1 || true; }; }
+# ITG-03's recovery record: the server's own connection-loss lines.
+losses() { grep -c '"kind":"connection-lose"' "$EVENTS" 2>/dev/null || true; }
+# loss_detail <losses before>: the next loss's code, reason and epoch, and how long after the latest stimulus it came.
+loss_detail() {
+  node -e 'const lines = require("fs").readFileSync(process.argv[1], "utf8").trim().split("\n").flatMap((l) => { try { return [JSON.parse(l)]; } catch { return []; } });
+const loss = lines.filter((e) => e.kind === "connection-lose")[Number(process.argv[2])];
+const stimulus = lines.filter((e) => e.kind === "stimulus" && e.at <= loss.at).pop();
+process.stdout.write(`${loss.code} ${loss.reason} on connection epoch ${loss.epoch}, ${stimulus ? loss.at - stimulus.at : "?"} ms after the stimulus`);' "$EVENTS" "$1" 2>/dev/null \
+    || echo "a loss the evidence does not parse"
+}
+# loss_epoch <losses before>: the epoch the next loss ended (empty if the evidence names none).
+loss_epoch() {
+  node -e 'const l = require("fs").readFileSync(process.argv[1], "utf8").trim().split("\n").flatMap((x) => { try { return [JSON.parse(x)]; } catch { return []; } }).filter((e) => e.kind === "connection-lose")[Number(process.argv[2])];
+process.stdout.write(String(Number.isInteger(l && l.epoch) ? l.epoch : ""));' "$EVENTS" "$1" 2>/dev/null
+}
+PLAYED='s => Array.isArray(s.exchanges) && s.exchanges.some((e) => e.turn_channel === "SPEECH" && e.delivery_state === "COMPLETE" && e.close_reason === "PLAYED_OUT")'
+# wait_turn <seconds> <saved-name> <losses before>: 0 = a spoken reply PLAYED_OUT; 2 = the server recorded a connection loss
+# first (the wait stops at once); 1 = neither in time. The last body is kept either way.
+wait_turn() {
+  local seconds="$1" saved="$2" before="$3" waited=0 body='{}'
+  while [ "$waited" -le "$seconds" ]; do
+    body="$(read_state)"
+    if node -e "const s = JSON.parse(process.argv[1]); process.exit((${PLAYED})(s) ? 0 : 1)" "$body" 2>/dev/null; then
+      echo "$body" > "$OUT/host/$saved.json"
+      return 0
+    fi
+    if [ "$(losses)" -gt "$before" ]; then
+      echo "$body" > "$OUT/host/$saved.json"
+      return 2
+    fi
+    sleep 2
+    waited=$((waited + 2))
+  done
+  echo "$body" > "$OUT/host/$saved.json"
+  return 1
+}
 # wait_json <seconds> <reader> <saved-name> <JavaScript predicate over the parsed body>: the last body is kept either way.
 wait_json() {
   local seconds="$1" reader="$2" saved="$3" predicate="$4" waited=0 body='{}'
@@ -101,7 +159,8 @@ PROOF_ATTENTION=ON PROOF_EVENTS_FILE="$EVENTS" PORT=8806 NODE_ENV=development \
   node "$REPO/node_modules/ts-node/dist/bin.js" --project "$REPO/apps/api/tsconfig.scripts.json" \
   "$REPO/apps/api/scripts/s8b-06-cp3-device-proof-server.ts" > "$OUT/host/server.log" 2>&1 &
 SERVER_PID=$!
-trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+DIAG_PIDS=""
+trap 'kill $SERVER_PID $DIAG_PIDS 2>/dev/null || true' EXIT
 for _ in $(seq 1 120); do grep -q '"kind":"listening"' "$EVENTS" 2>/dev/null && break; sleep 2; done
 grep -q '"kind":"listening"' "$EVENTS" || infrastructure "the proof server did not start (host/server.log)"
 grep -q '"kind":"attention-lane","state":"ON"' "$EVENTS" || infrastructure "the proof server's attention lane is not ON"
@@ -135,13 +194,47 @@ wait_json 60 read_state 02-call-active 's => s.call != null && s.call.state === 
 record ITG-02 PASS "the tap opened a call the server holds ACTIVE; the call line's End is drawn"
 
 # ITG-03 — one turn: the synthetic voiced signal, the endpointer's commit, the reply, played out by the iOS engine.
+start_client_diagnostics
+RECOVERED=""
+BEFORE="$(losses)"
 curl -s -m 5 -f -X POST "$SERVER/proof/speak?ms=1500" > "$OUT/host/03-speak.json" || fail ITG-03 "the server refused /proof/speak (no open uplink)"
-wait_json 120 read_state 03-turn-played-out \
-  's => Array.isArray(s.exchanges) && s.exchanges.some((e) => e.turn_channel === "SPEECH" && e.delivery_state === "COMPLETE" && e.close_reason === "PLAYED_OUT")' \
-  || fail ITG-03 "no spoken turn's reply was PLAYED_OUT within 120 s (host/03-turn-played-out.json)"
+wait_turn 120 03-attempt-1 "$BEFORE"
+TURN=$?
+if [ "$TURN" -eq 2 ]; then
+  # The ONE repeat (PO, 2026-11-25): only after a server-confirmed loss before PLAYED_OUT, and only once the call is back.
+  RECOVERED="$(loss_detail "$BEFORE")"
+  LOST_EPOCH="$(loss_epoch "$BEFORE")"
+  grep '"kind":"connection-lose"' "$EVENTS" | tail -n +"$((BEFORE + 1))" > "$OUT/host/03-loss-1.jsonl"
+  note "ITG-03: the server recorded the connection lost before PLAYED_OUT: $RECOVERED (first attempt kept: host/03-attempt-1.json, host/03-loss-1.jsonl)"
+  xcrun simctl io "$UDID" screenshot "$OUT/shots/itg-03-loss-1.png" >/dev/null 2>&1 || true
+  client_snapshot 03-loss-1
+  [ -n "$LOST_EPOCH" ] || fail ITG-03 "the connection was lost ($RECOVERED) and the evidence names no epoch; nothing was repeated"
+  wait_json 60 read_state 03-reconnected "s => s.call != null && s.call.state === \"ACTIVE\" && s.call.epoch > $LOST_EPOCH" \
+    || fail ITG-03 "the connection was lost ($RECOVERED) and the call was not ACTIVE again at a later epoch within 60 s (host/03-reconnected.json)"
+  note "ITG-03: the call is ACTIVE again after epoch $LOST_EPOCH (host/03-reconnected.json); the spoken turn is repeated once"
+  BEFORE="$(losses)"
+  SPOKE=1
+  for _ in $(seq 1 15); do
+    if curl -s -m 5 -f -X POST "$SERVER/proof/speak?ms=1500" > "$OUT/host/03-speak-repeat.json"; then SPOKE=0; break; fi
+    sleep 2
+  done
+  [ "$SPOKE" -eq 0 ] || fail ITG-03 "reconnected after the loss ($RECOVERED), but no uplink opened for the repeat within 30 s"
+  wait_turn 120 03-repeat "$BEFORE"
+  TURN=$?
+  [ "$TURN" -ne 2 ] || fail ITG-03 "a second connection loss ($(loss_detail "$BEFORE")) after the first ($RECOVERED)"
+  [ "$TURN" -eq 0 ] || fail ITG-03 "after recovering from the loss ($RECOVERED), the repeat's reply was not PLAYED_OUT within 120 s (host/03-repeat.json)"
+  cp "$OUT/host/03-repeat.json" "$OUT/host/03-turn-played-out.json"
+else
+  [ "$TURN" -eq 0 ] || fail ITG-03 "no spoken turn's reply was PLAYED_OUT within 120 s (host/03-attempt-1.json)"
+  cp "$OUT/host/03-attempt-1.json" "$OUT/host/03-turn-played-out.json"
+fi
 flow itg-call-visible.yaml after-turn -e ID=qandeel-call-rail:end -e SHOT=03-after-turn \
   || fail ITG-03 "the call line was not drawn after the turn"
-record ITG-03 PASS "a spoken turn committed, its reply PLAYED_OUT through the iOS engine's playout confirmations; the call line is still drawn"
+if [ -n "$RECOVERED" ]; then
+  record ITG-03 "PASS AFTER RECOVERY" "the first attempt's connection was lost before PLAYED_OUT ($RECOVERED; kept in host/03-attempt-1.json, host/03-loss-1.jsonl, client/); the call was ACTIVE again at a later epoch and the ONE repeat's spoken turn was PLAYED_OUT through the iOS engine; the call line is still drawn. The interruption is unresolved"
+else
+  record ITG-03 PASS "a spoken turn committed, its reply PLAYED_OUT through the iOS engine's playout confirmations; the call line is still drawn"
+fi
 
 # ITG-04 — end. The person's own End does not move them (S8B-06 CP3 J3): the call line goes and the Analysis stays; the
 # door back to the Conversation then shows the call entry again.
@@ -163,4 +256,8 @@ xcrun simctl spawn "$UDID" launchctl list 2>/dev/null | grep -q "UIKitApplicatio
 if ls "$HOME/Library/Logs/DiagnosticReports" 2>/dev/null | grep -Eiq 'qandeel'; then fail ITG-06 "a crash report names the app"; fi
 record ITG-06 PASS "the app is still running; no crash report names it"
 
-note "iOS Targeted Gate (live call): every case PASS"
+if [ -n "$RECOVERED" ]; then
+  note "iOS Targeted Gate (live call): every case passed; ITG-03 PASS AFTER RECOVERY (an unresolved interruption: $RECOVERED)"
+else
+  note "iOS Targeted Gate (live call): every case PASS"
+fi

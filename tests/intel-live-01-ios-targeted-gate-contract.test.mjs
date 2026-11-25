@@ -62,6 +62,18 @@ export function violations({ gate, runner, world, server, flows }) {
   if (!/e\.close_reason === "PLAYED_OUT"/u.test(r)) out.push('ITG-03 does not require the reply PLAYED_OUT');
   if (!/half_state === "COMPLETE"/u.test(r) || !/\["USER", "QANDEEL"\]\.every/u.test(r)) out.push('ITG-05 does not require both tracks settled');
   if (!/end_reason === "USER_ENDED"/u.test(r)) out.push('ITG-04 does not require USER_ENDED');
+  // PO 2026-11-25, option 1: ONE recorded repeat of ITG-03's spoken turn, only after a server-confirmed loss before PLAYED_OUT.
+  if ((r.match(/-X POST "\$SERVER\/proof\/speak/gu) ?? []).length !== 2) out.push('ITG-03 arms the stimulus other than once plus the one recovery repeat');
+  const lossAt = r.indexOf('if [ "$TURN" -eq 2 ]; then');
+  const repeatAt = r.indexOf('wait_turn 120 03-repeat "$BEFORE"');
+  const elseAt = r.indexOf('\nelse\n', repeatAt);
+  if (lossAt < 0 || repeatAt < lossAt || elseAt < 0) out.push('ITG-03 repeats its turn without a server-confirmed connection loss');
+  if (!/if \[ "\$\(losses\)" -gt "\$before" \]; then/u.test(r) || !/losses\(\) \{ grep -c '"kind":"connection-lose"' "\$EVENTS"/u.test(r)) out.push('ITG-03 does not take the loss from the server\'s own record');
+  if (!/s\.call\.state === \\"ACTIVE\\" && s\.call\.epoch > \$LOST_EPOCH/u.test(r)) out.push('ITG-03 repeats before the call is ACTIVE again at a later epoch');
+  if (!/\[ "\$TURN" -ne 2 \] \|\| fail ITG-03 "a second connection loss/u.test(r)) out.push('a second connection loss does not fail ITG-03');
+  if (!/if \[ -n "\$RECOVERED" \]; then\n\s+record ITG-03 "PASS AFTER RECOVERY"/u.test(r)) out.push('a recovered ITG-03 is not recorded PASS AFTER RECOVERY');
+  if (!/wait_turn 120 03-attempt-1 "\$BEFORE"/u.test(r) || !/> "\$OUT\/host\/03-loss-1\.jsonl"/u.test(r)) out.push('the first attempt\'s evidence is not kept');
+  if (!/^start_client_diagnostics$/mu.test(r) || !/log stream --style compact --level default/u.test(r) || !/client_snapshot "failure-\$1"/u.test(r)) out.push('the client-side diagnostics are missing');
 
   if (!/id: qandeel-call-entry/u.test(flows)) out.push('the launch flow does not wait for the production call entry');
   if (/hideKeyboard|retry:/u.test(code(flows))) out.push('a flow hides the keyboard or retries');
@@ -70,6 +82,7 @@ export function violations({ gate, runner, world, server, flows }) {
   if (!/if \(process\.env\.PROOF_ATTENTION === 'ON'\) \{\n\s+attentionBinding\.bind\(liveCallAttentionOf\(/u.test(s)) out.push('the proof server does not compose the production attention lane under PROOF_ATTENTION=ON');
   if (!/attentionSettlement: process\.env\.PROOF_ATTENTION === 'ON' \? new CallAttentionRepository\(serverApi\) : undefined/u.test(s)) out.push('the proof server does not settle the attention lane at the call\'s end');
   if (!/if \(openStreams === 0\) throw new HttpException/u.test(s)) out.push('/proof/speak arms a stimulus with no open uplink');
+  if (!/evidence\('connection-lose', \{ code: args\[0\] \?\? null, reason: args\[1\] \?\? null, phase: this\.phase \?\? null, epoch: this\.epoch \?\? null \}\)/u.test(s)) out.push('a connection loss is recorded without its epoch');
 
   const worldPaths = prPaths(world);
   for (const p of ['apps/mobile/**', 'packages/**', 'package-lock.json', 'scripts/cosmos-ios-world/**', WORLD]) {
@@ -142,6 +155,14 @@ test('each refusal is real: planted regressions are caught', () => {
     ['the lane left OFF', plant('runner', 'PROOF_ATTENTION=ON PROOF_EVENTS_FILE', 'PROOF_EVENTS_FILE')],
     ['an unrun case made PASS', plant('runner', 'record "$c" "NOT TESTED" "$1"', 'record "$c" PASS "$1"')],
     ['playout not required', plant('runner', 'e.close_reason === "PLAYED_OUT"', 'true')],
+    ['a recovery recorded as PASS', plant('runner', 'record ITG-03 "PASS AFTER RECOVERY"', 'record ITG-03 PASS')],
+    ['a second loss tolerated', plant('runner', '[ "$TURN" -ne 2 ] || fail ITG-03', 'true || fail ITG-03')],
+    ['a repeat without a loss', plant('runner', 'if [ "$TURN" -eq 2 ]; then', 'if [ "$TURN" -ne 0 ]; then')],
+    ['a repeat before reconnection', plant('runner', 's.call.epoch > $LOST_EPOCH', 'true')],
+    ['a third stimulus', plant('runner', '  wait_turn 120 03-repeat "$BEFORE"', '  curl -s -X POST "$SERVER/proof/speak?ms=1500"\n  wait_turn 120 03-repeat "$BEFORE"')],
+    ['the loss taken from elsewhere', plant('runner', 'if [ "$(losses)" -gt "$before" ]; then', 'if false; then')],
+    ['the diagnostics dropped', plant('runner', '\nstart_client_diagnostics\n', '\n')],
+    ['the loss epoch dropped', plant('server', ', epoch: this.epoch ?? null });', ' });')],
     ['the settlement dropped', plant('server', "attentionSettlement: process.env.PROOF_ATTENTION === 'ON' ? new CallAttentionRepository(serverApi) : undefined,", '')],
     ['the API re-added to the World gate', plant('world', "      - 'packages/**'\n", "      - 'packages/**'\n      - 'apps/api/**'\n")],
     ['a World gate suite removed', plant('world', 'run: npm run test:cosmos-ios-world-gate-composition-contract', 'run: true')],

@@ -411,8 +411,9 @@ function instrumentRefusals(): void {
   }
   // An exception inside a queued handler closes with PROTOCOL_VIOLATION too (reason INTERNAL): every close code is noted.
   const lose = proto.lose!;
-  proto.lose = function (this: { phase?: string }, ...args: unknown[]) {
-    evidence('connection-lose', { code: args[0] ?? null, reason: args[1] ?? null, phase: this.phase ?? null });
+  // INTEL-LIVE-01 CP1: with the connection epoch the loss ended, for the iOS Targeted Gate's ITG-03 recovery record.
+  proto.lose = function (this: { phase?: string; epoch?: number | null }, ...args: unknown[]) {
+    evidence('connection-lose', { code: args[0] ?? null, reason: args[1] ?? null, phase: this.phase ?? null, epoch: this.epoch ?? null });
     return lose.apply(this, args);
   };
 }

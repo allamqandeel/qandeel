@@ -338,7 +338,7 @@ separate future requirement; and CP2's map. One language and size: CP1 changes n
 |---|---|
 | ITG-01 launch | the proof build installs and launches; the Conversation's call entry (`qandeel-call-entry`) is drawn, which needs the runtime to have reached the server |
 | ITG-02 connect | a tap on the call entry draws the call line's End; the server holds the call `ACTIVE` (the `qandeel.live-call.v1` HELLO accepted) |
-| ITG-03 turn | `/proof/speak` arms a synthetic voiced signal; the endpointer commits, the reply is generated and closes `PLAYED_OUT`, which only the iOS engine's PLAYOUT confirmations produce; the call line is still drawn |
+| ITG-03 turn | `/proof/speak` arms a synthetic voiced signal; the endpointer commits, the reply is generated and closes `PLAYED_OUT`, which only the iOS engine's PLAYOUT confirmations produce; the call line is still drawn. After a server-confirmed connection loss before `PLAYED_OUT`, one recorded repeat on the reconnected call: `PASS AFTER RECOVERY`, never `PASS` (see below) |
 | ITG-04 end | a tap on End removes the call line while the Analysis stays (S8B-06 CP3 J3: the person's own End does not move them); the door back to the Conversation then shows the call entry again; the server ends the call `USER_ENDED` |
 | ITG-05 attention | the lane evaluated both tracks (`DEVELOPMENTS`), wrote `SET` events and settled both halves `COMPLETE`; no write failed |
 | ITG-06 stability | the app is still running; no crash report names it |
@@ -395,6 +395,72 @@ order and J3's text.
 
 Also observed in the run's events: both tracks resolved `DEVELOPMENTS` (USER 08:30:57, QANDEEL 08:31:04), so ITG-05's
 evaluation has its evidence. Its settlement half is shown by the next run.
+
+**The second simulator run.** Run 45586185915 on `1d64eb97`:
+
+| Case | Result | Detail |
+|---|---|---|
+| ITG-01 | PASS | |
+| ITG-02 | PASS | |
+| ITG-03 | FAIL | no spoken turn's reply was `PLAYED_OUT` within 120 s |
+| ITG-04 – 06 | NOT TESTED | not reached |
+
+The native build took 24 min of the 44-minute job.
+
+**ITG-03's diagnosis, from the run's evidence** (artifact `15012375786`, downloaded with the PO's approval; it was compared
+with the first run's, where ITG-03 passed). Times are measured from `/proof/speak`.
+
+| Stage | First run (PASS) | Second run |
+|---|---|---|
+| synthetic speech injection: 75 frames, `SPEECH_START`, stimulus end | 0.09 s / 1.49 s | 0.10 s / 1.49 s |
+| endpointer commit: `FINALIZE`, `COMMIT_SILENCE`, `COMMITTED` | 1.99 / 2.29 / 2.35 s | 2.00 / 2.30 / 2.61 s |
+| reply generation: `REPLY_OUTCOME COMPLETE` | 3.20 s | 3.63 s |
+| first audio | 3.33 s | 3.76 s |
+| **audio delivery** | complete: `REPLY_END` at 15.57 s | **lost at 11.76 s** |
+| PLAYOUT confirmation | `PLAYED_OUT`, 12 000 ms heard | never reached |
+
+**What happened in the second run:**
+- From 8.75 s the server received nothing from the phone, neither audio nor `HEARTBEAT`. On the phone, both ride its JS
+  thread: native capture → `onUplink` → `sendAudio`.
+- At 11.76 s the frozen 3 s silence rule (`live-call.connection.ts`, `silenceTimeoutMs`) closed the connection with
+  `4008 SILENCE`. By then 4.8 s of the 12 s reply had been delivered.
+- The phone reconnected at epoch 2, and the call stayed live (the failure screenshot shows 2:42). As frozen, the
+  interrupted reply was not resumed, so it could never close `PLAYED_OUT`.
+
+**The cause of the phone's 3 s pause is not observable in this evidence**, which has no client-side trace.
+- The pause began right after the phone's five map reads for the first subject.
+- The first run made the same reads at the same moment, followed by pauses of only 410 and 414 ms.
+
+That is a correlation seen in two runs, not a proven cause. CP1 changes no mobile code. Every server stage matched the
+first run within 0.5 s.
+
+**ITG-04 – 06 reviewed against the proof server before the next run:**
+- `/proof/state` reports the latest call's `state` and `end_reason`.
+- `/proof/attention` reports the exact fields ITG-05 reads: `evaluations` (track, outcome), `events` (track, op) and
+  `settlements` (track, half_state).
+- ITG-06 reads `launchctl` and the host's crash reports.
+
+No wrong assumption was found.
+
+**The recovery rule (PO, 2026-11-25, option 1).** The runner allows exactly ONE recorded repeat of ITG-03's spoken turn,
+within the same run, and only after the server itself recorded the connection lost before `PLAYED_OUT`:
+- **Stop and record.** The wait stops at once. The loss's code, reason, epoch and time after the stimulus are recorded.
+  The first attempt's evidence is kept: `host/03-attempt-1.json`, `host/03-loss-1.jsonl`, a screenshot and a host `top`
+  snapshot. The proof server now records each loss's connection epoch.
+- **Reconnect first.** The turn is repeated only once the call is `ACTIVE` again at a later epoch and an uplink is open.
+- **Report it as a recovery.** A repeat that plays out is recorded `PASS AFTER RECOVERY`, never `PASS`, and the run's
+  summary says so.
+- **A second loss fails the case.**
+- **Nothing else changed.** The assertions are unchanged, and so are the 3 s rule, the audio engine, the heartbeat policy,
+  prompt v5 and COSMOS.
+
+From ITG-03 on, the run also keeps lightweight client-side diagnostics in `client/`:
+- the app's unified log at default level (this proof's synthetic data only);
+- a once-a-second line of host load and the app's CPU;
+- a `top` snapshot at each loss and each failure.
+
+The ITG contract pins each element and plants its regression. If the repeat succeeds, the interruption is recorded as a
+tracked, unresolved finding, and its cause is not claimed resolved.
 
 **The run on the final head:** `PENDING`. It is recorded here per case. No case is reported before it ran.
 
