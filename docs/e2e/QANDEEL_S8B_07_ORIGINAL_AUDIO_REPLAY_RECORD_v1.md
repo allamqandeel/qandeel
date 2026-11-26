@@ -1,5 +1,9 @@
 # QANDEEL S8B-07 — Original Audio Replay, Media Rendering & Distribution: Implementation Record v1
 
+**Slice (2026-11-26, INTEL-LIVE-01 CP4):** Lane B's producer (§20) is **ACCEPTED by the Product Owner** (CP3 + R1, head
+`755192c5`) and INTEL-LIVE-01's closure (CP4) is delivered — **NOT MERGED** (PR #415); `0205` not hosted. Replay Lane B on a
+device stays mandatory in the HONOR Live + Replay proof (§20.1). *(The lines below are kept as written.)*
+
 **Slice (2026-11-26):** INTEL-LIVE-01 CP3 gives Lane B its producer (§20) — **DELIVERED / READY FOR PO REVIEW — NOT
 MERGED** (PR #415); `0205` not hosted. *(The lines below are kept as written.)*
 
@@ -1999,3 +2003,21 @@ the presentation's end. This matches the live phone, which drops a call's layer 
 is drawn in the next, and no provisional mark survives the closing display. The change is confined to Lane B
 (`attention-lane.ts`, `event-track.ts`) and its tests. No event, instant or visibility duration is invented. Lane A,
 `0205`, the API and COSMOS are unchanged. See the [INTEL-LIVE-01 record](QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §10.11.
+
+### 20.1 At INTEL-LIVE-01's closure (CP4, 2026-11-26)
+
+- **Accepted.** The Product Owner accepted CP3 + R1 on `755192c5` with a CP3-specific World gate exception (the INTEL-LIVE-01
+  record §10.13). No Replay surface is exercised by the World gate; its protected-input equivalence is recorded there.
+- **Carried to the HONOR Live + Replay proof**, mandatory and not claimed by any earlier evidence (that record §11.7):
+  - **V-4:** Replay Lane B on HONOR ALI-NX1 with real playback. This is C8, the corpus call's Replay: marks at their floors,
+    nothing at an anchor, nothing for `MISSED_*`, and `UNCOVERED_AT_END` showing Lane A only. It also covers each call's
+    marks ending at its own boundary (CP3-F2, corrected in R1), binding consistency and visual fidelity.
+  - **V-5:** a targeted iOS simulator Replay Lane B pass (D-CP3-iOS).
+  - **V-6:** Lane B's stage-preparation cost (CP3-F6), with COSMOS opening speed and motion smoothness.
+- **Kept:**
+  - Lane B's instants are never exact (CP3-F1: `0203` certifies ledger prefixes only).
+  - A tail SET settled at the same instant is never visible (CP3-F3; no timing invented).
+  - The video is not built (CP3-F8): its facts (`attentionOnFrame`) are ready for this record's CP2-A.
+- **Unchanged:** Lane A, `presentation-clock.ts`, the camera plan, the COSMOS renderer, §19's policy, `QAN-BL-VIS-02`
+  (`OPEN — UNASSIGNED`).
+- **Sequence:** INTEL-LIVE-01's merge decision → HONOR Live + Replay proof → CP2-A → CP2-B. S8B-07 is not closed.

@@ -1,6 +1,6 @@
 # INTEL-LIVE-01 — Incremental In-Speech Understanding & Living Map Attention: Execution Record v1
 
-**Status:** `INTEL-LIVE-01 CP1 ACCEPTED (PRODUCT OWNER, 2026-11-25, HEAD 0044f56e; §3.6) — CP2 ACCEPTED WITH A PO EXCEPTION (2026-11-26, HEAD 3c4298c5; §9.9) — CP3 REPLAY LANE B DELIVERED / READY FOR PO REVIEW (§10; R1 CALL-BOUNDARY CORRECTION §10.11) — NOT MERGED — NOT DEPLOYED — CP4 NOT STARTED`
+**Status:** `INTEL-LIVE-01 CP1–CP4 DELIVERED (SYNTHETIC MECHANISM PROVEN) — CP4 CLOSURE DELIVERED / READY FOR PO REVIEW AND MERGE DECISION (§11) — CP1 ACCEPTED (PRODUCT OWNER, 2026-11-25, HEAD 0044f56e; §3.6) — CP2 ACCEPTED WITH A PO EXCEPTION (2026-11-26, HEAD 3c4298c5; §9.9) — CP3 + R1 ACCEPTED WITH A CP3-SPECIFIC PO EXCEPTION (2026-11-26, HEAD 755192c5; §10.13) — QAN-BL-INTEL-06 VALIDATION — OPEN (THE HONOR LIVE + REPLAY PROOF IS THE PRODUCT GATE, §11.7) — NOT MERGED — NOT DEPLOYED`
 - Draft PR "INTEL-LIVE-01 CP1 — continuous in-speech understanding (provisional attention lane)" from `intel/intel-live-01`,
   stacked on Draft PR #414 (the CP0 docs commit `53429017`, itself on `main` at `aa6fc0c8`).
 - Merging needs the Product Owner's explicit «ادمج». Migrations `0204` and `0205` are **not hosted**; the next migration is `0206`.
@@ -12,7 +12,8 @@ sequence, step 3).
 
 **Backlog:** inherits and admits `QAN-BL-INTEL-06` (`HIGH`), transferred verbatim from Draft PR #410 and set
 `DEFERRED — OWNED` by this task (CP0 v1.1 §8.2): reopen condition CP4 delivered, close condition the HONOR Live + Replay
-proof recorded. CP4 moves it to `VALIDATION — OPEN`. No other item is admitted, re-owned or closed at CP1.
+proof recorded. CP4 moves it to `VALIDATION — OPEN`. No other item is admitted, re-owned or closed at CP1. *(CP4, 2026-11-26:
+moved to `VALIDATION — OPEN` with the validation set of §11.7; `QAN-BL-VOICE-07` gains the GCR-01 carry-forwards; §11.8.)*
 
 **Authority (binding in this order):**
 - The Product Owner's "INTEL-LIVE-01 — Binding PO Directive: Semantic Freedom & Targeted Cross-Platform Validation"
@@ -47,8 +48,8 @@ credential, transcript of a real person or hosted identifier. Every conversation
 |---|---|---|
 | **CP1** | The producer: migration `0204`, the lane, its wiring, the proofs A0 – A12 and A8′, the iOS Targeted Gate (live call) | **ACCEPTED** by the Product Owner at checkpoint level (2026-11-25, head `0044f56e`; §3.6) |
 | CP2 | The live map: Live Call protocol v3 (additive), the phone's consumption, B5′ / B6 (successful live disclosure); iOS Targeted Gate: v3 with v1 / v2 fallback, updates and withdrawals visible, reconnect / restore, COSMOS compatibility | **ACCEPTED with a PO exception** (2026-11-26, head `3c4298c5`; §9.9) |
-| CP3 | Replay Lane B: the producer's events on Replay's clock, the §19 placement policy | **DELIVERED / READY FOR PO REVIEW** (§10); migration `0205` (D-CP3) |
-| CP4 | Closure (BG-08 / BG-09), measured cost restated, `QAN-BL-INTEL-06` → `VALIDATION — OPEN` | not started |
+| CP3 | Replay Lane B: the producer's events on Replay's clock, the §19 placement policy | **ACCEPTED with a CP3-specific PO exception** (2026-11-26, head `755192c5`, R1 included; §10.13); migration `0205` (D-CP3) |
+| CP4 | Closure (BG-08 / BG-09), measured cost restated, `QAN-BL-INTEL-06` → `VALIDATION — OPEN` | **DELIVERED / READY FOR PO REVIEW** (2026-11-26; §11) |
 
 ### 0.1 The Product Owner's mandatory acceptance interpretations, and where each is met
 
@@ -1714,3 +1715,334 @@ to the HONOR Live + Replay proof, together with `4005 OVERLOADED` and the touch 
 validation.** That scenario covers speech that continues while QANDEEL's reply plays, and requires the meaningful
 developments of that speech to be preserved. CP1 is not reopened and the voice engine is not changed now. The failed ITG
 job is not re-run on its own before R1.
+
+### 10.13 CI on the R1 head `755192c5`, and the Product Owner's CP3 acceptance (2026-11-26)
+
+*(Written in CP4's change: the R1 head's CI ended after R1 was pushed.)*
+
+| Run | Result |
+|---|---|
+| API CI `45787825795` | **SUCCESS** |
+| Mobile CI `45787825775` | **SUCCESS** |
+| iOS Targeted Gate `45787825742` | **SUCCESS, 9 / 9 PASS** (ITG-01, 02, 03, 07, 08, 04, 09, 05, 06) |
+| UI touch (separate, exit-neutral; never functional evidence) | UT-1 **PASS**, UT-2 **PASS**, UT-3 **FAIL** ("a tap on End did not draw the call entry again") |
+| World gate `45787825692` (FULL) | **FAILURE, 86 / 93 PASS, 0 FAIL, 7 NOT TESTED**: iPhone 17 en 31 / 31 **SUCCESS**; iPhone 17 ar 27 PASS / 4 NOT TESTED (S-LAND, U-TAP, U-LAND, P-LAND); iPhone SE 28 PASS / 3 NOT TESTED (S-LAND, U-TAP, U-LAND) |
+
+**ITG.** Every functional case passed, ITG-07 included. That does not close CP3-F10 (§10.12), and the ITG proves the live
+call, not Replay Lane B.
+
+**UT-3, the first iOS run to reach it.** Earlier runs reached UT-1 only (FAIL, §3.6 and §9.6) or none. The run's
+evidence (`host/server-events.jsonl`, `watchdog-flow-ut-3.txt`):
+- the End tap reached the phone about 85 s after its flow started;
+- the phone's stage went from `ACTIVE` to `ENDING`, and the server drained the connection, with the lane stopped as
+  `HANDOVER`;
+- the call entry was not drawn again before the harness terminated the flow at its 120 s bound (`INFRASTRUCTURE`).
+
+The evidence holds no end of that call. Whether the failure is the runner's slowness or the product is **not
+determined**. It stays **unresolved until verified** (the Product Owner, below).
+
+**The World gate's seven NOT TESTED cases.** No case FAILED. Each comes from the harness or the simulator:
+- **iPhone SE (S-LAND, U-TAP, U-LAND).** The harness terminated three steps at their 150 s bound and labelled each
+  `INFRASTRUCTURE`: `sl-1` and `sl-2` (S-LAND's node taps) and `u-field` (the Public field wait), whose "is visible"
+  assert had already completed.
+- **iPhone 17 ar (S-LAND, then U-TAP, U-LAND, P-LAND).** S-LAND's `setOrientation` (`sl-l`) was terminated at its 150 s
+  bound, and the simulator was left turned. The next cases' evidence screenshots (`u-1-0.png`, `pl-init-2.png`) show the
+  app drawn in landscape inside a portrait capture. U-TAP and P-LAND then tapped portrait coordinates on that layout, and
+  U-LAND depends on U-TAP.
+- Single Maestro taps took 2 – 3 minutes in both cells.
+
+#### The Product Owner's acceptance ("INTEL-LIVE-01 — CP3 R1 ACCEPTANCE & CP4 EXECUTION AUTHORIZATION", 2026-11-26)
+
+**CP3 R1 is ACCEPTED on head `755192c5`:**
+- API CI and Mobile CI SUCCESS;
+- the iOS Targeted Gate 9 / 9 functional cases PASS;
+- the World gate 86 / 93 PASS, 0 FAIL, 7 NOT TESTED;
+- across both CP3 runs, 92 / 93 device-specific cases proven;
+- the historical CP1 evidence confirms S-LAND PASS on iPhone 17 ar.
+
+**A CP3-specific World gate exception**, approved on the accumulated evidence. Its terms:
+- protected-input equivalence is documented from the existing evidence (below);
+- no successful Full World Gate run is claimed;
+- the current tests are not re-run, COSMOS is not reopened, the harness is not modified, and BG-10 is not relaxed.
+
+**The per-case matrix across the two CP3 runs:**
+
+| Cell | `c7ed134c` (`45773068788`) | `755192c5` (`45787825692`) | Proven in at least one CP3 run |
+|---|---|---|---|
+| iPhone SE / 16e en | **31 / 31 PASS** | 28 PASS, 3 NOT TESTED (S-LAND, U-TAP, U-LAND) | 31 / 31 |
+| iPhone 17 en | 28 PASS, 3 NOT TESTED (S-LAND, U-EMPTY, P-LAND) | **31 / 31 PASS** | 31 / 31 |
+| iPhone 17 ar | 30 PASS, 1 NOT TESTED (S-LAND) | 27 PASS, 4 NOT TESTED (S-LAND, U-TAP, U-LAND, P-LAND) | 30 / 31 (all but S-LAND) |
+
+0 FAIL across the six cell runs; 92 / 93 device-specific cases proven.
+
+**Protected-input equivalence between the two CP3 heads.** The impact planner
+(`scripts/cosmos-ios-world/world-gate-impact.mjs`), run on the change `c7ed134c..755192c5`, classes only two files as
+affecting the gate: `replay-cosmos/attention-lane.ts` and `replay-cosmos/event-track.ts`. Both are `PROTECTED_SURFACE` /
+`FULL` because the Analysis composition hub `DepthComposition` imports the Replay player, whose composite draws them. No
+gate case runs them:
+- no gate flow, runner script, XCUITest (`CosmosWorldGestureUITests.swift`) or the S401 proof world names a Replay;
+- the Replay player renders nothing while no Replay is open (`ReplayPlayer.tsx`: `open === null` → `null`).
+
+Every other file of the change is outside the iOS binary (documents and Jest tests). So each case that passed on one CP3
+head passed on inputs equivalent, for that case, to the other head's.
+
+**S-LAND on iPhone 17 ar: the historical evidence.**
+- **PASS** in run `45630621888` on the CP1 head `4b60bc85`: iPhone 17 ar 31 / 31 (§6.2).
+- Between `4b60bc85` and `755192c5` the planner classes 12 files as affecting the gate:
+  - CP2's `cosmos/core/stage.ts` and `cosmos/product/owners/personal.ts` (the Personal stage's attention input);
+  - CP3's six `replay-cosmos/` files;
+  - four call-client files (targeted: the live call).
+
+  The Shared World's stage receives no attention input, and its golden is byte-identical (§9.6). S-LAND opens no Replay
+  and no call. S-LAND's own inputs are therefore equivalent, but the binary is **not byte-identical** to the one that
+  passed.
+- On the CP2 and CP3 inputs, S-LAND on iPhone 17 ar **failed once** (`d8d9edd7`: the expand tap did not toggle the
+  handle) and was **NOT TESTED four times**. It also failed before INTEL-LIVE-01, on unchanged COSMOS inputs (the
+  COSMOS-INT-01 contract's run table).
+- It is the case the exception rests on. It stays an **open note** alongside `QAN-BL-CI-04`.
+
+**UT-3 — mandatory Android device validation (OPEN — MANDATORY VALIDATION).** It is added to the HONOR Live + Replay
+integrated product acceptance plan (§11.7, V-3). On the physical HONOR ALI-NX1, pressing the **actual End button** must:
+- end the call correctly;
+- stop microphone capture and audio playback;
+- remove every provisional attention mark;
+- keep the committed knowledge and the correct screen state;
+- let a following call start normally.
+
+It is the physical button, never a proof-only command. A demonstrated product defect is corrected before product
+acceptance. The separate **iOS touch result (UT-3 FAIL above) stays unresolved** until verified, and Android acceptance is
+never represented as iOS evidence.
+
+**Conditions kept:**
+- C8 stays PARTIAL pending the integrated proof;
+- Replay Lane B device validation stays mandatory on Android and the iOS simulator;
+- CP3-F10 stays OPEN;
+- COSMOS opening speed, motion smoothness and Lane B performance stay mandatory acceptance conditions;
+- every other finding is kept;
+- no paid test and no hosted deployment without separate authorization.
+
+**CP4 authorized:** "Proceed directly to CP4 under the existing approved execution contract", within PR #415, as the
+final closure checkpoint of INTEL-LIVE-01, not a new development task (§11).
+
+---
+
+## 11. CP4 — Closure (2026-11-26)
+
+**Authority.**
+- The Product Owner's "INTEL-LIVE-01 — CP3 R1 ACCEPTANCE & CP4 EXECUTION AUTHORIZATION" (2026-11-26): "Proceed directly
+  to CP4 under the existing approved execution contract", within PR #415.
+- That contract's CP4 obligations:
+  - v1.0 §6: the governance closure (BG-08 / BG-09), the measured cost, the GCR-01 carry-forwards; **D1** and **D2**;
+  - v1.1 §5: the closure wording, `QAN-BL-INTEL-06` → `VALIDATION — OPEN`, `SYNTHETIC_ONLY` carried, never a tombstone;
+  - A1 §6: the full report with [M], with the cost restated against the approved model using the measured cache ratio;
+  - A2 §6: **D3**, the three metrics per scenario, degraded runs labelled, and a sustainable production budget proposed.
+
+**What CP4 is.** A closure checkpoint, not development. It changes documents only:
+- this record;
+- the locators: Current State, Project Map and the Roadmap;
+- the canonical backlog;
+- the S8B-07 record.
+
+It changes no code, migration, test harness, workflow or configuration. It starts no paid test and no re-run, and
+nothing is deployed or merged.
+
+**Closure wording (v1.1 §5):** `INTEL-LIVE-01 CP1–CP4 DELIVERED (synthetic mechanism proven)`. DeepSeek is
+`SYNTHETIC_ONLY` (`QAN-BL-AI-01`): synthetic acceptance proves the mechanism, not the product. The product gate is the
+HONOR Live + Replay proof (§11.7).
+
+### 11.1 The three metrics, per scenario (A2 §2, D3)
+
+The metrics are kept apart and never merged. The real-evaluator figures are A8′'s shipped run `cp1-a8-r5-v5` (prompt v5,
+§3.2). Recall is the adjudicated reading (subject identity is semantic) and the Product Owner reviews it. The live
+disclosure figures are CP2's emulator runs (§9.3).
+
+| Scenario | Evidence accounting: FINAL spans | Semantic recall | USER developments in-speech / tail | Successful live disclosure |
+|---|---|---|---|---|
+| (a) early, middle, late; QANDEEL's side | 24 / 24 covered | **4 / 4** (3 USER, 1 QANDEEL) | 2 / 1 | **all** (fake and CP1 latency; EN and AR) |
+| (b) > 40 s without a meaningful change | 20 / 20 covered (21 admissions: 1 `REFUSED`, its span covered by the next) | **1 / 1** | 1 / 0 | not measured |
+| (c) three developments within 6 s | 7 / 7 covered | **3 / 3** | 3 / 0 | not measured |
+| (d) a correction and a negation | 10 / 10 covered | **6 / 6**; 4 / 4 corrections and negations across the corpus | 4 / 2 | **all** (fake and CP1 latency; IN_SPEECH and TAIL rows) |
+| (e) an existing Thread and a new subject | 8 / 8 covered | **2 / 2** | 2 / 0 | not measured |
+| (f) evidence during an in-flight evaluation | 6 / 6 covered | **1 / 1** | 1 / 0 | not measured |
+| (g) evidence in the last FINAL | 4 / 4 covered | **1 / 1** | 0 / 1 | not measured |
+| (j) a late correction beyond the 600-word window | 67 / 67 covered | **3 / 3** | 1 / 2 | not measured |
+| **Corpus** | **146 / 146 covered; 0 `MISSED_*`, 0 `UNCOVERED_AT_END`** | **21 / 21** | **14 / 6**; QANDEEL-side 1 / 1 understood | (a) and (d) on the emulator; **NOT PROVEN on a device** |
+
+- A tail development is produced after its turn's speech end. It is reported separately and is **not** in-speech
+  disclosure.
+- "Successful live disclosure" was measured on the Android emulator only, with the fake evaluator and the CP1 latency model.
+  It has not been measured with the real evaluator or on a device. That is the HONOR proof (V-1, V-8).
+- **Failure-injection scenarios, labelled degraded.** These are fake-evaluator runs (`cp1-fake-r4`); they prove the
+  mechanism only. A miss in them is counted as **not understood live**, never as success.
+
+  | Scenario | Accounting | Label |
+  |---|---|---|
+  | (h) resume, same and other instance | 5 covered, **2 `MISSED_HANDOVER`** | degraded: 2 spans not understood live |
+  | (i) evaluator outage for 15 s, then recovery | 12 / 12 covered after recovery (6 admissions) | degraded during the outage; nothing silently lost |
+  | (k) the emergency guard set low | 2 covered, **3 `DEGRADED_SUSPENDED`** | **DEGRADED** (`EMERGENCY_SPEND`): a product failure, never success |
+  | (g2) a tail after the settlement | 3 covered, 1 `STALE_AFTER_SETTLEMENT` | the stale refusal by design |
+  | (k20) a 20-minute call, guard `null` | 390 / 390 covered | never suspends |
+
+- **Observed in CI, not a corpus scenario:** CP3-F10 (§10.12). Speech that continued while a reply played was held, and
+  then refused `STALE_AFTER_SETTLEMENT`. It stays OPEN (V-2).
+
+### 11.2 Cost and capacity restated with [M] (D2; A1 §6; A2 §6)
+
+**Measured** (`cp1-a8-r5-v5`: 147 DeepSeek Flash evaluations over 9.61 minutes of scripted call clock; provider usage
+fields at the **peak** list price — cache hit 0.006, miss 0.30, output 1.20 USD per million tokens; off-peak is half):
+
+| Quantity | Estimate (v1.1 / A1) | **Measured [M]** |
+|---|---|---|
+| Admissions per minute of speech | ≈ 30 for a continuous speaker (A1) | **15.3** (11.8 – 27.3 per scenario): one evaluation in flight per call coalesces the FINALs |
+| Prompt tokens per evaluation | ≈ 1 200 – 2 200 [E] | **2 238** average (328 981 / 147) |
+| Completion tokens per evaluation | ≈ 15 – 120 [E] | **75.7** average (11 131 / 147) |
+| Cache-hit ratio | 80 % assumed (S8A-05's surface) | **43.0 %** overall; 31.2 % on (j), where the window slides; 48 – 78 % elsewhere |
+| USD per evaluation, peak | ≈ 0.00018 (80 % cache) – 0.00074 (none) | **0.00048** |
+| USD per minute of speech, peak | ≈ 0.003 – 0.0055 cached; 0.011 – 0.022 uncached | **0.0073** overall; **0.0033 – 0.0087** per scenario; (j) 0.0087. Off-peak half |
+| USD per 120 s turn, peak | ≈ 0.007 – 0.014 (cache) | **≈ 0.015** at the corpus rate; ≈ 0.017 at (j)'s |
+| T3 admission → interpretation | 1.2 – 1.7 s [E] | P50 1.03 – 1.34 s, P95 ≤ 1.94 s |
+| ASR cost added | none (the stream already runs) | none |
+| Paid spend of the whole task | ceiling USD 0.60 | **≈ USD 0.416** (§4); CP2, CP3 and CP4 spent nothing |
+
+**Against the approved per-minute model** (USD 0.026 – 0.029 per call minute, S8B-01; ASR at 0.80 / h):
+- The lane adds **+25 – 28 %** at the corpus rate and **+30 – 33 %** at (j)'s long-monologue rate, both at peak. Off-peak
+  halves the lane's share.
+- This sits between A1's cached row (+10 – 20 %) and its uncached worst (+40 – 85 %), because the measured cache ratio is
+  43 %, not 80 %.
+
+**What is measured and what is not:**
+- **Both sides.** The lane evaluates whichever track has FINALs. The QANDEEL side is measured in (a) only (19 words, 1
+  development). A call's QANDEEL share is therefore **[E]** at the same rate per minute of speech.
+- **[M]** means the per-minute figures above are for continuous scripted speech. A real call with pauses costs less per
+  call minute, but that mix is not measured.
+- **1 000 users per month**, on S8B-01's 30 / 150 / 600 minutes per user-month: **USD ≈ 219 – 261 / 1 095 – 1 305 /
+  4 380 – 5 220** at peak (0.0073 – 0.0087), half off-peak. There is still **no approved usage profile**.
+- **Capacity** is unchanged from v1.1 §6 and not load-tested:
+  - one request in flight per speaking call, far under DeepSeek's published 2 500 concurrent;
+  - Speechmatics `realtime_session_capacity = 2` on the evaluation account.
+
+### 11.3 The sustainable production budget — a proposal for the Product Owner (A2 §1, §6)
+
+This is a proposal only. No configuration changes.
+
+1. **Planning rate: USD 0.009 per call minute at peak** (USD 0.0045 off-peak). It is (j)'s measured rate, the long call
+   where the window slides. The voice model becomes **USD ≈ 0.035 – 0.038 per call minute** at peak.
+2. **The emergency guard stays `null` now** (A2). It is set when real users reach the lane (`QAN-BL-AI-01`), from the
+   HONOR proof's real-speech measurement. A starting point for that decision: **USD 0.50 per call**, about 57 minutes at
+   (j)'s rate, entering `DEGRADED` and recorded as a product failure when reached.
+3. **Re-measure on real speech.** The HONOR Live + Replay proof (V-1) re-measures tokens, cache ratio and admissions per
+   minute on real speech, both tracks. The budget is confirmed or revised from those figures before any launch decision
+   (`QAN-BL-AI-03` owns DeepSeek's time-of-day pricing).
+
+The window, the prompt and the serialisation are unchanged. Any change to them for cost is a contract change and is not
+proposed here.
+
+### 11.4 GCR-01 carry-forwards (v1.0 §6)
+
+These are recorded on `QAN-BL-VOICE-07` (owner GCR-01 / GCR-01-A) in this change:
+- **Added DeepSeek volume:** ≈ 15 evaluations per minute of speech per call (measured, §11.2). At most one is in flight
+  per speaking call, so concurrent requests ≤ concurrent speaking calls.
+- **Permits — F-1 (§5):** the `PROVISIONAL_ATTENTION` permit refuses new admissions in the First Audio critical window,
+  but does not reclaim slots that in-flight evaluations already hold. With 2 shared provider slots and 4 calls, First
+  Audio ON − OFF was +1 578 / +1 789 ms. At 8 slots it was within noise.
+- GCR-01-A's capacity proof (the +50 / +100 ms First Audio rule) must count the lane's demand. No mechanism was added.
+
+### 11.5 The findings register (every finding kept)
+
+| Finding | State at CP4 | Where it goes |
+|---|---|---|
+| **F-1** provider capacity; the critical window does not reclaim in-flight slots (§5) | OPEN | GCR-01-A (`QAN-BL-VOICE-07`) |
+| F-2 A8′'s false-update clause (§5) | resolved by the directive's §2 interpretation; the Product Owner reviews the reading | — |
+| F-3 (f)'s "in flight" check depends on latency (§5) | kept; the mechanism is proven with the fake | — |
+| F-4 labels that nearly quote the speech (§5) | kept; a presentation note | — |
+| CP2-F1 settlements EXPIRED in every synthetic run (§9.7) | kept; `CONFIRMED` is unit-tested only | V-1 |
+| CP2-F2 a correction is two frames, 14 – 53 ms apart | kept (no debounce, by directive) | V-4 |
+| CP2-F3 TAIL is rare under the measured latency | kept; exercised | — |
+| CP2-F4 long labels shortened by the frozen label rule | kept | V-4 |
+| CP2-F5 an ember label follows the frozen placement | kept | V-4 |
+| CP2-F6 no Live Focus Thread centre | kept | — |
+| CP2-F7 the probe doubles the stage compile in the proof build only | kept; never in a Product build | — |
+| CP3-F1 nothing is certified; every Lane B instant `exact: false` (§10.6) | kept | — |
+| CP3-F2 call-boundary fidelity | **corrected in R1** (§10.11); on-device fidelity still to prove | V-4 |
+| CP3-F3 a tail SET and its settlement at one instant are never visible | kept; no timing invented | — |
+| CP3-F4 one mark per `track:subject` across calls | kept (the live identity) | — |
+| CP3-F5 embers on the empty field | kept | V-4 |
+| CP3-F6 Lane B stages prepared lazily; device cost unmeasured | OPEN | V-6 |
+| CP3-F7 Lane A's binding does not check the attention pin | kept (Lane A unchanged by mandate) | V-4 |
+| CP3-F8 the video is not built; C6 on facts only | kept | S8B-07 CP2-A (Replay video) |
+| CP3-F9 Replay Lane B not proven on a device | OPEN | V-4, V-5 |
+| **CP3-F10** speech during QANDEEL's reply held, then refused stale | **OPEN — mandatory** | V-2 |
+| C8 the corpus call's Replay | **PARTIAL** | V-4 |
+| ITG-03 `4005 OVERLOADED` (PASS AFTER RECOVERY, §9.6) | not treated as resolved | V-7 |
+| iOS touch: UT-1 (FAIL in CP1 / CP2, PASS on `755192c5`), **UT-3 FAIL on `755192c5`** | **unresolved until verified** | V-5 |
+| **UT-3 on Android:** the physical End button | **OPEN — MANDATORY VALIDATION** | V-3 |
+| S-LAND on iPhone 17 ar | open note (§10.13) | `QAN-BL-CI-04` |
+| World gate NOT TESTED cases (harness bounds, orientation, runner capacity) | kept as reported | `QAN-BL-CI-04` |
+| COSMOS opening speed and motion smoothness (§9.9) | **mandatory acceptance condition** | V-6 |
+
+### 11.6 What the product still lacks
+
+The mechanism is proven synthetically. The following is **not proven**:
+- the lane on real speech;
+- the live map on a device;
+- Replay Lane B on a device;
+- the product as a whole.
+
+### 11.7 The HONOR Live + Replay integrated validation plan (the close condition of `QAN-BL-INTEL-06`)
+
+The PO's sequence step 3 is separately authorized, including its paid providers. The device is the physical HONOR
+ALI-NX1 (Android). The iOS simulator is used where named. Every scenario below is **mandatory** for product acceptance,
+and none is claimed passed by any earlier evidence:
+
+| # | Scenario | Pass means |
+|---|---|---|
+| **V-1** | A long continuous USER monologue (90 – 120 s) on the live call, with the real recognizer and evaluator | ≥ 2 meaningful in-speech developments on the map before the speech ends; corrections and negations revise them; nothing fabricated; tokens, cache ratio and admissions per minute re-measured (§11.3) |
+| **V-2** | **CP3-F10:** the person keeps speaking while QANDEEL's reply plays | the meaningful developments of that speech are preserved (understood and shown), never silently lost to a stale refusal |
+| **V-3** | **UT-3:** the **physical End button** | the call ends correctly; microphone capture and playback stop; every provisional mark is removed; committed knowledge and the correct screen state are kept; a following call starts normally. A demonstrated defect is corrected before product acceptance |
+| **V-4** | Replay Lane B on the device: the corpus-like call's Replay (**C8**) and real playback | marks at their floors, nothing at an anchor, nothing for `MISSED_*`, `UNCOVERED_AT_END` shows Lane A only; each call's marks end at its own boundary (F2); binding consistency; visual fidelity (labels, embers, corrections) |
+| **V-5** | **iOS simulator:** a targeted Replay Lane B pass (D-CP3-iOS), and the iOS touch result (UT-1 / UT-3) | Replay Lane B shows its marks as V-4 does; the End tap ends the call and the call entry returns. Android evidence is never counted as iOS |
+| **V-6** | Performance | COSMOS opening speed and motion smoothness with marks and with Lane B; Lane B stage preparation cost (F6) |
+| **V-7** | Live call stability | `4005 OVERLOADED` handled and recovered; no crash |
+| **V-8** | Successful live disclosure on the device | T4 and "before Lane A" measured per development (on the emulator only so far) |
+
+`QAN-BL-INTEL-06` closes only when this proof is recorded and accepted. Until then it is **`VALIDATION — OPEN`**.
+
+### 11.8 Governance (BG-08 / BG-09)
+
+- **Inherited:** `QAN-BL-INTEL-06`, the task's only item. It moves from `DEFERRED — OWNED` to **`VALIDATION — OPEN`**
+  (D-11; never a tombstone). Its validation set is §11.7 and its close condition is unchanged.
+- **Carried forward (no new item):** `QAN-BL-VOICE-07` gains the GCR-01 carry-forwards (§11.4).
+- **Read and left unchanged:**
+  - `QAN-BL-AI-01`: `SYNTHETIC_ONLY`;
+  - `QAN-BL-AI-03`: time-of-day pricing, cited by §11.3;
+  - `QAN-BL-CI-04`: this task's World gate evidence is the same residue;
+  - `QAN-BL-VIS-02` and `QAN-BL-NAV-03`;
+  - `QAN-BL-VOICE-01`: Stage 8B's, worked by S8B-07.
+- **Not admitted:**
+  - CP3-F8, the video, which is S8B-07 CP2-A's own scope.
+  - The kept limitations (F-2 – F-4, CP2-F1 – F7, CP3-F1, F3 – F5, F7). No canonical document defers them to another
+    task (BG-06); they stay in this record's register.
+  - Every scenario of §11.7, which is the validation set of `QAN-BL-INTEL-06` itself.
+- **Index after CP4: 113 items; 54 / 5 / 17 / 37 by status (`DEFERRED — OWNED` / `VALIDATION — OPEN` / `OPEN — UNASSIGNED`
+  / `CLOSED — TOMBSTONE`); severity unchanged.** The §9 inheritance table gains INTEL-LIVE-01's row.
+- **BG-09:** this record's banner carries the final state of this change. The Current State, Project Map, Roadmap and
+  S8B-07 record are updated in the same change.
+
+### 11.9 Verification (D1)
+
+D1 (v1.0 §6) is the closure-governance contract plus the contracts that read these documents, green:
+- `npm run test:task-closure-governance-contract`: **25 / 25** (local, on this change);
+- every root contract (`node --test tests/*.test.mjs`), which includes the documentation readers: **1 891 / 1 891** (local,
+  on this change).
+
+The impact planner answers `NOT_AFFECTED` for this change over `755192c5`: no file of it is in the iOS binary.
+
+### 11.10 Deliberately not done at CP4
+
+- No code, migration, harness, workflow or configuration change.
+- No re-run of any gate, no paid test, no deployment, no merge.
+- No product-readiness claim.
+- No new checkpoint.
+
+**Next (the Product Owner's sequence):** the Product Owner's CP4 review and merge decision («ادمج»). Then the HONOR Live +
+Replay proof, under its own authorization, and the return to Replay video production (S8B-07 CP2-A, then CP2-B).

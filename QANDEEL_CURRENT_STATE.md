@@ -1,5 +1,37 @@
 # QANDEEL — Current State
 
+> **INTEL-LIVE-01 — CP1–CP4 DELIVERED (SYNTHETIC MECHANISM PROVEN) — CP3 + R1 ACCEPTED WITH A PO EXCEPTION (Product Owner, 2026-11-26, head `755192c5`) — CP4 CLOSURE DELIVERED / READY FOR PO REVIEW AND MERGE DECISION — `QAN-BL-INTEL-06` VALIDATION — OPEN — NOT MERGED — 2026-11-26 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's "INTEL-LIVE-01 — CP3 R1 ACCEPTANCE & CP4 EXECUTION AUTHORIZATION" (2026-11-26). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) is the task's primary document: §10.13 covers CP3's acceptance and §11 covers CP4.
+> - **CP3 + R1 accepted** on `755192c5`:
+>   - API CI and Mobile CI SUCCESS; the iOS Targeted Gate 9 / 9 PASS;
+>   - World gate 86 / 93 PASS, 0 FAIL, 7 NOT TESTED (harness bounds and a simulator left turned); 92 / 93 device cases proven across the two CP3 runs.
+>   - A **CP3-specific World gate exception**, with the protected-input equivalence in record §10.13.
+>   - S-LAND on iPhone 17 ar rests on its CP1 PASS (`4b60bc85`) and stays an **open note**.
+>   - **No Full World Gate success is claimed**, nothing is re-run, the harness is unchanged, and BG-10 is not relaxed.
+> - **Kept open:**
+>   - **UT-3 on Android** (the physical End button on HONOR ALI-NX1) is **OPEN — MANDATORY VALIDATION**.
+>   - The iOS touch result (**UT-3 FAIL** on `755192c5`) stays unresolved until verified.
+>   - C8 stays PARTIAL; CP3-F10 stays OPEN; Replay Lane B device validation (Android and the iOS simulator) and the COSMOS opening speed, motion smoothness and Lane B performance stay mandatory.
+> - **CP4 (closure, documents only):**
+>   - The three metrics per scenario (record §11.1):
+>     - evidence accounting: 146 / 146 FINAL spans covered;
+>     - semantic recall: 21 / 21;
+>     - in-speech / tail: 14 / 6;
+>     - successful live disclosure: on the emulator only.
+>   - The cost with [M] (record §11.2):
+>     - 15.3 evaluations per minute of speech; 43.0 % cache hits;
+>     - **USD 0.0073 per minute of speech at peak (0.0087 on the long monologue)**, i.e. **+25 – 33 %** on the approved per-call-minute model.
+>   - A budget proposal for the Product Owner (record §11.3): USD 0.009 per call minute at peak for planning; the emergency guard stays `null`.
+>   - GCR-01 carry-forwards on `QAN-BL-VOICE-07`.
+>   - The findings register (§11.5).
+>   - The **HONOR Live + Replay integrated validation plan, V-1 – V-8** (§11.7).
+> - **Backlog:** `QAN-BL-INTEL-06` → **`VALIDATION — OPEN`** (never a tombstone); it closes only by the HONOR Live + Replay proof. Index: 113 items; 54 / 5 / 17 / 37 by status.
+> - **Product readiness:** DeepSeek is `SYNTHETIC_ONLY`. Synthetic acceptance proves the mechanism, not the product. **No product-readiness claim** is made before the HONOR Live + Replay proof.
+> - **Next:**
+>   - The Product Owner's CP4 review. **Merge only on the Product Owner's explicit «ادمج».**
+>   - Then the HONOR Live + Replay proof, under its own authorization, and the return to Replay video production (S8B-07 CP2-A → CP2-B).
+>   - `0204` and `0205` are not hosted; the next migration is `0206`.
+
 > **INTEL-LIVE-01 — CP2 ACCEPTED WITH A PO EXCEPTION (Product Owner, 2026-11-26, head `3c4298c5`) — CP3 REPLAY LANE B DELIVERED / READY FOR PO REVIEW — NOT MERGED — 2026-11-26 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:** the Product Owner's "INTEL-LIVE-01 — CP2 ACCEPTANCE & PO EXCEPTION" (2026-11-26) and **D-CP3** (2026-11-26). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) is the task's primary document: §9.6 and §9.9 cover CP2's final head and its acceptance, and §10 covers CP3.
 > - **CP2 accepted, on these terms:**
