@@ -14,6 +14,11 @@ export interface FakeCallFinal {
   readonly endMs?: number;
 }
 export type FakeCallLine = FakeCallFinal | readonly FakeCallFinal[];
+/**
+ * The lines a session answers: a list read in order by each session, or (INTEL-LIVE-01 CP2, the device proof) a source asked
+ * at every finalize() for the line to answer now, shared by every session of the recognizer.
+ */
+export type FakeCallScript = readonly FakeCallLine[] | (() => FakeCallLine | undefined);
 
 /** An INTERIM the fake emits while audio arrives: a test proves it never leaves the engine. */
 export const FAKE_CALL_INTERIM = 'INTERIM-NEVER-COMMITTED';
@@ -27,7 +32,7 @@ export const FAKE_CALL_INTERIM = 'INTERIM-NEVER-COMMITTED';
 export class FakeCallRecognizer implements RealtimeRecognition {
   readonly sessions: FakeCallRecognitionSession[] = [];
 
-  constructor(private readonly script: readonly FakeCallLine[], private readonly options: { finalDelayMs?: number; openDelayMs?: number; neverAnswer?: boolean } = {}) {}
+  constructor(private readonly script: FakeCallScript, private readonly options: { finalDelayMs?: number; openDelayMs?: number; neverAnswer?: boolean } = {}) {}
 
   async openStream(request: { readonly language: 'ar_en'; readonly signal: AbortSignal }): Promise<FinalizableRecognitionSession> {
     if (this.options.openDelayMs) await new Promise((resolve) => setTimeout(resolve, this.options.openDelayMs));
@@ -47,7 +52,7 @@ export class FakeCallRecognitionSession implements FinalizableRecognitionSession
   private next = 0;
 
   constructor(
-    private readonly script: readonly FakeCallLine[],
+    private readonly script: FakeCallScript,
     private readonly options: { finalDelayMs?: number; neverAnswer?: boolean },
     signal: AbortSignal,
   ) {
@@ -86,7 +91,7 @@ export class FakeCallRecognitionSession implements FinalizableRecognitionSession
       return 'TIMED_OUT';
     }
     await new Promise((resolve) => setTimeout(resolve, this.options.finalDelayMs ?? 0));
-    const line = this.script[this.next];
+    const line = typeof this.script === 'function' ? this.script() : this.script[this.next];
     this.next += 1;
     const finals: readonly FakeCallFinal[] = line === undefined ? [] : Array.isArray(line) ? line : [line as FakeCallFinal];
     for (const f of finals) this.emit({ kind: 'FINAL', speech: { text: f.text, band: f.band ?? 'HIGH', startMs: f.startMs ?? 0, endMs: f.endMs ?? 0 } });

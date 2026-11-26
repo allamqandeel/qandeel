@@ -1174,6 +1174,23 @@ settlement reached the database before the resume, so the restored state equalle
 notified: the probe now reports the layer's seq every 2 s while a call runs (a tick), and ITG-08 drops the socket as soon as
 the negation is written. The iOS run on the pushed head is the gate's evidence; nothing is reported for it before it ran.
 
+**The first iOS run on the CP2 head (`d8d9edd7`, run `45716615306`): HARNESS failure, corrected.** ITG-01, ITG-02,
+ITG-03 and **ITG-07 PASS** on iOS: v3 negotiated (the state sent on epoch 2), **143 of 143 clock marks answered `null`**,
+a SET and its correction reached the phone, which matched the database (seq 7, 0 open), and the stage digest changed with
+a mark. **ITG-08 FAIL:** "the lane did not write the scenario's negation within 120 s"; ITG-04, ITG-09, ITG-05 and ITG-06
+NOT TESTED (not reached). Classification: **harness, not product**. The proof server's scripted recognizer answered each
+FINAL with the next line of one script, counted per recognition session: which corpus words a spoken segment received
+depended on how many FINALs came before it in that session — a reconnect (iOS was already on epoch 2) restarts the
+count, and an endpointer that joins two segments into one utterance skips one. Either gives the lane other words than
+the segment spoken. Which of them happened on that run is not determined from the log alone (the evidence artifact was
+not downloaded); the case's own wait and assertions were not the cause. **Correction (proof-only):** under a scenario,
+each FINAL now answers exactly the scenario segments whose stimulus was used up since the previous FINAL (all of them, in
+order), in whichever session hears it; any other utterance answers the next numbered line, counted across sessions.
+`FakeCallRecognizer` (testing only) accepts such a line source; the proof server records, as counts only, how many
+segments each FINAL answered (`scripted-final`). No assertion, timeout or case changed. The Android rehearsal passes
+again on a fresh clone (`itg-local-android-r3`: v3, applied, COSMOS, behind, restored on epoch 2 at seq 9, cleanup OK).
+The run on the corrected head is the gate's evidence.
+
 ### 9.5 B7 — performance
 
 | B7 requirement | Evidence |
@@ -1189,9 +1206,16 @@ providers on an emulator), and none is claimed.
 
 ### 9.6 CI on the CP2 head
 
-The run on the pushed head (API CI, Mobile CI, the iOS Targeted Gate with ITG-07 – ITG-09, and the World gate, which the
-impact planner sends to FULL because CP2 changes `cosmos/`) is reported in PR #415 and the delivery report with its run IDs
-and each failure classified (product, harness or infrastructure). It is written into this record at the next executable
+**The first CP2 head, `d8d9edd7`:**
+
+| Run | Result |
+|---|---|
+| API CI `45716615243` | **SUCCESS** |
+| Mobile CI `45716615367` | **SUCCESS** |
+| iOS Targeted Gate `45716615306` | FAILURE — ITG-01, ITG-02, ITG-03, **ITG-07 PASS**; ITG-08 FAIL (**harness**: the scripted recognizer's mapping, §9.4, corrected); ITG-04, ITG-09, ITG-05, ITG-06 NOT TESTED (not reached) |
+| World gate `45716615254` (impact plan: **FULL**, CP2 changes `cosmos/`) | FAILURE — **92 / 93 PASS**: iPhone 17 en 31 / 31, iPhone SE 31 / 31, iPhone 17 ar 30 / 31. The one FAIL is **S-LAND** (the Shared World's detail sheet in landscape: the expand tap did not toggle the handle; the handle stayed on screen in every orientation). Classification: **not CP2** — the Shared World's stage receives no attention input and is byte-identical (the golden); S-LAND on `i17-ar` failed before on unchanged COSMOS inputs (the COSMOS-INT-01 contract's run table). Every Personal case, every pan and landscape case, and every native XCUITest passed in all three cells. No retry was started for it |
+
+The corrected head's runs are reported in PR #415 and the delivery report; they are written here at the next executable
 change, never by a documentation-only push.
 
 **Local verification before the push:** API jest for the touched suites (`live-attention`, `voice/call`, `voice/call-turn`,

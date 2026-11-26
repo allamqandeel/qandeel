@@ -17,8 +17,8 @@
  * synthetic proof.
  *
  * INTEL-LIVE-01 CP2 (the Android emulator evidence, B5′ / B6′), each OFF unless its variable is set: with
- * `PROOF_ATTENTION_SCENARIO=a|d` (and PROOF_ATTENTION=ON) the scripted recognizer answers that CP1 corpus scenario's USER
- * segments in order and the fake evaluator is the corpus annotation's oracle (QANDEEL's annotated development on QANDEEL's
+ * `PROOF_ATTENTION_SCENARIO=a|d` (and PROOF_ATTENTION=ON) the scripted recognizer answers each FINAL with the CP1 corpus scenario's USER
+ * segments spoken since the previous FINAL (exactly the words spoken, whatever the endpointer split or a reconnect) and the fake evaluator is the corpus annotation's oracle (QANDEEL's annotated development on QANDEEL's
  * first evidence), and `POST /proof/speak-scenario` speaks the scenario's USER turn as the stimulus, one segment at a
  * time with a 650 ms pause (the endpointer finalizes at 500 ms of silence and commits at 800 ms: each pause ends an
  * utterance, never the turn); with `PROOF_PROBE=ON` the proof app's attention probe reports its instants
@@ -106,7 +106,7 @@ import { LiveCallAttentionBinding } from '../src/voice/call-turn/live-call-atten
 import { LiveCallConversationBinding } from '../src/voice/call-turn/live-call-conversation.port';
 import { LiveCallTurnEngine, type CallTurnObservation } from '../src/voice/call-turn/live-call-turn.engine';
 import { fakeCallSynthesisRoute } from '../src/voice/call-turn/testing/fake-call-synthesis';
-import { FakeCallRecognizer, type FakeCallLine } from '../src/voice/call-turn/testing/fake-call-recognizer';
+import { FakeCallRecognizer, type FakeCallLine, type FakeCallScript } from '../src/voice/call-turn/testing/fake-call-recognizer';
 import { CORPUS, type Scenario } from './intel-live-01/corpus';
 import type { RealtimeRecognition } from '../src/voice/live-note/live-voice-note.service';
 import {
@@ -158,6 +158,12 @@ let openStreams = 0;
 let stimulusSample = 0;
 /** INTEL-LIVE-01 CP2: who waits for the armed stimulus to be used up (`/proof/speak-scenario`). */
 const stimulusWaiters = new Set<() => void>();
+/**
+ * INTEL-LIVE-01 CP2: the texts of the scenario segments whose stimulus was used up and that no FINAL has answered yet. The
+ * next finalize() answers them all, in order: a segment's words are its own whatever the endpointer split, and whichever
+ * recognition session (a reconnect opens a new one) hears it.
+ */
+const spokenSegments: string[] = [];
 /** INTEL-LIVE-01 CP2: the connection epochs whose attention frames are withheld (`/proof/attention-hold`), and the open ones. */
 const heldEpochs = new Set<number>();
 const openEpochs = new Set<number>();
@@ -574,8 +580,19 @@ async function main(): Promise<void> {
   // The scripted recognizer: each end of an utterance is the next numbered synthetic line (never the person's words).
   const scenario: Scenario | null = scenarioOf(process.env.PROOF_ATTENTION_SCENARIO);
   const numbered: FakeCallLine[] = Array.from({ length: 400 }, (_, i) => ({ text: `جملة اختبارية رقم ${i + 1}` }));
-  // INTEL-LIVE-01 CP2: under a corpus scenario, its USER segments first (in order), then the numbered lines.
-  const script: FakeCallLine[] = scenario === null ? numbered : [...scenario.segments.filter((x) => x.track === 'USER').map((x) => ({ text: x.text })), ...numbered];
+  // INTEL-LIVE-01 CP2: under a corpus scenario, a FINAL answers the scenario segments spoken since the last one (see
+  // spokenSegments); any other utterance (`/proof/speak`) the next numbered line, counted across sessions.
+  let numberedNext = 0;
+  const script: FakeCallScript = scenario === null ? numbered : () => {
+    if (spokenSegments.length > 0) {
+      const texts = spokenSegments.splice(0);
+      evidence('scripted-final', { segments: texts.length, numbered: null });
+      return texts.map((text) => ({ text }));
+    }
+    numberedNext += 1;
+    evidence('scripted-final', { segments: 0, numbered: numberedNext });
+    return numbered[numberedNext - 1];
+  };
   const recognizer = new FakeCallRecognizer(script, { finalDelayMs: 150 });
   const recognition: RealtimeRecognition = placedRecognition({ openStream: (request) => recognizer.openStream(request) });
   const failureLine: CallFailureLine = { ar: [], en: [] };
@@ -886,6 +903,7 @@ async function main(): Promise<void> {
           const startAt = Date.now();
           stimulusFrames = Math.ceil(ms / 20);
           await used;
+          spokenSegments.push(seg.text);
           evidence('scenario-segment', { scenario: scenario.id, turn: index, index: i, startAt, endAt: Date.now(), ms, devs: seg.devs.length });
           if (k < segs.length - 1) await new Promise<void>((resolve) => setTimeout(resolve, 650));
         }
