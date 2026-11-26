@@ -20,6 +20,23 @@
 > - **Open items for the Product Owner:**
 >   - **iOS and Android Replay Lane B are NOT TESTED** on a device or simulator, because no gate opens a Replay. These are decisions D-CP3-iOS and D-CP3-C8 (record §10.7).
 >   - The FULL World gate and the iOS Targeted Gate results on the CP3 head will be reported in PR #415.
+> - **CP3 R1 (2026-11-26):** the Product Owner approved D-CP3-F2 (option (a)); F2 is a confirmed product defect.
+>   - Each call's Lane B marks now end at that call's own presented boundary, as the live phone drops a call's layer at
+>     the call's end. Nothing of one call is drawn in the next, and no provisional mark survives the closing display.
+>   - The change is confined to Lane B and its tests. No event, instant or visibility duration is invented. `0205`, the
+>     API, Lane A and COSMOS are unchanged.
+>   - The PO's CP3 review decisions are recorded: D-CP3-iOS and D-CP3-C8 approved (device validation, an iOS Replay
+>     simulator pass and the corpus-call Replay are carried to the HONOR Live + Replay proof; **C8 stays PARTIAL**).
+>   - The CP2 World gate exception does **not** extend to CP3.
+>   - The first CP3 head's ITG-07 failure is classified **not CP3**: the runner was overloaded and the turn was split
+>     mid-scenario. It is recorded with finding **CP3-F10**, which stays **OPEN** as a mandatory scenario of the integrated HONOR
+>     Live + Replay validation: speech continuing during QANDEEL's reply, with its meaningful developments preserved. CP1 is
+>     not reopened (record §10.9 – §10.12).
+> - **CI on the first CP3 head `c7ed134c`:**
+>   - Mobile CI and API CI SUCCESS.
+>   - iOS Targeted Gate: ITG-07 FAIL (not CP3; CP3-F10).
+>   - World gate FULL: 89 / 93 PASS, no FAIL, 4 NOT TESTED (iPhone 17 en: harness timeouts; S-LAND on both iPhone 17 cells, an open note). **Not a Full World Gate success**, and no exception is claimed.
+>   - The R1 push re-runs both gates once (record §10.12).
 > - **Next:** the Product Owner's CP3 review.
 >   - CP4 is not started.
 >   - No product-readiness claim is made before the HONOR Live + Replay proof.

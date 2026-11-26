@@ -24,9 +24,9 @@ import type { ReplayAttentionSourceState } from '../../original-audio/replay-att
 import { presentationMapDigest } from '../../original-audio/replay-availability';
 import { readingPaceMs } from '../../replay-player';
 import type { ReplayHistoryMoment } from '../../runtime-entry';
-import { replayAttentionLane, replayAttentionMarks, type ReplayAttentionTimeline } from '../attention-lane';
+import { replayAttentionLane, replayAttentionMarks, replayAttentionTrack, type ReplayAttentionTimeline } from '../attention-lane';
 import { buildReplayCameraPlan } from '../camera-plan';
-import { attentionAt, attentionOnFrame } from '../event-track';
+import { attentionAt, attentionOnFrame, buildReplayEventTimeline } from '../event-track';
 import { replayCosmosFrame, replayFrameFacts, type ReplayCosmosScene, type ReplayFrameAttention, type ReplayFrameStage } from '../frame';
 import { replayPresentationClock, type ReplayPresentationClock } from '../presentation-clock';
 import { replayStageTimeline } from '../stage-timeline';
@@ -76,8 +76,11 @@ describe('CP3 · the answer on the presentation clock (C2, C9)', () => {
     expect(keys(LANE, R0 + 1_900)).toEqual(['1:USER:manager']);
     expect(keys(LANE, R0 + 5_200)).toEqual(['1:USER:manager', '1:QANDEEL:plan']);
     expect(keys(LANE, R0 + 5_600)).toEqual(['1:QANDEEL:plan']);
-    expect(keys(LANE, R1 + 1_800)).toEqual(['1:QANDEEL:plan', '2:USER:trip']);
-    expect(keys(LANE, CLOCK.durationMs)).toEqual(['2:USER:trip']);
+    // RE-ANCHORED (CP3 R1, D-CP3-F2): these two lines pinned the defect — call 1's unsettled plan drawn inside call 2
+    // (['1:QANDEEL:plan', '2:USER:trip']) and call 2's open trip in the closing display (['2:USER:trip']). Live drops a
+    // call's layer at its end: call 1's leaves at its recording's presented end, call 2's at the presentation's.
+    expect(keys(LANE, R1 + 1_800)).toEqual(['2:USER:trip']);
+    expect(keys(LANE, CLOCK.durationMs)).toEqual([]);
   });
 
   it('C9 · a position the server produced inside a long pause is drawn at that pause\'s presented elapsed offset', () => {
@@ -127,13 +130,95 @@ describe('CP3 · the live order (C4): the same events give the live layer\'s mar
   });
 
   it('a mark names a body the person has (a glow) by its thread, else none (an ember); one subject of one track drawn once', () => {
+    // RE-ANCHORED (CP3 R1, D-CP3-F2): call 1's plan is no longer among call 2's marks.
+    expect(replayAttentionMarks(attentionAt(LANE, R0 + 5_600))).toEqual([{ subjectKey: 'QANDEEL:plan', label: 'the plan', entityId: null, confidence: 'MEDIUM' }]);
     expect(replayAttentionMarks(attentionAt(LANE, R1 + 1_800))).toEqual([
-      { subjectKey: 'QANDEEL:plan', label: 'the plan', entityId: null, confidence: 'MEDIUM' },
       { subjectKey: 'USER:trip', label: 'trip', entityId: 'THREAD:e0000000-0000-4000-8000-000000000005', confidence: 'LOW' },
     ]);
-    // A later call's same subject replaces the earlier call's, as the newest (the live map shows one call's layer).
+    // The same subject in two calls: each call draws its own, never both (the live map shows one call's layer).
     const twice = laneOf(bound([EVENTS[0]!, { ...EVENTS[0]!, call: 2, label: 'manager 2', anchor: { runIndex: 1, fileMs: 500 }, floor: produced(1, 900) }]))!;
-    expect(replayAttentionMarks(attentionAt(twice, CLOCK.durationMs - 1))).toEqual([{ subjectKey: 'USER:manager', label: 'manager 2', entityId: null, confidence: 'HIGH' }]);
+    expect(replayAttentionMarks(attentionAt(twice, R0 + 8_000))).toEqual([{ subjectKey: 'USER:manager', label: 'manager', entityId: null, confidence: 'HIGH' }]);
+    expect(replayAttentionMarks(attentionAt(twice, R1 + 900))).toEqual([{ subjectKey: 'USER:manager', label: 'manager 2', entityId: null, confidence: 'HIGH' }]);
+  });
+});
+
+describe('CP3 R1 · each call\'s layer ends at its own presented call boundary (D-CP3-F2)', () => {
+  // Call 1 is run 0 (its recording ends at R0 + 9000: the TEXT moment and the CROSS_RECORDING pause follow); call 2 is
+  // run 1, the presentation's last recording.
+  const runEnd = (runIndex: number) => CLOCK.blocks.find((b) => b.kind === 'RUN' && b.runIndex === runIndex)!.endMs;
+  const END1 = runEnd(0);
+  const END2 = runEnd(1);
+
+  it('the boundaries are the recordings\' presented ends, before the pause and the next call', () => {
+    expect(END1).toBe(R0 + 9_000);
+    expect(END1).toBeLessThan(R1);
+    expect(END2).toBe(R1 + 5_000);
+    expect(LANE.steps.every((s) => s.layerEndMs === (s.eventId.startsWith('1:') ? END1 : END2))).toBe(true);
+  });
+
+  it('consecutive calls: call 1\'s open marks are drawn to its end and never in call 2 — in time and on frames', () => {
+    expect(keys(LANE, END1 - 1)).toEqual(['1:QANDEEL:plan']);
+    expect(keys(LANE, END1)).toEqual([]);
+    for (const t of [END1 + 1, R1 - 1, R1, R1 + 1_799]) expect(keys(LANE, t)).toEqual([]);
+    expect(keys(LANE, R1 + 1_800)).toEqual(['2:USER:trip']);
+    const f = causalFrame(END1, FPS);
+    expect([...attentionOnFrame(LANE, f - 1).keys()]).toEqual(['1:QANDEEL:plan']);
+    expect([...attentionOnFrame(LANE, f).keys()]).toEqual([]);
+  });
+
+  it('the final call\'s closing display draws no provisional mark (its open SET and every AFTER_END step alike)', () => {
+    expect(keys(LANE, END2 - 1)).toEqual(['2:USER:trip']);
+    for (const t of [END2, CLOCK.durationMs, CLOCK.durationMs + 10_000]) expect(keys(LANE, t)).toEqual([]);
+    expect([...attentionOnFrame(LANE, causalFrame(CLOCK.durationMs, FPS)).keys()]).toEqual([]);
+    // A SET the server could place in no presented run of its call (AFTER_END) is never drawn — not even at the closing.
+    const late = laneOf(bound([{ call: 2, seq: 1, op: 'SET', ...subject('USER', 'tail', 'tail', 'TOPIC', 'LOW'), anchor: { runIndex: 1, fileMs: 1_000 }, floor: { kind: 'AFTER_END', basis: 'PRODUCED_POSITION' } }]))!;
+    expect(late.closing.map((s) => s.eventId)).toEqual(['2:1']);
+    for (const t of [R1 + 1_000, END2 - 1, CLOCK.durationMs]) expect(keys(late, t)).toEqual([]);
+  });
+
+  it('a late settlement: the mark leaves at its call\'s boundary, not later; an in-call settlement keeps its own floor', () => {
+    // 1:4 EXPIRED settles the plan only after the presentation (AFTER_END): the plan leaves at END1, not at the closing.
+    expect(LANE.closing.map((s) => s.eventId)).toEqual(['1:4']);
+    expect(keys(LANE, END1)).toEqual([]);
+    // A settlement placed inside its call still removes its subject at its own settled-through floor.
+    const settled = laneOf(bound([EVENTS[1]!, { ...EVENTS[3]!, floor: { kind: 'IN_RECORDING', runIndex: 0, fileMs: 7_000, basis: 'SETTLED_THROUGH' } }]))!;
+    expect(keys(settled, R0 + 6_999)).toEqual(['1:QANDEEL:plan']);
+    expect(keys(settled, R0 + 7_000)).toEqual([]);
+  });
+
+  it('a layer end that is not a time on the clock is refused whole (MALFORMED_EVENT), never repaired', () => {
+    const state = bound() as Extract<ReplayAttentionSourceState, { kind: 'BOUND' }>;
+    const track = replayAttentionTrack(state.answer, CLOCK, MAP_DIGEST);
+    const expected = { replayId: REPLAY, versionId: VERSION, revision: 1, mapDigest: MAP_DIGEST };
+    for (const layerEndMs of [-1, Number.NaN, Infinity]) {
+      const bad = { ...track, events: track.events.map((e, i) => (i === 0 ? { ...e, layerEndMs } : e)) };
+      expect(buildReplayEventTimeline(bad, expected, CLOCK.windows, { kind: 'FULL' }, { fps: FPS, durationMs: CLOCK.durationMs })).toEqual({ ok: false, reason: 'MALFORMED_EVENT' });
+    }
+  });
+
+  it('placement, order, corrections and track identity are unchanged: only the boundary was added', () => {
+    expect(LANE.steps.map((s) => [s.eventId, s.op, s.atMs, s.exact])).toEqual([
+      ['1:1', 'SET', R0 + 1_900, false], ['1:2', 'SET', R0 + 5_200, false], ['1:3', 'WITHDRAW', R0 + 5_600, false], ['2:1', 'SET', R1 + 1_800, false],
+    ]);
+    expect(keys(LANE, R0 + 5_200)).toEqual(['1:USER:manager', '1:QANDEEL:plan']);
+    expect(keys(LANE, R0 + 5_600)).toEqual(['1:QANDEEL:plan']);
+  });
+
+  it('play, seek, restart and RANGE: the state at t is the same however t was reached, and a RANGE opens without an ended call', () => {
+    const visits = [R1 + 2_000, R0 + 5_300, END1, 0, CLOCK.durationMs, END1 - 1, R1 + 2_000];
+    const first = visits.map((t) => [...attentionAt(LANE, t).keys()].join());
+    const restarted = laneOf(bound())!;
+    expect(visits.map((t) => [...attentionAt(restarted, t).keys()].join())).toEqual(first);
+    expect(first[0]).toBe(first[6]);
+    // A RANGE from inside call 1 opens on its marks and drops them at the boundary; one from call 2 never holds call 1's.
+    const inside = laneOf(bound(), { scope: { kind: 'RANGE', startMs: R0 + 6_000, endMs: R1 + 3_000 } })!;
+    expect([...inside.opening.keys()]).toEqual(['1:QANDEEL:plan']);
+    expect(keys(inside, END1 - (R0 + 6_000) - 1)).toEqual(['1:QANDEEL:plan']);
+    expect(keys(inside, END1 - (R0 + 6_000))).toEqual([]);
+    expect(keys(inside, R1 + 1_800 - (R0 + 6_000))).toEqual(['2:USER:trip']);
+    const after = laneOf(bound(), { scope: { kind: 'RANGE', startMs: R1, endMs: R1 + 3_000 } })!;
+    expect(keys(after, 0)).toEqual([]);
+    expect(keys(after, 1_800)).toEqual(['2:USER:trip']);
   });
 });
 

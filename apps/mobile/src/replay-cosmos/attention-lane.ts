@@ -11,6 +11,9 @@
  *              instant is certified)
  *   marks      the state at t as the live owner draws its layer: `track:subjectKey`, the thread a CONFIRMED-able subject
  *              names as its body, oldest first (a later call's same subject replaces an earlier call's, as the newest)
+ *   call end   (CP3 R1, D-CP3-F2) each call's layer ends at its recording's presented end — the last run before the next
+ *              CROSS_RECORDING pause, or the presentation's last — as live drops it at the call's end: nothing of one
+ *              call in the next, and nothing provisional in the closing display
  *
  * No lane (null) unless the answer is BOUND to the very map the clock holds and the version is eligible: a pending,
  * refused, unavailable or NOT_FOUND answer, Lane A's NOT_FOUND (the version is not this person's current one), no map,
@@ -38,9 +41,46 @@ export interface ReplayAttentionPayload {
 
 export type ReplayAttentionTimeline = ReplayEventTimeline<ReplayAttentionPayload>;
 
+/**
+ * CP3 R1 (D-CP3-F2): where each run's recording ends on the presentation clock — the end of the last RUN of the runs
+ * joined by SAME_RECORDING pauses; a CROSS_RECORDING pause begins another recording (another call's).
+ */
+function recordingEndOfRun(clock: ReplayPresentationClock): ReadonlyMap<number, number> {
+  const groupOf = new Map<number, number>();
+  const ends: number[] = [];
+  let group = 0;
+  for (const block of clock.blocks) {
+    if (block.kind === 'PAUSE' && block.boundary.kind === 'CROSS_RECORDING') group += 1;
+    if (block.kind === 'RUN') {
+      groupOf.set(block.runIndex, group);
+      ends[group] = Math.max(ends[group] ?? 0, block.endMs);
+    }
+  }
+  return new Map([...groupOf].map(([runIndex, g]) => [runIndex, ends[g]!]));
+}
+
+/**
+ * Each call's presented end (R1): the end of the recording its events were placed in — live, the call's whole layer is
+ * dropped when the call ends, so nothing of it is drawn past that boundary (another call, or the closing display).
+ */
+function callEnds(answer: ReplayAttention, clock: ReplayPresentationClock): ReadonlyMap<number, number> {
+  const endOfRun = recordingEndOfRun(clock);
+  const ends = new Map<number, number>();
+  const note = (call: number, runIndex: number) => {
+    const end = endOfRun.get(runIndex);
+    if (end !== undefined) ends.set(call, Math.max(ends.get(call) ?? 0, end));
+  };
+  for (const e of answer.events) {
+    if (e.anchor !== null) note(e.call, e.anchor.runIndex);
+    if (e.floor.kind === 'IN_RECORDING') note(e.call, e.floor.runIndex);
+  }
+  return ends;
+}
+
 /** The answer as a Lane B track on `clock` (bound by the caller to the map the clock was laid out from). */
 export function replayAttentionTrack(answer: ReplayAttention, clock: ReplayPresentationClock, mapDigest: string): ReplayHistoricalEventTrack<ReplayAttentionPayload> {
   const b = answer.binding;
+  const ends = callEnds(answer, clock);
   return {
     lane: 'IN_SPEECH_ATTENTION',
     binding: { replayId: b.replayId, versionId: b.versionId, revision: b.revision, mapDigest },
@@ -54,6 +94,7 @@ export function replayAttentionTrack(answer: ReplayAttention, clock: ReplayPrese
       // The server's order is (call, event_seq): its index is that order across calls.
       sequence: i,
       payload: { track: e.track, subjectKey: e.subjectKey, label: e.label, confidence: e.confidence, threadRef: e.threadRef, basis: e.floor.basis },
+      layerEndMs: ends.get(e.call) ?? null,
     })),
   };
 }

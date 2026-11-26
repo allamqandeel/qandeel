@@ -1992,3 +1992,10 @@ changes in Replay. §18 and §19 are kept as written.
 - `0205` is not hosted; the next migration is `0206`.
 - HONOR ALI-NX1 and iOS are **NOT TESTED** for Replay Lane B; see the INTEL-LIVE-01 record §10.3 and §10.7.
 - The sequence is unchanged: INTEL-LIVE-01 → HONOR Live + Replay proof → CP2-A → CP2-B.
+
+**CP3 R1 (2026-11-26, D-CP3-F2 approved by the Product Owner).** Each call's Lane B layer now ends at that call's own
+presented boundary: the end of the last presented run of its recording, before the next `CROSS_RECORDING` pause or at
+the presentation's end. This matches the live phone, which drops a call's layer when the call ends. Nothing of one call
+is drawn in the next, and no provisional mark survives the closing display. The change is confined to Lane B
+(`attention-lane.ts`, `event-track.ts`) and its tests. No event, instant or visibility duration is invented. Lane A,
+`0205`, the API and COSMOS are unchanged. See the [INTEL-LIVE-01 record](QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §10.11.

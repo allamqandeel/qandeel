@@ -24,6 +24,12 @@
  * Frames are causal (`causalFrame`, Lane A's own). A development whose anchor lies in no presented window of its own track
  * stays out (the words it is about are not heard there: no leakage into another speaker's or an earlier window); a track
  * bound to another Replay, version, revision or presentation map is refused whole, and the caller holds the empty lane.
+ *
+ * CP3 R1 (D-CP3-F2, the Product Owner's approval of 2026-11-26) — the layer's end: live, the phone drops a call's whole
+ * layer when that call ends, so nothing of one call is drawn in another. An event may name where its LAYER ends on the
+ * presentation clock (`layerEndMs`: its call's own presented end). From that instant its subject is never in the state —
+ * an open mark, a later settlement, a mark disclosed only at the closing display alike. A deterministic presentation
+ * boundary: no event, instant or visibility is invented, and every event keeps its own placement and order.
  */
 import { causalFrame, type ReplayScope } from './timeline';
 
@@ -48,6 +54,11 @@ export interface ReplayHistoricalEvent<P = unknown> {
   /** The producer's own order (a tie-break at an equal instant, and the order of corrections on one subject). */
   readonly sequence: number;
   readonly payload: P;
+  /**
+   * Where the event's layer ends, on the full presentation clock (its call's presented end): from it, its subject is
+   * never drawn. Absent or null: the layer has no end before the presentation's.
+   */
+  readonly layerEndMs?: number | null;
 }
 
 export interface ReplayEventTrackBinding {
@@ -85,6 +96,9 @@ export interface ReplayEventStep<P = unknown> {
   /** On the SCOPED clock, and its causal frame. */
   readonly atMs: number;
   readonly frame: number;
+  /** Where its layer ends, on the SCOPED clock, and that instant's causal frame (Infinity: no end). */
+  readonly layerEndMs: number;
+  readonly layerEndFrame: number;
   /** Always false: no Lane B instant is certified (a server-produced position, placed in source order). */
   readonly exact: false;
 }
@@ -93,6 +107,9 @@ export interface ReplayAttentionEntry<P = unknown> {
   readonly eventId: string;
   readonly source: ReplayEventSource;
   readonly payload: P;
+  /** Its layer's end on the SCOPED clock and that instant's frame (Infinity: none): from it, the entry is not drawn. */
+  readonly layerEndMs: number;
+  readonly layerEndFrame: number;
 }
 
 /** subjectKey → its entry, oldest first (a SET moves its subject to the end, as the live layer does). */
@@ -116,6 +133,8 @@ export interface ReplayEventTimeline<P = unknown> {
   readonly afterEnd: readonly string[];
   /** Developments whose anchor lies in no presented window of their track: out, never drawn. */
   readonly outside: readonly string[];
+  /** Whether any event names its layer's end (false: the state is never filtered, and the empty lane allocates nothing). */
+  readonly layered: boolean;
 }
 
 const EMPTY_STATE: ReplayAttentionState<never> = new Map();
@@ -145,7 +164,7 @@ export function buildReplayEventTimeline<P>(
   if (!(options.fps > 0 && startMs >= 0 && endMs > startMs && endMs <= options.durationMs)) return { ok: false, reason: 'SCOPE' };
   const durationMs = endMs - startMs;
   if (track.events.length === 0) {
-    return { ok: true, timeline: { startMs, endMs, durationMs, fps: options.fps, opening: EMPTY_STATE, steps: [], closing: [], afterEnd: [], outside: [] } };
+    return { ok: true, timeline: { startMs, endMs, durationMs, fps: options.fps, opening: EMPTY_STATE, steps: [], closing: [], afterEnd: [], outside: [], layered: false } };
   }
 
   const ids = new Set<string>();
@@ -156,6 +175,7 @@ export function buildReplayEventTimeline<P>(
     ids.add(e.eventId);
     const development = e.op === 'SET' || e.op === 'WITHDRAW';
     if (!Number.isSafeInteger(e.sequence) || (e.floor.kind === 'PRODUCED' && !isTime(e.floor.atMs))
+        || (e.layerEndMs !== undefined && e.layerEndMs !== null && !isTime(e.layerEndMs))
         || (development ? e.anchorMs === null || !isTime(e.anchorMs) : e.anchorMs !== null)) {
       return { ok: false, reason: 'MALFORMED_EVENT' };
     }
@@ -178,9 +198,14 @@ export function buildReplayEventTimeline<P>(
   const steps: ReplayEventStep<P>[] = [];
   const closing: ReplayEventStep<P>[] = [];
   const afterEnd: string[] = [];
-  const stepOf = (e: ReplayHistoricalEvent<P>, atMs: number): ReplayEventStep<P> => ({
-    eventId: e.eventId, subjectKey: e.subjectKey, op: e.op, source: e.source, payload: e.payload, atMs, frame: causalFrame(atMs, options.fps), exact: false,
-  });
+  const layered = ordered.some((e) => e.layerEndMs !== undefined && e.layerEndMs !== null);
+  const stepOf = (e: ReplayHistoricalEvent<P>, atMs: number): ReplayEventStep<P> => {
+    const layerEndMs = e.layerEndMs === undefined || e.layerEndMs === null ? Infinity : e.layerEndMs - startMs;
+    return {
+      eventId: e.eventId, subjectKey: e.subjectKey, op: e.op, source: e.source, payload: e.payload, atMs, frame: causalFrame(atMs, options.fps), exact: false,
+      layerEndMs, layerEndFrame: layerEndMs === Infinity ? Infinity : causalFrame(Math.max(0, layerEndMs), options.fps),
+    };
+  };
   for (const { e, at } of disclosed) {
     // At or after the scope's end: never on a frame inside it. At the PRESENTATION's end: the closing display.
     if (at >= endMs) {
@@ -188,35 +213,47 @@ export function buildReplayEventTimeline<P>(
       else afterEnd.push(e.eventId);
       continue;
     }
-    if (at <= startMs) { apply(opening, e); continue; }
+    if (at <= startMs) { apply(opening, stepOf(e, 0)); continue; }
     steps.push(stepOf(e, at - startMs));
   }
-  return { ok: true, timeline: { startMs, endMs, durationMs, fps: options.fps, opening, steps, closing, afterEnd, outside } };
+  return { ok: true, timeline: { startMs, endMs, durationMs, fps: options.fps, opening, steps, closing, afterEnd, outside, layered } };
 }
 
-function apply<P>(state: Map<string, ReplayAttentionEntry<P>>, e: { readonly subjectKey: string; readonly op: ReplayEventOp; readonly eventId: string; readonly source: ReplayEventSource; readonly payload: P }): void {
+function apply<P>(state: Map<string, ReplayAttentionEntry<P>>, e: ReplayEventStep<P>): void {
   // As the live layer: a SET opens or updates its subject as the newest; WITHDRAW, CONFIRMED and EXPIRED remove it.
   state.delete(e.subjectKey);
-  if (e.op === 'SET') state.set(e.subjectKey, { eventId: e.eventId, source: e.source, payload: e.payload });
+  if (e.op === 'SET') state.set(e.subjectKey, { eventId: e.eventId, source: e.source, payload: e.payload, layerEndMs: e.layerEndMs, layerEndFrame: e.layerEndFrame });
 }
 
-function reduce<P>(timeline: ReplayEventTimeline<P>, reached: (step: ReplayEventStep<P>) => boolean, closed: boolean): ReplayAttentionState<P> {
+function reduce<P>(
+  timeline: ReplayEventTimeline<P>, reached: (step: ReplayEventStep<P>) => boolean, closed: boolean, ended: (entry: ReplayAttentionEntry<P>) => boolean,
+): ReplayAttentionState<P> {
   // The empty lane, and every instant before the first step, cost nothing: no copy, no allocation.
   const any = (timeline.steps.length > 0 && reached(timeline.steps[0]!)) || (closed && timeline.closing.length > 0);
-  if (!any) return timeline.opening;
-  const state = new Map(timeline.opening);
-  for (const step of timeline.steps) {
-    if (!reached(step)) break;
-    apply(state, step);
+  let state: Map<string, ReplayAttentionEntry<P>> | null = null;
+  if (any) {
+    state = new Map(timeline.opening);
+    for (const step of timeline.steps) {
+      if (!reached(step)) break;
+      apply(state, step);
+    }
+    if (closed) for (const step of timeline.closing) apply(state, step);
   }
-  if (closed) for (const step of timeline.closing) apply(state, step);
-  return state;
+  if (!timeline.layered) return state ?? timeline.opening;
+  // R1: a layer that has ended draws nothing of its call — its subjects leave at its call's presented end.
+  const base: ReplayAttentionState<P> = state ?? timeline.opening;
+  for (const [subject, entry] of base) {
+    if (!ended(entry)) continue;
+    state ??= new Map(base);
+    state.delete(subject);
+  }
+  return state ?? base;
 }
 
 /** Lane B's state at scoped time t: a pure function of t (seek and restart give the identical state). */
 export const attentionAt = <P>(timeline: ReplayEventTimeline<P>, t: number): ReplayAttentionState<P> =>
-  reduce(timeline, (s) => s.atMs <= t, t >= timeline.durationMs);
+  reduce(timeline, (s) => s.atMs <= t, t >= timeline.durationMs, (e) => e.layerEndMs <= t);
 
 /** Lane B's state drawn on frame i (causal), exactly as `attentionAt` at that frame's time; the closing display only at or after the presentation's end. */
 export const attentionOnFrame = <P>(timeline: ReplayEventTimeline<P>, frame: number): ReplayAttentionState<P> =>
-  reduce(timeline, (s) => s.frame <= frame, frame >= causalFrame(timeline.durationMs, timeline.fps));
+  reduce(timeline, (s) => s.frame <= frame, frame >= causalFrame(timeline.durationMs, timeline.fps), (e) => e.layerEndFrame <= frame);

@@ -1,6 +1,6 @@
 # INTEL-LIVE-01 — Incremental In-Speech Understanding & Living Map Attention: Execution Record v1
 
-**Status:** `INTEL-LIVE-01 CP1 ACCEPTED (PRODUCT OWNER, 2026-11-25, HEAD 0044f56e; §3.6) — CP2 ACCEPTED WITH A PO EXCEPTION (2026-11-26, HEAD 3c4298c5; §9.9) — CP3 REPLAY LANE B DELIVERED / READY FOR PO REVIEW (§10) — NOT MERGED — NOT DEPLOYED — CP4 NOT STARTED`
+**Status:** `INTEL-LIVE-01 CP1 ACCEPTED (PRODUCT OWNER, 2026-11-25, HEAD 0044f56e; §3.6) — CP2 ACCEPTED WITH A PO EXCEPTION (2026-11-26, HEAD 3c4298c5; §9.9) — CP3 REPLAY LANE B DELIVERED / READY FOR PO REVIEW (§10; R1 CALL-BOUNDARY CORRECTION §10.11) — NOT MERGED — NOT DEPLOYED — CP4 NOT STARTED`
 - Draft PR "INTEL-LIVE-01 CP1 — continuous in-speech understanding (provisional attention lane)" from `intel/intel-live-01`,
   stacked on Draft PR #414 (the CP0 docs commit `53429017`, itself on `main` at `aa6fc0c8`).
 - Merging needs the Product Owner's explicit «ادمج». Migrations `0204` and `0205` are **not hosted**; the next migration is `0206`.
@@ -1500,7 +1500,7 @@ The function is `public.server_read_replay_version_attention_v1(user, replay, ve
 
 - **CP3-F1: nothing is certified.** C2's certified branch is unreachable while `0203` certifies ledger prefixes only. Every
   Lane B instant is non-exact (`exact: false`) and is never presented as the historical screen time.
-- **CP3-F2: an unsettled mark from an earlier call persists** until its settlement or the closing display. `0204` has no
+- **CP3-F2: an unsettled mark from an earlier call persists** *(confirmed as a product defect by the Product Owner; corrected in R1, §10.11)* until its settlement or the closing display. `0204` has no
   call-end fact, so Replay cannot remove the mark at its call's end.
 - **CP3-F3: a tail SET and its settlement at the same instant are never visible**, because both apply at one t.
 - **CP3-F4: one mark per `track:subject` across calls.** A later call's same subject replaces the earlier call's mark, as
@@ -1527,3 +1527,190 @@ The function is `public.server_read_replay_version_attention_v1(user, replay, ve
 ### 10.8 Reports (outside the repository)
 
 `E:/QANDEEL_REPORTS/INTEL-LIVE-01/CP3/` holds the delivery report, the negative plants' outputs and the local test outputs.
+
+### 10.9 The Product Owner's CP3 review decisions (2026-11-26)
+
+- **D-CP3-iOS: APPROVED.**
+  - Real Replay Lane B device validation moves to the integrated HONOR Live + Replay proof, which must include a targeted
+    iOS Replay simulator pass.
+  - No separate testing project now; the current device status stays **NOT TESTED**.
+  - The iOS live-call gate does **not** prove Replay Lane B.
+- **D-CP3-C8: APPROVED WITH CONDITION.**
+  - The synthetic mechanism evidence is accepted.
+  - The complete corpus-call Replay proof moves to the integrated validation.
+  - **C8 stays PARTIAL** until that proof is done.
+- **Carried to the integrated proof:**
+  - Lane B device performance;
+  - visual fidelity;
+  - binding consistency;
+  - real playback.
+- **Findings:**
+  - All CP3 and CP2 findings are kept.
+  - F3 gets no invented timing and no artificial visibility duration.
+- **World gate:** the CP2 World gate exception does **not** extend to CP3.
+
+### 10.10 CP3-F2: call-boundary fidelity — the defect is real (corrected in R1, §10.11; the text below is kept as written)
+
+The PO asked for call-boundary fidelity to be checked before product acceptance, with any real defect corrected. A
+committed CP3 test already shows the defect.
+
+`apps/mobile/src/replay-cosmos/__tests__/intel-live-01-cp3-lane-b.test.tsx:79` expects
+`['1:QANDEEL:plan', '2:USER:trip']` at `R1 + 1 800 ms`. In other words, call 1's unsettled `plan` mark is drawn while
+call 2 plays.
+
+- **Live behaviour:** the phone drops the whole layer when a call ends (the call owner; ITG-09 end cleanup). Call 1's
+  mark is never visible during call 2.
+- **Replay behaviour:** the mark lasts until its settlement's floor. In this case the floor is `AFTER_END`, so the mark
+  stays until the closing display.
+- **The closing display:** it also still shows the last call's never-settled SET (`2:USER:trip`). Live, that mark would
+  be gone at the call's end.
+- **When it happens:** whenever a call's SET has no settlement, or its settlement lies after that call's last presented
+  run. The server then answers `AFTER_END` because no later run of the same recording exists.
+
+**Proposed minimal correction (not implemented; for the PO):** end each call's layer where its recording's presentation
+ends, as live ends it at the call's end.
+- **Where a call's presentation ends:** at the end of its last presented run, i.e. the run before the next
+  `CROSS_RECORDING` boundary of the held map, or the last run. That point is `runStartMs(last run) + its duration`.
+- **What happens there:** a removal of every subject of that call still open. It is placed at a presented boundary, never
+  before any word or floor of the call. It adds no visibility time and invents no timing.
+- **Scope of the change:**
+  - Lane B only: `attention-lane.ts` and `event-track.ts`, plus tests.
+  - The test at line 79 is re-pinned as the defect's regression.
+  - Nothing in `0205`, the API, Lane A or COSMOS changes.
+- **What it costs:** a push re-runs the API CI, the Mobile CI, the FULL World gate and the iOS Targeted Gate.
+
+**Decision requested (D-CP3-F2):**
+- **(a)** apply it as CP3 R1 once the `c7ed134c` CI review is complete, as one more CI round; or
+- **(b)** apply it before the integrated HONOR Live + Replay proof, in the same cycle as other fixes found there.
+
+**Recommendation: (a).** The defect is already shown, the fix is small and stays within Lane B, and validating it in the
+integrated proof avoids a second device cycle there.
+
+### 10.11 CP3 R1 — the call-boundary correction (D-CP3-F2 APPROVED, option (a), 2026-11-26)
+
+**Authority.** The Product Owner's "D-CP3-F2 — APPROVED: OPTION (a)" (2026-11-26):
+- F2 is a confirmed product defect.
+- The current CI review is completed first; then the minimal correction is made within PR #415.
+- The correction stays inside Lane B and its tests.
+- `0205`, the API, Lane A, COSMOS, Prompt v5 and the voice engine are not changed.
+- R1 is a correction inside CP3, not a new task or checkpoint.
+
+**The rule.** Live, the phone drops a call's whole layer when that call ends. Replay now does the same at each call's own
+presented boundary:
+- The boundary is the end of the last presented run of that call's recording, i.e. the last `RUN` before the next
+  `CROSS_RECORDING` pause, or the last run of the presentation.
+- From that instant, none of the call's subjects is in Lane B's state. This covers alike:
+  - an open mark;
+  - a settlement placed after the boundary;
+  - a mark the server could place only at the closing display.
+- The rule is a deterministic presentation boundary. No event, instant or visibility duration is invented. Every event
+  keeps its own floor, anchor, order (`event_seq`), track identity, correction, hold offset and tail placement.
+- F3 is unchanged: a tail SET and its settlement at one instant are still never visible, and no duration is invented for
+  them.
+
+**Where.**
+- `replay-cosmos/attention-lane.ts` computes each call's presented end from the clock's own blocks (`RUN`, and `PAUSE`
+  with its boundary kind) and the runs its events were placed in.
+- `replay-cosmos/event-track.ts`:
+  - an event may carry `layerEndMs`;
+  - a step and a state entry carry the layer's end on the scoped clock and its causal frame;
+  - `attentionAt` and `attentionOnFrame` leave out an entry whose layer has ended by t, or by that frame;
+  - a layer end that is not a time on the clock refuses the track whole (`MALFORMED_EVENT`);
+  - a track with no layer end behaves exactly as before, and the empty lane still allocates nothing.
+- Lane A, `presentation-clock.ts`, the camera, COSMOS, `0205` and the API are not touched.
+
+**Re-anchored (declared).** In `replay-cosmos/__tests__/intel-live-01-cp3-lane-b.test.tsx`:
+- Line 79 had pinned the defect: call 1's `plan` drawn inside call 2, and call 2's open `trip` in the closing display.
+  Both lines are re-anchored to the corrected states (`['2:USER:trip']` at `R1 + 1 800`, `[]` at the end).
+- The marks test no longer expects call 1's `plan` among call 2's marks. The same subject in two calls is now drawn by
+  each call in turn, never both.
+
+**Added regression coverage** (the `CP3 R1` block, 7 tests):
+- the boundaries are the recordings' presented ends;
+- consecutive calls: call 1's marks are drawn up to its end and never inside call 2, in time and on frames;
+- the final call's closing display draws no provisional mark, and a SET placed `AFTER_END` is never drawn;
+- a late settlement: the mark leaves at its call's boundary, while an in-call settlement keeps its own floor;
+- a malformed layer end is refused;
+- placement, order, corrections and track identity are unchanged;
+- play, seek, restart and RANGE give the same state at the same t, and a RANGE never opens holding an ended call.
+
+**Negative plants** (each an in-place edit, reverted):
+
+| Plant | Tests failing |
+|---|---|
+| No call end | 7 |
+| All runs treated as one recording | 7 |
+| Off-by-one frame at the boundary | 3 |
+| Closing display left unfiltered | 2 |
+
+**Local verification (R1).**
+- Mobile type-check: clean.
+- The Lane B suites: 32 / 32 (Lane B 19, the event track 13); the decoder and source suite: 15 / 15.
+- `replay-cosmos`, `original-audio`, `replay-composite`, `replay-player`, `cosmos` and `call`: **41 suites, 610 / 610**.
+- Lint: 0 errors, and no warning in any R1 file.
+- Root contracts (`node --test tests/*.test.mjs`): **1 891 / 1 891**. The task-closure governance contract: **25 / 25**.
+- R1 touches no API, database or root-contract file.
+
+**F2 status:** corrected in R1 within Lane B. Call-boundary fidelity on a device remains part of the integrated HONOR Live
++ Replay proof (§10.9).
+
+### 10.12 CI on the first CP3 head `c7ed134c`
+
+| Run | Result |
+|---|---|
+| Mobile CI `45773068784` | **SUCCESS** |
+| API CI `45773068931` | **SUCCESS** |
+| World gate `45773068788` (FULL) | **FAILURE, 89 / 93 PASS**: iPhone SE 31 / 31 **SUCCESS**; iPhone 17 ar 30 PASS / 1 NOT TESTED (S-LAND); iPhone 17 en 28 PASS / 3 NOT TESTED (S-LAND, U-EMPTY, P-LAND) |
+| iOS Targeted Gate `45773068808` | **FAILURE**: ITG-01, ITG-02, ITG-03 PASS; **ITG-07 FAIL**; ITG-08, ITG-04, ITG-09, ITG-05, ITG-06 NOT TESTED (not reached) |
+
+**The World gate's NOT TESTED cases.** No case FAILED; four were NOT TESTED.
+- **iPhone 17 en, U-EMPTY and P-LAND.** The harness's own command timeouts expired (maestro exit 124): `ue-field` waited for
+  the Public World, and `pl-launch` tried to launch the app for P-LAND. The cell ran slowly throughout; single cases took
+  2 – 10 minutes. The same build passed both cases on iPhone 17 ar and on iPhone SE in this run.
+- **S-LAND, on both iPhone 17 cells.**
+  - On ar: "the Shared Fixture Map World did not open".
+  - On en: "the Shared sheet did not open", with two tap-point commands timing out (exit 124).
+  - S-LAND passed on iPhone SE.
+  - It is the Shared World in landscape, which CP3 does not touch.
+  - On iPhone 17 ar it was not proven in either CP2 run either (FAIL once, NOT TESTED once). It stays an **open note**.
+- **Classification: not CP3.** CP3 changes only the Replay's Lane B and its read, which none of these cases reaches.
+- **Nothing is claimed for this run.**
+  - **This is not a Full World Gate success.** The CP2 exception is **not** extended to CP3 (the Product Owner,
+    2026-11-26).
+  - No case was re-run. The R1 push runs the World gate FULL again as the one consolidated run (its impact plan decides
+    FULL because `replay-cosmos/` changes).
+
+**ITG-07's failure.** The case reported "the lane did not write the scenario's SET and its correction". The run's
+evidence artifact (`host/server-events.jsonl`, `07-written.json`, `client/failure-ITG-07-top.txt`) shows the sequence:
+1. The runner was overloaded: a 5-minute load average of 130.6, a 1-minute load average of 54.4, and 0.81 % CPU idle when
+   the case failed.
+2. A 1 830 ms uplink stall on the simulator, after the scenario's second segment, let the endpointer commit the scripted
+   speech in the middle (`COMMIT_SILENCE`, call turn 2).
+3. That turn's reply then played while segments 3 – 5 were spoken.
+4. CP1's lane holds USER evidence that ends while a reply plays (its echo rule, `live-call-turn.engine.ts`
+   `heldEvidence`). It released the three segments only when the turn ended (`INTERRUPTED`).
+5. They then waited three times for the shared analysis permit (`DEFERRED_PERMIT`). The evaluation ran only after the
+   turn had settled, and its write was refused `STALE_AFTER_SETTLEMENT`: the correction was explicitly refused, never
+   silently lost. Segment 1's SET had already been written while the person spoke.
+
+The passing CP2 run (`45731011757`) had no mid-scenario commit: every segment's evidence was evaluated while the person
+was still speaking.
+
+**Classification: not CP3.**
+- CP3 changes no file on the live path. The server's `live-attention`, `voice` and proof server are unchanged.
+- The run's timing came from the runner's overload.
+- The behaviour itself is CP1's approved design (held evidence during playback; stale refusal after a settlement), which
+  is not reopened.
+
+**No separate re-run was started.** The gate runs on the PR's whole diff, so R1's push runs it again as the one
+consolidated run.
+
+**CP3-F10 (a finding, kept; not fixed: CP1 is not reopened).** When the person keeps speaking while a reply plays, the
+in-speech attention of that speech is held until the reply ends. It can then be refused as stale after the turn's
+settlement, so no in-speech mark is drawn for it. This was observed in CI under runner overload. Its product weight goes
+to the HONOR Live + Replay proof, together with `4005 OVERLOADED` and the touch issues.
+
+*The Product Owner, 2026-11-26:* **CP3-F10 stays OPEN as a mandatory scenario of the integrated HONOR Live + Replay
+validation.** That scenario covers speech that continues while QANDEEL's reply plays, and requires the meaningful
+developments of that speech to be preserved. CP1 is not reopened and the voice engine is not changed now. The failed ITG
+job is not re-run on its own before R1.
