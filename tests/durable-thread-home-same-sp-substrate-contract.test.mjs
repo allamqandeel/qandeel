@@ -441,10 +441,21 @@ test('the whole slice is production-inert: no grant, no wiring, no runtime reade
   // INTEL-04 RE-ANCHOR (2026-11-04): its integrated proof READS conversation_threads once, to count a synthetic person's
   // Threads (no duplicated identity); it writes no Thread row and reaches no writer, canonicalizer or placement mirror.
   const INTEL_04_PROOF = 'apps/api/scripts/intel-04-thread-lifecycle-proof.ts';
+  // INTEL-LIVE-01 RE-ANCHOR (PO directive, 2026-11-25, §5): its CP1 corpus proof seeds ONE synthetic Thread for scenario (e)
+  // by the fixture surgery database/verify-migration-0204.mjs performs, on a loopback clone it refuses to leave. Exactly this
+  // INSERT is allowed, exactly once; the rest of the file is held to the same rule, and the forbidden expression is unchanged.
+  const INTEL_LIVE_01_CORPUS_PROOF = 'apps/api/scripts/intel-live-01/cp1-corpus-proof.ts';
+  const INTEL_LIVE_01_THREAD_FIXTURE = "INSERT INTO public.conversation_threads (id, user_id, grounding_emerging_focus_id, established_session_id, established_cu_id,\n        established_sp, established_event_sequence, establishment_path) VALUES ($1, $2, $3, $4, $5, $6, 2, 'TE-01')";
   for (const file of [...listFiles(join(rootPath, 'apps/api/scripts')), ...listFiles(join(rootPath, 'apps/mobile/src'))].map(relative)) {
     const text = file === INTEL_04_PROOF
       ? read(file).replace('SELECT count(*)::int n FROM public.conversation_threads t JOIN public.conversation_sessions s ON s.user_id = t.user_id WHERE s.id = $1', '')
       : read(file);
+    if (file === INTEL_LIVE_01_CORPUS_PROOF) {
+      assert.match(text, /DATABASE_URL must name a loopback throwaway database/u, `${file} refuses anything but a loopback database`);
+      assert.equal(text.split(INTEL_LIVE_01_THREAD_FIXTURE).length - 1, 1, `${file} carries its one Thread fixture insert exactly once`);
+      assert.doesNotMatch(text.replace(INTEL_LIVE_01_THREAD_FIXTURE, ''), /with_focus_and_thread|durable-thread|conversation_threads|thread_home/u, `${file} does not reach the substrate outside its Thread fixture insert`);
+      continue;
+    }
     assert.doesNotMatch(text, /with_focus_and_thread|durable-thread|conversation_threads|thread_home/u, `${file} does not reach the substrate`);
   }
   // FORWARD-SAFE (R2-02): a whole-lockfile hash and an exhaustive root devDependency set both make

@@ -112,6 +112,10 @@ const FILES = {
   // S8A-05 CP4 (2026-10-27, Controlled Amendment A-5(d)): the Public QANDEEL reply's one composition — the same DeepSeek
   // router under its own family, PUBLIC_QANDEEL_REPLY (migration 0182).
   publicReplyModule: 'apps/api/src/public-world/public-reply-model-router.ts',
+  // INTEL-LIVE-01 CP1 (2026-11-25, Product Owner Final Execution Authorization): the live call's provisional attention
+  // evaluator and its one composition, under its own 0204 family LIVE_ATTENTION_EVALUATION.
+  attentionAdapter: 'apps/api/src/live-attention/deepseek-attention-evaluator.ts',
+  attentionModule: 'apps/api/src/live-attention/live-attention.provider.ts',
   migration0175: 'database/migrations/0175_s8a_04_shared_social_memory_v1.sql',
   consumer: 'apps/api/src/post-response-intelligence/post-response-intelligence-consumer.service.ts',
   brainEvalPricing: 'apps/api/src/brain-eval/brain-eval.pricing.ts',
@@ -179,12 +183,15 @@ const CENSUS = [
   // the same shared client, JSON Output envelope, accounting boundary and SYNTHETIC_ONLY gate; paid by the publisher who
   // asked, zero retries. The Public placement is the database's deterministic rule: no transport, no family.
   { transport: 'apps/api/src/public-world/deepseek-public-semantic-interpreter.ts', family: 'PUBLIC_SEMANTIC_INTERPRETATION', frozen: 'd5eedac546ccd570df63858dd44242ed77bf63fd' },
+  // INTEL-LIVE-01 CP1 (2026-11-25): the call's provisional attention evaluator under its own 0204 family, through the same
+  // shared client, JSON Output envelope, accounting boundary and SYNTHETIC_ONLY gate; zero retries, its own 4 000 ms timeout.
+  { transport: 'apps/api/src/live-attention/deepseek-attention-evaluator.ts', family: 'LIVE_ATTENTION_EVALUATION' },
 ];
 // Kept wide on purpose: a reintroduced OpenAI Responses, Anthropic Messages or Gemini transport is still a census entry
 // that does not exist, so the census test fails on it.
 const PROVIDER_TRANSPORT = /\.responses\.create\(|\.messages\.create\(|\.chat\.completions\.create\(|generativelanguage\.googleapis\.com|new OpenAI\(|new Anthropic\(/u;
 const ADAPTERS = ['cuAdapter', 'focusAdapter', 'threadAdapter', 'continuityAdapter', 'intentAdapter', 'associationAdapter', 'candidateAdapter', 'understandingAdapter', 'sharedReadingAdapter',
-  'sharedRecallAdapter', 'sharedPlacerAdapter', 'sharedJudgeAdapter', 'publicSemanticAdapter'];
+  'sharedRecallAdapter', 'sharedPlacerAdapter', 'sharedJudgeAdapter', 'publicSemanticAdapter', 'attentionAdapter'];
 const CONFIGS = ['routerConfig', 'cuConfig', 'focusConfig', 'threadConfig', 'continuityConfig', 'intentConfig', 'associationConfig', 'candidateConfig', 'understandingConfig', 'sharedReadingConfig',
   'sharedMemoryConfig', 'publicSemanticConfig'];
 /** A provider other than DeepSeek, its credential, its SDK or its endpoint. */
@@ -252,6 +259,10 @@ function censusViolations(world) {
   const judge = ts(world.sharedJudgeModule);
   if (!/accountedDeepSeekChatCompletionsClient\(\s*createDeepSeekClient\(config\), 'SHARED_DISCLOSURE_JUDGE', productionAiProviderCallAccounting\(\)\)/u.test(judge)
     || (judge.match(/createDeepSeekClient\(/gu) ?? []).length !== 1 || /\.fromEnvironment\(/u.test(judge)) out.push('SHARED_DISCLOSURE_JUDGE is not accounted');
+  // INTEL-LIVE-01 CP1: the attention evaluator is composed through the boundary, in its one module, with exactly one client.
+  const attention = ts(world.attentionModule);
+  if (!attention.includes("costLedgerDecorator('LIVE_ATTENTION_EVALUATION')(createDeepSeekClient(config))")
+    || (attention.match(/createDeepSeekClient\(/gu) ?? []).length !== 1 || /\.fromEnvironment\(/u.test(attention)) out.push('LIVE_ATTENTION_EVALUATION is not accounted');
   // No structured adapter can build its own client: each receives the accounted one by injection.
   for (const key of ADAPTERS) {
     if (/fromEnvironment|createDeepSeekClient\(|new OpenAI\(/u.test(ts(world[key]))) out.push(`${key} can build an unaccounted client`);
@@ -600,7 +611,12 @@ function jsonOutputViolations(world) {
     const adapter = ts(world[key]);
     if (!adapter.includes('this.client.chat.completions.create(') || !adapter.includes('deepSeekJsonRequest({') || !/deepSeekJsonContent\(response\)/u.test(adapter)) out.push(`(JSON) ${key} bypasses the shared request or completion envelope`);
     if (!/\{ timeout: this\.config\.timeoutMs, maxRetries: 0, signal: controller\.signal \}/u.test(adapter)) out.push(`(JSON) ${key} lost its bounded, retry-free, abortable call`);
-    if (!/if \(isDeepSeekUnavailable\(error\)\) throw new \w+Error\('UNAVAILABLE'\);/u.test(adapter)) out.push(`(JSON) ${key} no longer classifies unavailability`);
+    // INTEL-LIVE-01 CP1: the attention port answers a closed result and never throws (the lane is off the voice path); its
+    // classification of unavailability is the overloaded flag of PROVIDER_FAILED, which drives the lane's DEGRADED state.
+    const classifies = key === 'attentionAdapter'
+      ? /return \{ kind: 'PROVIDER_FAILED', usage, providerMs, overloaded: isDeepSeekUnavailable\(error\) \};/u.test(adapter)
+      : /if \(isDeepSeekUnavailable\(error\)\) throw new \w+Error\('UNAVAILABLE'\);/u.test(adapter);
+    if (!classifies) out.push(`(JSON) ${key} no longer classifies unavailability`);
   }
   return out;
 }

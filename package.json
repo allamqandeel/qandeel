@@ -321,12 +321,15 @@
     "verify:semantic-commit-instants:integration": "node --env-file-if-exists=.env database/verify-migration-0201.mjs",
     "verify:replay-historical-availability:integration": "node --env-file-if-exists=.env database/verify-migration-0202.mjs",
     "verify:live-call-clock-marks:integration": "node --env-file-if-exists=.env database/verify-migration-0203.mjs",
+    "verify:live-call-attention:integration": "node --env-file-if-exists=.env database/verify-migration-0204.mjs",
+    "verify:replay-attention-read:integration": "node --env-file-if-exists=.env database/verify-migration-0205.mjs",
     "test:cosmos-e2-thread-names-contract": "node --test database/tests/cosmos-e2-thread-names-v1.test.mjs",
     "test:cosmos-e2-current-personal-world-contract": "node --test database/tests/cosmos-e2-current-personal-world-v1.test.mjs",
     "test:cosmos-e2-reading-reliance-contract": "node --test database/tests/cosmos-e2-reading-reliance-gate-v1.test.mjs",
     "test:semantic-commit-instants-contract": "node --test database/tests/session-semantic-commit-instants-v1.test.mjs",
     "test:replay-historical-availability-contract": "node --test database/tests/replay-historical-availability-v1.test.mjs",
     "test:live-call-clock-marks-contract": "node --test database/tests/live-call-clock-marks-v1.test.mjs tests/rb2-m2-live-call-protocol-v2-contract.test.mjs",
+    "test:live-call-attention-contract": "node --test database/tests/live-call-attention-v1.test.mjs tests/intel-live-01-provisional-attention-contract.test.mjs tests/intel-live-01-ios-targeted-gate-contract.test.mjs tests/intel-live-01-live-call-protocol-v3-contract.test.mjs",
     "test:cosmos-e2-conversation-catalog-contract": "node --test database/tests/cosmos-e2-conversation-catalog-v1.test.mjs",
     "prove:s8b-07-media-worker:integration": "node --env-file-if-exists=.env database/prove-0196-media-worker.mjs",
     "prove:s8b-07-media-service:integration": "node --env-file-if-exists=.env database/prove-0196-media-service.mjs",
@@ -398,7 +401,7 @@
     "test:qan-inf-03-deterministic-expo-dependency-validation-contract": "node --test tests/qan-inf-03-deterministic-expo-dependency-validation-contract.test.mjs",
     "test:qan-inf-04-native-ci-artifact-reuse-contract": "node --test tests/qan-inf-04-native-ci-artifact-reuse-contract.test.mjs",
     "test:val-01-change-aware-validation-contract": "node --test tests/val-01-change-aware-validation-contract.test.mjs",
-    "test:cosmos-ios-world-gate-composition-contract": "node --test tests/cosmos-ios-world-gate-composition-contract.test.mjs"
+    "test:cosmos-ios-world-gate-composition-contract": "node --test tests/cosmos-ios-world-gate-composition-contract.test.mjs tests/cosmos-ios-world-gate-impact.test.mjs"
   },
   "devDependencies": {"pg": "^8.16.3", "yaml": "^2.9.0"},
   "overrides": {

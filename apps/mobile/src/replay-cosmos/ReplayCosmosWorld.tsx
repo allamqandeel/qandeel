@@ -29,6 +29,12 @@
  * presentation is. The CLOSING display: once the audio clock reports the end of its last run while the last moment is
  * shown, the stage settles at the presentation's end after the audio allowance, and the closing knowledge (the last
  * speech's) appears there — never on a frame inside the Replay, never before the end is reported heard.
+ *
+ * INTEL-LIVE-01 CP3 (D-CP3, 2026-11-26): Lane B beside Lane A — the calls' in-speech attention (`attention-lane.ts`),
+ * from its own answer bound to the same map, on the same clock and scope, drawn over the Lane A stage at t through the
+ * production chain. Nothing of it reaches the Lane A timeline, the camera plan or t; without a bound answer with events
+ * the scene carries no Lane B and every frame is exactly Lane A's. Its prepared variants are few (`ATTENTION_STAGES_HELD`)
+ * and each is released once it is no longer drawn.
  */
 import { useImage } from '@shopify/react-native-skia';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
@@ -36,14 +42,16 @@ import { PixelRatio } from 'react-native';
 
 import { PERSONAL_DEPTHS } from '../cosmos/core/adapters';
 import { disposePrepared, prepareStage } from '../cosmos/skia/prepare';
+import { presentationMapDigest } from '../original-audio/replay-availability';
 import type { ReplayHistoryMoment, ReplayHistoryVersion } from '../runtime-entry';
 import type { ReplayCompositeController } from '../replay-composite/composite-controller';
+import { replayAttentionKey, replayAttentionLane, replayAttentionMarks, replayAttentionOf, type ReplayAttentionTimeline } from './attention-lane';
 import { buildReplayCameraPlan } from './camera-plan';
-import type { LabelTypography, ReplayCosmosScene, ReplayFrameImages, ReplayFrameStage } from './frame';
+import type { LabelTypography, ReplayCosmosScene, ReplayFrameAttention, ReplayFrameImages, ReplayFrameStage } from './frame';
 import { replayMomentScenes } from './history';
 import { REPLAY_STAGE_AUDIO_LAG_MS, replayPresentationClock, replayStageTime, type ReplayPresentationClock, type ReplayStageClock, type ReplayStageTime } from './presentation-clock';
 import { ReplayCosmosStage } from './ReplayCosmosStage';
-import { emptyReplayStage, type ReplayMomentStage } from './stages';
+import { emptyReplayStage, replayAttentionStage, type ReplayMomentStage } from './stages';
 import { replayStageTimeline } from './stage-timeline';
 import { UNRECORDED_AVAILABILITY, type ReplayCosmosMomentInput, type ReplayScope } from './timeline';
 
@@ -152,15 +160,23 @@ export function ReplayCosmosWorld(props: ReplayCosmosWorldProps) {
     const built = replayStageTimeline(windows, scope, stageClock === null ? { kind: 'TEXT_ONLY' } : { kind: 'AUDIO', presentation, availability }, REPLAY_COSMOS_FPS);
     return built === null ? null : built.timeline;
   }, [windows, scope, presentation, stageClock, availability]);
+  // INTEL-LIVE-01 CP3: Lane B, from its own answer on the same clock and scope (null: none drawn).
+  const attentionAnswer = replayAttentionOf(stageClock);
+  const mapDigest = useMemo(() => (audioPlan === null ? null : presentationMapDigest(audioPlan.runs, audioPlan.boundaries)), [audioPlan]);
+  const attentionTimeline = useMemo(() => replayAttentionLane({
+    replayId: version.replayId, versionId: version.versionId, revision: version.revision, presentation, mapDigest, availability,
+    attention: attentionAnswer, scope, fps: REPLAY_COSMOS_FPS,
+  }), [version, presentation, mapDigest, availability, attentionAnswer, scope]);
+  const attention = useAttentionStages(attentionTimeline, rtl);
   const prepared = usePrepared(stages);
   const images = useReplayCosmosImages();
   const scene = useMemo((): ReplayCosmosScene | null => {
     if (timeline === null || stages === null || prepared === null) return null;
     return {
       timeline, plan: buildReplayCameraPlan(timeline, stages, { width, height }), stages: prepared.byOrdinal, empty: prepared.empty,
-      rtl, fontScale: PixelRatio.getFontScale(), typography, fonts: null,
+      rtl, fontScale: PixelRatio.getFontScale(), typography, fonts: null, ...(attention === null ? {} : { attention }),
     };
-  }, [timeline, stages, prepared, width, height, rtl, typography]);
+  }, [timeline, stages, prepared, width, height, rtl, typography, attention]);
 
   const startMs = timeline?.startMs ?? 0;
   const durationMs = timeline?.durationMs ?? 0;
@@ -183,6 +199,67 @@ export function ReplayCosmosWorld(props: ReplayCosmosWorldProps) {
     : pacedRange !== null ? Math.max(0, paced - behind) : scoped(shownWindow?.windowStartMs ?? 0);
   if (scene === null) return null;
   return <ReplayCosmosStage scene={scene} images={images} t={t} width={width} height={height} accessibilityLabel={props.accessibilityLabel} />;
+}
+
+/** INTEL-LIVE-01 CP3: how many prepared Lane B variants are held at once (the stage draws two at most: the reveal's pair). */
+export const ATTENTION_STAGES_HELD = 8;
+
+/**
+ * INTEL-LIVE-01 CP3: Lane B's prepared variants — a Lane A stage with one attention state over it — made when first drawn
+ * and held, the most recent `ATTENTION_STAGES_HELD`; a variant let go (or every one, when the lane changes or the world
+ * leaves) is released a moment later, once the canvas no longer draws it. Null: no Lane B.
+ */
+function useAttentionStages(timeline: ReplayAttentionTimeline | null, rtl: boolean): ReplayFrameAttention | null {
+  const held = useMemo(() => {
+    if (timeline === null) return null;
+    const variants = new Map<string, ReplayFrameStage>(); // oldest first
+    const ids = new WeakMap<ReplayFrameStage, number>();
+    let serial = 0;
+    let retired = false;
+    const release = (stages: readonly ReplayFrameStage[]) => {
+      setTimeout(() => { for (const stage of stages) disposePrepared(stage.prepared); }, 250);
+    };
+    const idOf = (stage: ReplayFrameStage): number => {
+      let id = ids.get(stage);
+      if (id === undefined) { serial += 1; id = serial; ids.set(stage, id); }
+      return id;
+    };
+    const lane: ReplayFrameAttention = {
+      timeline,
+      stageOf(base, state) {
+        const key = `${idOf(base)}|${replayAttentionKey(state)}`;
+        const found = variants.get(key);
+        if (found !== undefined) {
+          variants.delete(key);
+          variants.set(key, found);
+          return found;
+        }
+        const stage = replayAttentionStage(base.stage, replayAttentionMarks(state), rtl);
+        const made: ReplayFrameStage = { stage, prepared: prepareStage(stage.list) };
+        if (retired) {
+          release([made]);
+          return made;
+        }
+        variants.set(key, made);
+        while (variants.size > ATTENTION_STAGES_HELD) {
+          const [oldest, stale] = variants.entries().next().value as [string, ReplayFrameStage];
+          variants.delete(oldest);
+          release([stale]);
+        }
+        return made;
+      },
+    };
+    return {
+      lane,
+      retire() {
+        retired = true;
+        release([...variants.values()]);
+        variants.clear();
+      },
+    };
+  }, [timeline, rtl]);
+  useEffect(() => () => held?.retire(), [held]);
+  return held?.lane ?? null;
 }
 
 const noSubscription = () => () => undefined;

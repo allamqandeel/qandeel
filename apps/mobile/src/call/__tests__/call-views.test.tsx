@@ -6,6 +6,7 @@
  * call continues. Both languages.
  */
 import { act, fireEvent, render } from '@testing-library/react-native';
+import { EMPTY_ATTENTION_LAYER } from '../provisional-attention';
 import type { ReactElement } from 'react';
 import { View } from 'react-native';
 
@@ -40,6 +41,8 @@ function fakeOwner(initial: Partial<CallOwnerState> = {}) {
     toggleRoute: () => void calls.push('route'),
     dismissNotice: () => void calls.push('dismiss'),
     carryText: () => null,
+    getAttention: () => EMPTY_ATTENTION_LAYER,
+    subscribeAttention: () => () => undefined,
     retire: () => undefined,
   };
   const set = (patch: Partial<CallOwnerState>) => act(async () => {

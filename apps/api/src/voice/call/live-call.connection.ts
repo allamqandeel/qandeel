@@ -8,6 +8,11 @@ import type { ClockMarkRegistration, LiveCallClockMarks } from './live-call.cloc
 import {
   encodeServerMessageV2, LIVE_CALL_PROTOCOL_V2, parseClientMessageV2, type ClientMessageV2, type HelloV2, type ServerMessageV2,
 } from './live-call.protocol-v2';
+import {
+  ATTENTION_OUTBOUND_LIMIT_BYTES, attentionStateFrames, encodeServerMessageV3, LIVE_CALL_PROTOCOL_V3, parseClientMessageV3, type ClientMessageV3,
+  type HelloV3,
+} from './live-call.protocol-v3';
+import type { LiveCallAttentionDelivery, LiveCallAttentionDisclosure } from '../call-turn/live-call-attention.port';
 import type { LiveCallStore, TrackState } from './live-call.store';
 import { UserTrackWriter, type CallSegmentMedia, type WriterFailure } from './recording/user-track-writer';
 
@@ -179,6 +184,11 @@ export class LiveCallConnection {
   private readonly endingNotices = new Set<number>();
   /** RB-2 / M-2: v2 was negotiated; only then is a CLOCK_MARK ever sent or a MARK_ECHO accepted. */
   private readonly v2: boolean;
+  /**
+   * INTEL-LIVE-01 CP2 (D-3): v3 was negotiated: v2's clock marks, plus the call's attention (ATTENTION, ATTENTION_STATE).
+   * Only then is an attention frame ever sent; a v1 or v2 phone is never sent one.
+   */
+  private readonly v3: boolean;
   private marks: ClockMarkRegistration | null = null;
 
   constructor(
@@ -191,6 +201,7 @@ export class LiveCallConnection {
   ) {
     const now = deps.clock.now();
     this.v2 = transport.subprotocol === LIVE_CALL_PROTOCOL_V2;
+    this.v3 = transport.subprotocol === LIVE_CALL_PROTOCOL_V3;
     this.lastInboundAt = now;
     this.frames = new Bucket(LIVE_CALL_LIMITS.framesPerSecond, LIVE_CALL_LIMITS.frameBurst, now);
     this.controls = new Bucket(LIVE_CALL_LIMITS.controlPerSecond, LIVE_CALL_LIMITS.controlPerSecond, now);
@@ -205,7 +216,7 @@ export class LiveCallConnection {
   // ------------------------------------------------------------------ inbound
   onText(text: string): void {
     if (!this.admit(true)) return;
-    const message = this.v2 ? parseClientMessageV2(text) : parseClientMessage(text);
+    const message = this.v3 ? parseClientMessageV3(text) : this.v2 ? parseClientMessageV2(text) : parseClientMessage(text);
     if (!message) {
       this.violation();
       return;
@@ -255,7 +266,7 @@ export class LiveCallConnection {
   }
 
   // ------------------------------------------------------------------ control messages
-  private async handle(message: ClientMessage | ClientMessageV2): Promise<void> {
+  private async handle(message: ClientMessage | ClientMessageV2 | ClientMessageV3): Promise<void> {
     if (this.doomed || this.phase === 'CLOSING' || this.phase === 'CLOSED') return;
     if (message.type === 'HELLO') {
       if (this.phase !== 'AWAIT_HELLO') return this.violation();
@@ -331,7 +342,7 @@ export class LiveCallConnection {
     this.send({ type: 'ACK', msgId });
   }
 
-  private async hello(hello: Extract<ClientMessage, { type: 'HELLO' }> | HelloV2): Promise<void> {
+  private async hello(hello: Extract<ClientMessage, { type: 'HELLO' }> | HelloV2 | HelloV3): Promise<void> {
     this.callId = hello.callId;
     this.clientInstanceId = hello.clientInstanceId;
     this.sessionId = hello.sessionId;
@@ -549,6 +560,7 @@ export class LiveCallConnection {
       settleQandeelTrack: () => settle(this.qandeel),
       send: (message) => this.send(message),
       sendReplyAudio: (packet) => this.sendReplyAudio(packet),
+      discloseAttention: (disclosure) => this.discloseAttention(disclosure),
     };
   }
 
@@ -733,9 +745,9 @@ export class LiveCallConnection {
     this.transport.close(code, reason);
   }
 
-  /** RB-2 / M-2: a v2 call that is ACTIVE on this connection receives clock marks in its slot. */
+  /** RB-2 / M-2: a v2 (or v3) call that is ACTIVE on this connection receives clock marks in its slot. */
   private startMarks(): void {
-    if (!this.v2 || !this.deps.clockMarks || this.marks || this.epoch === null || this.callId === null) return;
+    if (!(this.v2 || this.v3) || !this.deps.clockMarks || this.marks || this.epoch === null || this.callId === null) return;
     this.marks = this.deps.clockMarks.register(this.callId, this.epoch, {
       send: (seq) => {
         if (this.phase === 'ACTIVE') this.send({ type: 'CLOCK_MARK', seq });
@@ -769,6 +781,22 @@ export class LiveCallConnection {
     if (this.phase === 'CLOSED') return;
     if (this.transport.bufferedBytes > LIVE_CALL_LIMITS.maxOutboundBufferBytes) return;
     this.transport.sendText(message.type === 'CLOCK_MARK' ? encodeServerMessageV2(message) : encodeServerMessage(message));
+  }
+
+  /**
+   * INTEL-LIVE-01 CP2 (D-3): the call's attention towards a v3 phone while the call is ACTIVE on this connection, as ATTENTION
+   * or as ATTENTION_STATE's parts, written in one go (nothing interleaves them on the socket). Audio first: while more than
+   * ATTENTION_OUTBOUND_LIMIT_BYTES wait towards the phone, nothing is queued behind them (DROPPED: the lane sends the
+   * database's state again once the phone keeps up). Synchronous, no database call, never awaited.
+   */
+  private discloseAttention(disclosure: LiveCallAttentionDisclosure): LiveCallAttentionDelivery {
+    if (!this.v3 || this.phase !== 'ACTIVE') return 'NOT_LISTENING';
+    if (this.transport.bufferedBytes > ATTENTION_OUTBOUND_LIMIT_BYTES) return 'DROPPED';
+    const frames = disclosure.kind === 'EVENT'
+      ? [{ type: 'ATTENTION' as const, seq: disclosure.seq, op: disclosure.op, ...disclosure.subject, producedClockMs: disclosure.producedClockMs }]
+      : attentionStateFrames(disclosure.seq, disclosure.entries);
+    for (const frame of frames) this.transport.sendText(encodeServerMessageV3(frame));
+    return 'SENT';
   }
 
   /** One reply packet (REPLY_AUDIO) while the call is ACTIVE; a stalled consumer gets nothing more (it is lost by its own bound). */

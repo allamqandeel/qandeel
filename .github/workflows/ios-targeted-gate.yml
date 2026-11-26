@@ -1,0 +1,174 @@
+name: iOS Targeted Gate (live call)
+# INTEL-LIVE-01 CP1 (PO directive "Semantic Freedom & Targeted Cross-Platform Validation", 2026-11-25, §3 / §4; backlog
+# BG-10 clarification of the same date): the lightweight, MANDATORY, change-aware iOS gate for the live call. It proves
+# the changed functionality on an iOS simulator by real application interaction — a build alone is insufficient — and it
+# is recorded separately from the World gate (cosmos-ios-world-gate.yml), whose full COSMOS matrix is no longer re-run for
+# live-call backend changes that cannot reach it.
+#
+# What it is: the S8B-06 CP3 proof build (the production runtime, Conversation and call surfaces and the REAL native call
+# engine; one recorded change of the mobile manifest's `main` in this ephemeral checkout only) on an iPhone 17 / iOS 26.5
+# simulator, against the S8B-06 CP3 proof server (the REAL S8B-05 live call over a fresh local PostgreSQL carrying every
+# migration, the INTEL-LIVE-01 provisional attention lane ON with a fake evaluator) on the runner's loopback. One call:
+# launch, connect, one spoken turn played out, End, the attention lane written and settled, no crash
+# (scripts/ios-targeted-gate/run-live-call-gate.sh). The call is started and ended by the proof root's call commands, the
+# session's own CallOwner start and end, without a touch (PO, 2026-11-25); real UI taps are checked SEPARATELY after it,
+# in ui-touch.tsv, and never decide the job. Every case is PASS / FAIL / NOT TESTED in results.tsv; the job fails unless
+# every case passed. Nothing retries but ITG-03's one recorded exception. No credential, no provider, nothing paid.
+#
+# One language and size: CP1 changes no UI, layout, navigation, gesture or presentation (BG-10's language / size matrix
+# applies when those are affected). CP2 – CP4 extend the cases here (directive §3), never the World gate's.
+#
+# Change-aware: the live-call backend (voice, voice media, call analysis, the attention lane, the live-call reply), the
+# database's migrations, the shared packages (the wire contracts), the mobile call client and native call module, the
+# proof server, entry and flows this gate drives, the dependency lock and this gate — for a pull request and for a push
+# to main alike; and manual dispatch.
+on:
+  pull_request:
+    paths:
+      - 'apps/api/src/voice/**'
+      - 'apps/api/src/voice-media/**'
+      - 'apps/api/src/live-analysis/**'
+      - 'apps/api/src/live-attention/**'
+      - 'apps/api/src/conversation/live-call-reply.service.ts'
+      - 'apps/api/scripts/s8b-06-cp3-device-proof-server.ts'
+      - 'database/migrations/**'
+      - 'packages/**'
+      - 'apps/mobile/src/call/**'
+      - 'apps/mobile/src/voice-call/**'
+      - 'apps/mobile/modules/qandeel-voice-call/**'
+      - 'apps/mobile/scripts/select-s806cp3-proof-entry.mjs'
+      - 'apps/mobile/.maestro/itg-*.yaml'
+      - 'scripts/ios-targeted-gate/**'
+      - 'scripts/validation/bounded-run.mjs'
+      - 'package-lock.json'
+      - '.github/workflows/ios-targeted-gate.yml'
+  push:
+    branches: [main]
+    # Impact-aware on main too: the same inputs as a pull request.
+    paths:
+      - 'apps/api/src/voice/**'
+      - 'apps/api/src/voice-media/**'
+      - 'apps/api/src/live-analysis/**'
+      - 'apps/api/src/live-attention/**'
+      - 'apps/api/src/conversation/live-call-reply.service.ts'
+      - 'apps/api/scripts/s8b-06-cp3-device-proof-server.ts'
+      - 'database/migrations/**'
+      - 'packages/**'
+      - 'apps/mobile/src/call/**'
+      - 'apps/mobile/src/voice-call/**'
+      - 'apps/mobile/modules/qandeel-voice-call/**'
+      - 'apps/mobile/scripts/select-s806cp3-proof-entry.mjs'
+      - 'apps/mobile/.maestro/itg-*.yaml'
+      - 'scripts/ios-targeted-gate/**'
+      - 'scripts/validation/bounded-run.mjs'
+      - 'package-lock.json'
+      - '.github/workflows/ios-targeted-gate.yml'
+  workflow_dispatch:
+concurrency:
+  group: ios-targeted-gate-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+  MAESTRO_CLI_NO_ANALYTICS: 1
+  MAESTRO_VERSION: 2.10.0
+  MAESTRO_ZIP_SHA256: 29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991
+jobs:
+  live-call:
+    name: iOS Targeted Gate — live call (iPhone 17, iOS 26.5)
+    runs-on: macos-26
+    timeout-minutes: 90
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      IOS_SIMULATOR_NAME: iPhone 17
+      IOS_SIMULATOR_RUNTIME_SUFFIX: iOS-26-5
+      # A throwaway database on the runner's loopback; the proof server refuses any other.
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/itg
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      # Run 45601664395: during ITG-03 the runner had 0 – 3 % idle CPU and 129 MB free, and Spotlight (mds_stores, mds,
+      # mdworker_shared) was indexing. This ephemeral runner needs no index; switched off before anything is built.
+      - name: Stop Spotlight indexing on this ephemeral runner (it competed with the cases)
+        run: sudo mdutil -a -i off || echo "mdutil did not answer; indexing is unchanged"
+      - name: Select Xcode 26.6 explicitly (never the runner default)
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - name: Setup Temurin JDK 17 (Maestro tooling path)
+        uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: '17'}
+      - {name: Install dependencies from the root lockfile, run: npm ci}
+      # The proof server then runs --transpile-only: type-checking it in process held 658 MB beside the simulator.
+      - name: Type-check the proof server (the gate runs it transpile-only)
+        run: node node_modules/typescript/bin/tsc -p apps/api/tsconfig.scripts.json --noEmit
+      - name: Start a throwaway PostgreSQL 17 and apply the canonical bootstrap and every migration
+        run: |
+          brew install postgresql@17
+          PGBIN="$(brew --prefix postgresql@17)/bin"
+          "$PGBIN/initdb" -D "$RUNNER_TEMP/pg" -U postgres --auth=trust -E UTF8 --locale=C
+          "$PGBIN/pg_ctl" -D "$RUNNER_TEMP/pg" -l "$RUNNER_TEMP/pg.log" -o "-p 5432 -c listen_addresses=127.0.0.1" -w start
+          "$PGBIN/createdb" -h 127.0.0.1 -U postgres itg
+          "$PGBIN/psql" "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f database/supabase-compatible-bootstrap.sql
+          for migration in database/migrations/*.sql; do "$PGBIN/psql" "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$migration" > /dev/null; done
+          "$PGBIN/psql" "$DATABASE_URL" -tA -c "SELECT version()"
+      - name: Select the S8B-06 CP3 proof entry (validation build only; recorded)
+        run: S806_DEVICE_PROOF=1 node apps/mobile/scripts/select-s806cp3-proof-entry.mjs --apply
+      - {name: Generate the iOS project (CNG), run: npm run prebuild:ios --workspace @qandeel/mobile}
+      - name: Allow the loopback proof server (proof build only)
+        run: |
+          plist="$(ls apps/mobile/ios/*/Info.plist | grep -v Pods | head -n 1)"
+          echo "plist=$plist"
+          /usr/libexec/PlistBuddy -c 'Add :NSAppTransportSecurity dict' "$plist" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c 'Delete :NSAppTransportSecurity:NSAllowsLocalNetworking' "$plist" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c 'Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true' "$plist"
+      - name: Install CocoaPods dependencies
+        working-directory: apps/mobile/ios
+        run: pod install
+      - name: Build the proof Release simulator app
+        run: |
+          set -o pipefail
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          scheme="$(basename "$workspace" .xcworkspace)"
+          echo "workspace=$workspace scheme=$scheme"
+          xcodebuild -quiet -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+          app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
+          test -n "$app"
+          echo "IOS_APP_PATH=$app" >> "$GITHUB_ENV"
+      - name: Boot the authorized simulator (iPhone 17 on iOS 26.5)
+        run: |
+          udid="$(xcrun simctl list devices available -j | jq -r --arg name "$IOS_SIMULATOR_NAME" --arg suffix "$IOS_SIMULATOR_RUNTIME_SUFFIX" '.devices | to_entries[] | select(.key | endswith($suffix)) | .value[] | select(.name == $name) | .udid' | head -n 1)"
+          if [ -z "$udid" ]; then echo "STOP: ${IOS_SIMULATOR_NAME} / ${IOS_SIMULATOR_RUNTIME_SUFFIX} is not on this image"; xcrun simctl list devices available; exit 1; fi
+          xcrun simctl boot "$udid" || true
+          xcrun simctl bootstatus "$udid" -b
+          echo "IOS_SIM_UDID=$udid" >> "$GITHUB_ENV"
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified before extraction)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | shasum -a 256 --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro"
+          cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Prove the live call on the iOS simulator
+        timeout-minutes: 30
+        env:
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: 240000
+        run: bash scripts/ios-targeted-gate/run-live-call-gate.sh "$IOS_APP_PATH" "$RUNNER_TEMP/itg" "$IOS_SIM_UDID"
+      - name: Summarize
+        if: always()
+        run: |
+          { echo '### iOS Targeted Gate (live call)'; echo '```'; cat "$RUNNER_TEMP/itg/results.tsv" 2>/dev/null || echo 'no results.tsv: the gate did not run (every case NOT TESTED)'; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo '#### UI touch (separate; not functional evidence)'; echo '```'; cat "$RUNNER_TEMP/itg/ui-touch.tsv" 2>/dev/null || echo 'no ui-touch.tsv: the UI touch checks did not run (every check NOT TESTED)'; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the gate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-targeted-gate-live-call-${{ github.sha }}
+          path: ${{ runner.temp }}/itg
+          if-no-files-found: warn
+          include-hidden-files: true

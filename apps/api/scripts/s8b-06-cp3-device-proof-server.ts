@@ -16,6 +16,21 @@
  * transcript of the person: the recognizer never hears words, and nothing is logged but counts and identifiers of THIS
  * synthetic proof.
  *
+ * INTEL-LIVE-01 CP2 (the Android emulator evidence, B5′ / B6′), each OFF unless its variable is set: with
+ * `PROOF_ATTENTION_SCENARIO=a|d` (and PROOF_ATTENTION=ON) the scripted recognizer answers each FINAL with the CP1 corpus scenario's USER
+ * segments spoken since the previous FINAL (exactly the words spoken, whatever the endpointer split or a reconnect) and the fake evaluator is the corpus annotation's oracle (QANDEEL's annotated development on QANDEEL's
+ * first evidence), and `POST /proof/speak-scenario` speaks the scenario's USER turn as the stimulus, one segment at a
+ * time with a 650 ms pause (the endpointer finalizes at 500 ms of silence and commits at 800 ms: each pause ends an
+ * utterance, never the turn); with `PROOF_PROBE=ON` the proof app's attention probe reports its instants
+ * (`/proof/probe`, `/proof/clock`, `/proof/probe/report`); `PROOF_ORACLE_LATENCY=CP1` holds the stand-in evaluator's
+ * answers for CP1's provider latency model. Every v3 frame the lane hands the connection is recorded
+ * (`attention-sent`: its kind, seq, op, track, produced clock position, size of a snapshot and the delivery; never a label).
+ * For the iOS Targeted Gate's v3 cases: `POST /proof/attention-hold?on=1` withholds every attention frame of the call's
+ * CURRENT connection (as if lost in transit: the lane is told NOT_LISTENING, `attention-withheld` is recorded) until
+ * `on=0`; `POST /proof/drop` cuts the live-call sockets (a network loss: the phone resumes on a new connection, whose
+ * frames are never withheld); `/proof/attention` also counts the open subjects per track; and each clock-mark outcome
+ * the live-call service signals is recorded (`clock-signal`: operation and outcome only).
+ *
  * Host-only control routes (`/proof/*`, loopback, no bearer) let the operator read the evidence (the call, its exchanges,
  * its tracks), move THIS fixture call's start so its 60 minutes end soon (T-5 / T-1 / MAX_LENGTH), as the CP4 proof, and
  * set THIS throwaway database's realtime capacity (0 for the CAPACITY_FULL case, then back to the shipped 2).
@@ -30,7 +45,7 @@ import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import { appendFileSync } from 'node:fs';
 import {
-  Body, Controller, Get, HttpCode, HttpException, Module, Param, Post, Query, UnauthorizedException, UseGuards, type INestApplication,
+  Body, Controller, Get, HttpCode, HttpException, Module, Param, Post, Query, Req, UnauthorizedException, UseGuards, type INestApplication,
 } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { accountedDeepSeekStreamingChatCompletions } from '../src/ai-usage/accounted-provider-clients';
@@ -83,10 +98,16 @@ import { LIVE_CALL_STORE } from '../src/voice/call/live-call.store';
 import type { CallFailureLine } from '../src/voice/call-turn/call-failure-line';
 import { CallTurnRepository } from '../src/voice/call-turn/call-turn.repository';
 import { LiveCallAnalysisSignal } from '../src/voice/call-turn/live-call-analysis.signal';
+import { CallAttentionRepository } from '../src/live-attention/call-attention.repository';
+import { liveCallAttentionOf, signallingAttentionSettlement } from '../src/live-attention/live-attention.provider';
+import type { AttentionDevelopment, AttentionEvaluationInput, AttentionEvaluationResult, AttentionEvaluator } from '../src/live-attention/provisional-attention.types';
+import { FakeAttentionEvaluator } from '../src/live-attention/testing/fake-attention-evaluator';
+import { LiveCallAttentionBinding } from '../src/voice/call-turn/live-call-attention.port';
 import { LiveCallConversationBinding } from '../src/voice/call-turn/live-call-conversation.port';
 import { LiveCallTurnEngine, type CallTurnObservation } from '../src/voice/call-turn/live-call-turn.engine';
 import { fakeCallSynthesisRoute } from '../src/voice/call-turn/testing/fake-call-synthesis';
-import { FakeCallRecognizer, type FakeCallLine } from '../src/voice/call-turn/testing/fake-call-recognizer';
+import { FakeCallRecognizer, type FakeCallLine, type FakeCallScript } from '../src/voice/call-turn/testing/fake-call-recognizer';
+import { CORPUS, type Scenario } from './intel-live-01/corpus';
 import type { RealtimeRecognition } from '../src/voice/live-note/live-voice-note.service';
 import {
   type SpeechSynthesisAdapter, type SpeechSynthesisRequest, type SpeechSynthesisResult, type SpeechSynthesisSession,
@@ -125,6 +146,108 @@ function evidence(kind: string, detail: Record<string, unknown>): void {
 }
 
 /**
+ * INTEL-LIVE-01 CP1 — the iOS Targeted Gate's stimulus. A GitHub macOS runner has no microphone, so the simulator's
+ * uplink is silence and no turn could ever end. `POST /proof/speak?ms=` arms a synthetic VOICED signal (three harmonics
+ * under a syllable envelope: energy, never speech) over what the endpointer hears of THIS proof's connection for that
+ * long: the REAL endpointer then ends a REAL turn, the scripted recognizer answers its FINAL, the REAL engine commits it
+ * and the reply plays on the phone. The phone's own packets still arrive, are still recorded and are still counted; only
+ * the decoded frames the turn engine is handed are replaced while armed. Off unless armed; the device proof never arms it.
+ */
+let stimulusFrames = 0;
+let openStreams = 0;
+let stimulusSample = 0;
+/** INTEL-LIVE-01 CP2: who waits for the armed stimulus to be used up (`/proof/speak-scenario`). */
+const stimulusWaiters = new Set<() => void>();
+/**
+ * INTEL-LIVE-01 CP2: the texts of the scenario segments whose stimulus was used up and that no FINAL has answered yet. The
+ * next finalize() answers them all, in order: a segment's words are its own whatever the endpointer split, and whichever
+ * recognition session (a reconnect opens a new one) hears it.
+ */
+const spokenSegments: string[] = [];
+/** INTEL-LIVE-01 CP2: the connection epochs whose attention frames are withheld (`/proof/attention-hold`), and the open ones. */
+const heldEpochs = new Set<number>();
+const openEpochs = new Set<number>();
+const callSockets = new Set<{ destroy(): void }>();
+
+/**
+ * INTEL-LIVE-01 CP1 — the iOS Targeted Gate's call commands (PO, 2026-11-25, the final functional validation approach).
+ * The simulator's synthetic touch delivery dropped the call-entry tap (runs 45612961224, 45630621237, 45659136860), so the
+ * gate's functional cases start and end the call through the proof root instead (`s806cp3-call-commands.ts`): it calls
+ * the session's own CallOwner exactly as the call entry and End do. ONE command at a time, each consumed once:
+ * `POST /proof/call?do=` queues it, `GET /proof/call/next` hands it out once (held until one is queued or 20 s pass: one
+ * open request, no continuous polling), `POST /proof/call/ack` records what the app did with it, once.
+ */
+type CallCommand = { id: number; op: 'start' | 'end'; taken: boolean; acked: boolean };
+let callCommand: CallCommand | null = null;
+let callCommandSeq = 0;
+const callCommandWaiters = new Set<() => void>();
+function stimulusFrame(bytes: number): Buffer {
+  const out = Buffer.alloc(bytes);
+  for (let i = 0; i < Math.floor(bytes / 2); i += 1) {
+    const t = (stimulusSample + i) / 16000;
+    const envelope = 0.6 + 0.4 * Math.sin(2 * Math.PI * 4 * t);
+    const v = envelope * 2600 * (Math.sin(2 * Math.PI * 180 * t) + 0.5 * Math.sin(2 * Math.PI * 360 * t) + 0.25 * Math.sin(2 * Math.PI * 540 * t));
+    out.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(v))), i * 2);
+  }
+  stimulusSample += Math.floor(bytes / 2);
+  return out;
+}
+
+/** INTEL-LIVE-01 CP2: the corpus scenario the emulator evidence runs (a or d), or none. */
+function scenarioOf(id: string | undefined): Scenario | null {
+  if (id === undefined || id === '') return null;
+  if (id !== 'a' && id !== 'd') throw new Error('S806CP3_PROOF_REFUSED: PROOF_ATTENTION_SCENARIO must be a or d');
+  if (process.env.PROOF_ATTENTION !== 'ON') throw new Error('S806CP3_PROOF_REFUSED: a scenario needs PROOF_ATTENTION=ON');
+  return CORPUS.find((x) => x.id === id)!;
+}
+
+const qandeelToldFor = new WeakSet<Scenario>();
+/**
+ * INTEL-LIVE-01 CP2: the annotation oracle of the CP1 corpus proof, live: exactly the scenario's annotation for the USER
+ * evidence it is shown (by its text: the scripted recognizer's FINAL is the segment), and QANDEEL's annotated development
+ * on QANDEEL's first evidence (the reply's words are the synthetic reply's, not the corpus's; a scenario with none, d, sets
+ * CP1's proof subject there). It decides nothing.
+ */
+function oracleOf(scenario: Scenario, input: AttentionEvaluationInput): AttentionEvaluationResult {
+  const developments: AttentionDevelopment[] = [];
+  const first = input.newEvidence[0];
+  if (input.track === 'USER') {
+    for (const e of input.newEvidence) {
+      const seg = scenario.segments.find((x) => x.track === 'USER' && x.text === e.text);
+      for (const d of seg?.devs ?? []) developments.push({ op: d.op, subjectKey: d.key, label: d.label, kind: d.kind, confidence: 'HIGH', threadRef: null, dependsOnSeq: e.seq });
+    }
+  } else if (first && !qandeelToldFor.has(scenario)) {
+    qandeelToldFor.add(scenario);
+    for (const seg of scenario.segments.filter((x) => x.track === 'QANDEEL')) {
+      for (const d of seg.devs) developments.push({ op: d.op, subjectKey: d.key, label: d.label, kind: d.kind, confidence: 'HIGH', threadRef: null, dependsOnSeq: first.seq });
+    }
+    // A scenario with no QANDEEL annotation (d): CP1's proof subject, as the gate's evaluator always set it.
+    if (developments.length === 0) developments.push({ op: 'SET', subjectKey: 'proof_qandeel_subject', label: 'موضوع اختباري', kind: 'TOPIC', confidence: 'HIGH', threadRef: null, dependsOnSeq: first.seq });
+  }
+  return developments.length === 0
+    ? { kind: 'NONE', developments: [], contextCarry: null, usage: null, providerMs: 0 }
+    : { kind: 'DEVELOPMENTS', developments, contextCarry: null, usage: null, providerMs: 0 };
+}
+
+/**
+ * INTEL-LIVE-01 CP2 (B6′): with `PROOF_ORACLE_LATENCY=CP1`, each answer of the stand-in evaluator is held for the CP1
+ * corpus proof's provider latency model (650 ms + a seeded 0 – 850 ms, prng 204), so developments reach the phone when
+ * a provider's would and the in-speech / tail split is exercised. The latency is the stand-in's; nothing else changes.
+ */
+function withProviderLatency(inner: AttentionEvaluator): AttentionEvaluator {
+  let seed = 204;
+  const next = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+  return {
+    evaluate: async (input, signal) => {
+      const result = await inner.evaluate(input, signal);
+      const ms = Math.round(650 + next() * 850);
+      await new Promise<void>((resolve) => { const t = setTimeout(resolve, ms); signal.addEventListener('abort', () => { clearTimeout(t); resolve(); }, { once: true }); });
+      return signal.aborted ? { kind: 'TIMEOUT', usage: null, providerMs: ms } : { ...result, providerMs: ms } as AttentionEvaluationResult;
+    },
+  };
+}
+
+/**
  * R4 / F-F: the speech sink as composed, with each PLAYOUT the engine judged a VIOLATION reported in numbers only: the
  * reply it names, the chunk and instant the phone confirmed, what this connection sent for that reply, and the rule's
  * chunk bound. Nothing is changed: the verdict is the engine's.
@@ -135,12 +258,27 @@ function watchedSink(sink: LiveCallSpeechSink): LiveCallSpeechSink {
       const sent = new Map<number, { count: number; maxSeq: number }>();
       const last = new Map<number, { chunkSeq: number; playedMs: number; verdict: string }>();
       let lastPushAt: number | null = null;
+      openStreams += 1;
+      openEpochs.add(channel.epoch);
       const stream = sink.open({
         ...channel,
         accessToken: () => channel.accessToken(), latestCaptureMs: () => channel.latestCaptureMs(),
         settleUserTrack: () => channel.settleUserTrack(), qandeelEndMs: () => channel.qandeelEndMs(),
         qandeelSilence: (endMs) => channel.qandeelSilence(endMs), qandeelAppend: (packet, clockMs) => channel.qandeelAppend(packet, clockMs),
         settleQandeelTrack: () => channel.settleQandeelTrack(), send: (message) => channel.send(message),
+        // INTEL-LIVE-01 CP2: the connection's v3 disclosure, forwarded as it is (the lane reaches the phone through it).
+        discloseAttention: channel.discloseAttention ? (disclosure) => {
+          const at = Date.now();
+          if (heldEpochs.has(channel.epoch)) {
+            evidence('attention-withheld', { epoch: channel.epoch, frame: disclosure.kind, seq: disclosure.seq });
+            return 'NOT_LISTENING';
+          }
+          const delivery = channel.discloseAttention!(disclosure);
+          evidence('attention-sent', disclosure.kind === 'EVENT'
+            ? { epoch: channel.epoch, sentAt: at, frame: 'EVENT', seq: disclosure.seq, op: disclosure.op, track: disclosure.subject.track, producedClockMs: disclosure.producedClockMs, delivery }
+            : { epoch: channel.epoch, sentAt: at, frame: 'STATE', seq: disclosure.seq, entries: disclosure.entries.length, delivery });
+          return delivery;
+        } : undefined,
         sendReplyAudio: (packet) => {
           const was = sent.get(packet.callTurnIndex) ?? { count: 0, maxSeq: -1 };
           sent.set(packet.callTurnIndex, { count: was.count + 1, maxSeq: Math.max(was.maxSeq, packet.chunkSeq) });
@@ -154,10 +292,24 @@ function watchedSink(sink: LiveCallSpeechSink): LiveCallSpeechSink {
           const at = Date.now();
           if (lastPushAt !== null && at - lastPushAt >= 400) evidence('uplink-gap', { epoch: channel.epoch, ms: at - lastPushAt, captureMs });
           lastPushAt = at;
+          if (stimulusFrames > 0) {
+            stimulusFrames -= 1;
+            if (stimulusFrames === 0) {
+              evidence('stimulus-end', { epoch: channel.epoch, captureMs });
+              for (const wake of [...stimulusWaiters]) wake();
+            }
+            stream.push(stimulusFrame(pcm.length), captureMs);
+            return;
+          }
           stream.push(pcm, captureMs);
         },
         bargeIn: (input) => stream.bargeIn(input), textTurn: (input) => stream.textTurn(input),
-        drain: () => stream.drain(), close: () => stream.close(),
+        drain: () => stream.drain(),
+        close: () => {
+          openStreams -= 1;
+          openEpochs.delete(channel.epoch);
+          stream.close();
+        },
         playout: async (input) => {
           const verdict = await stream.playout(input);
           if (verdict === 'VIOLATION') {
@@ -177,6 +329,41 @@ function watchedSink(sink: LiveCallSpeechSink): LiveCallSpeechSink {
   };
 }
 
+/**
+ * INTEL-LIVE-01 CP1 (the iOS Targeted Gate): the scripted recognizer's FINAL carries no position (0 – 0), which the turn's
+ * words never needed. The attention lane places evidence on the call clock, so here each FINAL is placed where the stream
+ * stood when the engine forced it, its last 500 ms being the finalize silence (CALL_ENDPOINTING), as a real recognizer's
+ * word times would place it. Nothing else of the recognizer changes.
+ */
+function placedRecognition(inner: RealtimeRecognition): RealtimeRecognition {
+  return {
+    openStream: async (request) => {
+      const session = await inner.openStream(request);
+      let streamMs = 0;
+      const events = session.events[Symbol.asyncIterator]();
+      return {
+        send: async (chunk: Buffer) => {
+          streamMs += chunk.length / 32;
+          await session.send(chunk);
+        },
+        events: {
+          [Symbol.asyncIterator]: () => ({
+            next: async () => {
+              const next = await events.next();
+              if (next.done || next.value.kind !== 'FINAL' || next.value.speech.endMs > 0) return next;
+              const endMs = Math.max(20, Math.round(streamMs) - 500);
+              return { done: false as const, value: { kind: 'FINAL' as const, speech: { ...next.value.speech, startMs: Math.max(0, endMs - 1_000), endMs } } };
+            },
+          }),
+        },
+        finalize: () => session.finalize(),
+        end: () => session.end(),
+        abort: () => session.abort(),
+      };
+    },
+  };
+}
+
 /** R2: the semantic establishment's RPCs (the S8B-05 CP3 analysis proof's allowlist), beside the server_* functions. */
 const SEMANTIC_RPC = /^(?:commit_conversation_units_call_half_v1|commit_finalized_exchange_with_full_semantic_chain_v1|get_conversation_full_semantic_integrated_batch_snapshot_v1|get_conversation_full_semantic_runtime_context_v1|get_conversation_thread_identity_dossier_page_v1)$/u;
 
@@ -185,6 +372,8 @@ function rpcValue(name: string, v: unknown): unknown {
   if (SEMANTIC_RPC.test(name)) {
     return Array.isArray(v) && v.length > 0 && v.every((e) => typeof e === 'string') ? v : v !== null && typeof v === 'object' ? JSON.stringify(v) : v;
   }
+  // INTEL-LIVE-01 CP1: 0204's writer takes its events as jsonb (an array of objects), as PostgREST sends any JSON value.
+  if (name === 'server_record_call_attention_evaluation_v1') return v !== null && typeof v === 'object' ? JSON.stringify(v) : v;
   return v !== null && typeof v === 'object' && !Array.isArray(v) ? JSON.stringify(v) : v;
 }
 
@@ -335,8 +524,9 @@ function instrumentRefusals(): void {
   }
   // An exception inside a queued handler closes with PROTOCOL_VIOLATION too (reason INTERNAL): every close code is noted.
   const lose = proto.lose!;
-  proto.lose = function (this: { phase?: string }, ...args: unknown[]) {
-    evidence('connection-lose', { code: args[0] ?? null, reason: args[1] ?? null, phase: this.phase ?? null });
+  // INTEL-LIVE-01 CP1: with the connection epoch the loss ended, for the iOS Targeted Gate's ITG-03 recovery record.
+  proto.lose = function (this: { phase?: string; epoch?: number | null }, ...args: unknown[]) {
+    evidence('connection-lose', { code: args[0] ?? null, reason: args[1] ?? null, phase: this.phase ?? null, epoch: this.epoch ?? null });
     return lose.apply(this, args);
   };
 }
@@ -388,14 +578,43 @@ async function main(): Promise<void> {
     new IntegratedContextBudgetAssemblerService(telemetry), router);
   replyService.onModuleInit();
   // The scripted recognizer: each end of an utterance is the next numbered synthetic line (never the person's words).
-  const script: FakeCallLine[] = Array.from({ length: 400 }, (_, i) => ({ text: `جملة اختبارية رقم ${i + 1}` }));
+  const scenario: Scenario | null = scenarioOf(process.env.PROOF_ATTENTION_SCENARIO);
+  const numbered: FakeCallLine[] = Array.from({ length: 400 }, (_, i) => ({ text: `جملة اختبارية رقم ${i + 1}` }));
+  // INTEL-LIVE-01 CP2: under a corpus scenario, a FINAL answers the scenario segments spoken since the last one (see
+  // spokenSegments); any other utterance (`/proof/speak`) the next numbered line, counted across sessions.
+  let numberedNext = 0;
+  const script: FakeCallScript = scenario === null ? numbered : () => {
+    if (spokenSegments.length > 0) {
+      const texts = spokenSegments.splice(0);
+      evidence('scripted-final', { segments: texts.length, numbered: null });
+      return texts.map((text) => ({ text }));
+    }
+    numberedNext += 1;
+    evidence('scripted-final', { segments: 0, numbered: numberedNext });
+    return numbered[numberedNext - 1];
+  };
   const recognizer = new FakeCallRecognizer(script, { finalDelayMs: 150 });
-  const recognition: RealtimeRecognition = { openStream: (request) => recognizer.openStream(request) };
+  const recognition: RealtimeRecognition = placedRecognition({ openStream: (request) => recognizer.openStream(request) });
   const failureLine: CallFailureLine = { ar: [], en: [] };
   // R2: the analysis's one in-process signal: the engine kicks it at a commit, the first audio and an exchange's close, and
   // LiveCallService at the call's activation (S8B-05 CP3).
   const signal = new LiveCallAnalysisSignal();
-  const engine = new LiveCallTurnEngine(new CallTurnRepository(serverApi), binding, recognition, fakeCallSynthesisRoute(new ProofToneSynthesis()), telemetry, signal, failureLine);
+  // INTEL-LIVE-01 CP1 (the iOS Targeted Gate): the provisional attention lane, ON only with PROOF_ATTENTION=ON, composed by
+  // its ONE adapter (liveCallAttentionOf) over 0204's REAL writer and 0191's REAL background permits, bound into the REAL
+  // engine as the API binds it. Only the evaluator is a stand-in, so no model is called: shown evidence of a track whose
+  // proof subject is not open yet, it sets that one subject; otherwise it answers NONE.
+  const attentionBinding = new LiveCallAttentionBinding();
+  const attentionEvaluator = new FakeAttentionEvaluator((input: AttentionEvaluationInput): AttentionEvaluationResult => {
+    if (scenario !== null) return oracleOf(scenario, input);
+    const key = `proof_${input.track.toLowerCase()}_subject`;
+    const first = input.newEvidence[0];
+    if (!first || input.openSubjects.some((s) => s.subjectKey === key)) return { kind: 'NONE', developments: [], contextCarry: null, usage: null, providerMs: 0 };
+    return {
+      kind: 'DEVELOPMENTS', contextCarry: null, usage: null, providerMs: 0,
+      developments: [{ op: 'SET', subjectKey: key, label: 'موضوع اختباري', kind: 'TOPIC', confidence: 'HIGH', threadRef: null, dependsOnSeq: first.seq }],
+    };
+  });
+  const engine = new LiveCallTurnEngine(new CallTurnRepository(serverApi), binding, recognition, fakeCallSynthesisRoute(new ProofToneSynthesis()), telemetry, signal, failureLine, attentionBinding);
   engine.observe((o: CallTurnObservation) => evidence('turn', o as unknown as Record<string, unknown>));
 
   // ---------------------------------------------------------------- R2: the live analysis (S8B-05 CP3), real, over fakes
@@ -458,6 +677,16 @@ async function main(): Promise<void> {
   };
   const continuity = FakeThreadContinuityProvider.nominatingAll({ decision: 'DISTINCT_NEW', threadId: null, candidateThreadIds: [], currentEvidenceReferenceIndexes: [], priorEvidenceRefs: [] });
   const permits = new DatabaseBackgroundPermitGate(serverApi);
+  const attentionLane = process.env.PROOF_ATTENTION === 'ON' ? liveCallAttentionOf({
+    evaluator: process.env.PROOF_ORACLE_LATENCY === 'CP1' ? withProviderLatency(attentionEvaluator) : attentionEvaluator, store: new CallAttentionRepository(serverApi), permits,
+    // Kinds, tracks and outcomes only: never a word or a label.
+    observe: (_callId, o) => evidence('attention', { observation: o.kind, track: 'track' in o ? o.track : null, outcome: 'outcome' in o ? o.outcome : null, reason: 'reason' in o ? o.reason : null }),
+    signal: (op, outcome) => evidence('attention-signal', { op, outcome }),
+  }) : null;
+  if (attentionLane) {
+    attentionBinding.bind(attentionLane);
+    evidence('attention-lane', { state: 'ON' });
+  }
   const synthetic = { providerName: 'OPENAI', providerModel: 'gpt-5-mini' } as const;
   const semantic = new ConversationSemanticEstablishmentService(
     new ConversationSemanticRuntimeRepository(serverApi),
@@ -469,6 +698,8 @@ async function main(): Promise<void> {
   );
   const worker = new CallAnalysisWorker({
     store: new CallAnalysisRepository(serverApi), semantic, permits, safety: replyService, start: callAnalysisStart(),
+    // INTEL-LIVE-01 CP1: the attention settlement, composed as CallAnalysisWorkerHost composes it, only while the lane is ON.
+    attentionSettlement: attentionLane ? signallingAttentionSettlement(new CallAttentionRepository(serverApi), attentionLane) : undefined,
     // Ids, counts and outcomes only; the periodic scan's kicks are left out.
     observe: (o: CallAnalysisObservation) => {
       if (o.kind === 'KICK' && o.reason === 'SCAN') return;
@@ -637,6 +868,151 @@ async function main(): Promise<void> {
         client.release();
       }
     }
+    /** INTEL-LIVE-01 CP1: arms the stimulus for `ms` of uplink (see stimulusFrame). */
+    @Post('speak')
+    speak(@Query('ms') ms: string) {
+      const n = Number(ms);
+      if (!Number.isInteger(n) || n < 200 || n > 5000) throw new HttpException('ms 200..5000', 400);
+      if (openStreams === 0) throw new HttpException('no call connection is open', 409);
+      stimulusFrames = Math.ceil(n / 20);
+      evidence('stimulus', { ms: n });
+      return { frames: stimulusFrames };
+    }
+
+    /**
+     * INTEL-LIVE-01 CP2: speaks the scenario's USER turn `turn` (segments `from`..`to`, default all) as the stimulus: each
+     * segment for its corpus length, then a
+     * 650 ms pause (an utterance ends, the turn does not); the turn ends after its last segment (the endpointer commits it).
+     * Answers at once; each segment's start and end are evidence (`scenario-segment`), the turn's end `scenario-turn-end`.
+     */
+    @Post('speak-scenario')
+    speakScenario(@Query('turn') turn: string, @Query('from') from?: string, @Query('to') to?: string) {
+      if (scenario === null) throw new HttpException('no scenario', 409);
+      if (openStreams === 0) throw new HttpException('no call connection is open', 409);
+      const index = Number(turn);
+      const all = scenario.segments.filter((x) => x.track === 'USER' && x.turn === index);
+      const first = from === undefined ? 0 : Number(from);
+      const last = to === undefined ? all.length - 1 : Number(to);
+      if (!Number.isInteger(first) || !Number.isInteger(last) || first < 0 || last >= all.length || first > last) throw new HttpException('no such USER turn or segment range', 400);
+      const segs = all.slice(first, last + 1);
+      void (async () => {
+        for (const [k, seg] of segs.entries()) {
+          const i = first + k;
+          const ms = seg.t1 - seg.t0;
+          const used = new Promise<void>((resolve) => { const wake = () => { stimulusWaiters.delete(wake); resolve(); }; stimulusWaiters.add(wake); });
+          const startAt = Date.now();
+          stimulusFrames = Math.ceil(ms / 20);
+          await used;
+          spokenSegments.push(seg.text);
+          evidence('scenario-segment', { scenario: scenario.id, turn: index, index: i, startAt, endAt: Date.now(), ms, devs: seg.devs.length });
+          if (k < segs.length - 1) await new Promise<void>((resolve) => setTimeout(resolve, 650));
+        }
+        evidence('scenario-turn-end', { scenario: scenario.id, turn: index, from: first, to: last });
+      })();
+      return { segments: segs.length, from: first, to: last };
+    }
+
+    /** INTEL-LIVE-01 CP2: withholds (on=1) the attention frames of the connections open now, or stops withholding (on=0). */
+    @Post('attention-hold')
+    attentionHold(@Query('on') on: string) {
+      if (on !== '1' && on !== '0') throw new HttpException('on 1|0', 400);
+      if (on === '0') heldEpochs.clear();
+      else for (const epoch of openEpochs) heldEpochs.add(epoch);
+      evidence('attention-hold', { on: on === '1', epochs: [...heldEpochs] });
+      return { epochs: [...heldEpochs] };
+    }
+
+    /** INTEL-LIVE-01 CP2: cuts every live-call socket now (a network loss); the phone resumes on a new connection. */
+    @Post('drop')
+    drop() {
+      const n = callSockets.size;
+      for (const socket of [...callSockets]) socket.destroy();
+      evidence('proof-drop', { sockets: n });
+      return { sockets: n };
+    }
+
+    /** INTEL-LIVE-01 CP2: whether the proof app's attention probe runs, and in which language its mirror compiles. */
+    @Get('probe')
+    probe() {
+      return { on: process.env.PROOF_PROBE === 'ON', language: process.env.PROOF_PROBE_LANG === 'en' ? 'en' : 'ar' };
+    }
+
+    /** INTEL-LIVE-01 CP2: this server's clock, for the probe's offset. */
+    @Get('clock')
+    clock() {
+      return { at: Date.now() };
+    }
+
+    /** INTEL-LIVE-01 CP2: the probe's rows (instants, the layer's seq and size, the stage digest; nothing else is kept). */
+    @Post('probe/report')
+    @HttpCode(204)
+    probeReport(@Body() body: { rows?: unknown }) {
+      if (process.env.PROOF_PROBE !== 'ON' || !Array.isArray(body?.rows)) throw new HttpException('probe off', 409);
+      for (const r of body.rows as Array<Record<string, unknown>>) {
+        const ok = (r.kind === 'applied' || r.kind === 'digest' || r.kind === 'tick') && Number.isFinite(r.at) && Number.isInteger(r.seq) && Number.isInteger(r.marks)
+          && (r.digest === null || (typeof r.digest === 'string' && /^[0-9a-z]{1,64}$/u.test(r.digest))) && typeof r.stage === 'string' && /^[A-Z_]{1,32}$/u.test(r.stage);
+        if (ok) evidence('probe', { row: r.kind, phoneAt: r.at, seq: r.seq, marks: r.marks, digest: r.digest, stage: r.stage });
+      }
+    }
+
+    /** INTEL-LIVE-01 CP1: queues ONE call command for the proof root (see callCommand); refused while one is unanswered. */
+    @Post('call')
+    queueCallCommand(@Query('do') op: string) {
+      if (op !== 'start' && op !== 'end') throw new HttpException('do start|end', 400);
+      if (callCommand !== null && !callCommand.acked) throw new HttpException('a call command is still unanswered', 409);
+      callCommandSeq += 1;
+      callCommand = { id: callCommandSeq, op, taken: false, acked: false };
+      evidence('call-command', { step: 'queued', id: callCommand.id, op });
+      for (const wake of [...callCommandWaiters]) wake();
+      return { id: callCommand.id, op };
+    }
+
+    /**
+     * INTEL-LIVE-01 CP1: the proof root takes the queued command, once; held until one is queued or 20 s pass. A request
+     * whose connection closed while held takes nothing (a local check: a follower that went away took a command it never ran).
+     */
+    @Get('call/next')
+    async nextCallCommand(@Req() req: { socket?: { destroyed?: boolean } }) {
+      if (callCommand === null || callCommand.taken) {
+        await new Promise<void>((resolve) => {
+          const wake = () => { clearTimeout(timer); callCommandWaiters.delete(wake); resolve(); };
+          const timer = setTimeout(wake, 20_000);
+          callCommandWaiters.add(wake);
+        });
+      }
+      if (callCommand === null || callCommand.taken || req.socket?.destroyed === true) return { id: null };
+      callCommand.taken = true;
+      evidence('call-command', { step: 'taken', id: callCommand.id, op: callCommand.op });
+      return { id: callCommand.id, op: callCommand.op };
+    }
+
+    /** INTEL-LIVE-01 CP1: what the app did with the command it took (the owner's stage just after), recorded once. */
+    @Post('call/ack')
+    ackCallCommand(@Query('id') id: string, @Query('outcome') outcome: string, @Query('stage') stage: string) {
+      if (callCommand === null || String(callCommand.id) !== id || !callCommand.taken || callCommand.acked) throw new HttpException('no such taken command', 409);
+      if (!/^[A-Z_]{1,32}$/u.test(outcome ?? '') || !/^[A-Z_]{1,32}$/u.test(stage ?? '')) throw new HttpException('outcome and stage', 400);
+      callCommand.acked = true;
+      evidence('call-command', { step: 'executed', id: callCommand.id, op: callCommand.op, outcome, stage });
+      return { id: callCommand.id };
+    }
+
+    /** INTEL-LIVE-01 CP1: what 0204 recorded of THIS proof's latest call, in counts only (never a label or a word). */
+    @Get('attention')
+    async attention() {
+      const call = (await sql('SELECT id FROM voice_private.calls WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1', [PROOF_USER]))[0] ?? null;
+      if (!call) return { call: null };
+      const evaluations = await sql(`SELECT track, outcome, count(*)::int AS n FROM voice_private.call_attention_evaluations
+          WHERE call_id = $1 GROUP BY track, outcome ORDER BY track, outcome`, [call.id]);
+      const events = await sql(`SELECT track, op, count(*)::int AS n FROM voice_private.call_attention_events
+          WHERE call_id = $1 GROUP BY track, op ORDER BY track, op`, [call.id]);
+      const settlements = await sql(`SELECT track, half_state, count(*)::int AS n FROM voice_private.call_attention_settlements
+          WHERE call_id = $1 GROUP BY track, half_state ORDER BY track, half_state`, [call.id]);
+      // INTEL-LIVE-01 CP2: the subjects open now, per track (a subject whose latest event is a SET), and the latest event_seq.
+      const open = await sql(`SELECT track, count(*)::int AS n FROM (SELECT DISTINCT ON (track, subject_key) track, op FROM voice_private.call_attention_events
+          WHERE call_id = $1 ORDER BY track, subject_key, event_seq DESC) latest WHERE op = 'SET' GROUP BY track ORDER BY track`, [call.id]);
+      const last = (await sql('SELECT coalesce(max(event_seq), 0)::int AS seq FROM voice_private.call_attention_events WHERE call_id = $1', [call.id]))[0];
+      return { call: call.id, evaluatorCalls: attentionEvaluator.inputs.length, evaluations, events, settlements, open, lastSeq: last?.seq ?? 0 };
+    }
   }
 
   @Module({
@@ -660,6 +1036,27 @@ async function main(): Promise<void> {
   class ProofModule {}
 
   const app: INestApplication = await NestFactory.create(ProofModule, { logger: ['error', 'warn'] });
+  // INTEL-LIVE-01 CP1: each HTTP request's method, path, status and time (never its query, headers or body), so a case
+  // that saw nothing happen tells whether the app asked this server at all (the iOS Targeted Gate's run 45612961224:
+  // ITG-02's tap reached the app, and the app's own log cannot name the paths it read).
+  app.use((req: { method: string; url: string }, res: { statusCode: number; on(event: 'finish', listener: () => void): void }, next: () => void) => {
+    const started = Date.now();
+    res.on('finish', () => evidence('http', { method: req.method, path: req.url.split('?')[0], status: res.statusCode, ms: Date.now() - started }));
+    next();
+  });
+  // INTEL-LIVE-01 CP2: the live-call sockets (for `/proof/drop`), and the live-call service's clock-mark outcomes.
+  (app.getHttpServer() as { on(event: 'upgrade', listener: (req: { url?: string }, socket: { destroy(): void; once(e: 'close', l: () => void): void }) => void): void })
+    .on('upgrade', (req, socket) => {
+      if (!(req.url ?? '').startsWith(LIVE_CALL_PATH)) return;
+      callSockets.add(socket);
+      socket.once('close', () => callSockets.delete(socket));
+    });
+  const liveCalls = app.get(LiveCallService);
+  const signalled = liveCalls.signal.bind(liveCalls);
+  liveCalls.signal = (operation: string, outcome: string) => {
+    if (operation.startsWith('clock_')) evidence('clock-signal', { operation, outcome });
+    signalled(operation, outcome);
+  };
   const port = Number(process.env.PORT ?? 8806);
   await app.listen(port, '127.0.0.1');
   evidence('listening', { port, ws: `ws://127.0.0.1:${port}${LIVE_CALL_PATH}`, user: PROOF_USER, session: PROOF_SESSION });

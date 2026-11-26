@@ -1638,3 +1638,30 @@ own text, never copy. F-01, TM-02 and C-12 are not reopened.
 
 `E:\QANDEEL_REPORTS\S8B-05\CP4\` (outside the repository): the boundary review, the CP4 proof log, the CP3 proof with M2,
 the verifier runs.
+
+---
+
+## 13. Dated controlled amendment — 2026-11-25 — INTEL-LIVE-01 D-2 (an amendment, not an edit: §0 – §12 stay as written)
+
+**Authority:** the Product Owner's "INTEL-LIVE-01 — Final PO Execution Authorization" (2026-11-25), approving D-2 of the
+INTEL-LIVE-01 CP0 contract (v1.0 §9, unchanged by v1.1, A1 and A2;
+[contract](QANDEEL_INTEL_LIVE_01_CP0_EXECUTION_CONTRACT_v1.0.md),
+[execution record](QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md)).
+
+**What is amended.** The S8B-05 contract v1.2 FINAL §5.1 row «بدء DeepSeek — فقط بعد Turn Commit»
+(mirrored in this record §10.1, row "§3 ASR on the call": partials never leave the engine, only FINAL words make the turn), now reads, for one consumer only:
+
+- **The reply's DeepSeek call is unchanged:** it still starts only after the turn commit.
+- **The provisional attention evaluator** (`apps/api/src/live-attention/`) may read **FINAL** text of the current turn **before**
+  the commit, and QANDEEL's own pieces once the phone confirmed they were heard. What it writes is provisional and private
+  (migration `0204`); it is never a Conversation Unit, Thread, Live Focus, Memory or semantic clock write, and it is settled by
+  identity against the durable commit.
+- **INTERIM (partials) still never reaches DeepSeek, Memory or any analysis** (the §5.1 clause «النصوص المؤقتة لا تذهب إلى DeepSeek ولا
+  الذاكرة أبدًا» is untouched; D-1b's INTERIM option is not chosen, and choosing it later would be a second, separate amendment).
+- **CA-05-01 §1.6 (call volume)** is extended by the lane's bounds, which are backpressure only (A1, A2 §1): one evaluation in flight
+  per call, the shared `PROVISIONAL_ATTENTION` permit with the L2 critical window respected and no wait, a 4 s evaluator timeout and
+  a 5 s backoff after two consecutive failures, and an emergency per-call spend guard that is **disabled by default**. No time, word
+  or keyword threshold decides whether understanding happens.
+
+**What is not amended.** The voice path, First Audio, the endpointer, the durable chain, Lane A of Replay and every S8B-05
+acceptance item. The lane is OFF unless `LIVE_CALL_PROVISIONAL_ATTENTION=ON`, and is never bound under `NODE_ENV=test`.

@@ -2,7 +2,7 @@ import { HttpException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
 import type { TransientAudioStore } from './transient-audio.store';
-import type { ReplayAvailabilityRow, TransientMapRow, TransientMediaRepository, TransientSetRow } from './transient-media.repository';
+import type { ReplayAttentionRow, ReplayAvailabilityRow, TransientMapRow, TransientMediaRepository, TransientSetRow } from './transient-media.repository';
 import { TransientPlaybackService } from './transient-playback.service';
 
 // S8B-07 CP1-B step 3 — the Replay Media Service's translation of the database's answers into the approved wire, against
@@ -43,6 +43,7 @@ function harness(over: Partial<Record<keyof TransientMediaRepository, jest.Mock>
     request: jest.fn().mockResolvedValue([setRow()]),
     map: jest.fn().mockResolvedValue(TWO_RUN_MAP),
     availability: jest.fn().mockResolvedValue([]),
+    attention: jest.fn().mockResolvedValue([]),
     read: jest.fn().mockResolvedValue(null),
     check: jest.fn().mockResolvedValue(null),
     release: jest.fn().mockResolvedValue(null),
@@ -248,5 +249,114 @@ describe('RB-2 / S3: the availability read (GET /replay/:replayId/versions/:vers
       .toEqual([503, { outcome: 'BUSY' }]);
     const noMap = harness({ availability: jest.fn().mockResolvedValue([row({})]), map: jest.fn().mockResolvedValue([]) });
     expect(await failureOf(noMap.service.availability(USER, REPLAY, VERSION))).toEqual([404, { outcome: 'NOT_FOUND', reason: null }]);
+  });
+});
+
+describe('INTEL-LIVE-01 CP3: the attention read (GET /replay/:replayId/versions/:versionId/attention)', () => {
+  const DIGEST = `sha256:${'b'.repeat(64)}`;
+  // One call run [1000, 24000): USER [1000, 3000), QANDEEL [3000, 6000), a 14 s HELD [6000, 20000) (presented 1500 ms),
+  // USER [20000, 24000).
+  const HELD_MAP: TransientMapRow[] = [
+    mapRow('RUN', { entry_ordinal: 1, run_ordinal: 1, clock_start_ms: 1000, clock_end_ms: 24000 }),
+    mapRow('ITEM', { entry_ordinal: 1, run_ordinal: 1, window_ordinal: 1, selected_ordinal: 1 }),
+    mapRow('ITEM', { entry_ordinal: 1, run_ordinal: 1, window_ordinal: 2, selected_ordinal: 2 }),
+    mapRow('ITEM', { entry_ordinal: 1, run_ordinal: 1, window_ordinal: 3, selected_ordinal: 3 }),
+    mapRow('WINDOW', { entry_ordinal: 1, run_ordinal: 1, window_ordinal: 1, track: 'USER', clock_start_ms: 1000, clock_end_ms: 3000 }),
+    mapRow('WINDOW', { entry_ordinal: 1, run_ordinal: 1, window_ordinal: 2, track: 'QANDEEL', clock_start_ms: 3000, clock_end_ms: 6000 }),
+    mapRow('WINDOW', { entry_ordinal: 1, run_ordinal: 1, window_ordinal: 3, track: 'USER', clock_start_ms: 20000, clock_end_ms: 24000 }),
+    mapRow('HELD', { entry_ordinal: 1, run_ordinal: 1, clock_start_ms: 6000, clock_end_ms: 20000, elapsed_ms: 14000 }),
+  ];
+  const version = (over: Partial<ReplayAttentionRow> = {}): ReplayAttentionRow => ({
+    entry: 'VERSION', replay_id: REPLAY, replay_version_id: VERSION, replay_version_revision: 3, source_window_binding_digest: DIGEST,
+    call_ordinal: null, event_seq: null, track: null, op: null, subject_key: null, label: null, kind: null, confidence: null,
+    thread_ref: null, anchor_run_ordinal: null, anchor_clock_ms: null, floor_basis: null, floor_placement: null, floor_run_ordinal: null,
+    floor_clock_ms: null, ...over,
+  });
+  const event = (over: Partial<ReplayAttentionRow>): ReplayAttentionRow => version({
+    entry: 'EVENT', call_ordinal: 1, event_seq: '1', track: 'USER', op: 'SET', subject_key: 'manager', label: 'L manager', kind: 'TOPIC',
+    confidence: 'HIGH', anchor_run_ordinal: 1, anchor_clock_ms: '1200', floor_basis: 'PRODUCED_POSITION', floor_placement: 'IN_RECORDING',
+    floor_run_ordinal: 1, floor_clock_ms: '1700', ...over,
+  });
+
+  it('places every event at its produced (or settled) position in the map, the anchor at or after its words, a hold at its elapsed offset', async () => {
+    const thread = randomUUID();
+    const h = harness({
+      map: jest.fn().mockResolvedValue(HELD_MAP),
+      attention: jest.fn().mockResolvedValue([
+        version(),
+        event({}),
+        event({ event_seq: '2', op: 'WITHDRAW', anchor_clock_ms: 2600, floor_clock_ms: 2950 }),
+        event({ event_seq: '3', subject_key: 'held', anchor_clock_ms: 2900, floor_clock_ms: 6800 }),
+        event({ event_seq: '4', subject_key: 'far', anchor_clock_ms: 2900, floor_clock_ms: 10000 }),
+        event({ event_seq: '5', track: 'QANDEEL', subject_key: 'reply', thread_ref: thread, anchor_clock_ms: 3500, floor_clock_ms: 4100 }),
+        event({ event_seq: '6', subject_key: 'late', anchor_clock_ms: 21000, floor_placement: 'AFTER_END', floor_run_ordinal: null, floor_clock_ms: null }),
+        event({ event_seq: '7', op: 'CONFIRMED', anchor_clock_ms: null, floor_basis: 'SETTLED_THROUGH', floor_clock_ms: 3600 }),
+        event({ call_ordinal: 2, event_seq: '1', subject_key: 'edge', anchor_clock_ms: 21000, floor_clock_ms: 24000 }),
+      ]),
+    });
+    const answer = await h.service.attention(USER, REPLAY, VERSION);
+    const inRun = (fileMs: number, basis = 'PRODUCED_POSITION') => ({ kind: 'IN_RECORDING', runIndex: 0, fileMs, basis });
+    const base = { call: 1, track: 'USER', subjectKey: 'manager', label: 'L manager', kind: 'TOPIC', confidence: 'HIGH', threadRef: null };
+    expect(answer).toEqual({
+      replayId: REPLAY, versionId: VERSION, revision: 3, sourceWindowBindingDigest: DIGEST,
+      mapDigest: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+      events: [
+        { ...base, seq: 1, op: 'SET', anchor: { runIndex: 0, fileMs: 200 }, floor: inRun(700) },
+        { ...base, seq: 2, op: 'WITHDRAW', anchor: { runIndex: 0, fileMs: 1600 }, floor: inRun(1950) },
+        // inside the shortened hold (presented from 5000): 800 ms after its start, and at most its 1500 ms
+        { ...base, seq: 3, op: 'SET', subjectKey: 'held', anchor: { runIndex: 0, fileMs: 1900 }, floor: inRun(5800) },
+        { ...base, seq: 4, op: 'SET', subjectKey: 'far', anchor: { runIndex: 0, fileMs: 1900 }, floor: inRun(6500) },
+        { ...base, seq: 5, op: 'SET', track: 'QANDEEL', subjectKey: 'reply', threadRef: thread, anchor: { runIndex: 0, fileMs: 2500 }, floor: inRun(3100) },
+        { ...base, seq: 6, op: 'SET', subjectKey: 'late', anchor: { runIndex: 0, fileMs: 7500 }, floor: { kind: 'AFTER_END', basis: 'PRODUCED_POSITION' } },
+        { ...base, seq: 7, op: 'CONFIRMED', anchor: null, floor: inRun(2600, 'SETTLED_THROUGH') },
+        // a floor at the run's end waits for the end
+        { ...base, call: 2, seq: 1, op: 'SET', subjectKey: 'edge', anchor: { runIndex: 0, fileMs: 7500 }, floor: { kind: 'AFTER_END', basis: 'PRODUCED_POSITION' } },
+      ],
+    });
+    expect(h.repository.attention).toHaveBeenCalledWith(USER, REPLAY, VERSION);
+    expect(JSON.stringify(answer)).not.toMatch(/recording_?id|clock|voice-|storage_?key|call_?id/iu);
+  });
+
+  it('no event: the binding alone, no map read; a V1 version carries no digest', async () => {
+    const h = harness({ attention: jest.fn().mockResolvedValue([version()]) });
+    expect(await h.service.attention(USER, REPLAY, VERSION)).toEqual({
+      replayId: REPLAY, versionId: VERSION, revision: 3, sourceWindowBindingDigest: DIGEST, mapDigest: null, events: [],
+    });
+    expect(h.repository.map).not.toHaveBeenCalled();
+    const v1 = harness({ attention: jest.fn().mockResolvedValue([version({ source_window_binding_digest: null })]) });
+    expect(await v1.service.attention(USER, REPLAY, VERSION)).toMatchObject({ sourceWindowBindingDigest: null, mapDigest: null, events: [] });
+  });
+
+  it('refuses whole, never repairs: not found, a foreign binding, a misplaced VERSION row, a malformed event, a run the map lacks', async () => {
+    const of = (rows: ReplayAttentionRow[], map: TransientMapRow[] = HELD_MAP) =>
+      failureOf(harness({ attention: jest.fn().mockResolvedValue(rows), map: jest.fn().mockResolvedValue(map) }).service.attention(USER, REPLAY, VERSION));
+    expect(await of([])).toEqual([404, { outcome: 'NOT_FOUND', reason: null }]);
+    expect(await failureOf(harness().service.attention(USER, REPLAY, 'not-a-uuid'))).toEqual([404, { outcome: 'NOT_FOUND', reason: null }]);
+    expect(await of([version(), event({})], [])).toEqual([404, { outcome: 'NOT_FOUND', reason: null }]);
+    const busyCases: ReplayAttentionRow[][] = [
+      [event({})],
+      [version(), version()],
+      [version({ replay_version_id: randomUUID() })],
+      [version(), event({ replay_version_revision: 4 })],
+      [version(), event({ source_window_binding_digest: null })],
+      [version(), event({ op: 'GUESS' })],
+      [version(), event({ track: 'NOTE' })],
+      [version(), event({ kind: 'MOOD' })],
+      [version(), event({ confidence: 'SURE' })],
+      [version(), event({ event_seq: null })],
+      [version(), event({ call_ordinal: 0 })],
+      [version(), event({ anchor_run_ordinal: 7 })],
+      [version(), event({ anchor_clock_ms: null })],
+      [version(), event({ anchor_clock_ms: 25000 })],
+      [version(), event({ floor_basis: 'SETTLED_THROUGH' })],
+      [version(), event({ op: 'EXPIRED', floor_basis: 'SETTLED_THROUGH' })],
+      [version(), event({ floor_placement: 'AFTER_END' })],
+      [version(), event({ floor_placement: 'SOMEWHERE' })],
+      [version(), event({ floor_run_ordinal: 7 })],
+      [version(), event({ floor_clock_ms: null })],
+    ];
+    for (const rows of busyCases) expect([rows.length, await of(rows)]).toEqual([rows.length, [503, { outcome: 'BUSY' }]]);
+    expect(await failureOf(harness({ attention: jest.fn().mockRejectedValue(pgError('57014', 'timeout')) }).service.attention(USER, REPLAY, VERSION)))
+      .toEqual([503, { outcome: 'BUSY' }]);
   });
 });

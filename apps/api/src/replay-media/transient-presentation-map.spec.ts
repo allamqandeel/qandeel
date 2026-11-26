@@ -151,3 +151,25 @@ describe('RB-2 / S3: a certified run clock position in the map, at or after it',
     expect(presentationMapDigest(map)).toBe('sha256:2f290a7fcf3091994f2b2993f67af95c34b50bca1c2e97f2620be642ff931ac7');
   });
 });
+
+describe('INTEL-LIVE-01 CP3: a Lane B floor at its hold\'s elapsed offset', () => {
+  it('fileMsAtHeldOffset: as fileMsAtOrAfter outside a shortened HELD; inside one, its presented start plus the elapsed time, at most its presented length', () => {
+    const run2 = runTimelinesOf(plan())!.get(2)!;
+    // outside the 16 s HELD [5000, 21000): identical to Lane A's at-or-after translation
+    for (const t of [0, 1000, 4000, 5000, 21000, 24000]) expect(run2.fileMsAtHeldOffset(t)).toBe(run2.fileMsAtOrAfter(t));
+    expect(run2.fileMsAtHeldOffset(25000)).toBeNull();
+    expect(run2.fileMsAtHeldOffset(Number.NaN)).toBeNull();
+    // inside it (presented 4000 → 5500): the hold's elapsed offset, never its start, never past its presented end
+    expect(run2.fileMsAtHeldOffset(5001)).toBe(4001);
+    expect(run2.fileMsAtHeldOffset(5800)).toBe(4800);
+    expect(run2.fileMsAtHeldOffset(6499)).toBe(5499);
+    expect(run2.fileMsAtHeldOffset(6500)).toBe(5500);
+    expect(run2.fileMsAtHeldOffset(20999)).toBe(5500);
+    // never earlier than the time elapsed since the hold began, and never later than Lane A's at-or-after answer
+    for (let t = 5001; t < 21000; t += 250) {
+      const at = run2.fileMsAtHeldOffset(t)!;
+      expect(at - 4000).toBe(Math.min(t - 5000, 1500));
+      expect(at).toBeLessThanOrEqual(run2.fileMsAtOrAfter(t)!);
+    }
+  });
+});

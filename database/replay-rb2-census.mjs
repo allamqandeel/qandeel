@@ -49,3 +49,23 @@ export async function clockMarksApplied(rows) {
   const [{ applied }] = await rows("SELECT to_regprocedure('public.server_call_clock_slot_v1(uuid,uuid[],bigint[],integer[],bigint[],bigint[],uuid[])') IS NOT NULL AS applied");
   return applied;
 }
+
+// INTEL-LIVE-01 CP1 (migration 0204): the call's provisional attention adds seven voice_private internals (the slack, the
+// lock, the accounting and settlement helpers), created there and named first in its function ACL block, executable by
+// no role; its public server_* functions are not voice_private. verify-migration-0204 proves their shape.
+export const MIGRATION_0204 = '0204_intel_live_01_call_attention_v1.sql';
+
+/** The voice_private functions 0204 adds, as regprocedure text. */
+export function voiceInternals0204() {
+  const text = readFileSync(new URL(MIGRATION_0204, MIGRATIONS), 'utf8');
+  const names = created(MIGRATION_0204);
+  const acl = text.indexOf('  FOREACH fn IN ARRAY ARRAY[');
+  return [...text.slice(acl, text.indexOf('] LOOP', acl)).matchAll(/'(voice_private\.([a-z_0-9]+)\([^']*\))'/gu)]
+    .filter((m) => names.includes(`voice_private.${m[2]}`)).map((m) => m[1]);
+}
+
+/** Whether migration 0204 is applied to the database `rows` reads. */
+export async function callAttentionApplied(rows) {
+  const [{ applied }] = await rows("SELECT to_regprocedure('public.server_settle_due_call_attention_v1(integer)') IS NOT NULL AS applied");
+  return applied;
+}

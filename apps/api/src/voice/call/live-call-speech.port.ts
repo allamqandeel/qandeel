@@ -1,3 +1,4 @@
+import type { LiveCallAttentionDelivery, LiveCallAttentionDisclosure } from '../call-turn/live-call-attention.port';
 import type { RefusalReason, ServerMessage } from './live-call.protocol';
 
 /**
@@ -41,6 +42,8 @@ export interface LiveCallTurnChannel {
   settleQandeelTrack(): Promise<number | null>;
   send(message: ServerMessage): void;
   sendReplyAudio(packet: ReplyAudioPacket): void;
+  /** INTEL-LIVE-01 CP2: the call's attention towards the phone, on a v3 connection only (else NOT_LISTENING). Never awaited. */
+  discloseAttention?(disclosure: LiveCallAttentionDisclosure): LiveCallAttentionDelivery;
 }
 
 /** A PLAYOUT the engine judged: APPLIED, IGNORED (older, duplicate or after the close: P1 / P3), or a VIOLATION. */

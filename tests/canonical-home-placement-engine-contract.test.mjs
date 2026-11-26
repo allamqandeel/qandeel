@@ -529,7 +529,16 @@ test('no Thread id allocation, no Home durable allocation, no lifecycle / LF, no
   assert.equal((readingGate.match(/conversation_threads/gu) ?? []).length, 1, `${READING_GATE_MIGRATION} names the Thread table exactly once: the 0198 ownership read`);
   assert.match(readingGate, /JOIN public\.conversation_threads t ON t\.id = \(e\.value ->> 'id'\)::uuid AND t\.user_id = caller/u,
     `${READING_GATE_MIGRATION} reads the caller's own Thread, as 0198 does`);
-  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION && candidate !== ERASURE_MIGRATION && candidate !== RETRY_MIGRATION && candidate !== THREAD_NAMES_MIGRATION && candidate !== CURRENT_WORLD_MIGRATION && candidate !== READING_GATE_MIGRATION)) {
+  // INTEL-LIVE-01 CP1 (the PO's "INTEL-LIVE-01 — Final PO Execution Authorization", 2026-11-25, D-4): migration 0204, the
+  // call's provisional attention, READS the person's own Threads by id (an attention event's optional reference, the
+  // Threads a committed turn bound, 0198's name read for the evaluator's list) and nothing else: it creates, alters, writes
+  // or deletes no Thread / Home row, names no Home and defines no placement. It is exempt on exactly those terms and pinned
+  // by its own contract (database/tests/live-call-attention-v1.test.mjs); outside them it carries no Home substrate.
+  const ATTENTION_MIGRATION = '0204_intel_live_01_call_attention_v1.sql';
+  const attention = read(`database/migrations/${ATTENTION_MIGRATION}`);
+  assert.doesNotMatch(attention, /(?:CREATE|ALTER|DROP)s+TABLEs+public.conversation_thread|(?:INSERTs+INTO|UPDATE|DELETEs+FROM)s+public.conversation_thread|conversation_thread_homes|thread_home|osdap|home_placement|home_anchor|canonical_spatial/iu,
+    `${ATTENTION_MIGRATION} creates, writes or restructures no Thread / Home table and computes no placement`);
+  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION && candidate !== ERASURE_MIGRATION && candidate !== RETRY_MIGRATION && candidate !== THREAD_NAMES_MIGRATION && candidate !== CURRENT_WORLD_MIGRATION && candidate !== READING_GATE_MIGRATION && candidate !== ATTENTION_MIGRATION)) {
     const text = name === VOICE_MIGRATION ? withoutVoiceRecreations(read(`database/migrations/${name}`))
       : name === MIGRATION_0191 ? withoutLiveCallRecreations(read(`database/migrations/${name}`)) : read(`database/migrations/${name}`);
     assert.doesNotMatch(text, /home_anchor|canonical_spatial|osdap|thread_home|home_placement|conversation_threads/iu, `${name} carries no Home substrate`);

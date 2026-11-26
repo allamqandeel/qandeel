@@ -17,6 +17,7 @@ import { LIVE_CALL_FAILURE_LINE, failureLineFor, type CallFailureLine } from './
 import { CALL_TURN_STORE, type CallTurnStore, type CommitResult, type DeliveryState, type TextReplyState } from './call-turn.store';
 import { LiveCallAnalysisSignal } from './live-call-analysis.signal';
 import { LiveCallConversationBinding, type LiveCallReplyOutcome } from './live-call-conversation.port';
+import { LiveCallAttentionBinding, type LiveCallAttention, type LiveCallAttentionSession } from './live-call-attention.port';
 
 /**
  * S8B-05 CP2 (§3) — the call's realtime recognizer, bound by VoiceModule when the Speechmatics server key is set, INDEPENDENT of
@@ -78,7 +79,10 @@ const ceil20 = (ms: number) => Math.ceil(ms / AUDIO_PACKET_MS) * AUDIO_PACKET_MS
  *     one ledger row per session is settled with the gateway-measured audio (AI-COST-01);
  *   - the endpointer (D-A1) asks ForceEndOfUtterance after 500 ms of silence and allows the commit after 800 ms, once the
  *     final is accepted (its last FINAL, or the 1000 ms timeout). Speech that resumes before the commit is the SAME turn;
- *   - partials never leave the recognizer: only FINAL words make a turn, and nothing reaches DeepSeek before the commit;
+ *   - partials never leave the recognizer: only FINAL words make a turn. INTEL-LIVE-01 (D-2, the controlled amendment of
+ *     §5.1): each FINAL segment, and each piece of QANDEEL's speech once heard, is also evidence for the call's provisional
+ *     attention (`live-call-attention.port.ts`), handed synchronously and never awaited on the way to QANDEEL's voice; the
+ *     turn's reply still reaches DeepSeek only after the commit;
  *   - the commit (0190) writes the USER turn with its anchor inside the USER track (written first), and closes the open
  *     exchange in the same transaction (N1); the phone gets TURN_COMMITTED, and REPLY_END for the exchange it closed;
  *   - the conversation generates the reply (the orchestrator's REALTIME path, bound through LiveCallConversationBinding);
@@ -109,6 +113,8 @@ export class LiveCallTurnEngine implements LiveCallSpeechSink {
     @Optional() private readonly analysis?: LiveCallAnalysisSignal,
     // S8B-05 CP4: F-01's reply packets, null while its files are NOT_INSTALLED (D-05-02).
     @Optional() @Inject(LIVE_CALL_FAILURE_LINE) private readonly failureLine?: CallFailureLine | null,
+    // INTEL-LIVE-01 CP1: the provisional attention lane, registered by its owner at start; unbound, nothing is handed.
+    @Optional() private readonly attention?: LiveCallAttentionBinding,
   ) {}
 
   /** A proof's or a test's observer of instants and counts (no words); one at a time. */
@@ -129,6 +135,7 @@ export class LiveCallTurnEngine implements LiveCallSpeechSink {
         this.kickAnalysis(channel.sessionId, o);
       },
       failureLine: this.failureLine ?? null,
+      attention: this.attention?.attention ?? null,
     });
   }
 
@@ -160,6 +167,7 @@ interface SessionDeps {
   readonly signal: (op: string, outcome: string) => void;
   readonly observe: (observation: CallTurnObservation) => void;
   readonly failureLine: CallFailureLine | null;
+  readonly attention: LiveCallAttention | null;
 }
 
 /** S8B-05 CP4: a turn waiting for its commit, in the call's order: a finished utterance, or a message typed during the call. */
@@ -214,8 +222,23 @@ class CallTurnSession implements LiveCallSpeechStream {
   private inherited: Promise<boolean> | null = null;
   private draining = false;
   private closed = false;
+  /** INTEL-LIVE-01 CP1: this connection's provisional attention (null when the lane is OFF). */
+  private readonly attention: LiveCallAttentionSession | null;
+  /**
+   * INTEL-LIVE-01 CP1: FINAL segments that ended while QANDEEL was playing, held until it is known whether they were the
+   * reply's residual echo (§5.2 step 5: a barge-in excludes what ended before its onset): released by the same rule as the
+   * turn's words once the reply stopped playing, so echo is never evidence of what the person said.
+   */
+  private heldEvidence: Array<{ readonly text: string; readonly startMs: number; readonly endMs: number }> = [];
 
   constructor(private readonly channel: LiveCallTurnChannel, private readonly deps: SessionDeps) {
+    let attention: LiveCallAttentionSession | null = null;
+    try {
+      attention = deps.attention?.open(channel) ?? null;
+    } catch {
+      deps.signal('attention', 'integrity_failure');
+    }
+    this.attention = attention;
     void this.openRecognition();
   }
 
@@ -302,10 +325,50 @@ class CallTurnSession implements LiveCallSpeechStream {
   private async readEvents(session: FinalizableRecognitionSession): Promise<void> {
     try {
       // Only FINAL words are kept; an INTERIM never leaves this loop (never DeepSeek, Memory or analysis).
-      for await (const event of session.events) if (event.kind === 'FINAL' && event.speech.text.trim() !== '') this.finals.push(event.speech);
+      for await (const event of session.events) {
+        if (event.kind !== 'FINAL' || event.speech.text.trim() === '') continue;
+        this.finals.push(event.speech);
+        this.attend(event.speech);
+      }
     } catch {
       this.failRecognition();
     }
+  }
+
+  /** INTEL-LIVE-01 CP1: one FINAL segment as evidence, on the call clock (held while a reply plays: see heldEvidence). */
+  private attend(speech: RecognizedSpeech): void {
+    if (!this.attention) return;
+    const startMs = this.captureOf(speech.startMs);
+    const endMs = this.captureOf(speech.endMs);
+    const playing = this.playingFromMs();
+    if (playing !== null && endMs > playing) {
+      this.heldEvidence.push({ text: speech.text, startMs, endMs });
+      return;
+    }
+    if (!this.isEcho(endMs)) this.attention.evidence('USER', speech.text, startMs, endMs);
+  }
+
+  /** The turn's own echo rule (takeUtterance): a segment ending in a barged reply's (start, onset] was the reply's echo. */
+  private isEcho(endMs: number): boolean {
+    for (const reply of this.replies.values()) {
+      const w = reply instanceof CallReply ? reply.bargedPlayback : null;
+      if (w && endMs > w.startMs && endMs <= w.onsetMs) return true;
+    }
+    return false;
+  }
+
+  /** Where a reply still playing (not closed, not stopped) began on the call clock; null when none is. */
+  private playingFromMs(): number | null {
+    for (const reply of this.replies.values()) if (reply instanceof CallReply && reply.playingFromMs !== null) return reply.playingFromMs;
+    return null;
+  }
+
+  /** Releases the held segments once no reply plays, by the turn's own echo rule (takeUtterance). */
+  private releaseHeldEvidence(): void {
+    if (!this.attention || this.heldEvidence.length === 0 || this.playingFromMs() !== null) return;
+    const held = this.heldEvidence;
+    this.heldEvidence = [];
+    for (const h of held) if (!this.isEcho(h.endMs)) this.attention.evidence('USER', h.text, h.startMs, h.endMs);
   }
 
   private failRecognition(): void {
@@ -346,6 +409,7 @@ class CallTurnSession implements LiveCallSpeechStream {
     const words = this.finals;
     this.finals = [];
     this.endpointer.reset();
+    this.releaseHeldEvidence();
     const windows = [...this.replies.values()].flatMap((r) => (r instanceof CallReply && r.bargedPlayback ? [r.bargedPlayback] : []));
     const kept = windows.length === 0 ? words : words.filter((word) => {
       const endMs = this.captureOf(word.endMs);
@@ -514,6 +578,7 @@ class CallTurnSession implements LiveCallSpeechStream {
     }
     if (result.closed) this.replies.get(result.closed.callTurnIndex)?.closedBy(result.closed.deliveryState);
     this.deps.observe({ kind: 'COMMITTED', callTurnIndex: result.callTurnIndex, at: Date.now(), closed: result.closed?.deliveryState ?? null });
+    this.attention?.turnCommitted();
     this.deps.signal('commit', 'success');
     this.channel.send({ type: 'TURN_COMMITTED', callTurnIndex: result.callTurnIndex, role: 'USER', turnId: result.turnId, clientTurnId });
     return true;
@@ -533,7 +598,13 @@ class CallTurnSession implements LiveCallSpeechStream {
     const conversation = this.deps.conversation();
     const channel = this.channel;
     const reply = new CallReply({
-      store: this.deps.store, route: this.deps.route, channel, signal: this.deps.signal, observe: this.deps.observe, now: Date.now,
+      store: this.deps.store, route: this.deps.route, channel, signal: this.deps.signal, now: Date.now,
+      observe: (event) => {
+        this.deps.observe(event);
+        if (event.kind === 'REPLY_END') this.releaseHeldEvidence();
+      },
+      // INTEL-LIVE-01 CP1: a whole piece of QANDEEL's speech, once the phone confirmed it heard it, is evidence.
+      heard: (text, clockStartMs, clockEndMs) => this.attention?.evidence('QANDEEL', text, clockStartMs, clockEndMs),
       // S3: the generation failed or stopped before storing the turn's Safety: the conversation recomputes and stores it.
       ensureSafety: () => {
         const bound = this.deps.conversation();
@@ -627,6 +698,7 @@ class CallTurnSession implements LiveCallSpeechStream {
   async bargeIn(input: { readonly callTurnIndex: number; readonly captureMs: number }): Promise<'APPLIED' | 'IGNORED'> {
     const reply = this.replies.get(input.callTurnIndex);
     if (reply instanceof CallReply && !reply.closed) reply.interrupt(input.captureMs);
+    this.releaseHeldEvidence();
     const channel = this.channel;
     const result = await this.deps.store.recordBargeIn({
       userId: channel.userId, callId: channel.callId, epoch: channel.epoch, callTurnIndex: input.callTurnIndex, captureMs: input.captureMs,
@@ -651,6 +723,7 @@ class CallTurnSession implements LiveCallSpeechStream {
     if (known) return known;
     if (this.closed || this.draining) return Promise.resolve({ kind: 'REFUSED', reason: 'UNAVAILABLE' });
     if (this.reply instanceof CallReply && !this.reply.closed) this.reply.interrupt(null);
+    this.releaseHeldEvidence();
     const verdict = new Promise<TextTurnVerdict>((resolve) => {
       this.backlog.push({ kind: 'TEXT', clientTurnId: input.clientTurnId, text: input.text, done: resolve });
     });
@@ -681,6 +754,10 @@ class CallTurnSession implements LiveCallSpeechStream {
       }
       await this.flush();
       if (this.reply && !this.reply.closed) await this.reply.settleSafety();
+      // INTEL-LIVE-01 CP1 (A1 §3 rule 4): what this connection's attention did not cover is recorded MISSED_HANDOVER under
+      // its own epoch, inside the same bounded flush.
+      this.releaseHeldEvidence();
+      await this.attention?.handover();
     }).then(() => 'DRAINED' as const);
     const outcome = await Promise.race([drained, bound]);
     clearTimeout(timer);
@@ -702,6 +779,7 @@ class CallTurnSession implements LiveCallSpeechStream {
     this.backlog = [];
     // QANDEEL's voice stops with the connection; a text reply is the conversation's and goes on to its close.
     for (const reply of this.replies.values()) if (reply instanceof CallReply) reply.interrupt(null);
+    this.attention?.close();
     void this.endRecognition();
   }
 

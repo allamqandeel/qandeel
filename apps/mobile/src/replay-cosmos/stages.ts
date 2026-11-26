@@ -6,9 +6,14 @@
  * `personalScene` → `personalDrawList`, the ONE stage both the app and the video draw. Nothing here places, names,
  * relates or discloses anything itself: a Thread is labelled only with a name the Replay disclosed for it, and no focus
  * ring is drawn (a Replay records no inspection; the live map's rings are the live reader's).
+ *
+ * INTEL-LIVE-01 CP3 (Lane B): a stage keeps the rung inputs it was compiled from, so the Replay can draw the calls'
+ * attention over it (`replayAttentionStage`) through the same production chain — the live owner's own fold: the marks on
+ * every rung the stage holds, a glow of a body the person already has, else an ember. The Lane A stage itself is
+ * unchanged.
  */
 import { PERSONAL_DEPTHS, personalDrawList, personalScene } from '../cosmos/core/adapters';
-import type { Stage, StageHit } from '../cosmos/core/stage';
+import type { AttentionMark, SceneInput, Stage, StageHit } from '../cosmos/core/stage';
 import type { MapScene } from '../map';
 
 /** The production owners' scene origin (owner-core ORIGIN). */
@@ -20,6 +25,8 @@ export interface ReplayMomentStage {
   readonly held: readonly boolean[];
   /** Each drawn Reading appearance (its production mark id) → the Thread mark it is bound to, from the disclosed scenes. */
   readonly hosts: ReadonlyMap<string, string>;
+  /** INTEL-LIVE-01 CP3: the production scene of each rung (null: unheld), the inputs `list` was compiled from. */
+  readonly rungs: readonly (SceneInput | null)[];
 }
 
 /**
@@ -33,12 +40,27 @@ export function replayMomentStage(ordinal: number, scenes: readonly (MapScene | 
   const { list, held } = personalDrawList(byRung);
   const hosts = new Map<string, string>();
   for (const input of byRung) for (const e of input?.entities ?? []) if (e.kind === 'READING' && e.hostId !== undefined) hosts.set(e.id, e.hostId);
-  return { ordinal, list, held, hosts };
+  return { ordinal, list, held, hosts, rungs: byRung };
 }
 
 /** A stage with nothing disclosed: before the first disclosure of a scope that opens on nothing. */
 export function emptyReplayStage(): ReplayMomentStage {
-  return { ordinal: 0, ...personalDrawList(PERSONAL_DEPTHS.map(() => null)), hosts: new Map() };
+  return { ordinal: 0, ...personalDrawList(PERSONAL_DEPTHS.map(() => null)), hosts: new Map(), rungs: PERSONAL_DEPTHS.map(() => null) };
+}
+
+/**
+ * INTEL-LIVE-01 CP3: `stage` with the calls' attention `marks` drawn over it (oldest first; the production stage draws
+ * the newest it can per rung), exactly as the live owner folds its layer: each held rung's scene gains the marks. Before
+ * the first disclosure the stage holds no rung; the marks are then drawn on an empty field at every depth (the live map
+ * always holds the person's field during a call; the Replay's, before its first disclosure, has nothing in it) — embers
+ * only, nothing of Lane A invented. The camera plan and Lane A's stage are untouched.
+ */
+export function replayAttentionStage(stage: ReplayMomentStage, marks: readonly AttentionMark[], rtl: boolean): ReplayMomentStage {
+  const bare = stage.rungs.every((input) => input === null);
+  const field = (): SceneInput => ({ world: 'PERSONAL', rungs: PERSONAL_DEPTHS.length, entities: [], focusId: null, fringe: 0, rtl });
+  const byRung = stage.rungs.map((input) => (input === null ? (bare ? field() : null) : input)).map((input) => (input === null ? null : { ...input, attention: marks }));
+  const { list, held } = personalDrawList(byRung);
+  return { ordinal: stage.ordinal, list, held, hosts: stage.hosts, rungs: stage.rungs };
 }
 
 /** A mark's position at one rung, from the production stage's own hit targets (never recomputed here). */

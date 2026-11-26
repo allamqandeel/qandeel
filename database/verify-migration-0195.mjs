@@ -407,7 +407,11 @@ async function verifyCatalogue(report) {
     const at0195 = files.indexOf(M0195);
     assert.equal(files[at0195 + 1], '0196_s8b_07_transient_media_v1.sql', '0195 is followed only by 0196');
     assert.deepEqual(files.slice(at0195 + 2), ['0197_cosmos_e2_conversation_catalog_v1.sql', '0198_cosmos_e2_thread_names_v1.sql', '0199_cosmos_e2_current_personal_world_v1.sql', '0200_cosmos_e2_reading_reliance_gate_v1.sql', '0201_s8b_07_semantic_commit_instants_v1.sql', '0202_s8b_07_replay_historical_availability_v1.sql',
-      '0203_s8b_07_live_call_clock_marks_v1.sql'], 'after 0196 exactly the four COSMOS E-2 migrations, then 0201, then 0202, then 0203');
+      '0203_s8b_07_live_call_clock_marks_v1.sql',
+      // RE-ANCHORED by INTEL-LIVE-01 CP1 (2026-11-25, a declared re-anchor): exactly 0204, the call's provisional attention, follows 0203.
+      '0204_intel_live_01_call_attention_v1.sql',
+      // RE-ANCHORED by INTEL-LIVE-01 CP3 (2026-11-26, D-CP3, a declared re-anchor): exactly 0205, the Replay attention read, follows 0204.
+      '0205_intel_live_01_replay_attention_read_v1.sql'], 'after 0196 exactly the four COSMOS E-2 migrations, then 0201, then 0202, then 0203, then 0204, then 0205');
     const sql = readFileSync(new URL(`./migrations/${M0195}`, import.meta.url), 'utf8').replace(/\r\n/gu, '\n');
     const code = sql.replace(/^\s*--.*$/gmu, '').replace(/\$\$[\s\S]*?\$\$/gu, '$$$$');
     assert.equal((code.match(/^BEGIN;$/gmu) ?? []).length, 1);

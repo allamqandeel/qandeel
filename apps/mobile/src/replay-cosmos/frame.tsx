@@ -12,6 +12,11 @@
  * come from the Replay plan instead of a gesture. The one addition is the label drawing: Skia paragraphs (so the video
  * carries the same labels the app shows), with the live label's size, colour, weight, opacity, shadow and direction.
  * The typeface is a PO decision (`LabelTypography`); the default keeps the live weights (700 major / 500 ordinary).
+ *
+ * INTEL-LIVE-01 CP3 (Lane B): a scene MAY carry the calls' attention (`attention`). Then the stage drawn at t is the
+ * same Lane A stage with the attention state at t (`attentionAt`) folded over it — the scene's own prepared variant —
+ * and the facts name that state. Without it (every Replay whose calls attended to nothing, or whose answer is not bound)
+ * the frame and its facts are exactly Lane A's.
  */
 import { Fill, Group, Paragraph, Skia, TextAlign, TextDirection, type SkImage, type SkPaint, type SkParagraph, type SkTypefaceFontProvider } from '@shopify/react-native-skia';
 import type { ReactElement } from 'react';
@@ -22,7 +27,9 @@ import { Lens, PlateFill, RungDraws, VOID } from '../cosmos/skia/parts';
 import { placeLabels, type PlacedLabel } from '../cosmos/skia/CosmosCanvas';
 import type { PreparedStage } from '../cosmos/skia/prepare';
 import { depthOfLs, layerAlphaAt, plateMotions, plateOffsetOf, unheldMaskOf } from '../cosmos/skia/worklets';
+import type { ReplayAttentionPayload, ReplayAttentionTimeline } from './attention-lane';
 import { cameraAt, type ReplayCameraPlan } from './camera-plan';
+import { attentionAt, type ReplayAttentionState } from './event-track';
 import type { ReplayMomentStage } from './stages';
 import { knowledgeAt, type ReplayCosmosTimeline } from './timeline';
 
@@ -48,6 +55,13 @@ export const ESTEDAD_FAMILY_MEDIUM = 'QandeelEstedad-Medium';
 export interface ReplayFrameImages { readonly deep: SkImage; readonly gas: SkImage; readonly veil: SkImage; readonly atlas: SkImage }
 export interface ReplayFrameStage { readonly stage: ReplayMomentStage; readonly prepared: PreparedStage }
 
+/** INTEL-LIVE-01 CP3: Lane B of a scene — its timeline, and the prepared variant of a Lane A stage with a state's marks. */
+export interface ReplayFrameAttention {
+  readonly timeline: ReplayAttentionTimeline;
+  /** `base` with `state`'s marks drawn over it; never called for an empty state (the base is drawn as it is). */
+  stageOf(base: ReplayFrameStage, state: ReplayAttentionState<ReplayAttentionPayload>): ReplayFrameStage;
+}
+
 export interface ReplayCosmosScene {
   readonly timeline: ReplayCosmosTimeline;
   readonly plan: ReplayCameraPlan;
@@ -59,6 +73,8 @@ export interface ReplayCosmosScene {
   readonly typography: LabelTypography;
   /** Required for ESTEDAD_REGULAR_MEDIUM; ignored otherwise. */
   readonly fonts: SkTypefaceFontProvider | null;
+  /** INTEL-LIVE-01 CP3: Lane B (absent: none — the frame is exactly Lane A's). */
+  readonly attention?: ReplayFrameAttention;
 }
 
 export interface ReplayFrameFacts {
@@ -69,6 +85,8 @@ export interface ReplayFrameFacts {
   readonly knowledge: number | null;
   readonly previous: number | null;
   readonly mix: number;
+  /** INTEL-LIVE-01 CP3: the Lane B subjects drawn at t, oldest first (only when the scene carries Lane B). */
+  readonly attention?: readonly string[];
 }
 
 /** What frame t shows, as facts (for tests and the proof's sidecar). */
@@ -83,7 +101,8 @@ export function replayFrameFacts(scene: ReplayCosmosScene, t: number): ReplayFra
     previous = step.ordinal;
   }
   const mix = at === -Infinity ? 1 : Math.min(1, REVEAL_FLOOR + (1 - REVEAL_FLOOR) * ((t - at) / REVEAL_MS));
-  return { t, camera, anchor, segment: segment?.id ?? null, knowledge, previous: mix < 1 ? previous : null, mix };
+  const facts = { t, camera, anchor, segment: segment?.id ?? null, knowledge, previous: mix < 1 ? previous : null, mix };
+  return scene.attention === undefined ? facts : { ...facts, attention: [...attentionAt(scene.attention.timeline, t).keys()] };
 }
 
 // ── labels ────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -186,8 +205,14 @@ function rungsOf(key: string, frame: ReplayFrameStage, depth: number, alpha: num
 export function replayCosmosFrame(scene: ReplayCosmosScene, images: ReplayFrameImages | null, t: number, width: number, height: number, labels = true): ReactElement {
   const facts = replayFrameFacts(scene, t);
   const { camera, anchor } = facts;
-  const cur = facts.knowledge === null ? scene.empty : scene.stages.get(facts.knowledge) ?? scene.empty;
-  const prev = facts.previous === null ? (facts.mix < 1 ? scene.empty : null) : scene.stages.get(facts.previous) ?? scene.empty;
+  const base = facts.knowledge === null ? scene.empty : scene.stages.get(facts.knowledge) ?? scene.empty;
+  const before = facts.previous === null ? (facts.mix < 1 ? scene.empty : null) : scene.stages.get(facts.previous) ?? scene.empty;
+  // Lane B: the same stages with the attention at t over them (both, so a Lane A reveal never blinks the marks).
+  const lane = scene.attention;
+  const state = lane === undefined ? null : attentionAt(lane.timeline, t);
+  const marked = (stage: ReplayFrameStage): ReplayFrameStage => (lane === undefined || state === null || state.size === 0 ? stage : lane.stageOf(stage, state));
+  const cur = marked(base);
+  const prev = before === null ? null : marked(before);
   if (images === null) return <Fill color={VOID} />;
   const motions = plateMotions(RUNGS);
   const clock = t / 1000; // the atmosphere's drift clock, in seconds — presentation time, never the wall clock

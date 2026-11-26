@@ -26,6 +26,7 @@
 //      that World; the item's owner can never be the payer for another member's message.
 import assert from 'node:assert/strict';
 import { VOICE_COST_PROBE, VOICE_FAMILIES } from './voice-cost-families-0184.mjs';
+import { ATTENTION_COST_PROBE, ATTENTION_FAMILIES } from './live-attention-cost-family-0204.mjs';
 import { createHash, randomInt, randomUUID } from 'node:crypto';
 import process from 'node:process';
 import pg from 'pg';
@@ -352,7 +353,9 @@ async function verifyBoundary() {
     'PERSONAL_UNDERSTANDING_CAPTURE', 'SHARED_SEMANTIC_READING', 'SHARED_KNOWLEDGE_RECALL', 'SHARED_SPATIAL_PLACEMENT', 'SHARED_DISCLOSURE_JUDGE',
     'PUBLIC_SEMANTIC_INTERPRETATION', 'PUBLIC_QANDEEL_REPLY',
     // RE-ANCHORED by S8B-02 CP1 (migration 0184, 2026-10-30): 0184 adds exactly the four voice families (0184's own verifier pins the full list); nothing else in this list changes.
-    ...((await first(VOICE_COST_PROBE)).voice ? VOICE_FAMILIES : [])].sort());
+    ...((await first(VOICE_COST_PROBE)).voice ? VOICE_FAMILIES : []),
+    // RE-ANCHORED by INTEL-LIVE-01 CP1 (migration 0204, 2026-11-25): 0204 adds exactly LIVE_ATTENTION_EVALUATION (0204's own verifier proves it admitted); nothing else in this list changes.
+    ...((await first(ATTENTION_COST_PROBE)).attention ? ATTENTION_FAMILIES : [])].sort());
 }
 
 // ------------------------------------------------------------------------------------------------- 2–4. relevance and consent

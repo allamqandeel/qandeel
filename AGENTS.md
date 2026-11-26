@@ -71,6 +71,12 @@ Every code implementation checkpoint also carries iOS simulator validation (back
 Green Android, Jest or iOS-build results never substitute for it. A pure backend change records an iOS-facing
 contract-compatibility check and an impact assessment. A checkpoint whose required iOS validation is unexecuted or
 failing is not closed or merge-ready without explicit PO approval. Never weaken a test or bypass the gate to get green.
+Scope is proportional to impact (BG-10 clarification, PO 2026-11-25): a change-aware iOS Targeted Gate proves the
+changed functionality; the World Gate's scope (pull request or push to main) follows a conservative dependency analysis
+plus a functional classification of the change: the full gate when COSMOS rendering, camera, gestures, navigation or a
+shared dependency can be affected, or on any doubt; only the relevant COSMOS cases when the change is confined to a
+surface its own targeted gate proves; targeted validation is recorded separately, and an unexecuted suite is never
+reported as passed.
 
 ## 8. Git / PR discipline
 - Work on a dedicated branch.

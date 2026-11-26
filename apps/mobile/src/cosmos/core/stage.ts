@@ -12,6 +12,8 @@
 //  - Lines exist for exactly three facts: a Thread hosting a Reading, an explicit served relation of the focused
 //    Experience, and the instrument rings of the ONE focused entity. Nearness never draws a line.
 //  - Motes around a focused entity are counted from a served detail (sources, content items); absent until served.
+//  - AMENDED (INTEL-LIVE-01 CP2, D-5 = CP0 v1.1 §3.7): an attention mark is not an entity: it emits no body and no line, is
+//    drawn only in the warm role tint or as a glow of a real body, and vanishes when withdrawn, settled or at call end.
 
 export type WorldKind = 'PERSONAL' | 'SHARED' | 'PUBLIC';
 export type Dye = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -36,7 +38,24 @@ export interface SceneInput {
   /** A served count for the focused entity (its sources or content items); undefined until the authority serves it. */
   readonly focusMotes?: number;
   readonly rtl: boolean;
+  /**
+   * INTEL-LIVE-01 CP2: the running call's provisional attention (undefined: the stage is byte-identical to before). At most
+   * ATTENTION_MARKS_PER_RUNG are drawn per rung (the newest): a drawing bound, never a loss of what the call holds.
+   */
+  readonly attention?: readonly AttentionMark[];
 }
+
+/**
+ * A subject of the call's provisional attention. `entityId` names a real body (a Thread, or a Reading of it) when the
+ * subject is one the person already has; drawn on a rung where that body is, it is a glow of it, else an ember.
+ */
+export interface AttentionMark {
+  readonly subjectKey: string;
+  readonly label: string;
+  readonly entityId: string | null;
+  readonly confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+}
+export const ATTENTION_MARKS_PER_RUNG = 12;
 
 /** Prepared light assets a host bakes once. FIBRE_A–C are three fibrous nebula bodies, tinted and turned per use. */
 export const SPRITE = { PUFF: 0, HALO: 1, CORE: 2, SPARK: 3, MOTE: 4, FIBRE_A: 5, FIBRE_B: 6, FIBRE_C: 7 } as const;
@@ -187,7 +206,45 @@ function buildLayer(input: SceneInput, rung: number): StageLayer {
     hits.push({ id: e.id, x: e.x, y: e.y, r: 24 });
     if (e.label !== null) labels.push({ id: e.id, text: e.label, x: e.x, y: e.y + 16 * k, emphasis: false, major: false, tint: e.dye });
   }
+  if (input.attention !== undefined && input.attention.length > 0) attend(input, rung, k, put, labels);
   return { rung, sprites, lines: [...lineSets.values()].filter((l) => l.data.length > 0), labels, hits };
+}
+
+/** Where a body's light is drawn at a rung, and its halo's size (the glow is 1.6× it); null when the rung does not draw it. */
+function bodyOf(e: Entity, rung: number, k: number): { x: number; y: number; halo: number } | null {
+  if (e.fromRung > rung) return null;
+  if (e.kind === 'READING') {
+    const o = orbitOf(e.ordinal ?? 0, turnOf(e.hostId ?? e.id));
+    return { x: e.x + Math.cos(o.angle) * o.radius * k, y: e.y + Math.sin(o.angle) * o.radius * k, halo: e.solid === false ? 30 : 10.5 * 3.6 };
+  }
+  if (e.kind === 'THREAD') return { x: e.x, y: e.y, halo: (rung === 0 ? 13 : 15) * 3.6 };
+  return { x: e.x, y: e.y, halo: 70 };
+}
+
+/**
+ * INTEL-LIVE-01 CP2 (D-5): the attention marks of one rung, after everything else, in the same sprites and labels (no new
+ * draw pass, no hit, no line). A glow is one PUFF in the body's own dye; an ember one warm SPARK with an ordinary label,
+ * placed about the rung's centre by `orbitOf` — a position that is presentation only and carries no meaning.
+ */
+function attend(input: SceneInput, rung: number, k: number, put: (x: number, y: number, size: number, sprite: number, tint: number, alpha: number) => void, labels: StageLabel[]): void {
+  const drawn = input.entities.filter((e) => e.fromRung <= rung);
+  const cx = drawn.length === 0 ? 0 : drawn.reduce((sum, e) => sum + e.x, 0) / drawn.length;
+  const cy = drawn.length === 0 ? 0 : drawn.reduce((sum, e) => sum + e.y, 0) / drawn.length;
+  const byId = new Map(drawn.map((e) => [e.id, e] as const));
+  let embers = 0;
+  for (const mark of input.attention!.slice(-ATTENTION_MARKS_PER_RUNG)) {
+    const entity = mark.entityId === null ? undefined : byId.get(mark.entityId);
+    const body = entity === undefined ? null : bodyOf(entity, rung, k);
+    if (entity !== undefined && body !== null) {
+      put(body.x, body.y, body.halo * 1.6, SPRITE.PUFF, entity.dye, 0.28);
+      continue;
+    }
+    const o = orbitOf(embers, turnOf(mark.subjectKey));
+    embers += 1;
+    const x = cx + Math.cos(o.angle) * o.radius * k; const y = cy + Math.sin(o.angle) * o.radius * k;
+    put(x, y, 14, SPRITE.SPARK, TINT.WARM, 0.6);
+    labels.push({ id: `ATTENTION:${mark.subjectKey}`, text: mark.label, x, y: y + 10 * k, emphasis: false, major: false, tint: TINT.WARM });
+  }
 }
 
 function digestOf(layers: readonly StageLayer[]): string {

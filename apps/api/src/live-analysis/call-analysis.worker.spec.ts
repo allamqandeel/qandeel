@@ -206,4 +206,30 @@ describe('S8B-05 CP3: the durable ordered analysis worker', () => {
     await new Promise((resolve) => setImmediate(resolve));
     expect(store.claim).not.toHaveBeenCalled();
   });
+
+  it('INTEL-LIVE-01 CP1: a settled USER / ASSISTANT half is followed by its attention settlement; an EXCHANGE never; the scan sweeps', async () => {
+    const store = fakeStore([claimed('EXCHANGE', 0, 'p1', 'ap1'), claimed('USER', 1, 'u1'), claimed('ASSISTANT', 1, 'a1')]);
+    const attention = { settle: jest.fn(async () => ({})), settleDue: jest.fn(async () => 0) };
+    const { w } = worker(store, { attentionSettlement: attention });
+    (w as unknown as { stopped: boolean }).stopped = false;
+    await w.drain(SESSION);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(attention.settle.mock.calls).toEqual([[USER, CALL, 1, 'USER'], [USER, CALL, 1, 'ASSISTANT']]);
+    await w.scan();
+    expect(attention.settleDue).toHaveBeenCalledWith(20);
+  });
+
+  it('INTEL-LIVE-01 CP1: a failing attention settlement never fails the queue; without the lane nothing is settled', async () => {
+    const store = fakeStore([claimed('USER', 1, 'u1')]);
+    const attention = { settle: jest.fn(async () => { throw new Error('down'); }), settleDue: jest.fn(async () => { throw new Error('down'); }) };
+    const { w } = worker(store, { attentionSettlement: attention });
+    (w as unknown as { stopped: boolean }).stopped = false;
+    await w.drain(SESSION);
+    await w.scan();
+    expect(store.settled.map((x) => x.outcome)).toEqual(['RELEASE']);
+    const plain = fakeStore([claimed('USER', 1, 'u1')]);
+    const { w: w2 } = worker(plain);
+    (w2 as unknown as { stopped: boolean }).stopped = false;
+    await expect(w2.drain(SESSION)).resolves.toBeUndefined();
+  });
 });

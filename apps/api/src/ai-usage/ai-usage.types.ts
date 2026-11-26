@@ -43,6 +43,8 @@ export const AI_FEATURE_FAMILIES = [
   'PUBLIC_SEMANTIC_INTERPRETATION',
   // S8A-05 CP4 (migration 0182): the Public QANDEEL reply, paid by the human who invoked @qandeel.
   'PUBLIC_QANDEEL_REPLY',
+  // INTEL-LIVE-01 CP1 (migration 0204): the live call's in-speech attention evaluations, paid by the person speaking.
+  'LIVE_ATTENTION_EVALUATION',
 ] as const;
 export type AiFeatureFamily = typeof AI_FEATURE_FAMILIES[number];
 

@@ -18,6 +18,7 @@ import { SESSION_A, TEST_CONFIG, httpDouble } from '../../runtime-entry/__fixtur
 import { liveCallScreenCopy } from '../../voice-call/live-call-copy';
 import type { CallOwner, CallOwnerState } from '../call-owner';
 import { liveCallKey } from '../call-owner';
+import { EMPTY_ATTENTION_LAYER } from '../provisional-attention';
 import { CALL_RECORD_TEST_ID, useCallSurface } from '../CallViews';
 
 const CALL = 'f0000000-0000-4000-8000-000000000009';
@@ -43,6 +44,7 @@ function owner(initial: Partial<CallOwnerState> = {}): { owner: CallOwner; set: 
       },
       start: async () => undefined, end: () => undefined, toggleMute: () => undefined, toggleRoute: () => undefined,
       dismissNotice: () => undefined, carryText: () => null, retire: () => undefined,
+      getAttention: () => EMPTY_ATTENTION_LAYER, subscribeAttention: () => () => undefined,
     },
     set: (patch) => act(async () => {
       state = { ...state, ...patch };

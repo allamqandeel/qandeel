@@ -5363,3 +5363,87 @@ npm run test:live-call-clock-marks-contract
 The verifier needs `DATABASE_URL` pointing at a FULLY migrated database. It commits fixtures (the ledger exists only
 across real commits), models lost, delayed, reordered and duplicated echoes and a reconnect against a reference, measures
 WAL, and removes every fixture person through the account erasure. Its six planted defects each have a canonical control.
+
+## INTEL-LIVE-01 CP1 - Live call provisional attention (migration 0204)
+
+`0204_intel_live_01_call_attention_v1.sql` is INTEL-LIVE-01's producer of continuous in-speech understanding, under the
+Product Owner's "INTEL-LIVE-01 — Final PO Execution Authorization" (2026-11-25) on the CP0 contract stack v1.0 → v1.1 → A1 → A2
+(D-2, D-4 approved). Forward-only, one transaction; nothing earlier is dropped or redefined except 0191's permit grant (one
+kind added). Record: the [INTEL-LIVE-01 record](../docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md).
+
+- **Relations** (`voice_private`): `call_attention_evaluations` (the coverage ledger: one row per admission or recorded miss,
+  the evidence span it accounts for on the call clock, its outcome and measurements, no text), `call_attention_events`
+  (SET / WITHDRAW from an evaluation, CONFIRMED / EXPIRED from settlement: a subject key, a label of at most 40 characters, a
+  kind, a confidence and an optional reference to one of the person's own Threads; never a transcript, an INTERIM or audio)
+  and `call_attention_settlements` (one marker per settled half). Erasure coverage is registered for all three.
+- **The one writer** (`server_record_call_attention_evaluation_v1`) writes the coverage row, its events and the watermark's
+  advance in one transaction under the call's lock, fenced by the connection epoch (`FENCED`), idempotent
+  (`ALREADY_COVERED`), and refuses a late or overlapping result while recording it (`STALE_RESULT`,
+  `STALE_AFTER_SETTLEMENT`, `STALE_AFTER_END`). Only `DEVELOPMENTS` / `NONE` and the explicit misses `MISSED_HANDOVER` /
+  `DEGRADED_SUSPENDED` advance the watermark; `TIMEOUT` / `REFUSED` / `PROVIDER_FAILED` / `DEFERRED_PERMIT` leave the span
+  pending. Every producer event carries `anchor ≤ evidence ≤ produced` on the call clock.
+- **Readers.** `server_read_call_attention_state_v1` (per-track watermark and open subjects; a resumed or moved connection
+  starts from it) and `server_read_call_attention_threads_v1` (the person's named Threads of the session, by id).
+- **Settlement.** `server_settle_call_attention_v1` after a half's durable completion, `server_settle_due_call_attention_v1`
+  for a crash in between: every subject still open on that track up to the turn's end is CONFIRMED when its Thread reference
+  is one the durable half bound (identity by id, never by text), otherwise EXPIRED. Idempotent; no model.
+- **Widenings.** The background permit kind `PROVISIONAL_ATTENTION` (0191's shared permits) and the cost family
+  `LIVE_ATTENTION_EVALUATION` (0135 / 0184).
+- **Earlier verifiers re-anchored** (declared, migration-aware; no assertion removed, no migration changed). API CI on
+  `6400dc37` failed in `verify-migration-0171` C-1 (`20 !== 19`), the first of the earlier verifiers that pin what 0204
+  widens. Each one now adds exactly 0204's part once 0204 is applied, and holds it to its own rules:
+  - the cost family: 0171, 0174, 0175, 0176, 0181 and 0182, through `live-attention-cost-family-0204.mjs`, in the 0184
+    voice-family style;
+  - the seven new `voice_private` internals: 0183 S0b, 0185 C0 and 0186 C0b, through `replay-rb2-census.mjs`
+    (`voiceInternals0204()`, derived from the migration's ACL block, never copied);
+  - the migration order: 0194, 0195 and 0196, where exactly 0204 follows 0203.
+- **Not here.** Nothing provisional reaches CUs, Threads, Live Focus, Memory, the semantic clock or 0201's ledger; no Replay
+  read (CP3), no protocol message (CP2). **Deployment:** not deployed. **The next migration is 0205.**
+
+```sh
+npm run verify:live-call-attention:integration
+npm run test:live-call-attention-contract
+```
+
+The verifier needs `DATABASE_URL` pointing at a FULLY migrated database. It proves the writer's coverage, fencing,
+idempotency, staleness and atomicity, the readers, settlement by identity, the permit kind and erasure.
+
+## INTEL-LIVE-01 CP3 - Replay attention read (migration 0205)
+
+`0205_intel_live_01_replay_attention_read_v1.sql` is the Replay read of a live call's provisional attention (Lane B), under
+the Product Owner's "INTEL-LIVE-01 — CP2 ACCEPTANCE & PO EXCEPTION" (2026-11-26) and **D-CP3** (2026-11-26): one new read
+function, the Replay role only, strict ownership, consent, CURRENT version and deletion guards, **no new table**, and 0204
+and its accepted semantics unchanged. Record: the [INTEL-LIVE-01 record](../docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §10.
+
+- **The function** `public.server_read_replay_version_attention_v1(user, replay, version)` (`STABLE SECURITY DEFINER`,
+  `search_path = ''`, EXECUTE for `qandeel_replay_media` only) returns, for the creator's own CURRENT V2 version, one
+  `VERSION` row (the binding: ids, revision, source window binding digest) then one `EVENT` row per 0204 event of the
+  calls whose recordings the version presents, in (call, event_seq) order. A call is named by its rank among the
+  presented calls, never by its id. A V1 version returns the `VERSION` row alone.
+- **Placement, as 0202 places a moment, never certified.** An event's words (its anchor) must lie in a presented `WINDOW`
+  of its **own track** on its call's recording, else the event is not returned. Its floor is the server's own produced
+  position (`PRODUCED_POSITION`) or, for a settlement, the settled-through position (`SETTLED_THROUGH`), placed in the first
+  presented run of the same recording at or after the anchor's run whose clock ends after it, at `max(position, run
+  start)`; none: `AFTER_END` (the closing display, Replay §19). 0203 certifies ledger prefixes only, so no attention event
+  has a certified display instant; the reader labels every placement non-exact.
+- **Guards.** Ownership (the Replay's creator, the calls' and every event's user and session); CURRENT (the one availability
+  derivation and the plan's own re-derivation of the source windows); deletion (every presented call recording readable
+  now, else nothing); consent (calls admitted only under CURRENT recording consent; a withdrawal is never a deletion reason,
+  PRIV-W); coverage (only `DEVELOPMENTS` evaluations' events, C10; a settlement only when its SET is returned; nothing
+  reconstructed for `MISSED_*`, C8).
+- **Earlier verifiers re-anchored** (declared; no assertion removed): the migration order in 0194, 0195 and 0196 (exactly
+  0205 follows 0204), and `tests/s8b-05-live-call-contract.test.mjs` (the last 17 migrations). The S7-04 contract admits
+  0205 by its whole file name as the third Replay migration after 0169.
+- **Not here.** No write, no table, no certification, no change to 0201 – 0204. **Deployment:** not deployed. **The next
+  migration is 0206.**
+
+```sh
+npm run verify:replay-attention-read:integration
+```
+
+The verifier needs `DATABASE_URL` pointing at a FULLY migrated database. On 0202's two-call world it proves the exact rows
+(11), the per-track window rule, the hold, tail and run-end placements, settlements and AFTER_END, C10 coverage, the
+guards (a stranger, another Replay id or an unknown version read zero rows alike; a deleted recording and a due erasure
+read zero rows; a V1 version reads the VERSION row alone; another Session's call is never read; no client role executes
+it), that it writes nothing and sees no uncommitted row, and six planted defects caught (floor at the anchor, track rule removed, run end removed, non-`DEVELOPMENTS` admitted, foreign session,
+owner check removed); fixtures are removed by account erasure.

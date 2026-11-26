@@ -351,6 +351,8 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'DELETE /voice/transient/:artifactId': 'AUTHENTICATED',
   // RB-2 / S3 (PO 2026-11-24): the availability read, a bounded database read like the status poll; no new class.
   'GET /replay/:replayId/versions/:versionId/availability': 'AUTHENTICATED',
+  // INTEL-LIVE-01 CP3 (D-CP3, 2026-11-26): the attention read (Lane B), a bounded database read like the availability read.
+  'GET /replay/:replayId/versions/:versionId/attention': 'AUTHENTICATED',
 });
 
 const segments = (path: unknown): string[] =>

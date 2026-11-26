@@ -30,6 +30,9 @@ import {
   type ServerMessage,
 } from './live-call-protocol';
 import { encodeMarkEcho, LIVE_CALL_PROTOCOL_V2, LIVE_CALL_PROTOCOL_V2_VERSION, parseServerMessageV2 } from './live-call-protocol-v2';
+import {
+  LIVE_CALL_PROTOCOL_V3, LIVE_CALL_PROTOCOL_V3_VERSION, parseServerMessageV3, type AttentionMessage, type AttentionStateMessage,
+} from './live-call-protocol-v3';
 
 /** The subset of the React Native / WHATWG WebSocket the client uses (a fake implements it in tests). */
 export interface LiveCallSocket {
@@ -70,6 +73,9 @@ export type LiveCallClientEvent =
   | { readonly type: 'serverFault' }
   /** RB-2 / M-2 (v2 only): the server asks for the capture position of this instant. */
   | { readonly type: 'clockMark'; readonly seq: number }
+  /** INTEL-LIVE-01 CP2 (v3 only): one attention event the database committed, or one part of its state. */
+  | { readonly type: 'attention'; readonly message: AttentionMessage }
+  | { readonly type: 'attentionState'; readonly message: AttentionStateMessage }
   | { readonly type: 'ended'; readonly reason: LiveCallEnd };
 
 export interface LiveCallClientOptions {
@@ -90,6 +96,11 @@ export interface LiveCallClientOptions {
    * (Android) sets it; the server's selection decides, and a server that selects v1 gets exactly v1.
    */
   readonly offerClockMarks?: boolean;
+  /**
+   * INTEL-LIVE-01 CP2: offer protocol v3 (the call's provisional attention) first. Android then offers v3, v2, v1; iOS
+   * (no clock marks) v3, v1. The server's selection decides; a server that selects v2 or v1 gets exactly that.
+   */
+  readonly offerAttention?: boolean;
 }
 
 type LogItem =
@@ -146,6 +157,8 @@ export class LiveCallClient {
   private newestCaptureMs = -AUDIO_PACKET_MS;
   /** RB-2 / M-2: this connection runs v2 (the server selected it). */
   private v2 = false;
+  /** INTEL-LIVE-01 CP2: this connection runs v3 (the server selected it): v2's clock marks plus attention. */
+  private v3 = false;
   /** The call's state as the server last stated it. */
   callState: 'NONE' | 'CONNECTING' | 'ACTIVE' | 'ENDED' = 'NONE';
   readonly counters = { audioSent: 0, audioBuffered: 0, audioResent: 0, controlsResent: 0, replyFrames: 0, replyWrongEpoch: 0, replyMalformed: 0, reconnects: 0 };
@@ -253,7 +266,8 @@ export class LiveCallClient {
     let socket: LiveCallSocket;
     try {
       const offered = this.options.offerClockMarks === true ? [LIVE_CALL_PROTOCOL_V2, LIVE_CALL_PROTOCOL] : LIVE_CALL_PROTOCOL;
-      socket = this.factory(this.options.url, offered, { Authorization: `Bearer ${this.options.accessToken()}` });
+      const withAttention = this.options.offerAttention === true ? [LIVE_CALL_PROTOCOL_V3, ...(typeof offered === 'string' ? [offered] : offered)] : offered;
+      socket = this.factory(this.options.url, withAttention, { Authorization: `Bearer ${this.options.accessToken()}` });
     } catch {
       this.lost(0);
       return;
@@ -265,9 +279,11 @@ export class LiveCallClient {
       this.everConnected = true;
       this.resuming = resume;
       this.v2 = this.options.offerClockMarks === true && socket.protocol === LIVE_CALL_PROTOCOL_V2;
+      this.v3 = this.options.offerAttention === true && socket.protocol === LIVE_CALL_PROTOCOL_V3;
       this.options.onEvent({ type: 'connection', phase: 'OPEN', attempt: this.attempt });
       const hello = { type: 'HELLO' as const, v: 1 as const, callId: this.options.callId, sessionId: this.options.sessionId, clientInstanceId: this.options.clientInstanceId, resume };
-      if (this.v2) this.writeRaw(JSON.stringify({ ...hello, v: LIVE_CALL_PROTOCOL_V2_VERSION }));
+      if (this.v3) this.writeRaw(JSON.stringify({ ...hello, v: LIVE_CALL_PROTOCOL_V3_VERSION }));
+      else if (this.v2) this.writeRaw(JSON.stringify({ ...hello, v: LIVE_CALL_PROTOCOL_V2_VERSION }));
       else this.write(hello);
       this.heartbeat = this.timers.setInterval(() => {
         this.write({ type: 'HEARTBEAT', n: this.heartbeatN });
@@ -287,7 +303,7 @@ export class LiveCallClient {
   }
 
   private onText(text: string): void {
-    const message = this.v2 ? parseServerMessageV2(text) : parseServerMessage(text);
+    const message = this.v3 ? parseServerMessageV3(text) : this.v2 ? parseServerMessageV2(text) : parseServerMessage(text);
     if (!message) {
       this.options.onEvent({ type: 'serverFault' });
       this.socket?.close(LIVE_CALL_CLOSE.PROTOCOL_ERROR, 'fault');
@@ -317,15 +333,21 @@ export class LiveCallClient {
       case 'CLOCK_MARK':
         this.options.onEvent({ type: 'clockMark', seq: message.seq });
         return;
+      case 'ATTENTION':
+        this.options.onEvent({ type: 'attention', message });
+        return;
+      case 'ATTENTION_STATE':
+        this.options.onEvent({ type: 'attentionState', message });
+        return;
     }
   }
 
   /**
-   * RB-2 / M-2: the echo of a CLOCK_MARK, only on a v2 connection that is live. Evidence, never a command: not logged for a
+   * RB-2 / M-2: the echo of a CLOCK_MARK, only on a v2 (or v3) connection that is live. Evidence, never a command: not logged for a
    * resend and not acknowledged — a lost echo only makes a certification later.
    */
   sendMarkEcho(seq: number, captureMs: number | null): void {
-    if (!this.v2 || this.ended || !this.canSendLive()) return;
+    if (!(this.v2 || this.v3) || this.ended || !this.canSendLive()) return;
     this.writeRaw(encodeMarkEcho(seq, captureMs));
   }
 
