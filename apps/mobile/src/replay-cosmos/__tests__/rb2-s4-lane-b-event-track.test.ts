@@ -1,9 +1,13 @@
 /**
- * RB-2 / S4-E (PO S4 execution directive, 2026-11-24) — Lane B READINESS ONLY. Every event below is SYNTHETIC, made in
- * this file and labelled so (`payload.synthetic`). Nothing in the product produces Lane B events: these tests prove the
- * extension point (the typed track, its deterministic reduction on Lane A's presentation clock), NOT live incremental
- * understanding — QAN-BL-INTEL-06 stays open, and no DeepSeek, Speechmatics, INTERIM analysis, storage, migration,
- * worker or attention UI is involved.
+ * RB-2 / S4-E built Lane B as a typed boundary with no producer; INTEL-LIVE-01 CP3 (D-10, D-CP3 — PO approval of
+ * 2026-11-26) RE-ANCHORS it to its producer (0204 → 0205) and to the Replay §19 placement. Previous pins, replaced here:
+ *   - "an UNRECORDED event refuses the whole lane" → an uncertified event is placed at its server-produced floor, labelled
+ *     non-exact (`exact: false`), never dropped and never at its anchor alone;
+ *   - "AFTER_END is never inside the Replay" → AFTER_END is the closing display (applied only at t ≥ the end);
+ *   - an event bound to a `momentOrdinal`'s window → its anchor must lie in a presented window of its OWN track (C7), else
+ *     it stays out (not a refusal of the lane);
+ *   - SET / WITHDRAW → SET / WITHDRAW / CONFIRMED / EXPIRED, reduced as the live layer reduces them.
+ * Every event below is SYNTHETIC, made in this file (`payload.synthetic`).
  */
 import { CROSS, MOMENTS, REPLAY, RUN0, RUN1, VERSION, moment, pace } from '../../original-audio/__fixtures__/replay-audio-world';
 import { planFor } from '../../original-audio/replay-audio-clock';
@@ -12,40 +16,42 @@ import { readingPaceMs } from '../../replay-player';
 import type { ReplayHistoryMoment } from '../../runtime-entry';
 import {
   attentionAt, attentionOnFrame, buildReplayEventTimeline, emptyReplayEventTrack,
-  type ReplayEventTimeline, type ReplayEventTrackBinding, type ReplayHistoricalEvent, type ReplayHistoricalEventTrack,
+  type ReplayEventFloor, type ReplayEventTimeline, type ReplayEventTrackBinding, type ReplayHistoricalEvent, type ReplayHistoricalEventTrack,
 } from '../event-track';
 import { replayPresentationClock } from '../presentation-clock';
 import { replayStageTimeline } from '../stage-timeline';
-import { causalFrame, knowledgeAt, type ReplayCosmosAvailability, type ReplayScope } from '../timeline';
+import { causalFrame, knowledgeAt, type ReplayScope } from '../timeline';
 
 const FPS = 30;
 const FULL: ReplayScope = { kind: 'FULL' };
 const paceOf = (m: ReplayHistoryMoment): number => readingPaceMs(m.text ?? '');
 const PLAN = planFor(MOMENTS, [{ durationMs: 9_000, spans: RUN0 }, { durationMs: 5_000, spans: RUN1 }], [CROSS])!;
 const CLOCK = replayPresentationClock(PLAN, MOMENTS, paceOf)!;
+// Run 0: USER [R0, R0 + 6000], QANDEEL [R0 + 4000, R0 + 9000]; run 1: USER [R1, R1 + 5000].
 const R0 = pace('first');
 const R1 = R0 + 9_000 + pace('fifth') + 1_500;
 const BINDING: ReplayEventTrackBinding = { replayId: REPLAY, versionId: VERSION, revision: 1, mapDigest: presentationMapDigest(PLAN.runs, PLAN.boundaries)! };
 
 type Synthetic = { readonly synthetic: true; readonly label: string };
 let seq = 0;
-const at = (atMs: number): ReplayCosmosAvailability => ({ kind: 'RECORDED', atMs });
-/** A SYNTHETIC Lane B event (no producer exists). */
-function ev(over: Partial<ReplayHistoricalEvent<Synthetic>> & Pick<ReplayHistoricalEvent<Synthetic>, 'subjectKey' | 'momentOrdinal' | 'anchorMs'>): ReplayHistoricalEvent<Synthetic> {
+const at = (atMs: number): ReplayEventFloor => ({ kind: 'PRODUCED', atMs });
+/** A SYNTHETIC development (SET by default), produced 700 ms after its anchor unless said otherwise. */
+function ev(over: Partial<ReplayHistoricalEvent<Synthetic>> & Pick<ReplayHistoricalEvent<Synthetic>, 'subjectKey' | 'anchorMs'>): ReplayHistoricalEvent<Synthetic> {
   seq += 1;
   return {
-    eventId: `synthetic-${seq}`, op: 'SET', source: 'USER', availability: at(over.anchorMs), sequence: seq,
+    eventId: `synthetic-${seq}`, op: 'SET', source: 'USER', floor: at((over.anchorMs ?? 0) + 700), sequence: seq,
     payload: { synthetic: true, label: `SYNTHETIC ${over.subjectKey} #${seq}` }, ...over,
   };
 }
+/** A SYNTHETIC settlement (no anchor), at its settled-through position. */
+const settle = (subjectKey: string, op: 'CONFIRMED' | 'EXPIRED', floor: ReplayEventFloor, source: 'USER' | 'QANDEEL' = 'USER') => ev({ subjectKey, anchorMs: null, op, floor, source });
 const track = (events: ReplayHistoricalEvent<Synthetic>[], binding = BINDING): ReplayHistoricalEventTrack<Synthetic> => ({ lane: 'IN_SPEECH_ATTENTION', binding, events });
 const built = (t: ReplayHistoricalEventTrack<Synthetic>, scope: ReplayScope = FULL): ReplayEventTimeline<Synthetic> => {
-  const r = buildReplayEventTimeline(t, BINDING, CLOCK.inputs, scope, { fps: FPS, durationMs: CLOCK.durationMs });
+  const r = buildReplayEventTimeline(t, BINDING, CLOCK.windows, scope, { fps: FPS, durationMs: CLOCK.durationMs });
   if (!r.ok) throw new Error(r.reason);
   return r.timeline;
 };
-const view = (state: ReadonlyMap<string, { eventId: string; source: string; payload: Synthetic }>) =>
-  [...state].map(([subject, e]) => `${subject}=${e.source}:${e.payload.label}`).sort();
+const view = (state: ReadonlyMap<string, { eventId: string; source: string; payload: Synthetic }>) => [...state].map(([subject, e]) => `${subject}=${e.source}:${e.payload.label}`);
 
 /** Lane A, certified, for the same version: what Lane B must never change. */
 function laneA() {
@@ -57,12 +63,12 @@ function laneA() {
   return replayStageTimeline(CLOCK.inputs, FULL, { kind: 'AUDIO', presentation: CLOCK, availability: { kind: 'BOUND', answer } }, FPS)!;
 }
 
-describe('Lane B · the empty lane (every Replay today)', () => {
+describe('Lane B · the empty lane', () => {
   it('reduces to the empty state at every t and frame, with no allocation, and leaves Lane A identical', () => {
     const before = laneA();
     const tl = built(emptyReplayEventTrack<Synthetic>(BINDING));
     expect(tl.steps).toEqual([]);
-    expect(tl.afterEnd).toEqual([]);
+    expect(tl.closing).toEqual([]);
     const first = attentionAt(tl, 0);
     expect(first.size).toBe(0);
     for (let t = 0; t <= CLOCK.durationMs; t += 100) expect(attentionAt(tl, t)).toBe(first); // the same object: nothing made
@@ -71,90 +77,136 @@ describe('Lane B · the empty lane (every Replay today)', () => {
   });
 });
 
-describe('Lane B · synthetic in-speech events on Lane A\'s clock', () => {
-  it('several USER events inside one long window appear while it is heard — never before their anchor or availability', () => {
+describe('Lane B · C2 / C9: placed at the server-produced floor, never at the anchor alone, never before the words', () => {
+  it('in-speech progression is kept at the produced positions (never deferred to the end of the turn), labelled non-exact', () => {
     const events = [
-      ev({ subjectKey: 'topic', momentOrdinal: 2, anchorMs: R0 + 1_000 }),
-      ev({ subjectKey: 'person', momentOrdinal: 2, anchorMs: R0 + 2_500, availability: at(R0 + 3_100) }), // available 600 ms later
-      ev({ subjectKey: 'topic', momentOrdinal: 2, anchorMs: R0 + 4_000 }), // a correction of the same subject
+      ev({ subjectKey: 'topic', anchorMs: R0 + 1_000, floor: at(R0 + 1_700) }),
+      ev({ subjectKey: 'person', anchorMs: R0 + 2_500, floor: at(R0 + 3_100) }),
+      ev({ subjectKey: 'topic', anchorMs: R0 + 4_000, floor: at(R0 + 4_400) }), // a correction of the same subject
     ];
     const tl = built(track(events));
-    expect(tl.steps.map((s) => [s.eventId, s.atMs])).toEqual([[events[0]!.eventId, R0 + 1_000], [events[1]!.eventId, R0 + 3_100], [events[2]!.eventId, R0 + 4_000]]);
-    expect(view(attentionAt(tl, R0 + 999))).toEqual([]);
-    expect(view(attentionAt(tl, R0 + 3_099))).toEqual([`topic=USER:${events[0]!.payload.label}`]);
-    expect(view(attentionAt(tl, R0 + 3_100))).toEqual([`person=USER:${events[1]!.payload.label}`, `topic=USER:${events[0]!.payload.label}`]);
+    expect(tl.steps.map((s) => [s.eventId, s.atMs, s.exact])).toEqual([[events[0]!.eventId, R0 + 1_700, false], [events[1]!.eventId, R0 + 3_100, false], [events[2]!.eventId, R0 + 4_400, false]]);
+    // The anchor alone never places it (previous pin: shown at the anchor when certified at it).
+    expect(view(attentionAt(tl, R0 + 1_000))).toEqual([]);
+    expect(view(attentionAt(tl, R0 + 1_699))).toEqual([]);
+    expect(view(attentionAt(tl, R0 + 1_700))).toEqual([`topic=USER:${events[0]!.payload.label}`]);
+    // A SET moves its subject to the newest, as the live layer does.
     expect(view(attentionAt(tl, R0 + 5_000))).toEqual([`person=USER:${events[1]!.payload.label}`, `topic=USER:${events[2]!.payload.label}`]);
-    // Lane B may show during the speech; Lane A shows nothing of moment 2 until its window has ended (and, in this
-    // synthetic Lane A, nothing at all before R0 + 9000): the two lanes never mix.
+    // Every change happens while the user is still speaking (the window ends at R0 + 6000).
+    expect(tl.steps.every((s) => s.atMs < R0 + 6_000)).toBe(true);
+    // Lane A shows nothing of moment 2 until its window has ended: the two lanes never mix.
     expect(knowledgeAt(laneA().timeline, R0 + 5_000)).toBeNull();
-    expect(knowledgeAt(laneA().timeline, R0 + 9_000)).toBe(5);
   });
 
-  it('a QANDEEL event in QANDEEL\'s overlapping window; update, correction and withdrawal in the producer\'s order', () => {
-    const set = ev({ subjectKey: 'focus', momentOrdinal: 3, anchorMs: R0 + 4_500, source: 'QANDEEL' });
-    // The correction was available EARLIER than what it corrects: it is held after it (never shown before it).
-    const corrected = ev({ subjectKey: 'focus', momentOrdinal: 3, anchorMs: R0 + 4_600, source: 'QANDEEL', availability: at(R0 + 4_400) });
-    const withdrawn = ev({ subjectKey: 'focus', momentOrdinal: 3, anchorMs: R0 + 7_000, source: 'QANDEEL', op: 'WITHDRAW' });
-    const tl = built(track([withdrawn, corrected, set])); // handed over in any order
-    expect(tl.steps.map((s) => [s.eventId, s.op, s.atMs])).toEqual([
-      [set.eventId, 'SET', R0 + 4_500], [corrected.eventId, 'SET', R0 + 4_600], [withdrawn.eventId, 'WITHDRAW', R0 + 7_000],
-    ]);
-    expect(view(attentionAt(tl, R0 + 4_550))).toEqual([`focus=QANDEEL:${set.payload.label}`]);
-    expect(view(attentionAt(tl, R0 + 6_000))).toEqual([`focus=QANDEEL:${corrected.payload.label}`]);
-    expect(view(attentionAt(tl, R0 + 7_000))).toEqual([]);
+  it('a floor before its anchor (a mapped hold) is held at the anchor — never before the words', () => {
+    const e = ev({ subjectKey: 'held', anchorMs: R0 + 2_000, floor: at(R0 + 1_500) });
+    expect(built(track([e])).steps.map((s) => s.atMs)).toEqual([R0 + 2_000]);
   });
 
-  it('a late-available event is never shown early; AFTER_END is never inside the Replay', () => {
-    const late = ev({ subjectKey: 'late', momentOrdinal: 2, anchorMs: R0 + 500, availability: at(R1 + 2_000) });
-    const after = ev({ subjectKey: 'after', momentOrdinal: 6, anchorMs: R1 + 100, availability: { kind: 'AFTER_END' } });
-    const tl = built(track([late, after]));
-    expect(tl.steps.map((s) => [s.eventId, s.atMs])).toEqual([[late.eventId, R1 + 2_000]]);
-    expect(tl.afterEnd).toEqual([after.eventId]);
-    expect(view(attentionAt(tl, R1 + 1_999))).toEqual([]);
+  it('C9 · a tail event after the speech ended is placed at its produced position, after the window, not at the anchor', () => {
+    const tail = ev({ subjectKey: 'tail', anchorMs: R0 + 5_500, floor: at(R0 + 7_200) });
+    const tl = built(track([tail]));
+    expect(tl.steps.map((s) => s.atMs)).toEqual([R0 + 7_200]);
+    expect(view(attentionAt(tl, R0 + 6_000))).toEqual([]);
+  });
+
+  it('AFTER_END is the closing display: applied at the presentation\'s end and on no frame before it', () => {
+    const late = ev({ subjectKey: 'late', anchorMs: R0 + 500, floor: { kind: 'AFTER_END' } });
+    const tl = built(track([late]));
+    expect(tl.steps).toEqual([]);
+    expect(tl.closing.map((s) => [s.eventId, s.atMs, s.exact])).toEqual([[late.eventId, CLOCK.durationMs, false]]);
+    expect(view(attentionAt(tl, CLOCK.durationMs - 1))).toEqual([]);
     expect(view(attentionAt(tl, CLOCK.durationMs))).toEqual([`late=USER:${late.payload.label}`]);
-  });
-
-  it('nothing uncertified enters: an UNRECORDED (temporary, uncommitted) event refuses the whole lane', () => {
-    const r = buildReplayEventTimeline(track([ev({ subjectKey: 'x', momentOrdinal: 2, anchorMs: R0, availability: { kind: 'UNRECORDED' } })]), BINDING, CLOCK.inputs, FULL, { fps: FPS, durationMs: CLOCK.durationMs });
-    expect(r).toEqual({ ok: false, reason: 'UNRECORDED_EVENT' });
-  });
-
-  it('seek, re-seek and restart give the identical state; frames are causal and agree with time (the video\'s facts)', () => {
-    const events = [
-      ev({ subjectKey: 'a', momentOrdinal: 2, anchorMs: R0 + 1_234 }), ev({ subjectKey: 'b', momentOrdinal: 3, anchorMs: R0 + 5_001, source: 'QANDEEL' }),
-      ev({ subjectKey: 'a', momentOrdinal: 6, anchorMs: R1 + 10, op: 'WITHDRAW' }),
-    ];
-    const tl = built(track(events));
-    const visits = [0, R0 + 5_001, R0 + 1_233, R1 + 10, R0 + 1_234, R0 + 5_000, 0, R1 + 4_000];
-    const first = visits.map((t) => view(attentionAt(tl, t)));
-    expect(visits.map((t) => view(attentionAt(built(track(events)), t)))).toEqual(first);
-    for (const s of tl.steps) expect(s.frame).toBe(causalFrame(s.atMs, FPS));
-    const frames = Math.ceil((CLOCK.durationMs * FPS) / 1000);
-    for (let f = 0; f < frames; f += 1) expect(view(attentionOnFrame(tl, f))).toEqual(view(attentionAt(tl, (f * 1000) / FPS)));
-  });
-
-  it('a RANGE opens on the events disclosed at or before its start', () => {
-    const a = ev({ subjectKey: 'a', momentOrdinal: 2, anchorMs: R0 + 1_000 });
-    const b = ev({ subjectKey: 'b', momentOrdinal: 3, anchorMs: R0 + 6_000, source: 'QANDEEL' });
-    const tl = built(track([a, b]), { kind: 'RANGE', startMs: R0 + 3_000, endMs: R1 });
-    expect(view(tl.opening)).toEqual([`a=USER:${a.payload.label}`]);
-    expect(tl.steps.map((s) => [s.eventId, s.atMs])).toEqual([[b.eventId, 3_000]]);
+    const end = causalFrame(CLOCK.durationMs, FPS);
+    expect(view(attentionOnFrame(tl, end - 1))).toEqual([]);
+    expect(view(attentionOnFrame(tl, end))).toEqual([`late=USER:${late.payload.label}`]);
+    // Every later event on that subject follows it to the end (monotonic per subject).
+    const after = ev({ subjectKey: 'late', anchorMs: R1 + 100, floor: at(R1 + 300), op: 'WITHDRAW' });
+    expect(built(track([late, after])).closing.map((s) => s.op)).toEqual(['SET', 'WITHDRAW']);
   });
 });
 
-describe('Lane B · no leakage, refused whole', () => {
-  const one = () => [ev({ subjectKey: 'a', momentOrdinal: 2, anchorMs: R0 + 1_000 })];
-  const refusal = (t: ReplayHistoricalEventTrack<Synthetic>) => buildReplayEventTimeline(t, BINDING, CLOCK.inputs, FULL, { fps: FPS, durationMs: CLOCK.durationMs });
-  it('another Replay, version, revision or map; a duplicate id; an unknown moment; an anchor outside its window', () => {
+describe('Lane B · C4: corrections, withdrawals and settlements in the producer\'s order (the live order)', () => {
+  it('SET → corrected SET → WITHDRAW; the earlier state is never rewritten', () => {
+    const set = ev({ subjectKey: 'focus', anchorMs: R0 + 4_500, source: 'QANDEEL', floor: at(R0 + 4_800) });
+    // The correction was produced EARLIER than what it corrects (an out-of-order floor): it is held after it.
+    const corrected = ev({ subjectKey: 'focus', anchorMs: R0 + 4_600, source: 'QANDEEL', floor: at(R0 + 4_700) });
+    const withdrawn = ev({ subjectKey: 'focus', anchorMs: R0 + 7_000, source: 'QANDEEL', op: 'WITHDRAW', floor: at(R0 + 7_300) });
+    const tl = built(track([withdrawn, corrected, set])); // handed over in any order
+    expect(tl.steps.map((s) => [s.eventId, s.op, s.atMs])).toEqual([
+      [set.eventId, 'SET', R0 + 4_800], [corrected.eventId, 'SET', R0 + 4_800], [withdrawn.eventId, 'WITHDRAW', R0 + 7_300],
+    ]);
+    expect(view(attentionAt(tl, R0 + 4_799))).toEqual([]);
+    expect(view(attentionAt(tl, R0 + 4_800))).toEqual([`focus=QANDEEL:${corrected.payload.label}`]);
+    expect(view(attentionAt(tl, R0 + 7_300))).toEqual([]);
+  });
+
+  it('CONFIRMED and EXPIRED remove their subject at their settled-through position, never before what they settle', () => {
+    const a = ev({ subjectKey: 'a', anchorMs: R0 + 1_000, floor: at(R0 + 1_500) });
+    const b = ev({ subjectKey: 'b', anchorMs: R0 + 2_000, floor: at(R0 + 2_600) });
+    const confirmed = settle('a', 'CONFIRMED', at(R0 + 6_000));
+    const expired = settle('b', 'EXPIRED', at(R0 + 1_000)); // settled-through earlier than its SET: held after it
+    const tl = built(track([a, b, confirmed, expired]));
+    expect(tl.steps.map((s) => [s.op, s.atMs])).toEqual([['SET', R0 + 1_500], ['SET', R0 + 2_600], ['EXPIRED', R0 + 2_600], ['CONFIRMED', R0 + 6_000]]);
+    expect(view(attentionAt(tl, R0 + 5_999))).toEqual([`a=USER:${a.payload.label}`]);
+    expect(view(attentionAt(tl, R0 + 6_000))).toEqual([]);
+  });
+});
+
+describe('Lane B · C7: each event on its own track', () => {
+  it('a QANDEEL development whose anchor lies only in a USER window stays out (no leakage into another speaker)', () => {
+    const user = ev({ subjectKey: 'u', anchorMs: R0 + 1_000 });
+    const misplaced = ev({ subjectKey: 'q', anchorMs: R0 + 1_000, source: 'QANDEEL' }); // QANDEEL speaks from R0 + 4000 only
+    const own = ev({ subjectKey: 'q', anchorMs: R0 + 4_200, source: 'QANDEEL' });
+    const tl = built(track([user, misplaced, own]));
+    expect(tl.outside).toEqual([misplaced.eventId]);
+    expect(tl.steps.map((s) => s.eventId)).toEqual([user.eventId, own.eventId]);
+    // An anchor in no presented window at all (the text block, the pause) stays out too.
+    const gap = ev({ subjectKey: 'g', anchorMs: R0 + 9_500 });
+    expect(built(track([gap])).outside).toEqual([gap.eventId]);
+  });
+});
+
+describe('Lane B · C3: seek, restart and RANGE are pure functions of t', () => {
+  it('seek, re-seek and restart give the identical state; frames are causal and agree with time (the video\'s facts)', () => {
+    const events = [
+      ev({ subjectKey: 'a', anchorMs: R0 + 1_234 }), ev({ subjectKey: 'b', anchorMs: R0 + 5_001, source: 'QANDEEL' }),
+      ev({ subjectKey: 'a', anchorMs: R1 + 10, op: 'WITHDRAW' }), settle('b', 'EXPIRED', { kind: 'AFTER_END' }, 'QANDEEL'),
+    ];
+    const tl = built(track(events));
+    const visits = [0, R0 + 5_701, R0 + 1_933, R1 + 710, R0 + 1_934, R0 + 5_000, 0, R1 + 4_000, CLOCK.durationMs];
+    const first = visits.map((t) => view(attentionAt(tl, t)));
+    expect(visits.map((t) => view(attentionAt(built(track(events)), t)))).toEqual(first);
+    for (const s of tl.steps) expect(s.frame).toBe(causalFrame(s.atMs, FPS));
+    const frames = Math.ceil((CLOCK.durationMs * FPS) / 1000) + 1;
+    for (let f = 0; f <= frames; f += 1) expect(view(attentionOnFrame(tl, f))).toEqual(view(attentionAt(tl, Math.min((f * 1000) / FPS, CLOCK.durationMs))));
+  });
+
+  it('a RANGE opens on the events disclosed at or before its start; a disclosure after its end is listed, never drawn', () => {
+    const a = ev({ subjectKey: 'a', anchorMs: R0 + 1_000 });
+    const b = ev({ subjectKey: 'b', anchorMs: R0 + 6_000, source: 'QANDEEL' });
+    const c = ev({ subjectKey: 'c', anchorMs: R1 + 100 });
+    const tl = built(track([a, b, c]), { kind: 'RANGE', startMs: R0 + 3_000, endMs: R1 });
+    expect(view(tl.opening)).toEqual([`a=USER:${a.payload.label}`]);
+    expect(tl.steps.map((s) => [s.eventId, s.atMs])).toEqual([[b.eventId, 3_700]]);
+    expect(tl.afterEnd).toEqual([c.eventId]);
+    expect(tl.closing).toEqual([]);
+  });
+});
+
+describe('Lane B · C5: no leakage, refused whole, Lane A unaffected', () => {
+  const one = () => [ev({ subjectKey: 'a', anchorMs: R0 + 1_000 })];
+  const refusal = (t: ReplayHistoricalEventTrack<Synthetic>) => buildReplayEventTimeline(t, BINDING, CLOCK.windows, FULL, { fps: FPS, durationMs: CLOCK.durationMs });
+  it('another Replay, version, revision or map; a duplicate id; a malformed event', () => {
     expect(refusal(track(one(), { ...BINDING, versionId: 'c0000000-0000-4000-8000-0000000000ff' }))).toEqual({ ok: false, reason: 'BINDING_MISMATCH' });
     expect(refusal(track(one(), { ...BINDING, replayId: 'b0000000-0000-4000-8000-0000000000ff' }))).toEqual({ ok: false, reason: 'BINDING_MISMATCH' });
     expect(refusal(track(one(), { ...BINDING, revision: 2 }))).toEqual({ ok: false, reason: 'BINDING_MISMATCH' });
     expect(refusal(track(one(), { ...BINDING, mapDigest: `sha256:${'9'.repeat(64)}` }))).toEqual({ ok: false, reason: 'BINDING_MISMATCH' });
     const e = one()[0]!;
     expect(refusal(track([e, { ...e }]))).toEqual({ ok: false, reason: 'DUPLICATE_EVENT' });
-    expect(refusal(track([{ ...e, momentOrdinal: 9 }]))).toEqual({ ok: false, reason: 'UNKNOWN_MOMENT' });
-    // An unselected source span is not moved into an earlier selected window (#410 annex §3.2).
-    expect(refusal(track([{ ...e, anchorMs: R0 + 6_001 }]))).toEqual({ ok: false, reason: 'ANCHOR_OUTSIDE_WINDOW' });
+    expect(refusal(track([{ ...e, anchorMs: null }]))).toEqual({ ok: false, reason: 'MALFORMED_EVENT' }); // a development without words
+    expect(refusal(track([{ ...e, op: 'CONFIRMED' }]))).toEqual({ ok: false, reason: 'MALFORMED_EVENT' }); // a settlement with an anchor
+    expect(refusal(track([{ ...e, floor: { kind: 'PRODUCED', atMs: Number.NaN } }]))).toEqual({ ok: false, reason: 'MALFORMED_EVENT' });
   });
 
   it('a refused Lane B leaves Lane A\'s certified knowledge exactly as it is (fails closed, alone)', () => {
@@ -174,24 +226,22 @@ describe('Lane B · a 120-second USER turn (#410 annex §4.2–4.3), SYNTHETIC',
   const clock = replayPresentationClock(plan, moments, paceOf)!;
   const binding = { ...BINDING, mapDigest: presentationMapDigest(plan.runs, plan.boundaries)! };
 
-  it('several attention changes while the user is still speaking; the one known only at 17 s is not shown at 12 s', () => {
+  it('several attention changes while the user is still speaking; the one produced at 17 s is not shown at 12 s (its anchor)', () => {
     const events = [
-      ev({ subjectKey: 'topic', momentOrdinal: 1, anchorMs: 12_000, availability: at(17_000) }),
-      ev({ subjectKey: 'topic', momentOrdinal: 1, anchorMs: 40_000 }),
-      ev({ subjectKey: 'person', momentOrdinal: 1, anchorMs: 75_000 }),
-      ev({ subjectKey: 'topic', momentOrdinal: 1, anchorMs: 110_000, op: 'WITHDRAW' }),
+      ev({ subjectKey: 'topic', anchorMs: 12_000, floor: at(17_000) }),
+      ev({ subjectKey: 'topic', anchorMs: 40_000, floor: at(41_200) }),
+      ev({ subjectKey: 'person', anchorMs: 75_000, floor: at(76_000) }),
+      ev({ subjectKey: 'topic', anchorMs: 110_000, op: 'WITHDRAW', floor: at(111_000) }),
     ];
-    const r = buildReplayEventTimeline(track(events, binding), binding, clock.inputs, FULL, { fps: FPS, durationMs: clock.durationMs });
+    const r = buildReplayEventTimeline(track(events, binding), binding, clock.windows, FULL, { fps: FPS, durationMs: clock.durationMs });
     if (!r.ok) throw new Error(r.reason);
     const tl = r.timeline;
-    expect(tl.steps.map((s) => s.atMs)).toEqual([17_000, 40_000, 75_000, 110_000]);
+    expect(tl.steps.map((s) => s.atMs)).toEqual([17_000, 41_200, 76_000, 111_000]);
     expect(view(attentionAt(tl, 12_000))).toEqual([]);
     expect(view(attentionAt(tl, 16_999))).toEqual([]);
-    const changes = new Set([0, 17_000, 40_000, 75_000, 110_000].map((t) => JSON.stringify(view(attentionAt(tl, t)))));
+    const changes = new Set([0, 17_000, 41_200, 76_000, 111_000].map((t) => JSON.stringify(view(attentionAt(tl, t)))));
     expect(changes.size).toBe(5); // four distinct changes, all before the window ends at 120 s
-    // Lane A for the same turn: nothing of moment 1 before its window has ended. S4-CORRECTION-01 RE-ANCHOR: moment 2 is
-    // AFTER_END, so Lane A is SOURCE_ORDER (its certified instant for moment 1 kept; moment 2 the closing knowledge at the
-    // presentation's end, never inside); before the correction this read CERTIFIED with moment 2 never shown.
+    // Lane A for the same turn: nothing of moment 1 before its window has ended.
     const answer = decodeReplayAvailability({
       replayId: REPLAY, versionId: VERSION, revision: 1, sourceWindowBindingDigest: `sha256:${'a'.repeat(64)}`, mapDigest: binding.mapDigest,
       ledgerWatermark: { sp: 2, seq: 0 },
@@ -201,8 +251,5 @@ describe('Lane B · a 120-second USER turn (#410 annex §4.2–4.3), SYNTHETIC',
     expect(a.kind).toBe('SOURCE_ORDER');
     expect(knowledgeAt(a.timeline, 119_999)).toBeNull();
     expect(knowledgeAt(a.timeline, 120_000)).toBe(1);
-    expect(a.timeline.steps.map((s) => [s.ordinal, s.atMs, s.availability])).toEqual([[1, 120_000, 'RECORDED']]);
-    expect(a.timeline.closing).toEqual([2]);
-    expect(knowledgeAt(a.timeline, 124_999)).toBe(1);
   });
 });

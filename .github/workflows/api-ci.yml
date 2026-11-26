@@ -1477,6 +1477,11 @@ jobs:
       # the crash-window sweep; the erasure cascade.
       - name: Verify INTEL-LIVE-01 call provisional attention (0204) against real PostgreSQL
         run: npm run verify:live-call-attention:integration
+      # INTEL-LIVE-01 CP3 (the PO's CP3 authorisation and D-CP3, 2026-11-26): migration 0205, the Replay read of a call's
+      # provisional attention (Lane B) - the produced-position floors, the own-track window rule, hold, tail, run end and
+      # settlement placement, C10, ownership, deletion and erasure, V1, MVCC and 6 planted defects of the read.
+      - name: Verify INTEL-LIVE-01 Replay attention read (0205) against real PostgreSQL
+        run: npm run verify:replay-attention-read:integration
       # S8B-07 CP1-B (D-06.6): the Replay pool's ffmpeg - BtbN's 9.0.2 LGPL build, from its own release asset at a pinned
       # autobuild tag, refused unless its sha256 is the one pinned here (the rclone and PostgREST pattern: no registry, no
       # image, no package manager). FFMPEG_BIN / FFPROBE_BIN name it for the media proofs; nothing else uses it.

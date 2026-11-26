@@ -49,8 +49,11 @@ const sha = (text) => createHash('sha256').update(text, 'utf8').digest('hex');
 // S8B-07 CP1-A (the Product Owner's S-1 option (a), 2026-11-05): the one Replay migration approved after 0169. Not a pattern.
 // RE-ANCHORED by S8B-07 RB-2 / S3 (the PO's 'RB-2 / M-2 + S3 PRODUCTION IMPLEMENTATION' authorization, 2026-11-24, CP1):
 // the approved 0202 availability read is the second, named by its whole file name. Still not a pattern.
+// RE-ANCHORED by INTEL-LIVE-01 CP3 (D-CP3, the Product Owner's approval of 2026-11-26: 'new unhosted migration 0205, one
+// read function, Replay role only'): the approved 0205 attention read is the third, named by its whole file name. Still
+// not a pattern.
 const APPROVED_LATER_REPLAY_MIGRATIONS = Object.freeze(['0195_s8b_07_replay_original_audio_source_truth_v1.sql',
-  '0202_s8b_07_replay_historical_availability_v1.sql']);
+  '0202_s8b_07_replay_historical_availability_v1.sql', '0205_intel_live_01_replay_attention_read_v1.sql']);
 
 const PLAYER = 'apps/mobile/src/replay-player';
 const CLIENT = 'apps/mobile/src/runtime-entry/replay-lifecycle-api.ts';
@@ -531,7 +534,7 @@ for (const [name, detector, plant] of PLANTED) {
 test('S8B-07 CP1-A: the S-1 re-anchor admits exactly the approved 0195, and the guard still holds after 0169', () => {
   const w = shipped();
   assert.deepEqual([...APPROVED_LATER_REPLAY_MIGRATIONS], ['0195_s8b_07_replay_original_audio_source_truth_v1.sql',
-    '0202_s8b_07_replay_historical_availability_v1.sql']);
+    '0202_s8b_07_replay_historical_availability_v1.sql', '0205_intel_live_01_replay_attention_read_v1.sql']);
   for (const name of APPROVED_LATER_REPLAY_MIGRATIONS) assert.ok(w.migrations.includes(name), name + ' is in the repository');
   assert.deepEqual(DETECTORS.apiViolations(w), [], 'the approved 0195 is admitted');
   const later = w.migrations.filter((name) => name.slice(0, 4) > '0169' && /replay/iu.test(name));

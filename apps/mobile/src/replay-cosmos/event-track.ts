@@ -1,42 +1,50 @@
 /**
- * RB-2 / S4-E (the Product Owner's S4 execution directive, 2026-11-24) — Lane B READINESS ONLY: the typed boundary a
- * future in-speech attention source (QAN-BL-INTEL-06, open; INTEL-LIVE-01, not authorised) would hand the Replay, and its
- * deterministic reduction on the SAME presentation clock as Lane A. Nothing produces such events today: every Replay
- * carries the EMPTY track, nothing here is drawn, stored, fetched or logged, and no final schema is claimed.
+ * RB-2 / S4-E built this file as Lane B READINESS (a typed boundary with no producer); INTEL-LIVE-01 CP3 (D-10, D-CP3 —
+ * the Product Owner's approval of 2026-11-26) RE-ANCHORS it to its producer, the calls' in-speech attention events
+ * (0204, read and placed by 0205, decoded by `original-audio/replay-attention.ts`), and to the Replay §19 placement policy
+ * (S4-CORRECTION-01: an uncertified history is placed in source order and labelled, never dropped).
  *
  *   Lane A  COMMITTED_KNOWLEDGE    S1 → M-2 → S3 → timeline.ts → COSMOS: K(TC), disclosed after the speech that made it
- *   Lane B  IN_SPEECH_ATTENTION    this file: events that may appear WHILE a window is heard (USER or QANDEEL speaking),
- *                                  never before the instant they refer to and never before they were historically
- *                                  available; separate from K(TC) — nothing here enters or reads Lane A's knowledge
+ *   Lane B  IN_SPEECH_ATTENTION    this file: what the call was attending to WHILE a window was heard (USER or QANDEEL
+ *                                  speaking); separate from K(TC) — nothing here enters or reads Lane A's knowledge
  *
- *   disclosedAt(e) = max( availability(e), anchor(e), disclosedAt(previous event on the same subject) )
+ *   disclosedAt(e) = max( floor(e), anchor(e), disclosedAt(previous event on the same subject) )
  *
- * An event SETs or WITHDRAWs one subject (a correction is a later SET of the same subject). The state at t is the
- * reduction of every event disclosed at or before t, in (disclosedAt, sequence) order: a pure function of t, so a seek
- * or a restart gives the identical state. Frames are causal (`causalFrame`, Lane A's own). As in Lane A's CERTIFIED mode,
- * an UNRECORDED event refuses the whole track (the caller holds the empty lane), AFTER_END is never inside the Replay,
- * and a track bound to another Replay, version, revision or presentation map is refused (no leakage across sessions,
- * recordings or versions). Its shape follows the #410 compatibility annex (QANDEEL_S8B07_S4_INCREMENTAL_UNDERSTANDING_
- * REPLAY_COMPATIBILITY_v1.md §3.1) only as far as S4 needs it; provenance, consent, retention and schema versioning are
- * the future producer's contract, not this file's.
+ *   floor     when the event could first be seen: a certified instant would be one, but none exists (0205 certifies
+ *             nothing), so it is the position the SERVER produced it at during the call — a development's produced
+ *             position, a settlement's settled-through position — at its hold's elapsed offset; a NON-EXACT placement
+ *             (every step says so), never a claim of when the phone displayed it live. AFTER_END: nothing presented is at
+ *             or after it — the closing display.
+ *   anchor    the words the event is about (a settlement has none): never shown before them. NEVER the placement alone.
+ *
+ * An event SETs (opens or updates), WITHDRAWs, or settles (CONFIRMED / EXPIRED) one subject — one subject of one track of
+ * one call, the caller's `subjectKey` — exactly as the live layer reduces them: a SET moves its subject to the newest, any
+ * other op removes it, in the producer's order (`sequence`). The state at t is the reduction of every event disclosed at
+ * or before t, in (disclosedAt, sequence) order: a pure function of t, so a seek or a restart gives the identical state.
+ * Frames are causal (`causalFrame`, Lane A's own). A development whose anchor lies in no presented window of its own track
+ * stays out (the words it is about are not heard there: no leakage into another speaker's or an earlier window); a track
+ * bound to another Replay, version, revision or presentation map is refused whole, and the caller holds the empty lane.
  */
-import { causalFrame, type ReplayCosmosAvailability, type ReplayCosmosMomentInput, type ReplayScope } from './timeline';
+import { causalFrame, type ReplayScope } from './timeline';
 
 export type ReplayEventSource = 'USER' | 'QANDEEL';
+export type ReplayEventOp = 'SET' | 'WITHDRAW' | 'CONFIRMED' | 'EXPIRED';
 
-/** One historical event of Lane B. `P` is the event's content: deliberately open (no final schema, no UI). */
+/** When an event may first be drawn, on the full presentation clock: the server-produced position, or the closing display. */
+export type ReplayEventFloor =
+  | { readonly kind: 'PRODUCED'; readonly atMs: number }
+  | { readonly kind: 'AFTER_END' };
+
+/** One historical event of Lane B. `P` is the event's content (the attention mark it draws). */
 export interface ReplayHistoricalEvent<P = unknown> {
   readonly eventId: string;
-  /** What the event is about; a later event on the same subject replaces (SET) or withdraws it. */
+  /** What the event is about; a later event on the same subject updates, withdraws or settles it. */
   readonly subjectKey: string;
-  readonly op: 'SET' | 'WITHDRAW';
+  readonly op: ReplayEventOp;
   readonly source: ReplayEventSource;
-  /** The moment whose window the event was produced in (several events may share one window). */
-  readonly momentOrdinal: number;
-  /** The instant, on the full presentation clock, the event refers to (inside that window): never shown before it. */
-  readonly anchorMs: number;
-  /** When it became historically available, as Lane A's: RECORDED{atMs}, AFTER_END, or UNRECORDED. */
-  readonly availability: ReplayCosmosAvailability;
+  /** The instant, on the full presentation clock, of the words it is about (a settlement: null). Never shown before it. */
+  readonly anchorMs: number | null;
+  readonly floor: ReplayEventFloor;
   /** The producer's own order (a tie-break at an equal instant, and the order of corrections on one subject). */
   readonly sequence: number;
   readonly payload: P;
@@ -56,20 +64,29 @@ export interface ReplayHistoricalEventTrack<P = unknown> {
   readonly events: readonly ReplayHistoricalEvent<P>[];
 }
 
-/** The lane every Replay carries today: nothing produces Lane B events. */
+/** The lane of a Replay whose calls attended to nothing (or whose answer is not held): it draws nothing. */
 export function emptyReplayEventTrack<P = unknown>(binding: ReplayEventTrackBinding): ReplayHistoricalEventTrack<P> {
   return { lane: 'IN_SPEECH_ATTENTION', binding, events: [] };
+}
+
+/** A presented window of one track, on the full presentation clock (the presentation clock's `windows`). */
+export interface ReplayEventWindow {
+  readonly track: string;
+  readonly startMs: number;
+  readonly endMs: number;
 }
 
 export interface ReplayEventStep<P = unknown> {
   readonly eventId: string;
   readonly subjectKey: string;
-  readonly op: 'SET' | 'WITHDRAW';
+  readonly op: ReplayEventOp;
   readonly source: ReplayEventSource;
   readonly payload: P;
   /** On the SCOPED clock, and its causal frame. */
   readonly atMs: number;
   readonly frame: number;
+  /** Always false: no Lane B instant is certified (a server-produced position, placed in source order). */
+  readonly exact: false;
 }
 
 export interface ReplayAttentionEntry<P = unknown> {
@@ -78,32 +95,43 @@ export interface ReplayAttentionEntry<P = unknown> {
   readonly payload: P;
 }
 
+/** subjectKey → its entry, oldest first (a SET moves its subject to the end, as the live layer does). */
 export type ReplayAttentionState<P = unknown> = ReadonlyMap<string, ReplayAttentionEntry<P>>;
 
 export interface ReplayEventTimeline<P = unknown> {
   readonly startMs: number;
   readonly endMs: number;
+  /** The scope's own length (Lane A's `durationMs` for the same scope). */
+  readonly durationMs: number;
   readonly fps: number;
   /** The state the scope opens on (every event disclosed at or before its start). */
   readonly opening: ReplayAttentionState<P>;
   readonly steps: readonly ReplayEventStep<P>[];
-  /** Events disclosed at or after the scope's end: never drawn in it, never pulled into its last frame. */
+  /**
+   * The closing display (a scope that ends at the presentation's end): events disclosed at or after it, applied only at
+   * t ≥ durationMs, in order — never on a frame inside the scope.
+   */
+  readonly closing: readonly ReplayEventStep<P>[];
+  /** Events disclosed at or after the end of a scope that ends BEFORE the presentation's end: never drawn in it. */
   readonly afterEnd: readonly string[];
+  /** Developments whose anchor lies in no presented window of their track: out, never drawn. */
+  readonly outside: readonly string[];
 }
 
 const EMPTY_STATE: ReplayAttentionState<never> = new Map();
 
-export type ReplayEventTrackRefusal =
-  | 'BINDING_MISMATCH' | 'DUPLICATE_EVENT' | 'UNKNOWN_MOMENT' | 'ANCHOR_OUTSIDE_WINDOW' | 'UNRECORDED_EVENT' | 'SCOPE';
+export type ReplayEventTrackRefusal = 'BINDING_MISMATCH' | 'DUPLICATE_EVENT' | 'MALFORMED_EVENT' | 'SCOPE';
+
+const isTime = (value: number): boolean => Number.isFinite(value) && value >= 0;
 
 /**
- * Lane B's timeline for one scope of a version, on the clock Lane A uses (`moments`: the same inputs, `durationMs`: the
- * same presentation length). Refused whole, never repaired.
+ * Lane B's timeline for one scope of a version, on the clock Lane A uses (`windows`: the presentation clock's, by track;
+ * `durationMs`: the same presentation length). Refused whole, never repaired.
  */
 export function buildReplayEventTimeline<P>(
   track: ReplayHistoricalEventTrack<P>,
   expected: ReplayEventTrackBinding,
-  moments: readonly ReplayCosmosMomentInput[],
+  windows: readonly ReplayEventWindow[],
   scope: ReplayScope,
   options: { readonly fps: number; readonly durationMs: number },
 ): { readonly ok: true; readonly timeline: ReplayEventTimeline<P> } | { readonly ok: false; readonly reason: ReplayEventTrackRefusal } {
@@ -115,25 +143,32 @@ export function buildReplayEventTimeline<P>(
   const startMs = scope.kind === 'FULL' ? 0 : scope.startMs;
   const endMs = scope.kind === 'FULL' ? options.durationMs : scope.endMs;
   if (!(options.fps > 0 && startMs >= 0 && endMs > startMs && endMs <= options.durationMs)) return { ok: false, reason: 'SCOPE' };
-  if (track.events.length === 0) return { ok: true, timeline: { startMs, endMs, fps: options.fps, opening: EMPTY_STATE, steps: [], afterEnd: [] } };
+  const durationMs = endMs - startMs;
+  if (track.events.length === 0) {
+    return { ok: true, timeline: { startMs, endMs, durationMs, fps: options.fps, opening: EMPTY_STATE, steps: [], closing: [], afterEnd: [], outside: [] } };
+  }
 
-  const windowOf = new Map(moments.map((m) => [m.ordinal, m]));
   const ids = new Set<string>();
+  const outside: string[] = [];
+  const admitted: ReplayHistoricalEvent<P>[] = [];
   for (const e of track.events) {
     if (ids.has(e.eventId)) return { ok: false, reason: 'DUPLICATE_EVENT' };
     ids.add(e.eventId);
-    const m = windowOf.get(e.momentOrdinal);
-    if (m === undefined) return { ok: false, reason: 'UNKNOWN_MOMENT' };
-    if (!(e.anchorMs >= m.windowStartMs && e.anchorMs <= m.windowEndMs)) return { ok: false, reason: 'ANCHOR_OUTSIDE_WINDOW' };
-    if (e.availability.kind === 'UNRECORDED') return { ok: false, reason: 'UNRECORDED_EVENT' };
+    const development = e.op === 'SET' || e.op === 'WITHDRAW';
+    if (!Number.isSafeInteger(e.sequence) || (e.floor.kind === 'PRODUCED' && !isTime(e.floor.atMs))
+        || (development ? e.anchorMs === null || !isTime(e.anchorMs) : e.anchorMs !== null)) {
+      return { ok: false, reason: 'MALFORMED_EVENT' };
+    }
+    const anchor = e.anchorMs;
+    if (anchor !== null && !windows.some((w) => w.track === e.source && w.startMs <= anchor && anchor <= w.endMs)) { outside.push(e.eventId); continue; }
+    admitted.push(e);
   }
-  // Each subject's events in the producer's order: a correction never shows before what it corrects.
-  const ordered = [...track.events].sort((x, y) => x.sequence - y.sequence || (x.eventId < y.eventId ? -1 : x.eventId > y.eventId ? 1 : 0));
+  // Each subject's events in the producer's order: a correction or a settlement never shows before what it follows.
+  const ordered = admitted.sort((x, y) => x.sequence - y.sequence || (x.eventId < y.eventId ? -1 : x.eventId > y.eventId ? 1 : 0));
   const lastOnSubject = new Map<string, number>();
   const disclosed = ordered.map((e) => {
-    const a = e.availability;
-    const available = a.kind === 'RECORDED' ? a.atMs : Infinity;
-    const at = Math.max(available, e.anchorMs, lastOnSubject.get(e.subjectKey) ?? -Infinity);
+    const floor = e.floor.kind === 'PRODUCED' ? e.floor.atMs : Infinity;
+    const at = Math.max(floor, e.anchorMs ?? -Infinity, lastOnSubject.get(e.subjectKey) ?? -Infinity);
     lastOnSubject.set(e.subjectKey, at);
     return { e, at };
   });
@@ -141,34 +176,47 @@ export function buildReplayEventTimeline<P>(
 
   const opening = new Map<string, ReplayAttentionEntry<P>>();
   const steps: ReplayEventStep<P>[] = [];
+  const closing: ReplayEventStep<P>[] = [];
   const afterEnd: string[] = [];
+  const stepOf = (e: ReplayHistoricalEvent<P>, atMs: number): ReplayEventStep<P> => ({
+    eventId: e.eventId, subjectKey: e.subjectKey, op: e.op, source: e.source, payload: e.payload, atMs, frame: causalFrame(atMs, options.fps), exact: false,
+  });
   for (const { e, at } of disclosed) {
-    if (at >= endMs) { afterEnd.push(e.eventId); continue; }
+    // At or after the scope's end: never on a frame inside it. At the PRESENTATION's end: the closing display.
+    if (at >= endMs) {
+      if (endMs === options.durationMs) closing.push(stepOf(e, durationMs));
+      else afterEnd.push(e.eventId);
+      continue;
+    }
     if (at <= startMs) { apply(opening, e); continue; }
-    const atMs = at - startMs;
-    steps.push({ eventId: e.eventId, subjectKey: e.subjectKey, op: e.op, source: e.source, payload: e.payload, atMs, frame: causalFrame(atMs, options.fps) });
+    steps.push(stepOf(e, at - startMs));
   }
-  return { ok: true, timeline: { startMs, endMs, fps: options.fps, opening, steps, afterEnd } };
+  return { ok: true, timeline: { startMs, endMs, durationMs, fps: options.fps, opening, steps, closing, afterEnd, outside } };
 }
 
-function apply<P>(state: Map<string, ReplayAttentionEntry<P>>, e: { readonly subjectKey: string; readonly op: 'SET' | 'WITHDRAW'; readonly eventId: string; readonly source: ReplayEventSource; readonly payload: P }): void {
-  if (e.op === 'WITHDRAW') state.delete(e.subjectKey);
-  else state.set(e.subjectKey, { eventId: e.eventId, source: e.source, payload: e.payload });
+function apply<P>(state: Map<string, ReplayAttentionEntry<P>>, e: { readonly subjectKey: string; readonly op: ReplayEventOp; readonly eventId: string; readonly source: ReplayEventSource; readonly payload: P }): void {
+  // As the live layer: a SET opens or updates its subject as the newest; WITHDRAW, CONFIRMED and EXPIRED remove it.
+  state.delete(e.subjectKey);
+  if (e.op === 'SET') state.set(e.subjectKey, { eventId: e.eventId, source: e.source, payload: e.payload });
 }
 
-function reduce<P>(timeline: ReplayEventTimeline<P>, reached: (step: ReplayEventStep<P>) => boolean): ReplayAttentionState<P> {
-  // The empty lane costs nothing: no copy, no allocation.
-  if (timeline.steps.length === 0 || !reached(timeline.steps[0]!)) return timeline.opening;
+function reduce<P>(timeline: ReplayEventTimeline<P>, reached: (step: ReplayEventStep<P>) => boolean, closed: boolean): ReplayAttentionState<P> {
+  // The empty lane, and every instant before the first step, cost nothing: no copy, no allocation.
+  const any = (timeline.steps.length > 0 && reached(timeline.steps[0]!)) || (closed && timeline.closing.length > 0);
+  if (!any) return timeline.opening;
   const state = new Map(timeline.opening);
   for (const step of timeline.steps) {
     if (!reached(step)) break;
     apply(state, step);
   }
+  if (closed) for (const step of timeline.closing) apply(state, step);
   return state;
 }
 
 /** Lane B's state at scoped time t: a pure function of t (seek and restart give the identical state). */
-export const attentionAt = <P>(timeline: ReplayEventTimeline<P>, t: number): ReplayAttentionState<P> => reduce(timeline, (s) => s.atMs <= t);
+export const attentionAt = <P>(timeline: ReplayEventTimeline<P>, t: number): ReplayAttentionState<P> =>
+  reduce(timeline, (s) => s.atMs <= t, t >= timeline.durationMs);
 
-/** Lane B's state drawn on frame i (causal), exactly as `attentionAt` at that frame's time. */
-export const attentionOnFrame = <P>(timeline: ReplayEventTimeline<P>, frame: number): ReplayAttentionState<P> => reduce(timeline, (s) => s.frame <= frame);
+/** Lane B's state drawn on frame i (causal), exactly as `attentionAt` at that frame's time; the closing display only at or after the presentation's end. */
+export const attentionOnFrame = <P>(timeline: ReplayEventTimeline<P>, frame: number): ReplayAttentionState<P> =>
+  reduce(timeline, (s) => s.frame <= frame, frame >= causalFrame(timeline.durationMs, timeline.fps));

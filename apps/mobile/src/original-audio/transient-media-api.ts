@@ -11,6 +11,8 @@
  *   DELETE /voice/transient/:artifactId                                      leaving: the set is released, its erasure due
  *   GET    /replay/:replayId/versions/:versionId/availability                RB-2 / S4: when each moment may appear (S3's
  *                                                                            answer; read only, creates nothing)
+ *   GET    /replay/:replayId/versions/:versionId/attention                   INTEL-LIVE-01 CP3: the calls' in-speech attention
+ *                                                                            events, placed (0205; read only, creates nothing)
  *
  * The one ambiguity it refuses to hide: a request with no readable answer MAY have created its set. That is UNKNOWN; the
  * caller retries it with the SAME command id, which the server resolves to the same set (§14.2 step 2).
@@ -203,6 +205,18 @@ export class TransientMediaApiClient {
    */
   async availability(replayId: string, versionId: string): Promise<TransientAvailabilityResult> {
     const answer = await this.send('GET', `/replay/${encodeURIComponent(replayId)}/versions/${encodeURIComponent(versionId)}/availability`);
+    if (answer === null) return { kind: 'UNAVAILABLE' };
+    if (answer.status === 404) return { kind: 'NOT_FOUND' };
+    if (answer.status !== 200 || answer.body === undefined) return { kind: 'UNAVAILABLE' };
+    return { kind: 'ANSWER', body: answer.body };
+  }
+
+  /**
+   * INTEL-LIVE-01 CP3: the version's attention answer, undecoded (the caller binds it to the map it holds), with the same
+   * outcomes as the availability read: NOT_FOUND (not this person's CURRENT version), UNAVAILABLE (anything else).
+   */
+  async attention(replayId: string, versionId: string): Promise<TransientAvailabilityResult> {
+    const answer = await this.send('GET', `/replay/${encodeURIComponent(replayId)}/versions/${encodeURIComponent(versionId)}/attention`);
     if (answer === null) return { kind: 'UNAVAILABLE' };
     if (answer.status === 404) return { kind: 'NOT_FOUND' };
     if (answer.status !== 200 || answer.body === undefined) return { kind: 'UNAVAILABLE' };

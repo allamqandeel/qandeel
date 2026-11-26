@@ -5,7 +5,7 @@ import type { TelemetryService } from '../observability/telemetry.service';
 import { parseByteRange } from '../voice-media/byte-range';
 import { assertReplayDatabaseRole, type ReplayDatabase } from './replay-database';
 import type { TransientAudioStore } from './transient-audio.store';
-import type { ReplayAvailabilityRow, TransientMediaRepository, TransientSetRow } from './transient-media.repository';
+import type { ReplayAttentionRow, ReplayAvailabilityRow, TransientMediaRepository, TransientSetRow } from './transient-media.repository';
 import {
   buildPresentationMap, presentationMapDigest, runTimelinesOf, type PresentationBoundary, type PresentationSpan,
 } from './transient-presentation-map';
@@ -26,6 +26,10 @@ import { boundedRecheck, type OpenedTransient } from './transient-stream';
  *   GET    /replay/:replayId/versions/:versionId/availability    → RB-2 / S3: { replayId, versionId, revision,
  *                                                                  sourceWindowBindingDigest, mapDigest, ledgerWatermark,
  *                                                                  moments[{ ordinal, state, placement }] }
+ *   GET    /replay/:replayId/versions/:versionId/attention       → INTEL-LIVE-01 CP3: { replayId, versionId, revision,
+ *                                                                  sourceWindowBindingDigest, mapDigest, events[{ call, seq,
+ *                                                                  track, op, subjectKey, label, kind, confidence,
+ *                                                                  threadRef, anchor, floor }] }
  *
  * Refusals are the bounded words only: 404 NOT_FOUND (with the PROVEN reason, or null), 409 COMMAND_REUSED (nothing
  * else), 409 LIVE_CALL_ACTIVE, 503 BUSY (a full queue, a generation limit, or any failure to answer: fail-closed), 400
@@ -80,6 +84,44 @@ export interface ReplayAvailabilityAnswer {
 }
 const AVAILABILITY_STATES: ReadonlySet<string> = new Set(['RECORDED', 'UNESTABLISHED', 'BROKEN', 'ORDINAL_ONLY']);
 
+/**
+ * INTEL-LIVE-01 CP3: where one attention event may first appear — never certified (0205): the server-produced position or
+ * the settlement's source-order position, at its hold's elapsed offset, inside a run of the playback map; or after the
+ * whole Replay (the closing display).
+ */
+export type ReplayAttentionFloor =
+  | { readonly kind: 'IN_RECORDING'; readonly runIndex: number; readonly fileMs: number; readonly basis: ReplayAttentionBasis }
+  | { readonly kind: 'AFTER_END'; readonly basis: ReplayAttentionBasis };
+export type ReplayAttentionBasis = 'PRODUCED_POSITION' | 'SETTLED_THROUGH';
+
+export interface ReplayAttentionEvent {
+  /** The call's rank by its first presented run, and 0204's event_seq within it. */
+  readonly call: number;
+  readonly seq: number;
+  readonly track: 'USER' | 'QANDEEL';
+  readonly op: 'SET' | 'WITHDRAW' | 'CONFIRMED' | 'EXPIRED';
+  readonly subjectKey: string;
+  readonly label: string;
+  readonly kind: string;
+  readonly confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  readonly threadRef: string | null;
+  /** The words the event is about, in the playback map (a settlement has none). */
+  readonly anchor: { readonly runIndex: number; readonly fileMs: number } | null;
+  readonly floor: ReplayAttentionFloor;
+}
+
+export interface ReplayAttentionAnswer {
+  readonly replayId: string;
+  readonly versionId: string;
+  readonly revision: number;
+  readonly sourceWindowBindingDigest: string | null;
+  readonly mapDigest: string | null;
+  readonly events: readonly ReplayAttentionEvent[];
+}
+const ATTENTION_OPS: ReadonlySet<string> = new Set(['SET', 'WITHDRAW', 'CONFIRMED', 'EXPIRED']);
+const ATTENTION_KINDS: ReadonlySet<string> = new Set(['TOPIC', 'PERSON', 'PLACE', 'EXPERIENCE', 'CONCERN', 'PLAN']);
+const CONFIDENCES: ReadonlySet<string> = new Set(['HIGH', 'MEDIUM', 'LOW']);
+
 export interface TransientStatusAnswer {
   readonly state: JobState;
   readonly failure: string | null;
@@ -91,6 +133,52 @@ interface DatabaseError { readonly code?: string; readonly message?: string; rea
 type Settled<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: DatabaseError };
 const settle = <T>(promise: Promise<T>): Promise<Settled<T>> =>
   promise.then((value) => ({ ok: true as const, value }), (error: unknown) => ({ ok: false as const, error: (error ?? {}) as DatabaseError }));
+
+const whole = (value: string | number | null): number | null => {
+  const n = Number(value);
+  return value === null || !Number.isSafeInteger(n) ? null : n;
+};
+
+/** One EVENT row of 0205 as the wire carries it, or the integrity refusal (a malformed row refuses the whole answer). */
+function attentionEventOf(r: ReplayAttentionRow, timelines: ReturnType<typeof runTimelinesOf>, integrity: () => HttpException): ReplayAttentionEvent {
+  const seq = whole(r.event_seq);
+  const producer = r.op === 'SET' || r.op === 'WITHDRAW';
+  const anchorRun = r.anchor_run_ordinal === null ? undefined : timelines?.get(r.anchor_run_ordinal);
+  const basis = r.floor_basis;
+  if (r.entry !== 'EVENT' || seq === null || seq < 1 || r.call_ordinal === null || r.call_ordinal < 1
+      || (r.track !== 'USER' && r.track !== 'QANDEEL') || r.op === null || !ATTENTION_OPS.has(r.op)
+      || typeof r.subject_key !== 'string' || typeof r.label !== 'string' || r.kind === null || !ATTENTION_KINDS.has(r.kind)
+      || r.confidence === null || !CONFIDENCES.has(r.confidence) || anchorRun === undefined
+      || basis !== (producer ? 'PRODUCED_POSITION' : 'SETTLED_THROUGH')) {
+    throw integrity();
+  }
+  let anchor: ReplayAttentionEvent['anchor'] = null;
+  if (producer) {
+    const clock = whole(r.anchor_clock_ms);
+    const fileMs = clock === null ? null : anchorRun.fileMsAtOrAfter(clock);
+    if (fileMs === null) throw integrity();
+    anchor = { runIndex: r.anchor_run_ordinal! - 1, fileMs };
+  } else if (r.anchor_clock_ms !== null) {
+    throw integrity();
+  }
+  let floor: ReplayAttentionFloor;
+  if (r.floor_placement === 'AFTER_END') {
+    if (r.floor_run_ordinal !== null || r.floor_clock_ms !== null) throw integrity();
+    floor = { kind: 'AFTER_END', basis };
+  } else {
+    const run = r.floor_placement === 'IN_RECORDING' && r.floor_run_ordinal !== null && r.floor_run_ordinal >= r.anchor_run_ordinal!
+      ? timelines?.get(r.floor_run_ordinal) : undefined;
+    const clock = whole(r.floor_clock_ms);
+    if (run === undefined || clock === null) throw integrity();
+    const fileMs = run.fileMsAtHeldOffset(clock);
+    // Nothing of the run is at or after the position: the event waits for the end, never for an earlier instant.
+    floor = fileMs === null ? { kind: 'AFTER_END', basis } : { kind: 'IN_RECORDING', runIndex: r.floor_run_ordinal! - 1, fileMs, basis };
+  }
+  return {
+    call: r.call_ordinal, seq, track: r.track, op: r.op as ReplayAttentionEvent['op'], subjectKey: r.subject_key, label: r.label,
+    kind: r.kind, confidence: r.confidence as ReplayAttentionEvent['confidence'], threadRef: r.thread_ref, anchor, floor,
+  };
+}
 
 const notFound = (reason: Reason = null) => new NotFoundException({ outcome: 'NOT_FOUND', reason });
 const busy = () => new ServiceUnavailableException({ outcome: 'BUSY' });
@@ -220,6 +308,45 @@ export class TransientPlaybackService {
       mapDigest,
       ledgerWatermark: first.ledger_through_sp === null || !Number.isSafeInteger(seq) ? null : { sp: first.ledger_through_sp, seq },
       moments,
+    };
+  }
+
+  /**
+   * INTEL-LIVE-01 CP3 (D-CP3): the database reads and places every attention event of the version's calls (0205); this
+   * answer only translates each run clock position into the playback map's file position (the anchor AT OR AFTER it, the
+   * floor at its hold's elapsed offset, RunTimeline) and binds the answer to the version, its revision, its source windows
+   * and the map. Nothing is certified, nothing is cached; a malformed answer is refused whole (BUSY), never repaired.
+   */
+  async attention(userId: string, replayId: string, versionId: string): Promise<ReplayAttentionAnswer> {
+    if (!UUID.test(replayId) || !UUID.test(versionId)) throw this.refused('attention', notFound());
+    const read = await settle(this.repository.attention(userId, replayId, versionId));
+    if (!read.ok) throw this.refused('attention', busy(), 'transport_failure');
+    const rows = read.value;
+    const first = rows[0];
+    if (first === undefined) throw this.refused('attention', notFound());
+    const integrity = () => this.refused('attention', busy(), 'integrity_failure');
+    if (first.entry !== 'VERSION' || rows.some((r, i) => (r.entry === 'VERSION') !== (i === 0) || r.replay_id !== replayId
+        || r.replay_version_id !== versionId || r.replay_version_revision !== first.replay_version_revision
+        || r.source_window_binding_digest !== first.source_window_binding_digest)) {
+      throw integrity();
+    }
+    const eventRows = rows.slice(1);
+    let mapDigest: string | null = null;
+    let timelines: ReturnType<typeof runTimelinesOf> = null;
+    if (eventRows.length > 0) {
+      const plan = await settle(this.repository.map(userId, replayId, versionId));
+      if (!plan.ok) throw this.refused('attention', busy(), 'transport_failure');
+      if (plan.value.length === 0) throw this.refused('attention', notFound());
+      const map = buildPresentationMap(plan.value);
+      timelines = runTimelinesOf(plan.value);
+      if (map === null || timelines === null) throw integrity();
+      mapDigest = presentationMapDigest(map);
+    }
+    const events = eventRows.map((r) => attentionEventOf(r, timelines, integrity));
+    this.signal('attention', 'success');
+    return {
+      replayId, versionId, revision: first.replay_version_revision, sourceWindowBindingDigest: first.source_window_binding_digest,
+      mapDigest, events,
     };
   }
 

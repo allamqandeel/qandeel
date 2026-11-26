@@ -322,6 +322,7 @@
     "verify:replay-historical-availability:integration": "node --env-file-if-exists=.env database/verify-migration-0202.mjs",
     "verify:live-call-clock-marks:integration": "node --env-file-if-exists=.env database/verify-migration-0203.mjs",
     "verify:live-call-attention:integration": "node --env-file-if-exists=.env database/verify-migration-0204.mjs",
+    "verify:replay-attention-read:integration": "node --env-file-if-exists=.env database/verify-migration-0205.mjs",
     "test:cosmos-e2-thread-names-contract": "node --test database/tests/cosmos-e2-thread-names-v1.test.mjs",
     "test:cosmos-e2-current-personal-world-contract": "node --test database/tests/cosmos-e2-current-personal-world-v1.test.mjs",
     "test:cosmos-e2-reading-reliance-contract": "node --test database/tests/cosmos-e2-reading-reliance-gate-v1.test.mjs",

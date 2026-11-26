@@ -60,6 +60,13 @@ export class TransientMediaController {
     return this.playback.availability(request.authenticatedUser.userId, replayId, versionId);
   }
 
+  /** INTEL-LIVE-01 CP3: the calls' provisional attention of the version (Lane B), bound to the version and its playback map. */
+  @Get('replay/:replayId/versions/:versionId/attention')
+  @Header('Cache-Control', PRIVATE_NO_STORE)
+  attention(@Req() request: AuthenticatedRequest, @Param('replayId') replayId: string, @Param('versionId') versionId: string) {
+    return this.playback.attention(request.authenticatedUser.userId, replayId, versionId);
+  }
+
   @Get('voice/transient/:artifactId/status')
   @Header('Cache-Control', PRIVATE_NO_STORE)
   status(@Req() request: AuthenticatedRequest, @Param('artifactId') artifactId: string) {

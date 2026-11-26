@@ -1,9 +1,9 @@
 # INTEL-LIVE-01 — Incremental In-Speech Understanding & Living Map Attention: Execution Record v1
 
-**Status:** `INTEL-LIVE-01 CP1 ACCEPTED (PRODUCT OWNER, 2026-11-25, HEAD 0044f56e; §3.6) — CP2 LIVE MAP DISCLOSURE DELIVERED / READY FOR PO REVIEW (§9) — NOT MERGED — NOT DEPLOYED — CP3 – CP4 NOT STARTED`
+**Status:** `INTEL-LIVE-01 CP1 ACCEPTED (PRODUCT OWNER, 2026-11-25, HEAD 0044f56e; §3.6) — CP2 ACCEPTED WITH A PO EXCEPTION (2026-11-26, HEAD 3c4298c5; §9.9) — CP3 REPLAY LANE B DELIVERED / READY FOR PO REVIEW (§10) — NOT MERGED — NOT DEPLOYED — CP4 NOT STARTED`
 - Draft PR "INTEL-LIVE-01 CP1 — continuous in-speech understanding (provisional attention lane)" from `intel/intel-live-01`,
   stacked on Draft PR #414 (the CP0 docs commit `53429017`, itself on `main` at `aa6fc0c8`).
-- Merging needs the Product Owner's explicit «ادمج». Migration `0204` is **not hosted**; the next migration is `0205`.
+- Merging needs the Product Owner's explicit «ادمج». Migrations `0204` and `0205` are **not hosted**; the next migration is `0206`.
 - The lane is **OFF** unless `LIVE_CALL_PROVISIONAL_ATTENTION=ON`; every voice gate stays `DISABLED`.
 
 **Product readiness (carried in every record from CP1 on, CP0 v1.1 §8.2):** DeepSeek is `SYNTHETIC_ONLY`; synthetic
@@ -46,8 +46,8 @@ credential, transcript of a real person or hosted identifier. Every conversation
 | Checkpoint | Scope (contract) | State |
 |---|---|---|
 | **CP1** | The producer: migration `0204`, the lane, its wiring, the proofs A0 – A12 and A8′, the iOS Targeted Gate (live call) | **ACCEPTED** by the Product Owner at checkpoint level (2026-11-25, head `0044f56e`; §3.6) |
-| CP2 | The live map: Live Call protocol v3 (additive), the phone's consumption, B5′ / B6 (successful live disclosure); iOS Targeted Gate: v3 with v1 / v2 fallback, updates and withdrawals visible, reconnect / restore, COSMOS compatibility | **DELIVERED / READY FOR PO REVIEW** (§9) |
-| CP3 | Replay Lane B: the producer's events on Replay's clock, the §19 placement policy | not started |
+| CP2 | The live map: Live Call protocol v3 (additive), the phone's consumption, B5′ / B6 (successful live disclosure); iOS Targeted Gate: v3 with v1 / v2 fallback, updates and withdrawals visible, reconnect / restore, COSMOS compatibility | **ACCEPTED with a PO exception** (2026-11-26, head `3c4298c5`; §9.9) |
+| CP3 | Replay Lane B: the producer's events on Replay's clock, the §19 placement policy | **DELIVERED / READY FOR PO REVIEW** (§10); migration `0205` (D-CP3) |
 | CP4 | Closure (BG-08 / BG-09), measured cost restated, `QAN-BL-INTEL-06` → `VALIDATION — OPEN` | not started |
 
 ### 0.1 The Product Owner's mandatory acceptance interpretations, and where each is met
@@ -1045,6 +1045,9 @@ documentation-only push).
 **State:** `INTEL-LIVE-01 CP2 — DELIVERED / READY FOR PO REVIEW`. Not merged, not deployed. No product-readiness claim:
 the product gate stays the HONOR Live + Replay proof. CP3 is not started.
 
+*(Dated note, 2026-11-26: CP2 was **ACCEPTED** by the Product Owner with a World gate exception — §9.9. The text of §9.1 – §9.8
+is kept as delivered; CP3 is §10.)*
+
 ### 9.1 What CP2 delivers
 
 **Protocol v3** ([QANDEEL_LIVE_CALL_PROTOCOL_v3.md](../voice/QANDEEL_LIVE_CALL_PROTOCOL_v3.md)): v2 plus two server messages,
@@ -1215,8 +1218,19 @@ providers on an emulator), and none is claimed.
 | iOS Targeted Gate `45716615306` | FAILURE — ITG-01, ITG-02, ITG-03, **ITG-07 PASS**; ITG-08 FAIL (**harness**: the scripted recognizer's mapping, §9.4, corrected); ITG-04, ITG-09, ITG-05, ITG-06 NOT TESTED (not reached) |
 | World gate `45716615254` (impact plan: **FULL**, CP2 changes `cosmos/`) | FAILURE — **92 / 93 PASS**: iPhone 17 en 31 / 31, iPhone SE 31 / 31, iPhone 17 ar 30 / 31. The one FAIL is **S-LAND** (the Shared World's detail sheet in landscape: the expand tap did not toggle the handle; the handle stayed on screen in every orientation). Classification: **not CP2** — the Shared World's stage receives no attention input and is byte-identical (the golden); S-LAND on `i17-ar` failed before on unchanged COSMOS inputs (the COSMOS-INT-01 contract's run table). Every Personal case, every pan and landscape case, and every native XCUITest passed in all three cells. No retry was started for it |
 
-The corrected head's runs are reported in PR #415 and the delivery report; they are written here at the next executable
-change, never by a documentation-only push.
+**The final CP2 head, `3c4298c5`** (CP2 + the R1 harness correction of §9.4; written here in CP3's first executable change,
+as the Product Owner directed — never by a documentation-only push):
+
+| Run | Result |
+|---|---|
+| API CI `45731011712` | **SUCCESS** |
+| Mobile CI `45731011715` | **SUCCESS** |
+| iOS Targeted Gate `45731011757` | **SUCCESS on attempt 2**: ITG-01, ITG-02, **ITG-03 PASS AFTER RECOVERY** (`4005 OVERLOADED` on epoch 1; the gate's existing recovery resumed the call — not an uninterrupted pass), ITG-07, ITG-08, ITG-04, ITG-09, ITG-05, ITG-06 PASS. Attempt 1: ITG-02 had no ACTIVE call within 60 s — classified **infrastructure** (R1 touches no start path; the app was identical to `d8d9edd7`, whose ITG-02 passed; the runner was slower); one documented re-run of the failed job. The UI touch section (separate, exit-neutral): UT-1 FAIL, UT-2 / UT-3 NOT TESTED |
+| World gate `45731011895` (FULL) | iPhone 17 en and iPhone SE **SUCCESS**; iPhone 17 ar **29 PASS / 0 FAIL / 2 NOT TESTED** — S-LAND (the Shared sheet did not open on the first tap) and P-LAND (not run: the gate's deadline). No retry started |
+
+Across the two FULL World gate runs on identical app code, **92 of 93 device cases were proven** (every other case passed in at
+least one of the two runs); **S-LAND on iPhone 17 ar** was never proven (FAIL once, NOT TESTED once). It is the Shared
+World, which CP2 does not touch. This is **not** a Full World Gate success; §9.9 records the Product Owner's exception.
 
 **Local verification before the push:** API jest for the touched suites (`live-attention`, `voice/call`, `voice/call-turn`,
 `live-analysis`): 17 suites, 193 / 193; API and API scripts type-check clean; mobile type-check and lint clean; mobile jest
@@ -1247,3 +1261,269 @@ alone, and the centring test's slowest case takes the same time with the base `p
 `E:/QANDEEL_REPORTS/INTEL-LIVE-01/CP2/`: `b5/` (every run: server events, screenshots with their times, the driver log, the
 database's events, the analysis and the contact sheet; the first attempt kept as `scenario-a-attempt0`, the proof APK
 without cleartext), `itg-local-android/`, `bench/`, `apk/` (the proof APK and its build logs).
+
+### 9.9 CP2 acceptance and the Product Owner's exception (2026-11-26)
+
+The Product Owner's "INTEL-LIVE-01 — CP2 ACCEPTANCE & PO EXCEPTION" (2026-11-26) **ACCEPTED CP2** at head `3c4298c5` and
+directed the task to CP3. Its terms are recorded here, in CP3's first executable change, as directed:
+
+1. **CI accepted.** The API CI, Mobile CI and iOS Targeted Gate results of §9.6 are accepted. **ITG-03 is recorded as
+   PASS AFTER RECOVERY** (`4005 OVERLOADED`, handled by the gate's existing recovery), never as an uninterrupted pass.
+2. **A World gate exception that applies to CP2 only.**
+   - The two FULL runs (`45716615254` and `45731011895`) were on identical app code.
+   - 92 of the 93 device cases were proven across them.
+   - **S-LAND on iPhone 17 ar stays an open note.**
+   - **No Full World Gate success is claimed.**
+   - The current tests are not re-run, and the permanent BG-10 rules are not changed.
+3. **COSMOS measurements carried.** The remaining real COSMOS measurements, opening speed and motion smoothness, move to
+   the integrated **HONOR Live + Replay** test as product acceptance conditions. B7's Node figures (§9.5) are not those
+   measurements.
+4. **Findings kept.** Every CP2 finding (§9.7) stands. The iOS touch issues (UT-1, §3.6) and `4005 OVERLOADED` are **not**
+   treated as finally resolved.
+5. **Locators.** This record, the Project Map, Current State and the Roadmap are updated in CP3's first executable commit.
+   There is no documentation-only push.
+
+The same directive also set these conditions:
+- CP1 and CP2 are not reopened.
+- COSMOS, Prompt v5 and the voice engine are not changed.
+- CP3 is completed inside PR #415, under the approved contract and Replay §19, with Lane A fully preserved.
+- CP4 does not start before CP3 is accepted.
+- No merge, no deployment, no paid test.
+
+---
+
+## 10. CP3 — Replay Lane B (the calls' in-speech attention on Replay's clock)
+
+**Authority:** the CP2 acceptance (§9.9) and the Product Owner's **D-CP3** (2026-11-26).
+
+D-CP3 approved a new **unhosted migration `0205`**:
+- one read function, `server_read_replay_version_attention_v1`;
+- for the Replay role only;
+- with strict ownership, consent, CURRENT-version and deletion guards;
+- **no new table**;
+- `0204` and its accepted semantics unchanged.
+
+D-CP3 also **approved non-exact placement**, under the binding Replay §19 policy and Lane B's actual production-time floor,
+with these terms:
+- The recorded in-speech progression is preserved at the server-produced positions. Uncertified events are **not** all
+  deferred to the end of the spoken turn.
+- No event is ever shown before its supporting speech or before its actual production floor.
+- Per-track identity, `event_seq`, corrections, withdrawals, hold offsets and tail timing are preserved.
+- Exact historical screen-display timing is not claimed without certification.
+- Lane A is unchanged.
+- No hosted deployment, no paid test, no scope expansion.
+
+The contract: CP0 v1.0 §5 (CP3: C1 – C6), v1.1 (C2 rewritten, C7), A1 (C8), A2 (C9, C10), §8.4 and §8.5.
+
+**State:** `INTEL-LIVE-01 CP3 — DELIVERED / READY FOR PO REVIEW`.
+- Not merged and not deployed; `0205` is not hosted.
+- No product-readiness claim: the product gate stays the HONOR Live + Replay proof.
+- CP4 is not started.
+
+### 10.1 What CP3 delivers
+
+**Database: migration `0205`** (`database/migrations/0205_intel_live_01_replay_attention_read_v1.sql`, described in the
+[database README](../../database/README.md) section "INTEL-LIVE-01 CP3").
+
+The function is `public.server_read_replay_version_attention_v1(user, replay, version)`: `STABLE SECURITY DEFINER`,
+`search_path = ''`, EXECUTE for `qandeel_replay_media` only. For the creator's own CURRENT V2 version it returns:
+- one `VERSION` row (the ids, the revision and the source window binding digest);
+- then one `EVENT` row per `0204` event of the presented calls, in (call, `event_seq`) order. A call is named by its rank,
+  never by its id.
+
+**Placement** follows how `0202` places a moment, and is never certified:
+- A development's words (its anchor) must lie in a presented `WINDOW` **of its own track**; otherwise it is not returned (C7).
+- Its floor is one of two positions:
+  - the server's produced position (`PRODUCED_POSITION`);
+  - for a settlement, the settled-through position (`SETTLED_THROUGH`).
+- The floor is placed in the first presented run of the same recording that is at or after the anchor's run and whose
+  clock ends after the floor, at `max(position, run start)`. A hold is therefore placed at its presented elapsed offset (C9).
+- When no such run exists, the floor is `AFTER_END`, the closing display (Replay §19).
+
+**Guards:**
+
+| Guard | Rule |
+|---|---|
+| Ownership | the creator, the calls, and every event's user and session |
+| CURRENT | the one availability derivation, plus the plan's own re-derivation of the source windows |
+| Deletion | every presented recording must be readable now, otherwise nothing is returned |
+| Consent | only calls under CURRENT recording consent; a withdrawal is never a deletion reason (PRIV-W) |
+| Coverage | only `DEVELOPMENTS` evaluations (C10); a settlement only together with its SET; nothing reconstructed for `MISSED_*` (C8) |
+
+`0204` and `0201` – `0203` are unchanged. `0205` adds no write, no table and no certification.
+
+**API** (`apps/api/src/replay-media/`):
+- A new route, `GET replay/:replayId/versions/:versionId/attention`, on the transient media controller. It uses the same
+  authorization seam and rate limit as the availability read and is added to the route census.
+- The repository makes the one call of `0205`.
+- The service answers `{replayId, versionId, revision, sourceWindowBindingDigest, mapDigest, events[]}`. Each event is
+  `{call, seq, track, op, subjectKey, label, kind, confidence, threadRef, anchor{runIndex, fileMs} | null,
+  floor{IN_RECORDING, runIndex, fileMs, basis} | {AFTER_END, basis}}`.
+- File positions are on the version's own presentation map. `RunTimeline.fileMsAtHeldOffset` places a hold's elapsed offset.
+- The route answers 404 for anything that is not the person's current eligible version.
+
+**Phone, the source** (`apps/mobile/src/original-audio/`):
+- `replay-attention.ts` holds two functions.
+  - `decodeReplayAttention` takes exact keys. It refuses the whole answer on any fault and never repairs one. It checks:
+    - the identities, the revision and the digests;
+    - (call, seq) order with no duplicates;
+    - 0204's bounded subject, label and kind sets;
+    - that a development has words and a produced position, and a settlement has neither;
+    - that every placement lies inside a run of the map held;
+    - that a floor is never in a run before its words.
+  - `bindReplayAttention` checks this revision, this map, and the source windows pinned for the version.
+- `replay-attention-source.ts`:
+  - It sends one request once the map is held, following the availability source's pattern.
+  - Its states are `PENDING`, `BOUND`, `REFUSED`, `NOT_FOUND` and `UNAVAILABLE`.
+  - Stale answers are dropped, and failures are never masked.
+  - `ReplayAttentionPort` is the stage clock's Lane B port. It sits **beside** `ReplayStageClock`, so `presentation-clock.ts`
+    is not edited (§8.5). A clock without the port has an empty Lane B.
+- `transient-media-api.ts` gains `attention()`. `replay-audio.ts` gives each clock its attention source and the port.
+
+**Phone, Lane B** (`apps/mobile/src/replay-cosmos/`):
+- `event-track.ts`, re-anchored (§19, D-10):
+  - The operations are `SET / WITHDRAW / CONFIRMED / EXPIRED`.
+  - Each step is at `max(produced floor, anchor, previous on its subject)` and is always `exact: false`.
+  - `AFTER_END`, and a floor at the end, are the closing display: applied at the presentation's end and on no frame before it.
+  - A development outside every window of its own track is left out.
+  - The whole track is refused on another binding, a duplicate or a malformed event.
+  - It is pure in t.
+- `attention-lane.ts`:
+  - It lays the answer out as a track on the presentation clock (`runStartMs(runIndex) + fileMs`).
+  - There is a lane only when the answer is BOUND to the very map the clock holds and Lane A has not answered NOT_FOUND.
+  - It folds the marks to the live identity (`track:subjectKey`); a later call's same subject is the newest.
+- `stages.ts`:
+  - `replayMomentStage` also returns its per-rung scenes (`rungs`).
+  - `replayAttentionStage` compiles one stage with the marks through the Personal production chain, using CP2's D-5 marks:
+    a glow on a drawn Thread, otherwise an ember, at most 12 per rung.
+  - Before any Lane A disclosure, the marks are drawn on an empty field.
+- `frame.tsx`:
+  - When a lane exists and its state at t is not empty, the frame draws that state's stage.
+  - Otherwise the frame is Lane A's, unchanged.
+  - `ReplayFrameFacts.attention` (the export's facts) is present only when a lane exists.
+- `ReplayCosmosWorld.tsx`:
+  - The lane is memoised on its inputs.
+  - At most 8 prepared Lane B stages are held (LRU), disposed after 250 ms, and retired on change and on unmount.
+
+**Not changed:**
+- Lane A: `timeline.ts`, `stage-timeline.ts`, `presentation-clock.ts`, and the availability decoding and binding.
+- The camera plan; the COSMOS renderer, gestures and assets; CP2's marks.
+- `0204`, Prompt v5, the evaluator and the voice path.
+
+### 10.2 Acceptance (C1 – C10)
+
+| Criterion | Evidence | Result |
+|---|---|---|
+| **C1** zero events: Lane A identical | In `intel-live-01-cp3-lane-b`, the golden frames and facts (`3a4dc8b2…ab75a`) are equal before and after CP3, with no Lane B fact, and an empty state at t draws the identical frame. Before the push, a copy of `replay-cosmos` at `HEAD` and the CP3 code gave equal digests over 105 instants (the copy was then deleted) | PASS |
+| **C2** (v1.1) certified events at their certification; uncertified at the produced position, labelled; never at the anchor alone; `NOT_FOUND` gives an empty lane | The event-track C2 and C9 cases. Every step is `exact: false`. There is no lane for NOT_FOUND, pending, refused, unavailable, another map or another revision. **No event is certified** (`0203` certifies ledger prefixes only), so the certified branch is unreachable | PASS (uncertified branch only) |
+| **C3** seek, restart, RANGE: equal state at equal t | The event-track C3 case; the frame and its facts at t are equal however t was reached | PASS |
+| **C4** a correction reproduces the live order | Call 1 is run through CP2's live reducer (`ProvisionalAttention` + `attentionMarksOf`) and through Lane B, with equal marks after every event. SET → corrected SET → WITHDRAW never rewrites the earlier state | PASS |
+| **C5** revocation, another version or a digest mismatch: Lane B refused, Lane A unaffected | The decoder and binding refusals and event-track C5: a refused Lane B leaves Lane A's knowledge identical, and Lane B is refused while the audio plays and Lane A is bound | PASS |
+| **C6** export facts: `attentionOnFrame` parity (video not built) | At every frame, `attentionOnFrame` equals the state drawn at that frame's time | PASS (facts only) |
+| **C7** per track | `0205` returns no development outside its own track's window, and event-track rejects one. The verifier's track-rule plant is caught | PASS |
+| **C8** the recorded events at their floors; nothing at anchors; nothing for `MISSED_*`; `UNCOVERED_AT_END` shows Lane A only | The `0205` verifier on `0202`'s two-call world (exact rows, nothing reconstructed, only `DEVELOPMENTS` events), plus the phone's placement tests | PARTIAL: proven on the verifier's synthetic world only. **No Replay of a CP1 corpus call was built**; that composition belongs to the HONOR Live + Replay proof |
+| **C9** hold offset; tail after the speech; nothing at an anchor | The `0205` hold and tail placements (verifier). On the phone, a position produced inside a long pause is drawn at the pause's presented elapsed offset, and a tail event is drawn at its produced position after the window | PASS |
+| **C10** no mark for `STALE_*` / `DEGRADED_SUSPENDED` | `0205` admits only the events of `DEVELOPMENTS` evaluations; the verifier's plant that admits others is caught | PASS |
+
+**D-CP3's terms, as met:**
+- In-speech progression is kept at the produced positions. In the 120-second synthetic USER turn there are several changes
+  while the person speaks, and the event produced at 17 s is not shown at 12 s, its anchor.
+- Nothing appears before its words or its floor.
+- Per-track identity, `event_seq`, corrections, withdrawals, hold offsets and tail timing are preserved.
+- No exact-timing claim is made: every step is `exact: false`.
+- Lane A is unchanged.
+
+### 10.3 iOS (the 2026-11-18 policy) and Android
+
+- **iOS, Replay Lane B on a simulator: NOT TESTED.**
+  - No iOS gate opens a Replay: the World gate covers the COSMOS worlds, and the iOS Targeted Gate covers the live call.
+  - An iOS Replay case would need a Replay version with presented call recordings, the media worker and the transient
+    stream. That is outside CP3's approved scope.
+  - This is a Product Owner decision: D-CP3-iOS in §10.7.
+- **iOS, regression.** The push runs two gates:
+  - the World gate. Its impact plan decides **FULL**, because `replay-cosmos/` is imported by a protected surface;
+  - the iOS Targeted Gate, because `database/migrations/**` changed.
+
+  Their results on the CP3 head are reported in PR #415 and will be written here at the next executable change.
+- **Contract compatibility.** The new route is additive. The existing availability, stream and playback routes and their
+  wire shapes are unchanged (the S7-01 contract, re-anchored). A phone without CP3 never calls the route.
+- **Android.** No device or emulator proof of Replay Lane B was run in CP3, because no Replay world exists locally for it.
+
+### 10.4 Declared re-anchors (no assertion removed)
+
+- `replay-cosmos/__tests__/rb2-s4-lane-b-event-track.test.ts` is rewritten for D-10. Its header names the S4 pins it
+  replaces:
+  - the anchor-or-availability placement becomes the produced floor;
+  - `SET / WITHDRAW` gains the settlements.
+- `tests/s7-01-replay-secure-integration-contract.test.mjs`:
+  - there are now three Replay reads, with the attention route pinned;
+  - the plant is renamed "a fourth Replay route";
+  - two new plants: "a token in the attention URL" and "the attention read as a write".
+- `tests/s7-04-replay-player-navigation-contract.test.mjs` admits `0205`, by its whole file name, as an approved later
+  Replay migration.
+- `database/verify-migration-0194.mjs`, `0195` and `0196` pin the migration order: exactly `0205` follows `0204`.
+- `tests/s8b-05-live-call-contract.test.mjs` pins the last 17 migrations.
+
+### 10.5 Verification (local)
+
+**Database.**
+- The `0205` verifier (`npm run verify:replay-attention-read:integration`) ran on a local PostgreSQL clone with `0204` and
+  `0205`: **29 / 29**.
+- It caught six planted defects:
+  - the floor placed at the anchor;
+  - the track rule removed;
+  - the run end removed;
+  - non-`DEVELOPMENTS` events admitted;
+  - a foreign session;
+  - the owner check removed.
+- The re-anchored `0194` – `0196` verifiers pass on the same database.
+
+**API.** The `replay-media` and `http-security` specs pass, **11 suites, 161 / 161**, and the API type-check is clean.
+
+**Mobile.**
+- The type-check is clean.
+- The CP3 suites:
+  - the decoder, source and wiring: **15 / 15**;
+  - Lane B: **12 / 12**;
+  - the re-anchored event track: **13 / 13**.
+- Three negative plants, each made by an in-place edit, caught by exactly one failing test, then reverted:
+  - removing the decoder's floor-run check;
+  - removing event-track's own-track rule;
+  - making the frame draw Lane A's stage instead of Lane B's.
+- Jest for `replay-cosmos`, `original-audio`, `replay-composite`, `replay-player`, `cosmos` and `call`: **41 suites,
+  603 / 603**.
+- Lint: 0 errors, and no warning in any file CP3 touches.
+
+**Root contracts.** `node --test tests/*.test.mjs` passes **1 891 / 1 891**. The task-closure governance contract passes **25 / 25**.
+
+### 10.6 Findings (CP3)
+
+- **CP3-F1: nothing is certified.** C2's certified branch is unreachable while `0203` certifies ledger prefixes only. Every
+  Lane B instant is non-exact (`exact: false`) and is never presented as the historical screen time.
+- **CP3-F2: an unsettled mark from an earlier call persists** until its settlement or the closing display. `0204` has no
+  call-end fact, so Replay cannot remove the mark at its call's end.
+- **CP3-F3: a tail SET and its settlement at the same instant are never visible**, because both apply at one t.
+- **CP3-F4: one mark per `track:subject` across calls.** A later call's same subject replaces the earlier call's mark, as
+  the live identity does.
+- **CP3-F5: embers on the empty field.** They are drawn before Lane A's first disclosure, so the in-speech progression is
+  visible then.
+- **CP3-F6: Lane B stages are prepared lazily**, at most 8 held. Their device cost is unmeasured; it joins the COSMOS
+  measurements carried to the HONOR Live + Replay test (§9.9).
+- **CP3-F7: Lane A's availability binding does not check the attention pin.** The attention answer is bound to the
+  availability pin, or pins its own; the reverse check is not added, because Lane A is unchanged by mandate.
+- **CP3-F8: the video is not built.** C6 is proven on facts only.
+- **CP3-F9: Replay Lane B is not proven on an iOS or Android device** (§10.3).
+- The CP2 findings, the touch issues and `4005 OVERLOADED` all stand (§9.9).
+
+### 10.7 Decisions for the Product Owner
+
+- **D-CP3-iOS.** Either:
+  - accept CP3 with Replay Lane B's iOS interaction NOT TESTED, carried (with Android) to the HONOR Live + Replay proof and
+    an iOS Replay pass at that point; or
+  - authorize an iOS Replay Lane B case, which is a scope addition.
+- **D-CP3-C8.** Accept C8 as proven on the verifier's synthetic world, with the corpus call's Replay carried to the HONOR
+  Live + Replay proof.
+
+### 10.8 Reports (outside the repository)
+
+`E:/QANDEEL_REPORTS/INTEL-LIVE-01/CP3/` holds the delivery report, the negative plants' outputs and the local test outputs.

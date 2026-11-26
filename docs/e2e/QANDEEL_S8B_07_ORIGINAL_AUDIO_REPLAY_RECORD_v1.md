@@ -1,5 +1,8 @@
 # QANDEEL S8B-07 — Original Audio Replay, Media Rendering & Distribution: Implementation Record v1
 
+**Slice (2026-11-26):** INTEL-LIVE-01 CP3 gives Lane B its producer (§20) — **DELIVERED / READY FOR PO REVIEW — NOT
+MERGED** (PR #415); `0205` not hosted. *(The lines below are kept as written.)*
+
 **Slice (2026-11-25):** REPLAY-COSMOS-01 RB-2 / S4 + S4-CORRECTION-01 — **MERGED through PR #413 as `aa6fc0c8`** (§18, §19,
 §19.9; the tests on the final head `b5acae2a` passed; no deployment; `0201` – `0203` not hosted). The next task is
 INTEL-LIVE-01 (`QAN-BL-INTEL-06`); its CP0 contract is delivered for review (§19.9). S5 stays open. S8B-07 is not closed.
@@ -1932,3 +1935,60 @@ rules; no history-wire field for the source-window digest.
   The video (S5 / CP2-A) consumes the same track and reducer later; nothing is analysed at export.
 - **Sequence (unchanged):** INTEL-LIVE-01 → HONOR Live + Replay proof → CP2-A → CP2-B. HONOR ALI-NX1 and iOS remain
   **NOT TESTED** for S4.
+
+---
+
+## 20. INTEL-LIVE-01 CP3 — Lane B gets its producer (DELIVERED / READY FOR PO REVIEW, 2026-11-26; NOT MERGED)
+
+This section is written under INTEL-LIVE-01 CP0 v1.0 §8.4. The authoritative account is the
+[INTEL-LIVE-01 record](QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §10. This section only states what CP3
+changes in Replay. §18 and §19 are kept as written.
+
+**Authority.**
+- The Product Owner's CP2 acceptance (2026-11-26).
+- **D-CP3** (2026-11-26):
+  - unhosted migration `0205`: one Replay-role read, no new table, `0204` unchanged;
+  - non-exact placement approved under §19 and Lane B's actual production-time floor;
+  - Lane A unchanged.
+
+**The sibling read.**
+- `0205` `server_read_replay_version_attention_v1` and the route `GET replay/:replayId/versions/:versionId/attention` sit
+  beside S3's availability answer. They use the same authorization seam and the same ownership, CURRENT, deletion and
+  consent guards.
+- The answer is bound to the version's revision, the presentation map's digest and the pinned source windows.
+- On the phone it has its own decoder, binding and source (`original-audio/replay-attention*.ts`), plus a port that sits
+  beside the stage clock. `presentation-clock.ts` is not edited.
+
+**The §19 re-anchor of `event-track.ts` (§18.4 superseded for Lane B).**
+- The rule "UNRECORDED refuses the track, AFTER_END stays outside" is gone.
+- §19.9's proposal to place an uncertified event at its anchor by source order is replaced by CP0 v1.1's rewritten C2
+  and D-CP3: an uncertified event is placed at **the server's produced position**, written as
+  `max(produced floor, anchor, previous on its subject)`.
+- Such an event is never placed at its anchor alone and never deferred to the end of the turn.
+- It is labelled `exact: false`.
+- `AFTER_END` is the closing display, as in §19.2.
+- A development outside every window of its own track is out.
+- The operations are `SET / WITHDRAW / CONFIRMED / EXPIRED`.
+- Nothing is certified, because `0203` certifies ledger prefixes only, so the certified branch is unreachable.
+
+**The frame.**
+- `frame.tsx` draws a Lane B state's stage over Lane A's (the D-5 marks through the Personal production chain) only when a
+  lane exists and its state at t is not empty. Otherwise the frame is Lane A's, identical.
+- A golden and a HEAD-versus-CP3 comparison over 105 instants prove that identity.
+- `attentionOnFrame` gives the export's facts; the video is not built.
+
+**Declared re-anchors.**
+- S7-01: three Replay reads.
+- S7-04: `0205` admitted as an approved later Replay migration.
+- The S4 Lane B test rewritten for D-10.
+- The migration-order pins of `0194` – `0196` and S8B-05.
+
+**Not changed.**
+- Lane A: `timeline.ts`, `stage-timeline.ts`, `presentation-clock.ts`, and the availability decoder and binding.
+- The camera plan, the COSMOS renderer and §19's Lane A policy.
+- `QAN-BL-VIS-02` stays `OPEN — UNASSIGNED` (CP0 v1.0 §8.4).
+
+**State.**
+- `0205` is not hosted; the next migration is `0206`.
+- HONOR ALI-NX1 and iOS are **NOT TESTED** for Replay Lane B; see the INTEL-LIVE-01 record §10.3 and §10.7.
+- The sequence is unchanged: INTEL-LIVE-01 → HONOR Live + Replay proof → CP2-A → CP2-B.

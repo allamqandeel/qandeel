@@ -12,6 +12,7 @@ import type { VoiceNotePlayerPort } from '../voice-note/voice-note-playback';
 import type { PlaybackOwner } from './playback-owner';
 import type { ReplayStageClock } from '../replay-cosmos/presentation-clock';
 import { createReplayAudioClock, type ReplayAudioAnnouncement, type ReplayAudioClock } from './replay-audio-clock';
+import { createReplayAttentionSource, type ReplayAttentionPort, type ReplayAttentionSource } from './replay-attention-source';
 import type { ReplayAvailabilityBinding } from './replay-availability';
 import { createReplayAvailabilitySource, type ReplayAvailabilitySource } from './replay-availability-source';
 import type { TransientMediaApiClient, TransientRequestResult } from './transient-media-api';
@@ -33,7 +34,8 @@ export interface ReplayAudio {
   clockOf(versionId: string): ReplayAudioClock | null;
   /**
    * RB-2 / S4: what the Replay's stage reads for this version — its audio clock, and the historical availability bound to
-   * the map that clock holds (one request per opening; see `replay-availability-source.ts`). Null: no clock for it.
+   * the map that clock holds (one request per opening; see `replay-availability-source.ts`); INTEL-LIVE-01 CP3: and the
+   * calls' attention events bound to the same map (`replay-attention-source.ts`, Lane B). Null: no clock for it.
    */
   stageClockOf(versionId: string): ReplayStageClock | null;
   /** Changes when a clock is made or let go, or when a clock's state (not its position) changes. */
@@ -51,10 +53,13 @@ const BUSY: Promise<TransientRequestResult> = Promise.resolve({ kind: 'BUSY' });
 export function createReplayAudio(options: ReplayAudioOptions): ReplayAudio {
   const { api } = options;
   const clocks = new Map<string, {
-    readonly clock: ReplayAudioClock; readonly stage: ReplayStageClock; readonly source: ReplayAvailabilitySource; readonly unsubscribe: () => void;
+    readonly clock: ReplayAudioClock; readonly stage: ReplayStageClock; readonly source: ReplayAvailabilitySource; readonly attention: ReplayAttentionSource;
+    readonly unsubscribe: () => void;
   }>();
   /** RB-2 / S4: the last availability binding accepted per version in this generation (pins source windows and watermark). */
   const pins = new Map<string, ReplayAvailabilityBinding>();
+  /** INTEL-LIVE-01 CP3: the source windows an attention answer was bound to per version (checked with the availability pin). */
+  const attentionPins = new Map<string, string>();
   const listeners = new Set<() => void>();
   const speakers = new Set<(announcement: ReplayAudioAnnouncement) => void>();
   let revision = 0;
@@ -80,6 +85,7 @@ export function createReplayAudio(options: ReplayAudioOptions): ReplayAudio {
         if (held === undefined || held.clock !== clock) return;
         held.unsubscribe();
         held.source.retire();
+        held.attention.retire();
         clocks.delete(versionId);
         changed();
       },
@@ -106,31 +112,45 @@ export function createReplayAudio(options: ReplayAudioOptions): ReplayAudio {
         pins.set(versionId, binding);
       },
     });
-    const stage: ReplayStageClock = {
+    // INTEL-LIVE-01 CP3: Lane B's own source; its source windows must be the ones any answer of either lane was bound to.
+    const attention = createReplayAttentionSource({
+      replayId, versionId, revision: version.revision,
+      fetch: () => (api === null ? Promise.resolve({ kind: 'UNAVAILABLE' as const }) : api.attention(replayId, versionId)),
+      pinned: () => pins.get(versionId)?.sourceWindowBindingDigest ?? attentionPins.get(versionId) ?? null,
+      pin: (digest) => {
+        attentionPins.set(versionId, digest);
+      },
+    });
+    const stage: ReplayStageClock & ReplayAttentionPort = {
       getState: () => clock.getState(),
       subscribe(listener) {
         const fromClock = clock.subscribe(listener);
         const fromSource = source.subscribe(listener);
+        const fromAttention = attention.subscribe(listener);
         return () => {
           fromClock();
           fromSource();
+          fromAttention();
         };
       },
-      // Both only ever grow: the sum changes whenever either does.
-      revision: () => clock.revision() + source.revision(),
+      // All only ever grow: the sum changes whenever any does.
+      revision: () => clock.revision() + source.revision() + attention.revision(),
       detail: () => clock.detail(),
       place: () => clock.place(),
       availability: () => source.getState(),
+      attention: () => attention.getState(),
     };
     let seen = clock.getState();
     const unsubscribe = clock.subscribe(() => {
       source.observe(clock.detail().plan);
+      attention.observe(clock.detail().plan);
       if (clock.getState() === seen) return;
       seen = clock.getState();
       changed();
     });
     source.observe(clock.detail().plan);
-    clocks.set(versionId, { clock, stage, source, unsubscribe });
+    attention.observe(clock.detail().plan);
+    clocks.set(versionId, { clock, stage, source, attention, unsubscribe });
     changed();
     return clock;
   };
@@ -155,12 +175,14 @@ export function createReplayAudio(options: ReplayAudioOptions): ReplayAudio {
     retire() {
       if (retired) return;
       retired = true;
-      for (const { clock, source } of Array.from(clocks.values())) {
+      for (const { clock, source, attention } of Array.from(clocks.values())) {
         source.retire();
+        attention.retire();
         clock.retire();
       }
       clocks.clear();
       pins.clear();
+      attentionPins.clear();
       listeners.clear();
       speakers.clear();
     },

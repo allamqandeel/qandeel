@@ -1,5 +1,30 @@
 # QANDEEL — Current State
 
+> **INTEL-LIVE-01 — CP2 ACCEPTED WITH A PO EXCEPTION (Product Owner, 2026-11-26, head `3c4298c5`) — CP3 REPLAY LANE B DELIVERED / READY FOR PO REVIEW — NOT MERGED — 2026-11-26 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's "INTEL-LIVE-01 — CP2 ACCEPTANCE & PO EXCEPTION" (2026-11-26) and **D-CP3** (2026-11-26). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) is the task's primary document: §9.6 and §9.9 cover CP2's final head and its acceptance, and §10 covers CP3.
+> - **CP2 accepted, on these terms:**
+>   - API CI `45731011712`, Mobile CI `45731011715` and the iOS Targeted Gate `45731011757` are accepted. ITG-03 is recorded as **PASS AFTER RECOVERY** (`4005 OVERLOADED`).
+>   - The World gate has a **CP2-only exception**. The two FULL runs were on identical app code and proved 92 of 93 device cases. **S-LAND on iPhone 17 ar is an open note**. No Full World Gate success is claimed, nothing is re-run, and BG-10 is unchanged.
+>   - COSMOS opening speed and motion smoothness are carried to the HONOR Live + Replay test as product acceptance conditions.
+>   - Every CP2 finding stands. The touch issues and `4005` are not treated as resolved.
+> - **CP3 delivered (Draft PR #415):**
+>   - Migration **`0205`** adds one read, `server_read_replay_version_attention_v1`, for the Replay role only, with ownership, consent, CURRENT and deletion guards. It adds no table; `0204` is unchanged. It is **not hosted**; **the next migration is `0206`**.
+>   - A new route: `GET replay/:replayId/versions/:versionId/attention`.
+>   - On the phone: the decoder, the binding and the source, and Lane B (`event-track.ts`), re-anchored to Replay §19 and D-10.
+>   - Placement: each event at the server-produced position, `max(floor, anchor, previous on subject)`. Nothing is placed at an anchor alone, and nothing is deferred to the end of the turn. Every step is labelled non-exact; nothing is certified.
+>   - The calls' marks are drawn over Lane A's stage. Lane A, the camera and the COSMOS renderer are unchanged (proven by a golden).
+>   - The [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §20 states what this changes in Replay.
+> - **Evidence:**
+>   - C1 – C7, C9 and C10 PASS. C8 is PARTIAL: proven on the `0205` verifier's synthetic world only.
+>   - The `0205` verifier passes 29 / 29.
+> - **Open items for the Product Owner:**
+>   - **iOS and Android Replay Lane B are NOT TESTED** on a device or simulator, because no gate opens a Replay. These are decisions D-CP3-iOS and D-CP3-C8 (record §10.7).
+>   - The FULL World gate and the iOS Targeted Gate results on the CP3 head will be reported in PR #415.
+> - **Next:** the Product Owner's CP3 review.
+>   - CP4 is not started.
+>   - No product-readiness claim is made before the HONOR Live + Replay proof.
+>   - **Merge only on the Product Owner's explicit «ادمج».**
+
 > **INTEL-LIVE-01 — CP1 ACCEPTED (Product Owner, 2026-11-25, head `0044f56e`) — CP2 LIVE MAP DISCLOSURE DELIVERED / READY FOR PO REVIEW — NOT MERGED — 2026-11-25 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:** the Product Owner's "INTEL-LIVE-01 — CP1 Acceptance & CP2 Execution Authorization" (2026-11-25): CP1 accepted at checkpoint level (iOS Targeted Gate `45678917888` 6 / 6 PASS; API CI `45678917950` and Mobile CI `45678917980` SUCCESS; World gate `45678918023` CANCELLED under the CP1-only exception, which ended with CP1; UI touch UT-1 FAIL on infrastructure, UT-2 / UT-3 NOT TESTED), D-3 and D-5 approved. The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §3.6 (CP1) and §9 (CP2) are the task's primary document.
 > - **CP2 delivered (Draft PR #415, `intel/intel-live-01`):** the additive Live Call protocol **v3** ([QANDEEL_LIVE_CALL_PROTOCOL_v3.md](docs/voice/QANDEEL_LIVE_CALL_PROTOCOL_v3.md): `ATTENTION` and `ATTENTION_STATE`; v1 and v2 unchanged; Android offers v3, v2, v1, iOS v3, v1); the server discloses only what `0204` committed (the state after every `STATE ACTIVE`, each event once in `event_seq` order, never a state older than an event sent, audio first with a 64 KiB bound); the phone's call-only layer (`apps/mobile/src/call/provisional-attention.ts`: no debounce, timer, count gate or meaning; dropped at the end; restored after a reconnect); and the COSMOS D-5 marks on the Personal map (a glow in the Thread's dye, or a warm ember with its label; no hit, no line, no new draw pass, at most 12 per rung; the stage byte-identical without attention). No migration (`0204` unchanged, not hosted; the next is `0205`), no prompt, model or ASR change, no paid run.

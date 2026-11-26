@@ -105,6 +105,17 @@ export class RunTimeline {
     return at;
   }
 
+  /**
+   * INTEL-LIVE-01 CP3 (A2 C9): the file position of a Lane B floor at run clock instant `t` — `fileMsAtOrAfter`, except
+   * inside a shortened HELD span, where it is the span's presented start plus the time elapsed since the span began, at
+   * most the span's presented length: the hold's elapsed offset, never its start and never before `t`'s own elapsed time.
+   */
+  fileMsAtHeldOffset(t: number): number | null {
+    if (!Number.isSafeInteger(t) || t >= this.runEndMs) return null;
+    for (const h of this.helds) if (h.shrink > 0 && h.a < t && t < h.b) return this.fileMs(h.a) + Math.min(t - h.a, HELD_SHORTENED_MS);
+    return this.fileMsAtOrAfter(t);
+  }
+
   get fileLengthMs(): number {
     return this.fileMs(this.runEndMs);
   }

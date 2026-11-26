@@ -77,6 +77,8 @@ export interface WorldOptions {
   readonly moments?: readonly ReplayHistoryMoment[];
   /** RB-2 / S4: the availability answer (default: UNAVAILABLE — the stage stays neutral; the audio is unaffected). */
   readonly availability?: (replayId: string, versionId: string) => Promise<TransientAvailabilityResult>;
+  /** INTEL-LIVE-01 CP3: the attention answer (default: UNAVAILABLE — Lane B stays empty; Lane A and the audio are unaffected). */
+  readonly attention?: (replayId: string, versionId: string) => Promise<TransientAvailabilityResult>;
 }
 
 export function world(options: WorldOptions = {}) {
@@ -86,11 +88,17 @@ export function world(options: WorldOptions = {}) {
   const owner = createPlaybackOwner(call.signal);
   const replayCalls: string[] = [];
   const availabilityCalls: string[] = [];
+  const attentionCalls: string[] = [];
   const api = {
     // RB-2 / S4: the availability GET, kept out of `server.calls` (the playback set's own ledger).
     availability: (replayId: string, versionId: string) => {
       availabilityCalls.push(`${replayId} ${versionId}`);
       return options.availability?.(replayId, versionId) ?? Promise.resolve({ kind: 'UNAVAILABLE' as const });
+    },
+    // INTEL-LIVE-01 CP3: the attention GET, kept out of `server.calls` too.
+    attention: (replayId: string, versionId: string) => {
+      attentionCalls.push(`${replayId} ${versionId}`);
+      return options.attention?.(replayId, versionId) ?? Promise.resolve({ kind: 'UNAVAILABLE' as const });
     },
     requestReplay: (replayId: string, versionId: string, command: string) => {
       replayCalls.push(`${replayId} ${versionId}`);
@@ -144,7 +152,7 @@ export function world(options: WorldOptions = {}) {
   const clock = () => audio.clockOf(VERSION);
   /** Content heard per file (artifact): [from, to] pieces in the order heard. */
   const heard = () => players.audible.map((s) => ({ run: server.sets[0]!.ids.indexOf(s.artifactId), from: s.contentStart, to: s.contentEnd, at: s.wallStart, until: s.wallEnd }));
-  return { server, players, call, owner, audio, player, open, ordinal, playing, clock, heard, announced, replayCalls, availabilityCalls, analysisReads };
+  return { server, players, call, owner, audio, player, open, ordinal, playing, clock, heard, announced, replayCalls, availabilityCalls, attentionCalls, analysisReads };
 }
 
 export const run = (ms: number) => jest.advanceTimersByTimeAsync(ms);

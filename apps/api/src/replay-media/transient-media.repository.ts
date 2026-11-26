@@ -98,6 +98,33 @@ export interface ReplayAvailabilityRow {
   readonly clock_ms: string | number | null;
 }
 
+/**
+ * One row of `server_read_replay_version_attention_v1` (0205, INTEL-LIVE-01 CP3): the VERSION row first, then one EVENT row
+ * per attention event of the calls the version presents, each with the version binding.
+ */
+export interface ReplayAttentionRow {
+  readonly entry: 'VERSION' | 'EVENT';
+  readonly replay_id: string;
+  readonly replay_version_id: string;
+  readonly replay_version_revision: number;
+  readonly source_window_binding_digest: string | null;
+  readonly call_ordinal: number | null;
+  readonly event_seq: string | number | null;
+  readonly track: string | null;
+  readonly op: string | null;
+  readonly subject_key: string | null;
+  readonly label: string | null;
+  readonly kind: string | null;
+  readonly confidence: string | null;
+  readonly thread_ref: string | null;
+  readonly anchor_run_ordinal: number | null;
+  readonly anchor_clock_ms: string | number | null;
+  readonly floor_basis: string | null;
+  readonly floor_placement: string | null;
+  readonly floor_run_ordinal: number | null;
+  readonly floor_clock_ms: string | number | null;
+}
+
 /** The per-request read (every GET, every Range): the key stays in this process, the deadline is the database's. */
 export interface TransientReadRow {
   readonly storage_key: string;
@@ -131,6 +158,11 @@ export class TransientMediaRepository {
 
   availability(userId: string, replayId: string, versionId: string): Promise<ReplayAvailabilityRow[]> {
     return this.db.query<ReplayAvailabilityRow>('SELECT * FROM public.server_read_replay_version_availability_v1($1, $2, $3)',
+      [userId, replayId, versionId]);
+  }
+
+  attention(userId: string, replayId: string, versionId: string): Promise<ReplayAttentionRow[]> {
+    return this.db.query<ReplayAttentionRow>('SELECT * FROM public.server_read_replay_version_attention_v1($1, $2, $3)',
       [userId, replayId, versionId]);
   }
 
