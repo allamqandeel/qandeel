@@ -18,7 +18,7 @@
 //   CI          wired
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -184,11 +184,28 @@ test('iOS gate results: a multi-line detail stays on its row; the file is exactl
   const mirror = createHarnessMirror('qandeel-irg-results-');
   const dir = mirror;
   const posix = (path) => path.replace(/\\/gu, '/');
-  const sh = (body) => spawnSync('bash', ['-c', `. "$1"; ${body}`, 'irg', posix(join(root, 'scripts/ios-replay-gate/results.sh'))], {
+  // Run 46059753878, small-en: every testable case passed and validate_results still failed, as the runner's BSD awk
+  // refuses a newline inside a -v assignment ("awk: newline in string"); GNU awk takes it. The proof runs behind a shim
+  // that refuses it the same way, ahead of whichever awk the host has.
+  mkdirSync(join(dir, 'bsd-awk'));
+  writeFileSync(join(dir, 'bsd-awk', 'awk'), [
+    '#!/bin/bash',
+    'prev=',
+    'for a in "$@"; do',
+    `  if [ "$prev" = -v ] || [[ "$a" == -v?* ]]; then case "$a" in *$'\\n'*) echo "awk: newline in string $a" >&2; exit 2;; esac; fi`,
+    '  prev=$a',
+    'done',
+    'PATH="${PATH#*:}" exec awk "$@"',
+    '',
+  ].join('\n'), { mode: 0o755 });
+  const sh = (body) => spawnSync('bash', ['-c', `PATH="$(cd "$2" && pwd):$PATH"; . "$1"; ${body}`, 'irg', posix(join(root, 'scripts/ios-replay-gate/results.sh')), posix(join(dir, 'bsd-awk'))], {
     cwd: mirror, encoding: 'utf8', env: { ...process.env, RES: posix(join(dir, 'results.tsv')), LOG: posix(join(dir, 'gate.log')) },
   });
   const header = 'case\tresult\tdetail\n';
   try {
+    // The shim is in force: a newline in a -v value is refused, a single-line one passes through.
+    const shim = sh(String.raw`awk -v x="$(printf 'a\nb')" 'BEGIN { print x }'; echo "rc=$?"; awk -v x='a b' 'BEGIN { print x }'`);
+    assert.match(shim.stdout, /rc=2\na b/u, `${shim.stdout}${shim.stderr}`);
     writeFileSync(join(dir, 'results.tsv'), header);
     // J-SAVED-LINE's evidence as the label query returned it: three lines (one with a carriage return), and a tab.
     const wrote = sh(String.raw`result A PASS "$(printf 'The selected part was saved for a Replay.\nThe selected part was saved for a Replay.\r\nThe selected part was saved for a Replay.')"; result B 'NOT TESTED' "$(printf 'one\ttab\nnext')"; validate_results A B`);

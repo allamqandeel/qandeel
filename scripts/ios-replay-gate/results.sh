@@ -16,10 +16,11 @@ result() { local d; d="$(one_line "$3")"; printf '%s\t%s\t%s\n' "$1" "$2" "$d" >
 
 # validate_results <case>...: the file is its header, then exactly these cases, in this order, each once, each with
 # three fields and a result of PASS, FAIL or NOT TESTED. Prints what is wrong; non-zero when anything is.
+# Run 46059753878: the cases went to awk one per line, and the runner's BSD awk refuses a newline in a -v value ("awk:
+# newline in string"). Case names hold no space, so they go space-separated, which every awk takes.
 validate_results() {
-  local expected; expected="$(printf '%s\n' "$@")"
-  awk -F'\t' -v want="$expected" '
-    BEGIN { n = split(want, w, "\n"); bad = 0 }
+  awk -F'\t' -v want="$*" '
+    BEGIN { n = split(want, w, " "); bad = 0 }
     NR == 1 { if ($0 != "case\tresult\tdetail") { print "results.tsv: the header is not case/result/detail"; bad = 1 } next }
     { i = NR - 1
       if (NF != 3) { print "results.tsv: line " NR " has " NF " fields, not 3"; bad = 1 }
