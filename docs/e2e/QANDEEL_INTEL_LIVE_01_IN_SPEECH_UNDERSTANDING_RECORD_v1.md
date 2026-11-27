@@ -2402,7 +2402,7 @@ USD 1.50 ceiling (USD 0.012 spent). The server-only correction needs no new APK 
 - T-2: **18 / 18** (twice, then again after the sibling proofs).
 - `tsc --noEmit` passes for the scripts project.
 - The gate contract: **7 / 7**.
-- Root contracts (`node --test tests/*.test.mjs`) and `test:task-closure-governance-contract`: run on the committed tree; results in the closing note below.
+- On the committed R1 tree (`4d154043`, no untracked files): root contracts (`node --test tests/*.test.mjs`) **1896 / 1896**; `test:task-closure-governance-contract` **25 / 25**. Before the commit, the first full run found 14 failures, all from this change: the S8B-05 live call contract's explicit outbox and erasure-key counts, and the QAN-INF-02 harness lifecycle (the new test first used `mkdtempSync`). The forward-safety mirror tests failed on those same assertions. All are corrected in `4d154043`.
 
 **CI impact (BG-10):** the World gate's impact plan stays **NOT_AFFECTED** for every file. The iOS Targeted Gate runs
 again, triggered by `scripts/ios-targeted-gate/**`, `live-attention/**` and `live-analysis/**`. API CI runs in full.
