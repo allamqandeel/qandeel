@@ -2271,8 +2271,9 @@ Nothing is added on the First Audio path.
 **Local verification on the committed tree (`E:/intellive`, no untracked files):**
 - `tsc --noEmit` passes for `apps/api` and for its scripts project.
 - API jest: **353 / 353 suites, 7936 passed**; the 1 skipped test is pre-existing and unrelated (`shared-qandeel-reply.evidence-linked-prototype.spec.ts`).
-- Root contracts: __ROOT__.
-- `npm run test:task-closure-governance-contract`: __GOV__.
+- Root contracts (`node --test tests/*.test.mjs`): **1895 / 1895**.
+- `npm run test:task-closure-governance-contract`: **25 / 25**.
+- One full API jest run made in parallel with the root suite failed one case of `live-call-turn.engine.spec.ts` (a timing case under load). That spec passed alone (20 / 20), and the full suite passed again when run alone, so this is not a defect of this change.
 
 **CI impact (BG-10):**
 - The World gate's impact plan is **NOT_AFFECTED** for every file in the PR: `package.json` is `MANIFEST_SCRIPTS_ONLY`
