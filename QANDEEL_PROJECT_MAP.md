@@ -1,5 +1,12 @@
 # QANDEEL — Project Map
 
+> **CALL-ATTR-01 — MERGED (PR #416, `main` `b842fd0d`, accepted head `8f52f6df`) — HONOR SESSION RESUMED FROM MERGED `main` — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's "CALL-ATTR-01 MERGED — RESUME HONOR VALIDATION" (2026-11-27); record §12.8.
+> - **Where it lives (now on `main`):** `apps/api/src/live-attention/live-attention.provider.ts` (`attributedEvaluator`) and `apps/api/src/live-analysis/call-analysis.worker.ts` (`establish`), both through `runWithAiUsageAttribution`. Permanent tests T-1 – T-3 as listed in the addendum below.
+> - **Merge evidence:** all mandatory CI passed; T-2 18 / 18 on all four PostgREST lines; the iOS Targeted Gate 9 / 9.
+> - **Kept open:** iOS touch **UT-1 PASS, UT-2 FAIL, UT-3 NOT TESTED**; `QAN-BL-CI-05` (`OPEN — UNASSIGNED`); `QAN-BL-INTEL-06` until the HONOR evidence (V-1 – V-8, the physical End button, CP3-F10, C8, First Audio latency, COSMOS performance) is accepted.
+> - **Next:** the paid HONOR session within USD 1.488 remaining; then S8B-07 CP2-A.
+
 > **CALL-ATTR-01 — CALL-PATH AI USAGE ATTRIBUTION CORRECTION — APPROVED BY THE PO AND DELIVERED / READY FOR PO REVIEW — NOT MERGED — `QAN-BL-INTEL-06` VALIDATION — OPEN — HONOR SESSION STILL SUSPENDED — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:** the Product Owner's "CALL-ATTR-01 — PO EXECUTION AUTHORIZATION" (2026-11-27): one task, one PR, one checkpoint, no migration. The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.5 is the primary account; §12.6 records the PO's "PR #416 CI CORRECTION" (R1: T-2's teardown and the ITG-09 checker), §12.7 CI R2 (the iOS gate's microphone grant read back before the start command; `QAN-BL-CI-05` registered).
 > - **Where it lives:**

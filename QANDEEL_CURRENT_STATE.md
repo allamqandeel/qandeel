@@ -1,5 +1,12 @@
 # QANDEEL — Current State
 
+> **CALL-ATTR-01 MERGED (PR #416, `main` `b842fd0d`, accepted head `8f52f6df`) — HONOR LIVE + REPLAY VALIDATION RESUMED FROM MERGED `main` (FREE READINESS PASS; PAID SESSION PENDING) — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's "CALL-ATTR-01 MERGED — RESUME HONOR VALIDATION" (2026-11-27). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.8 is the primary account.
+> - **Implemented on `main`:** CALL-ATTR-01. The provisional attention lane and the call analysis worker reach DeepSeek attributed. All mandatory CI passed: T-2 **18 / 18** on all four PostgREST lines; the iOS Targeted Gate **9 / 9**.
+> - **Outstanding validation observations (kept, not resolved by the merge):** iOS touch **UT-1 PASS, UT-2 FAIL, UT-3 NOT TESTED**. UT-3 on Android (HONOR's physical End button) stays mandatory.
+> - **Resumption:** the same HONOR session, from merged `main`; the installed test APK is compatible and reused; the free readiness checks pass (record §12.8). V-1 – V-8 are unchanged. Of the authorized USD 1.50, about USD 0.012 is spent (ceiling USD 1.488). No hosted deployment.
+> - **Open:** the paid session's evidence and the PO's acceptance of `QAN-BL-INTEL-06`. S8B-07 CP2-A follows that acceptance.
+
 > **INTEL-LIVE-01 MERGED (PRs #414 / #415, `main` `11e0702d`) — HONOR LIVE + REPLAY VALIDATION SUSPENDED — CALL-ATTR-01 DELIVERED / READY FOR PO REVIEW — NOT MERGED — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:**
 >   - the Product Owner's "HONOR VALIDATION — BILLING RECOVERY & USAGE ATTRIBUTION CORRECTION" (2026-11-27);

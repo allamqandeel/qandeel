@@ -6778,6 +6778,15 @@ merge).**
   defect, before product acceptance.
 - **Index after CALL-ATTR-01 CI R2: 114 items; 54 / 5 / 18 / 37 by status, 64 / 46 / 4 by severity.**
 
+**CALL-ATTR-01 — merged (2026-11-27; PR #416, `main` `b842fd0d`, accepted head `8f52f6df`).**
+
+- **Authority:** the Product Owner's "CALL-ATTR-01 MERGED — RESUME HONOR VALIDATION" (2026-11-27); record §12.8.
+- **Effective:** the CI R2 entry above, so `QAN-BL-CI-05` is now admitted on `main` (`OPEN — UNASSIGNED`, not implemented).
+- **Read and left unchanged:** `QAN-BL-INTEL-06` stays `VALIDATION — OPEN` until the resumed HONOR session's required
+  evidence is accepted. The iOS touch observations UT-1 PASS, UT-2 FAIL, UT-3 NOT TESTED are kept in the record and the
+  locators. They are validation observations of that item, not new items.
+- **Index unchanged: 114 items; 54 / 5 / 18 / 37 by status, 64 / 46 / 4 by severity.**
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.

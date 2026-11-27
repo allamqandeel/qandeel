@@ -2481,3 +2481,49 @@ only. `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`.
 - `bash -n` on the runner;
 - the World gate's impact plan stays **NOT_AFFECTED** (the flow is `NOT_IN_BINARY`);
 - the root contracts and governance results are in the PR's R2 note.
+
+### 12.8 CALL-ATTR-01 merged; the HONOR session resumes from `main` (2026-11-27)
+
+**Authority:** the Product Owner's "CALL-ATTR-01 MERGED — RESUME HONOR VALIDATION" (2026-11-27).
+
+**The merge.** PR #416 is merged; accepted head `8f52f6df`; `main` merge commit `b842fd0d`. All mandatory CI passed:
+- T-2 passed **18 / 18** on all four PostgREST lines;
+- the iOS Targeted Gate passed **9 / 9**.
+
+**Outstanding validation observations, kept as the PO recorded them:** the iOS touch results of the merged head are
+**UT-1 PASS, UT-2 FAIL, UT-3 NOT TESTED**. They are not resolved by the merge. UT-3 on Android (the physical End button on
+HONOR) stays mandatory in the resumed session.
+
+**The resumption, free readiness first (no paid request was sent):**
+- The HONOR session runs from merged `main` (`b842fd0d`), not from the code it was suspended on. The API's `dist`, which
+  the local Replay pool loads, is rebuilt from it. The proof server's temporary diagnostic additions (harness only) are removed;
+  its composition reaches the attention lane and the call analysis worker through the production adapters this task
+  corrected.
+- **APK compatibility:** between the test APK's source (`11e0702d`) and `b842fd0d`, nothing under `apps/mobile` or
+  `packages` changed except the iOS gate's Maestro flow, which is not in the binary. There is no `database/` change. The
+  installed test app (`com.qandeel.mobile.intelhonor`, sha256 `c30f6faa…`) is reused as is.
+- **API changes since `11e0702d`:** only `live-attention.provider.ts` and `call-analysis.worker.ts` in production code, plus
+  T-1. The free dry run exercises both.
+- **REAL boot check** (every request refused): all nine steps pass: the six compositions, the Speechmatics key, the Vertex project and the ADC
+  token are all OK. Spend is USD 0.
+- **Host checks:**
+  - `replay/capability` → `creationAvailable: true`;
+  - the voice capability → `VOICE_RECORDING_V3` current;
+  - the pool from the rebuilt `dist` refuses an unauthenticated request (401) and answers the 0205 route (NOT_FOUND for
+    an unknown id).
+- **FAKE dry run on HONOR:**
+  - the app came up in Arabic;
+  - a call started with the COSMOS stage and the real microphone uplink;
+  - two attention evaluations were admitted and resolved with developments, and four frames reached the phone;
+  - the call ended `USER_ENDED`;
+  - both halves of its exchange were analysed `COMPLETE` on the first attempt, with no `PARKED`.
+- **The paid database** is recreated clean from the migrated template. The suspended session's database is kept, renamed,
+  as evidence of §12.1 – §12.2.
+
+**Unchanged:**
+- V-1 – V-8, including the physical End button (UT-3 on Android), CP3-F10, C8, First Audio latency and COSMOS performance;
+- the authorized total of USD 1.50, of which about USD 0.012 is spent, leaving a ceiling of USD 1.488;
+- the existing real providers and the Achird voice, with synthetic conversation content only;
+- no hosted deployment.
+
+`QAN-BL-INTEL-06` stays `VALIDATION — OPEN` until the PO accepts the required evidence.
