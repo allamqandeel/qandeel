@@ -30,6 +30,10 @@
  * shown, the stage settles at the presentation's end after the audio allowance, and the closing knowledge (the last
  * speech's) appears there — never on a frame inside the Replay, never before the end is reported heard.
  *
+ * S8B-07 CP2-A.1 (R-2, R-3): given the player's `pacedElapsed`, a paced range runs on the reading pace's elapsed part the
+ * player itself times (a pause keeps it, a timeline seek inside the moment places it), never on a second wall clock of its
+ * own; without it (a caller with no player), exactly as before.
+ *
  * INTEL-LIVE-01 CP3 (D-CP3, 2026-11-26): Lane B beside Lane A — the calls' in-speech attention (`attention-lane.ts`),
  * from its own answer bound to the same map, on the same clock and scope, drawn over the Lane A stage at t through the
  * production chain. Nothing of it reaches the Lane A timeline, the camera plan or t; without a bound answer with events
@@ -104,6 +108,8 @@ export interface ReplayCosmosWorldProps {
   readonly windowMs: (moment: ReplayHistoryMoment) => number;
   /** RB-1 S2: the version's audio clock, when the player has one for it; absent or null: the version is text only. */
   readonly stageClock?: ReplayStageClock | null;
+  /** S8B-07 CP2-A.1: the player's reading-pace elapsed part of the paced moment shown (null: none yet). Absent: timed here. */
+  readonly pacedElapsed?: (ordinal: number) => number | null;
   readonly scope: ReplayScope;
   readonly rtl: boolean;
   readonly typography: LabelTypography;
@@ -189,7 +195,9 @@ export function ReplayCosmosWorld(props: ReplayCosmosWorldProps) {
   const shownWindow = windows.find((w) => w.ordinal === ordinal) ?? null;
   const pacedRange = followed?.kind === 'PACED' ? { from: followed.startMs, to: followed.endMs }
     : followed === null && stageClock === null && shownWindow !== null ? { from: shownWindow.windowStartMs, to: shownWindow.windowEndMs } : null;
-  const paced = usePacedTime(pacedRange, startMs, durationMs, playing && pacedRange !== null);
+  const own = usePacedTime(pacedRange, startMs, durationMs, playing && pacedRange !== null && props.pacedElapsed === undefined);
+  const followedPace = usePlayerPacedTime(props.pacedElapsed, ordinal, pacedRange, startMs, durationMs, playing && pacedRange !== null);
+  const paced = followedPace ?? own;
   const scoped = (full: number) => Math.min(durationMs, Math.max(0, full - startMs));
   // A text block inside an audio plan is drawn its stated allowance behind (a delay, never an advance); a text-only version
   // keeps its pace exactly.
@@ -300,6 +308,28 @@ function useSettledAfter(key: number | null, ms: number): boolean {
     return () => clearTimeout(handle);
   }, [key, ms]);
   return key !== null && settled === key;
+}
+
+/**
+ * S8B-07 CP2-A.1: scoped presentation time through a paced range on the PLAYER's reading pace — its elapsed part, read on
+ * each display frame while it plays (a pause or a seek is the player's change, and redraws). Null: no player reading given.
+ */
+function usePlayerPacedTime(read: ((ordinal: number) => number | null) | undefined, ordinal: number, range: { readonly from: number; readonly to: number } | null, startMs: number, durationMs: number, playing: boolean): number | null {
+  const [, redraw] = useState(0);
+  useEffect(() => {
+    if (!playing || read === undefined) return undefined;
+    let frame = 0;
+    const onFrame = () => {
+      redraw((n) => n + 1);
+      frame = requestAnimationFrame(onFrame);
+    };
+    frame = requestAnimationFrame(onFrame);
+    return () => cancelAnimationFrame(frame);
+  }, [playing, read]);
+  if (read === undefined || range === null) return null;
+  const base = Math.max(0, range.from - startMs);
+  const limit = Math.max(base, Math.min(durationMs, range.to - startMs));
+  return Math.min(limit, base + Math.max(0, read(ordinal) ?? 0));
 }
 
 /** Scoped presentation time through a paced range (a text-only version's moment, or a text moment's block; see the header). */

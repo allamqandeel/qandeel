@@ -243,3 +243,68 @@ export function replayExportAudio(clock: ReplayPresentationClock): readonly { re
   return clock.blocks.filter((b): b is Extract<ReplayPresentationBlock, { kind: 'RUN' }> => b.kind === 'RUN')
     .map((b) => ({ runIndex: b.runIndex, atMs: b.startMs, durationMs: b.endMs - b.startMs }));
 }
+
+/**
+ * S8B-07 CP2-A.1 (R-2, R-3) — the Replay's ONE timeline, read on this same clock: where the presentation is now, from 0
+ * to `durationMs`, for the whole selected part. It is not a second timing authority: on audio it is the clock's own
+ * place (`at`), in a TEXT block it is the reading pace's elapsed part the player reports, and nothing else.
+ *
+ *   a TEXT moment shown   its block's start plus the reading pace's elapsed part (null: its start), within the block;
+ *                         read in full while the clock presents what follows it, naming no moment yet (the pause
+ *                         before the next run, that run's start), the clock's place up to the next moment's start
+ *   an audio moment shown the clock's place while it presents that moment, the pause before a run, or nothing named (a
+ *                         stale place — paused elsewhere, then moved on the Spine — is never read: the moment's start)
+ *   the end reported      the presentation's end, as the closing display reads it
+ *
+ * Unlike the stage time, no allowance is subtracted: the line shows where the presentation is, and the stage alone draws
+ * behind it (FC-0), so no knowledge is drawn earlier by this.
+ */
+export function replayTimelinePosition(clock: ReplayPresentationClock, shown: number, audio: ReplayStageAudioState, pacedElapsedMs: number | null): number {
+  const index = clock.inputs.findIndex((m) => m.ordinal === shown);
+  if (index < 0) return 0;
+  const text = clock.blocks.find((b) => b.kind === 'TEXT' && b.ordinal === shown);
+  if (text !== undefined) {
+    const read = Math.min(text.endMs - text.startMs, Math.max(0, pacedElapsedMs ?? 0));
+    // Read in full, while the clock presents what comes right after it and names no moment yet (the pause before the next
+    // run, or that run's start before its first window reports): the clock's place, up to the next moment's start.
+    if (read >= text.endMs - text.startMs && audio.ordinal === null && audio.place !== null && FOLLOWING.includes(audio.phase)) {
+      const t = clock.at(audio.place);
+      const after = clock.inputs.slice(index + 1).find((m) => m.windowStartMs >= text.endMs);
+      if (t >= text.endMs && (after === undefined || t <= after.windowStartMs)) return t;
+    }
+    return text.startMs + read;
+  }
+  const own = clock.inputs[index]!;
+  const start = own.windowStartMs;
+  const next = clock.inputs.slice(index + 1).find((m) => m.windowStartMs > start);
+  const end = next === undefined ? clock.durationMs : next.windowStartMs;
+  const presentedBy = (ordinal: number) => clock.inputs.find((m) => m.ordinal === ordinal)?.presentedBy ?? ordinal;
+  const presents = audio.ordinal === null || presentedBy(audio.ordinal) === own.presentedBy;
+  if (audio.phase === 'DONE' && presents && end === clock.durationMs) return clock.durationMs;
+  if (audio.place === null || !FOLLOWING.includes(audio.phase) || !presents) return start;
+  return Math.min(clock.durationMs, Math.max(0, clock.at(audio.place)));
+}
+
+/**
+ * S8B-07 CP2-A.1 (R-3): the moment and the offset inside it that present instant t — what the timeline's seek hands the
+ * player. In a TEXT block: that moment, t after its start. In a run: the latest-started window at or before t (D-05.5,
+ * as the audio clock reports it; two starting together, the later moment), t after that window's start, so the clock's
+ * file place is exactly t; before the run's first window, that window's start. In the pause before a run: the run's first
+ * window, from its start. Null only for an empty clock.
+ */
+export function replayTimelineTarget(clock: ReplayPresentationClock, t: number): { readonly ordinal: number; readonly offsetMs: number } | null {
+  if (clock.blocks.length === 0 || clock.durationMs <= 0) return null;
+  const at = Math.min(clock.durationMs - 1, Math.max(0, Math.round(t)));
+  const block = clock.blocks.find((b) => b.startMs <= at && at < b.endMs) ?? clock.blocks[clock.blocks.length - 1]!;
+  if (block.kind === 'TEXT') return { ordinal: block.ordinal, offsetMs: at - block.startMs };
+  const inRun = clock.windows.filter((w) => w.runIndex === block.runIndex);
+  if (inRun.length === 0) return null;
+  const first = inRun.reduce((best, w) => (w.startMs < best.startMs || (w.startMs === best.startMs && w.momentOrdinal > best.momentOrdinal) ? w : best));
+  if (block.kind === 'PAUSE') return { ordinal: first.momentOrdinal, offsetMs: 0 };
+  let found: ReplayPresentationWindow | null = null;
+  for (const w of inRun) {
+    if (w.startMs > at) continue;
+    if (found === null || w.startMs > found.startMs || (w.startMs === found.startMs && w.momentOrdinal > found.momentOrdinal)) found = w;
+  }
+  return found === null ? { ordinal: first.momentOrdinal, offsetMs: 0 } : { ordinal: found.momentOrdinal, offsetMs: at - found.startMs };
+}

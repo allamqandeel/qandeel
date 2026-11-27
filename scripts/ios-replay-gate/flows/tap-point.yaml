@@ -1,0 +1,7 @@
+# S8B-07 CP2-A.1 iOS Replay gate: one tap at a point given in screen percentages ("x%,y%") (no retry).
+appId: com.qandeel.mobile
+---
+- tapOn:
+    retryTapIfNoChange: false
+    waitToSettleTimeoutMs: 1500
+    point: "${P}"

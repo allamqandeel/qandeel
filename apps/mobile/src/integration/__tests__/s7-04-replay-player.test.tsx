@@ -16,7 +16,7 @@ import { exchange, historyBody } from '../../conversation/__fixtures__/conversat
 import { MAP_SURFACE_TEST_ID } from '../../map';
 import { REPLAY_COSMOS_TEST_ID } from '../../replay-cosmos';
 import { conversationCopy } from '../../conversation';
-import { replayEntryCopy } from '../../replay-entry';
+import { replayEntryCopy, replaySaveCopy } from '../../replay-entry';
 import { replayCompositeCopy } from '../../replay-composite';
 import { REPLAY_PLAYER_TEST_ID, replayPlayerCopy } from '../../replay-player';
 import { PLAYER_IDS, PLAYER_WIRE, playerServer, type PlayerServer } from '../../replay-player/__fixtures__/player-wire';
@@ -130,6 +130,10 @@ describe('S7-04 — Select → Saved Draft → Real Preview → Player → Priva
     await savePart(view);
     expect(JSON.parse(h.http.matching('/replay/drafts')[0].body!)).toMatchObject({ firstTc: 1, lastTc: 6 });
     expect(view.getByTestId('qandeel-replay-notice')).toBeTruthy();
+    // S8B-07 CP2-A.1 (O-3): RS-01 once the server saved it, and RS-02, the way to that exact Replay.
+    expect(view.getByText(replaySaveCopy(LANGUAGE).savedPart)).toBeTruthy();
+    expect(view.getByTestId('qandeel-replay-preview').props.accessibilityLabel).toBe(replaySaveCopy(LANGUAGE).openReplay);
+    expect(view.getByText(replaySaveCopy(LANGUAGE).openReplay)).toBeTruthy();
 
     const conversationBefore = runtime.conversation.getState();
     const storeBefore = runtime.store.getState();

@@ -1,0 +1,9 @@
+# S8B-07 CP2-A.1 iOS Replay gate: a cold launch of the proof build to its validation chooser.
+appId: com.qandeel.mobile
+---
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "irg-choose-journey"
+    timeout: 180000

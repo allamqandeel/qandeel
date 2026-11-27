@@ -71,6 +71,8 @@ export interface ReplayMomentCompositeProps {
   readonly windowMs?: (moment: ReplayHistoryMoment) => number;
   /** PR #404 RB-1: the version's audio clock, when the player has one: the COSMOS stage follows it. Default: none (text). */
   readonly stageClock?: ReplayStageClock | null;
+  /** S8B-07 CP2-A.1: the player's reading-pace elapsed part of the paced moment shown, for the stage. Absent: timed there. */
+  readonly pacedElapsed?: (ordinal: number) => number | null;
 }
 
 const STILL_WINDOW_MS = (): number => 6000;
@@ -102,7 +104,7 @@ export interface ReplayMomentPresentation {
   readonly beneath: ReactNode;
 }
 
-export function ReplayMomentComposite({ controller, ordinal, language, insets, initialDepth = 'WORLD', top = null, controls = null, playing = false, windowMs = STILL_WINDOW_MS, stageClock = null }: ReplayMomentCompositeProps) {
+export function ReplayMomentComposite({ controller, ordinal, language, insets, initialDepth = 'WORLD', top = null, controls = null, playing = false, windowMs = STILL_WINDOW_MS, stageClock = null, pacedElapsed }: ReplayMomentCompositeProps) {
   useSyncExternalStore(controller.subscribe, controller.revision);
   const state = controller.state();
   useEffect(() => controller.open(), [controller]);
@@ -137,16 +139,17 @@ export function ReplayMomentComposite({ controller, ordinal, language, insets, i
   return (
     <ReadyComposite key={state.version.versionId} controller={controller} version={state.version} moments={state.moments} ordinal={ordinal}
       language={language} insets={insets} fontScale={screen.fontScale} envelope={presentedIn} initialDepth={initialDepth} top={top} controls={controls}
-      playing={playing} windowMs={windowMs} stageClock={stageClock} />
+      playing={playing} windowMs={windowMs} stageClock={stageClock} pacedElapsed={pacedElapsed} />
   );
 }
 
-function ReadyComposite({ controller, version, moments, ordinal, language, insets, fontScale, envelope, initialDepth, top, controls, playing, windowMs, stageClock }: {
+function ReadyComposite({ controller, version, moments, ordinal, language, insets, fontScale, envelope, initialDepth, top, controls, playing, windowMs, stageClock, pacedElapsed }: {
   readonly controller: ReplayCompositeController; readonly version: ReplayHistoryVersion; readonly moments: readonly ReplayHistoryMoment[];
   readonly ordinal: number; readonly language: ChromeLanguage; readonly insets: ReplayMomentCompositeProps['insets'];
   readonly fontScale: number; readonly envelope: { readonly width: number; readonly height: number }; readonly initialDepth: SemanticDepth;
   readonly top: LivingAnalysisTopBand | null; readonly controls: ReplayMomentControls | null;
   readonly playing: boolean; readonly windowMs: (moment: ReplayHistoryMoment) => number; readonly stageClock: ReplayStageClock | null;
+  readonly pacedElapsed: ((ordinal: number) => number | null) | undefined;
 }) {
   const asked = moments.find((moment) => moment.ordinal === ordinal) ?? null;
   // One isolated viewpoint per version, opened on the moment first asked for.
@@ -199,7 +202,7 @@ function ReadyComposite({ controller, version, moments, ordinal, language, inset
         top={top}
         world={(frame) => (context === null || !context.ok || request === null ? null : (
           <ReplayCosmosWorld controller={controller} version={version} moments={moments} sessionId={request.sessionId} ordinal={moment?.ordinal ?? ordinal}
-            playing={playing} windowMs={windowMs} stageClock={stageClock} scope={FULL_SCOPE} rtl={language === 'ar'} typography="SYSTEM_LIVE_WEIGHTS"
+            playing={playing} windowMs={windowMs} stageClock={stageClock} {...(pacedElapsed === undefined ? {} : { pacedElapsed })} scope={FULL_SCOPE} rtl={language === 'ar'} typography="SYSTEM_LIVE_WEIGHTS"
             width={frame.width} height={frame.height} />
         ))}
         timeline={null}

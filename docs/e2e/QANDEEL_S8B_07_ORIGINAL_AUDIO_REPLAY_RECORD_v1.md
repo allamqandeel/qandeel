@@ -1,5 +1,9 @@
 # QANDEEL S8B-07 — Original Audio Replay, Media Rendering & Distribution: Implementation Record v1
 
+**Slice (2026-11-27):** S8B-07 CP2-A.1 — continuous in-app Replay (R-1 / O-3, R-2 / O-4, R-3 / O-5, R-5 in-app, and the iOS
+Replay gate) — **DELIVERED / READY FOR PO REVIEW — NOT MERGED** (§21). The CP2-A.1 Copy Gate is CLOSED (§21.5). CP2-A.2
+and CP2-B are not started. S8B-07 is not closed. *(The lines below are kept as written.)*
+
 **Slice (2026-11-26, INTEL-LIVE-01 CP4):** Lane B's producer (§20) is **ACCEPTED by the Product Owner** (CP3 + R1, head
 `755192c5`) and INTEL-LIVE-01's closure (CP4) is delivered — **NOT MERGED** (PR #415); `0205` not hosted. Replay Lane B on a
 device stays mandatory in the HONOR Live + Replay proof (§20.1). *(The lines below are kept as written.)*
@@ -2021,3 +2025,171 @@ is drawn in the next, and no provisional mark survives the closing display. The 
 - **Unchanged:** Lane A, `presentation-clock.ts`, the camera plan, the COSMOS renderer, §19's policy, `QAN-BL-VIS-02`
   (`OPEN — UNASSIGNED`).
 - **Sequence:** INTEL-LIVE-01's merge decision → HONOR Live + Replay proof → CP2-A → CP2-B. S8B-07 is not closed.
+
+## 21. S8B-07 CP2-A.1 — Continuous In-App Replay (DELIVERED / READY FOR PO REVIEW, 2026-11-27; NOT MERGED)
+
+**Authority:**
+- the Product Owner's "EXECUTION AUTHORIZATION — S8B-07 CP2-A.1" (2026-11-27). CP2-A is split into three tasks:
+  - CP2-A.1: continuous in-app Replay;
+  - CP2-A.2: continuous video;
+  - CP2-B: export, download, sharing and Public World publishing.
+
+  CP2-A.1 covers R-1 / O-3, R-2 / O-4, R-3 / O-5, the in-app part of R-5, and the applicable Replay iOS and performance
+  validation. It is one implementation PR with one execution checkpoint.
+- the Product Owner's "CP2-A.1 COPY GATE APPROVED" (2026-11-27), §21.5.
+
+The remaining-scope table (R-1 – R-8) and the observations O-3 – O-5 are recorded in §20.2 – §20.3 of the documentation
+PR #417 (Draft, unmerged). This section does not depend on it. The PR branch is `replay/s8b-07-cp2a1-continuous-replay`,
+from `main` at `b842fd0d`.
+
+**One timing authority; nothing new keeps time:**
+- RB-1's presentation clock (`replay-cosmos/presentation-clock.ts`: TEXT / PAUSE / RUN blocks over the audio map) stays the
+  only map from a place to an instant.
+- The original-audio clock (`replay-audio-clock.ts`) stays the only place of the audio.
+- The player's paced moments keep their reading pace.
+
+CP2-A.1 adds pure functions of that clock and one step through the existing owners. Unchanged: historical binding, Lane A,
+Lane B, C8, the COSMOS renderer, the camera plan and the original audio.
+
+### 21.1 R-1 / O-3 — saving is confirmed, and the saved Replay opens directly
+
+- **The likely cause of O-3:** the saved line was removed whenever the conversation's completed replies grew. That happens
+  often around a call, so the line could vanish before it was read.
+  - Now the "saved" line stays until the reader opens the entry again, takes its action or dismisses it.
+  - Only the "not available" line still goes when the conversation moves on.
+- **While saving:** the selection bar shows RS-03 instead of the count.
+- **When a save fails** (not admitted, or refused for another reason): RS-04 with RS-05, and RS-05 saves again. Nothing is
+  shown as saved.
+- **After a successful save:** RS-01, with one action, RS-02, which opens the exact Replay just saved (`openSaved`).
+- A part that reaches the open head keeps S7-02's own line and has no action, as before.
+- The line is compact and works right to left and left to right. No new screen and no blocking dialog.
+
+### 21.2 R-2 / O-4 — one continuous presentation
+
+- From one Play, the player passes every moment of the part in order, to the end, with no second touch:
+  - text at its reading pace;
+  - the audio of each recording;
+  - the pause between recordings.
+- A text moment keeps its elapsed time across a pause. Play resumes it where it stopped, not from its start.
+- One function, `replayMomentPaceMs`, times the text moments. The player, the timeline and the stage all use it.
+
+### 21.3 R-3 / O-5 — one timeline of the whole part, and seeking anywhere on it
+
+- One line under the moment spans the whole part on the presentation clock. It is labelled with the Replay's own name
+  (`replayName`, S7-02, APPROVED).
+- Two pure functions of that clock draw and seek the line:
+  - `replayTimelinePosition` gives the place shown:
+    - inside a text moment, the reading position;
+    - inside a run, the audio place (no stage lag);
+    - after a text moment is read, it follows the clock to the next window;
+    - at DONE, the end.
+  - `replayTimelineTarget` gives the moment and offset of an instant:
+    - inside a text moment, that moment and the offset;
+    - in the pause before a recording, that recording's first window;
+    - inside a run, the latest window started at or before that instant.
+- **Seeking inside long speech lands at that instant, not at the message's start (O-5):**
+  1. The player's new `seekTo(ordinal, offsetMs)` passes the target to the clock source.
+  2. The audio clock places the engine at the window's start plus the offset, whether playing or paused.
+  3. While paused, the engine is still placed, so the stage draws that instant and Play continues from it.
+  4. If the map is not known yet, the offset is kept and applied when the map arrives.
+- **The line appears after the first Play.** The map that gives the part's length is requested on Play (CP1-B), and
+  nothing is invented before it.
+
+### 21.4 R-5 (in-app) — the map follows the same time
+
+- An audio moment's stage already follows the audio clock's place (RB-1, with its 300 ms audio allowance).
+- **A text moment's stage now follows the player's own paced time** (`pacedElapsed`), the same time the timeline shows.
+  - This replaces a separate timer in the COSMOS world.
+  - When a text moment is paused, resumed or seeked, the stage draws the instant the player is at.
+- What is drawn is unchanged: certified or source-order placement (§19) and Lane B (§20). Nothing is fabricated.
+
+### 21.5 Copy Gate — S8B-07 CP2-A.1 COPY GATE — CLOSED — 2026-11-27
+
+Reconciled with the existing registries; nothing is duplicated and no approved row changed.
+
+| ID | Arabic | English | Where |
+|---|---|---|---|
+| RS-01 | حُفظ الجزء المختار لإعادة العرض | The selected part has been saved for Replay | **The existing S7-02 row `savedPart`, reused verbatim:** «حُفظ الجزء المختار لإعادة العرض.» / "The selected part was saved for a Replay." Its full stop and its approved English are kept. |
+| RS-02 | فتح إعادة العرض | Open Replay | New, in `replay-entry/save-copy.ts`. The action on the saved line; it replaces S7-04's «معاينة» there. The player's own «معاينة» is unchanged. |
+| RS-03 | جارٍ حفظ إعادة العرض… | Saving Replay… | New, in `save-copy.ts`. |
+| RS-04 | تعذّر حفظ إعادة العرض | Replay couldn't be saved | New, in `save-copy.ts`. |
+| RS-05 | إعادة المحاولة | Try again | **The existing row `tryAgain`, reused verbatim.** |
+
+The Product Owner approved all five in Arabic and English (2026-11-27). The S7-02 registry keeps its 16 rows. The S7-02
+and S7-04 Copy Gates stay CLOSED.
+
+### 21.6 Tests
+
+- **Mobile (Jest), on the final tree:** every suite passed. New and changed suites:
+  - `original-audio/__tests__/cp2a1-continuous-replay.test.ts` (9 tests):
+    - the layout;
+    - the targets and their round trip;
+    - the position rules;
+    - continuity over the whole part: monotonic, no step over 400 ms, from 0 to the end;
+    - seeking while playing;
+    - seeking while paused: the stage time at that instant, and Play continuing from it;
+    - a text moment paused and resumed;
+    - seeking inside a text moment;
+    - the refusals.
+  - `replay-audio-views.test.tsx`: the one timeline under the moment, in Arabic and English, and seeking on it.
+  - `replay-entry-controller.test.ts` and `replay-entry-surface.test.tsx`: the saved line kept, RS-03, RS-04 with RS-05,
+    and a second save after a refusal.
+  - `s7-04-replay-player.test.tsx`: RS-01 and RS-02 on the production composition.
+  - `integration/__tests__/cp2a1-proof-monitor.test.ts` (4 tests): the iOS gate's readout, over the same fixture world.
+- **Negative proof:** with `seekTo`'s step to the clock source and the paced elapsed time reverted in place, 4 of the new
+  tests failed. Restored, they pass.
+- **Root contracts:**
+  - `tests/s8b-07-cp2a1-continuous-replay-contract.test.mjs` is new and wired in Mobile CI. It pins the RS rows in the code
+    and here, the kept saved line, the one timing authority and the iOS gate.
+  - Every existing Replay contract (`s7-0*`, `s8b-07-*`, `rb*`, `replay*`) passes unchanged.
+
+### 21.7 iOS — the iOS Replay gate (BG-10; the PO's iOS validation policy of 2026-11-18)
+
+No iOS gate exercised the Replay (V-5 was open), so CP2-A.1 adds one: `.github/workflows/ios-replay-gate.yml` and
+`scripts/ios-replay-gate/`.
+- It builds a proof Release app, `S807Cp2a1ProofRoot.tsx`, through one recorded change of the manifest's `main`, behind
+  `S807_CP2A1_PROOF=1`.
+- It drives that app on the iOS 26.5 simulator by real touch, in BG-10's three cells: iPhone 17 English, iPhone 17
+  Arabic, and the small iPhone in English.
+
+| Case | What is asserted |
+|---|---|
+| J-SAVED-LINE | After a part is chosen and saved on the production composition (the S7-04 proof world), the saved line shows RS-01. |
+| J-OPEN-ACTION | Its one action shows RS-02. |
+| J-OPENS-SAVED | That action opens the Replay player. |
+| C-TIMELINE | One line of the whole part (the Replay's name, 22.5 s) under the moment. |
+| C-PLAY-THROUGH | One Play passes moments 1-2-3-5-6 (text, audio, audio, text, another recording) to the end. The place never goes back or jumps. |
+| C-SEEK-PLAYING | Seeking at 75 % of the line while playing lands on the second recording (moment 6), and the part continues to its end without a break. |
+| C-SEEK-HELD | Seeking at 50 % while paused lands inside the long turn (moment 3, 10.6 – 11.9 s) and stays there. Play continues from that place. |
+| IOS-NATIVE-AUDIO | **NOT TESTED by construction:** the continuous scene uses the labelled synthetic player, which makes no sound. |
+
+- The continuous scene runs in real time: the shipped player and the shipped original-audio surface, over the player
+  tests' synthetic Replay Media Service.
+- A one-line validation readout reads the place with the timeline's own functions.
+- Every case is PASS, FAIL or NOT TESTED, and nothing is retried.
+- The results of the PR's run are recorded in §21.9.
+
+### 21.8 Not done, and kept
+
+- **The device pass** (HONOR, and the real audio on a device) is left for the Product Owner's return, as directed. No
+  device result is claimed.
+- **Not in CP2-A.1:**
+  - CA-RL-01's decisions A – G, the label-font route, F2 and VG-CP2A (all CP2-A.2);
+  - export and sharing (CP2-B);
+  - prompt, O-2, provider, TTS or quota changes;
+  - paid calls;
+  - hosted deployment.
+- **Kept:**
+  - HONOR-CORR-01 suspended;
+  - `QAN-BL-INTEL-06` `VALIDATION — OPEN`;
+  - the production release blockers (§20.3 on PR #417);
+  - COSMOS, CALL-ATTR-01 and the completed Replay checkpoints, not reopened.
+- **Performance:**
+  - CP2-A.1 adds a 100 ms redraw of one line while playing, and replaces the COSMOS world's text-moment timer with the
+    player's paced time.
+  - COSMOS opening, rendering, panning and gestures are unchanged and stay under the World gate.
+  - V-6 (opening speed and Lane B stage preparation) is not measured here.
+
+### 21.9 CI on the Draft PR
+
+Recorded when the PR's runs complete.

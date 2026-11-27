@@ -1,5 +1,31 @@
 # QANDEEL — Current State
 
+> **S8B-07 CP2-A.1 — CONTINUOUS IN-APP REPLAY — DELIVERED / READY FOR PO REVIEW — NOT MERGED — COPY GATE CLOSED — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:**
+>   - the Product Owner's "EXECUTION AUTHORIZATION — S8B-07 CP2-A.1" (2026-11-27). Replay resumes at CP2-A, split into three tasks: CP2-A.1, CP2-A.2 and CP2-B;
+>   - "CP2-A.1 COPY GATE APPROVED" (2026-11-27).
+>   - The [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §21 is the primary account.
+>   - The "RETURN TO REPLAY" directive and the two release blockers it registered are recorded on the documentation PR #417 (Draft, unmerged).
+> - **Delivered (one Draft PR, branch `replay/s8b-07-cp2a1-continuous-replay`, from `main` at `b842fd0d`):**
+>   - R-1 / O-3: a "saved" line that stays, with one action that opens the exact saved Replay. A failed save is stated, with Try again.
+>   - R-2 / O-4: one Play through every message boundary to the end.
+>   - R-3 / O-5: one timeline of the whole part, and seeking to any instant inside long speech, while playing or paused.
+>   - R-5 (in-app): a text moment's stage follows the player's own paced time.
+>   - All of it on RB-1's presentation clock. **No second timing authority.**
+>   - A new **iOS Replay gate** (`.github/workflows/ios-replay-gate.yml`), on the iOS simulator by real touch, in BG-10's three cells.
+> - **Copy:** RS-01 – RS-05 APPROVED. RS-01 and RS-05 are existing approved rows, reused verbatim. RS-02 – RS-04 are new, in `replay-entry/save-copy.ts`.
+> - **Not done:**
+>   - the HONOR device pass, left for the Product Owner's return;
+>   - the native audio on iOS: NOT TESTED by construction (synthetic player);
+>   - CP2-A.2 (CA-RL-01 A – G, the font route, F2, VG-CP2A) and CP2-B;
+>   - no prompt, provider, TTS, quota or hosted change, and no paid call.
+> - **Kept:**
+>   - `QAN-BL-INTEL-06` `VALIDATION — OPEN`;
+>   - HONOR-CORR-01 suspended;
+>   - COSMOS, CALL-ATTR-01 and the completed Replay checkpoints not reopened.
+>   - No migration; the next one is still `0206`.
+> - **Next:** the Product Owner's review and the device pass. **Merge only on «ادمج».**
+
 > **INTEL-LIVE-01 MERGED (PRs #414 / #415, `main` `11e0702d`) — HONOR LIVE + REPLAY VALIDATION SUSPENDED — CALL-ATTR-01 DELIVERED / READY FOR PO REVIEW — NOT MERGED — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:**
 >   - the Product Owner's "HONOR VALIDATION — BILLING RECOVERY & USAGE ATTRIBUTION CORRECTION" (2026-11-27);

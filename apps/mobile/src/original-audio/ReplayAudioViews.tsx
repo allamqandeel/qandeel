@@ -14,16 +14,20 @@
  *   the notices       RA-11 after 1 s without audio; RA-12 (error ink) with the existing Stage 7 «Try again» (B14)
  *   no longer         RA-09 / RA-10 only for the cause the server PROVES, otherwise RA-17; the reading is withheld (B13)
  *   assistive tech    RA-15 when two voices start together, a gap's line as it starts, RA-04 / RA-05 as the pause starts
+ *   the timeline      S8B-07 CP2-A.1 (R-2, R-3): the whole part's ONE line, on the presentation clock laid out from the map
+ *                     the clock holds — its length, where the presentation is now, and a tap or drag that places it at any
+ *                     instant (inside long speech too). Named by the approved «إعادة عرض المحادثة»; no new word
  *
  * No sound is added (D-05.7 (b)). Nothing is logged.
  */
-import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AccessibilityInfo, Text, View } from 'react-native';
 
 import { Control, readerDirection, readerSide, typeStyle, usePalette } from '../conversation';
 import type { ChromeLanguage } from '../orientation-chrome/types';
 import { replayEntryCopy } from '../replay-entry';
-import type { ReplayPlayerController, ReplayPlayerSurface, ReplayPlayerSurfaceControls, ReplayPlayerView } from '../replay-player';
+import { replayPresentationClock, replayTimelinePosition, replayTimelineTarget } from '../replay-cosmos/presentation-clock';
+import { replayMomentPaceMs, type ReplayPlayerController, type ReplayPlayerSurface, type ReplayPlayerSurfaceControls, type ReplayPlayerView } from '../replay-player';
 import type { ReplayHistoryMoment } from '../runtime-entry';
 import { AudioLine } from './AudioLine';
 import { originalAudioLengthText, originalAudioText, type OriginalAudioCopyId } from './original-audio-copy';
@@ -217,6 +221,54 @@ function Note({ clock, controller, language }: { readonly clock: ReplayAudioCloc
   );
 }
 
+/** How often the timeline's line is redrawn while the Replay plays (its position is read from the clock each time). */
+export const REPLAY_TIMELINE_REDRAW_MS = 100;
+
+const noToggle = () => undefined;
+
+/**
+ * CP2-A.1 (R-2, R-3): the whole selected part's ONE timeline. Its length and position are the presentation clock's — the
+ * same `replayPresentationClock` the stage and the video read, from the map this clock holds and the player's own reading
+ * pace — and its seek is the player's `seekTo` (the clock's place, or the reading pace's). Nothing before the map is known.
+ */
+function TimelineLine({ clock, controller, language }: { readonly clock: ReplayAudioClock; readonly controller: ReplayPlayerController; readonly language: ChromeLanguage }) {
+  useSyncExternalStore(clock.subscribe, clock.revision);
+  const open = useSyncExternalStore(controller.subscribe, () => controller.getState().open);
+  const plan = clock.detail().plan;
+  const presentation = useMemo(() => (plan === null ? null : replayPresentationClock(plan, clock.moments, replayMomentPaceMs)), [plan, clock.moments]);
+  const playing = open?.playing === true;
+  const [, redraw] = useState(0);
+  useEffect(() => {
+    if (!playing) return undefined;
+    const handle = setInterval(() => redraw((n) => n + 1), REPLAY_TIMELINE_REDRAW_MS);
+    return () => clearInterval(handle);
+  }, [playing]);
+  if (presentation === null || open === null) return null;
+  const state = clock.getState();
+  const paced = controller.pacedElapsed();
+  const positionMs = replayTimelinePosition(presentation, open.ordinal, { phase: state.phase, ordinal: state.ordinal, place: clock.place() },
+    paced !== null && paced.ordinal === open.ordinal ? paced.elapsedMs : null);
+  return (
+    <AudioLine
+      language={language}
+      testID={`${REPLAY_AUDIO_TEST_ID}-timeline`}
+      totalMs={presentation.durationMs}
+      positionMs={positionMs}
+      active={playing}
+      disabled={open.command !== null || state.phase === 'ENDED'}
+      control={false}
+      playLabel=""
+      pauseLabel=""
+      lineLabel={replayEntryCopy(language).replayName}
+      onToggle={noToggle}
+      onSeek={(ms) => {
+        const target = replayTimelineTarget(presentation, ms);
+        if (target !== null) controller.seekTo(target.ordinal, target.offsetMs);
+      }}
+    />
+  );
+}
+
 /** The screen reader is told each span as it starts, once, in the reader's language. */
 function useAnnouncements(audio: ReplayAudio, language: ChromeLanguage): void {
   useEffect(() => audio.onAnnouncement((announcement) => {
@@ -238,6 +290,7 @@ function useReplayAudioControls(audio: ReplayAudio, controller: ReplayPlayerCont
     // PR #404 RB-1: the Replay's stage follows this clock's place (it reads; it never drives the clock). RB-2 / S4: with
     // the historical availability bound to the map it holds; a clock alone carries none, and its stage stays neutral.
     stageClock: audio.stageClockOf(clock.versionId) ?? clock,
+    timeline: <TimelineLine clock={clock} controller={controller} language={language} />,
     moment: (moment: ReplayHistoryMoment) => (moment.originalMedium !== 'ORIGINAL_AUDIO' ? null : {
       caption: originalAudioText('RA-03', language),
       before: <Before clock={clock} ordinal={moment.ordinal} language={language} />,

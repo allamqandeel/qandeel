@@ -1,0 +1,130 @@
+name: iOS Replay gate (CP2-A.1, touch)
+# S8B-07 CP2-A.1 (PO execution authorization and Copy Gate decision, 2026-11-27; backlog BG-10; PO iOS validation policy of
+# 2026-11-18): the iOS simulator gate of the Replay this checkpoint changes — the saved line and its one action (R-1 / O-3),
+# one Play through every message boundary to the end (R-2 / O-4), and the one timeline of the whole part and a step on it,
+# playing and held (R-3 / O-5).
+#
+# It drives the CP2-A.1 proof build (one recorded change of the mobile manifest's `main`, in this ephemeral checkout only):
+# the production Conversation and Replay over the S7-04 proof world, and the shipped Replay player with its
+# original-audio surface over the labelled SYNTHETIC Replay Media Service and streaming player. It reaches no API, no
+# database and no provider. What the native audio makes audible is NOT TESTED here by construction (the device pass's).
+#
+# Every case is PASS / FAIL / NOT TESTED in results.tsv (scripts/ios-replay-gate/run-replay-gate.sh); the job fails unless
+# every case it can test passed. Nothing retries a failed case.
+#
+# Impact (BG-10): it runs for a change to what it proves — the Replay sources, the Conversation's Replay entry, the proof
+# root and world it drives, its own files, or the iOS binary's shared inputs — and on manual dispatch. The matrix is
+# BG-10's permanent cells: the reference iPhone, Arabic (right to left), and the small iPhone.
+on:
+  pull_request:
+    paths:
+      - 'apps/mobile/src/replay-*/**'
+      - 'apps/mobile/src/original-audio/**'
+      - 'apps/mobile/src/integration/__validation__/S807Cp2a1ProofRoot.tsx'
+      - 'apps/mobile/src/integration/__validation__/s807cp2a1-proof-entry.tsx'
+      - 'apps/mobile/src/integration/__validation__/cp2a1-proof-monitor.ts'
+      - 'apps/mobile/src/integration/__validation__/S704ProofRoot.tsx'
+      - 'apps/mobile/src/integration/__validation__/s704-proof-world.ts'
+      - 'apps/mobile/scripts/select-s807cp2a1-proof-entry.mjs'
+      - 'apps/mobile/package.json'
+      - 'apps/mobile/app.config.js'
+      - 'package-lock.json'
+      - 'scripts/ios-replay-gate/**'
+      - 'scripts/cosmos-ios-world/sim.sh'
+      - 'scripts/cosmos-ios-world/setup.sh'
+      - 'scripts/cosmos-ios-world/hier.mjs'
+      - 'scripts/validation/bounded-run.mjs'
+      - '.github/workflows/ios-replay-gate.yml'
+  workflow_dispatch:
+concurrency:
+  group: ios-replay-gate-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+  MAESTRO_CLI_NO_ANALYTICS: 1
+  MAESTRO_VERSION: 2.10.0
+  MAESTRO_ZIP_SHA256: 29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991
+  IOS_RUNTIME_SUFFIX: iOS-26-5
+jobs:
+  replay-gate:
+    name: iOS Replay gate — ${{ matrix.device }} ${{ matrix.lang }}
+    runs-on: macos-26
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {cell: i17-en, device: 'iPhone 17', lang: en, langtag: en-US, langloc: en_US}
+          - {cell: i17-ar, device: 'iPhone 17', lang: ar, langtag: ar-EG, langloc: ar_EG}
+          - {cell: small-en, device: 'iPhone SE (3rd generation)|iPhone 16e', lang: en, langtag: en-US, langloc: en_US}
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
+      MAESTRO_IOS_DRIVER_PORT: 22087
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Stop Spotlight indexing on this ephemeral runner
+        run: sudo mdutil -a -i off || echo "mdutil did not answer; indexing is unchanged"
+      - name: Select Xcode 26.6 explicitly
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - {name: Install dependencies from the root lockfile, run: npm ci}
+      - name: Select the CP2-A.1 proof entry (this ephemeral checkout only; recorded)
+        env: {S807_CP2A1_PROOF: '1'}
+        run: |
+          mkdir -p "$RUNNER_TEMP/evidence"
+          node apps/mobile/scripts/select-s807cp2a1-proof-entry.mjs --apply
+          git diff -- apps/mobile/package.json | tee "$RUNNER_TEMP/evidence/entry-diff.txt"
+      - {name: Generate the iOS project (CNG), run: npm run prebuild:ios --workspace @qandeel/mobile}
+      - name: Install CocoaPods dependencies
+        working-directory: apps/mobile/ios
+        run: pod install
+      - name: Build the proof Release simulator app
+        run: |
+          set -o pipefail
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          scheme="$(basename "$workspace" .xcworkspace)"
+          xcodebuild -quiet -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+          app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
+          test -n "$app"; echo "APP=$app" >> "$GITHUB_ENV"
+          { echo "head=$(git rev-parse HEAD)"; echo "entry=src/integration/__validation__/s807cp2a1-proof-entry.tsx"; echo "app=$(basename "$app")"; xcodebuild -version; } > "$RUNNER_TEMP/evidence/identity.txt"
+      - name: Setup Temurin JDK 17 (Maestro)
+        uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: '17'}
+      - name: Boot the simulator
+        env: {CANDIDATES: '${{ matrix.device }}'}
+        run: bash scripts/cosmos-ios-world/sim.sh "$CANDIDATES" "$RUNNER_TEMP/evidence"
+      - name: Install the proof app
+        run: xcrun simctl install "$IOS_SIM_UDID" "$APP"
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | shasum -a 256 --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro" && cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Set the simulator language and prove the driver
+        env: {LANGTAG: '${{ matrix.langtag }}', LANGLOC: '${{ matrix.langloc }}'}
+        run: bash scripts/cosmos-ios-world/setup.sh "$IOS_SIM_UDID" "$RUNNER_TEMP/evidence"
+      - name: Replay gate (save and open; one Play through; the timeline; a step playing and held)
+        timeout-minutes: 40
+        env: {GATE_LANG: '${{ matrix.lang }}'}
+        run: bash scripts/ios-replay-gate/run-replay-gate.sh "$RUNNER_TEMP/evidence/gate" "$IOS_SIM_UDID"
+      - name: Results
+        if: ${{ !cancelled() }}
+        run: |
+          f="$RUNNER_TEMP/evidence/gate/results.tsv"
+          if [ -f "$f" ]; then { echo '### iOS Replay gate — ${{ matrix.cell }}'; echo; echo '| case | result | detail |'; echo '|---|---|---|'; tail -n +2 "$f" | awk -F'\t' '{print "| "$1" | "$2" | "$3" |"}'; } >> "$GITHUB_STEP_SUMMARY"; cat "$f"
+          else echo 'no results.tsv: every case NOT TESTED' | tee -a "$GITHUB_STEP_SUMMARY"; fi
+          # Every case the gate can test must be PASS; IOS-NATIVE-AUDIO is NOT TESTED by construction and is recorded as such.
+          [ -f "$f" ] && ! tail -n +2 "$f" | grep -v '^IOS-NATIVE-AUDIO' | awk -F'\t' '$2 != "PASS"' | grep -q .
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with: {name: 'ios-replay-gate-${{ matrix.cell }}', path: '${{ runner.temp }}/evidence', if-no-files-found: warn}

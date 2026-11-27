@@ -4,7 +4,7 @@ export { CAMERA_PLAN_VERSION, buildReplayCameraPlan, cameraAt, planFutureViolati
 export { ESTEDAD_FAMILY_MEDIUM, ESTEDAD_FAMILY_REGULAR, REVEAL_MS, replayCosmosFrame, replayFrameFacts, type LabelTypography, type ReplayCosmosScene, type ReplayFrameAttention, type ReplayFrameFacts, type ReplayFrameImages, type ReplayFrameStage } from './frame';
 export { replayMomentScenes, type ReplayMomentScenes } from './history';
 export {
-  REPLAY_STAGE_AUDIO_LAG_MS, replayExportAudio, replayPresentationClock, replayStageTime, withReplayAvailability,
+  REPLAY_STAGE_AUDIO_LAG_MS, replayExportAudio, replayPresentationClock, replayStageTime, replayTimelinePosition, replayTimelineTarget, withReplayAvailability,
   type ReplayPresentationBlock, type ReplayPresentationClock, type ReplayPresentationSpan, type ReplayPresentationWindow, type ReplayStageAudioState, type ReplayStageClock, type ReplayStageTime,
 } from './presentation-clock';
 export { emptyReplayStage, markOf, marksOf, replayAttentionStage, replayMomentStage, type ReplayMomentStage } from './stages';

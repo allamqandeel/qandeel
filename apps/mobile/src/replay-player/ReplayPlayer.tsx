@@ -12,7 +12,8 @@
  *                 controls, which the composite stands beside the moment's own position inside the band its chrome
  *                 measures (Product Owner visual direction, 2026-10-20: option (b); the surface stays CHROME_ONLY and
  *                 the Live Timeline is not used). It draws no map, no graphic and no motion of its own;
- *   the entries   the draft just saved, from the Conversation's saved line (its «معاينة»); and the Analysis's END edge,
+ *   the entries   the draft just saved, from the Conversation's saved line (S8B-07 CP2-A.1: its RS-02 «فتح إعادة العرض»,
+ *                 which opens that exact Replay); and the Analysis's END edge,
  *                 the same quiet 44 × 44 Replay glyph the Conversation's upper chrome has.
  *
  * The moments are navigated on the Replay's Temporal Spine (`ReplaySpine`: P2's frozen Spine + Aperture C "Parting" and
@@ -30,10 +31,10 @@ import { LivingAnalysisSurface, type LivingAnalysisTopBand } from '../living-ana
 import type { ChromeLanguage } from '../orientation-chrome';
 import { ReplayMomentComposite, ReplayPreviewLimit, replayCompositeCopy, type ReplayCompositeController, type ReplayMomentControls } from '../replay-composite';
 import type { ReplayStageClock } from '../replay-cosmos';
-import { replayEntryCopy, type ReplayEntryController } from '../replay-entry';
+import { replayEntryCopy, replaySaveCopy, type ReplayEntryController } from '../replay-entry';
 import type { ReplayHistoryMoment } from '../runtime-entry';
 import { replayPlayerCopy } from './copy';
-import { readingPaceMs, type ReplayPlayerController, type ReplayPlayerTransportView, type ReplayPlayerView } from './player-controller';
+import { replayMomentPaceMs, type ReplayPlayerController, type ReplayPlayerTransportView, type ReplayPlayerView } from './player-controller';
 import { ReplaySpine } from './ReplaySpine';
 
 export const REPLAY_PLAYER_TEST_ID = 'qandeel-replay-player';
@@ -67,6 +68,12 @@ export interface ReplayPlayerSurfaceControls {
   readonly withheld: boolean;
   /** PR #404 RB-1: the version's clock, which the COSMOS stage follows (its place, never the reading pace). */
   readonly stageClock?: ReplayStageClock;
+  /**
+   * S8B-07 CP2-A.1 (R-3): the one timeline of the whole selected part, under the Spine in the moment band — never the
+   * surface's temporal slot, which stays empty (option (b)) — (its line is
+   * the clock's own presentation time; a seek on it is the player's `seekTo`). Absent: the Spine alone.
+   */
+  readonly timeline?: ReactNode;
 }
 
 const NO_SURFACE: ReplayPlayerSurface = { useControls: () => null };
@@ -74,9 +81,15 @@ const NO_SURFACE: ReplayPlayerSurface = { useControls: () => null };
 /**
  * REPLAY-COSMOS-01: each paced moment's presentation window for the COSMOS stage — the declared reading pace the player
  * times it with. A clock-presented V2 moment's window is its audio window, from the clock the surface hands the stage
- * (PR #404 RB-1 S2: residue R-3).
+ * (PR #404 RB-1 S2: residue R-3). S8B-07 CP2-A.1: the one function the timeline lays a paced moment out with, too.
  */
-const momentPaceMs = (moment: ReplayHistoryMoment): number => readingPaceMs(moment.text ?? '');
+const momentPaceMs = (moment: ReplayHistoryMoment): number => replayMomentPaceMs(moment);
+
+/** CP2-A.1: the player's reading-pace elapsed part of this paced moment, or null (not paced here, or not yet timed). */
+const pacedElapsedOf = (controller: ReplayPlayerController, ordinal: number): number | null => {
+  const paced = controller.pacedElapsed();
+  return paced !== null && paced.ordinal === ordinal ? paced.elapsedMs : null;
+};
 
 const noSubscription = () => () => undefined;
 const noRevision = () => 0;
@@ -110,7 +123,7 @@ export function ReplayPlayer({ controller, language, insets, surface = NO_SURFAC
   };
   const transport = controller.transport();
   const controls: ReplayMomentControls | null = !transport.available ? null : {
-    instrument: <Transport controller={controller} view={open} transport={transport} language={language} />,
+    instrument: <Transport controller={controller} view={open} transport={transport} language={language} partLine={added?.timeline ?? null} />,
     note: added === null ? <PacingLine language={language} /> : added.note,
     ...(added === null ? {} : { moment: added.moment, withheld: added.withheld }),
   };
@@ -118,7 +131,7 @@ export function ReplayPlayer({ controller, language, insets, surface = NO_SURFAC
   let body: ReactNode;
   if (open.composite !== null) {
     body = <ReplayMomentComposite controller={open.composite} ordinal={open.ordinal} language={language} insets={insets} top={top} controls={controls}
-      playing={open.playing} windowMs={momentPaceMs} stageClock={added?.stageClock ?? null} />;
+      playing={open.playing} windowMs={momentPaceMs} stageClock={added?.stageClock ?? null} pacedElapsed={(ordinal) => pacedElapsedOf(controller, ordinal)} />;
   } else if (open.problem === 'MOMENT_NOT_SEALED' || open.problem === 'ANALYSIS_UNAVAILABLE') {
     body = <ReplayPreviewLimit outcome={open.problem} language={language} insets={insets} top={top} />;
   } else {
@@ -310,8 +323,9 @@ function PacingLine({ language }: { readonly language: ChromeLanguage }) {
 }
 
 /** P2's play / pause, then the Replay's Temporal Spine, in the reading direction: the instrument of the moment band. */
-function Transport({ controller, view, transport, language }: {
+function Transport({ controller, view, transport, language, partLine }: {
   readonly controller: ReplayPlayerController; readonly view: ReplayPlayerView; readonly transport: ReplayPlayerTransportView; readonly language: ChromeLanguage;
+  readonly partLine: ReactNode;
 }) {
   const palette = usePalette();
   const words = replayPlayerCopy(language);
@@ -322,7 +336,7 @@ function Transport({ controller, view, transport, language }: {
   const sentences = replayCompositeCopy(language);
   // At the last moment, play starts again from the first: the same P2 play mark, named for what it does.
   const playLabel = view.playing ? words.pause : transport.atLast ? words.restart : words.play;
-  return (
+  const row = (
     <View testID="qandeel-replay-transport" style={{ direction, flexDirection: 'row', alignItems: 'center', columnGap: 4, minHeight: MIN_TARGET }}>
       <Control
         palette={palette}
@@ -346,6 +360,8 @@ function Transport({ controller, view, transport, language }: {
       />
     </View>
   );
+  // CP2-A.1 (R-3): the whole part's one timeline, under the play control and the Spine.
+  return partLine === null ? row : <View style={{ rowGap: 2 }}>{row}{partLine}</View>;
 }
 
 // ---------------------------------------------------------------------------------------------------- the entries
@@ -356,7 +372,8 @@ export interface ReplayPreviewActionProps {
 }
 
 /**
- * The saved line's one action: preview the draft just saved. Not offered when the draft reaches the open Live Head —
+ * The saved line's one action: open the exact Replay just saved (S8B-07 CP2-A.1, RS-02 «فتح إعادة العرض»; it is read first,
+ * and a draft is previewed, so what was saved is what is shown). Not offered when the draft reaches the open Live Head —
  * the line already says it can be shown only after the conversation continues.
  */
 export function ReplayPreviewAction({ player, entry, language }: ReplayPreviewActionProps) {
@@ -364,7 +381,7 @@ export function ReplayPreviewAction({ player, entry, language }: ReplayPreviewAc
   const palette = usePalette();
   const ref = useReturnFocus(player, 'CONVERSATION');
   if (saved === null || saved.reachesOpenHead) return null;
-  const label = replayPlayerCopy(language).preview;
+  const label = replaySaveCopy(language).openReplay;
   return (
     <Control palette={palette} language={language} accessibilityLabel={label} onPress={() => player.openSaved(saved)} testID="qandeel-replay-preview"
       controlRef={(node) => {

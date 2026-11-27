@@ -20,7 +20,7 @@ export type {
   ReplayPlayerTransportView,
   ReplayPlayerView,
 } from './player-controller';
-export { REPLAY_READING_PACE, createReplayPlayerController, readingPaceMs } from './player-controller';
+export { REPLAY_READING_PACE, createReplayPlayerController, readingPaceMs, replayMomentPaceMs } from './player-controller';
 export type { ReplayMomentClock, ReplayMomentClockPhase, ReplayMomentClockSource, ReplayMomentClockState } from './moment-clock';
 export type { ReplayPlayerCopy, ReplayPlayerCopyStatus } from './copy';
 export { REPLAY_PLAYER_COPY_GATE, REPLAY_PLAYER_COPY_ROWS, replayPlayerCopy } from './copy';

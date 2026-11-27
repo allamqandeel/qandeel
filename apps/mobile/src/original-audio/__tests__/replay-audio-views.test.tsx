@@ -10,6 +10,7 @@ import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-lib
 
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../appearance';
 import { REPLAY_RENDER_CONTRACT_V1 } from '../../replay-composite';
+import { replayEntryCopy } from '../../replay-entry';
 import { REPLAY_PLAYER_TEST_ID, ReplayPlayer, replayPlayerCopy } from '../../replay-player';
 import { resize } from '../../responsive/__fixtures__/composition';
 import { originalAudioLengthText, originalAudioText } from '../original-audio-copy';
@@ -95,6 +96,37 @@ describe.each(['ar', 'en'] as const)('the V2 player surface (%s)', (language) =>
     // The line is the moment's, never a play control of its own: the player's transport is the only one.
     expect(view.queryByTestId('qandeel-replay-audio-line-2-play')).toBeNull();
     expect(view.queryByTestId('qandeel-replay-audio-line-2-play-unavailable')).toBeNull();
+  });
+
+  it('S8B-07 CP2-A.1: one timeline of the whole part under the Spine, at the clock place; a step on it places the clock there', async () => {
+    const { view, w } = await mount(language);
+    // Nothing is known before the map arrives: no timeline, and no length claimed.
+    expect(view.queryByTestId('qandeel-replay-audio-timeline-line')).toBeNull();
+    await show(w, 2);
+    await act(async () => { w.player.play(); });
+    await act(async () => { await until(() => w.clock()!.getState().phase === 'RUNNING'); });
+    await tick(2_500);
+    const line = view.getByTestId('qandeel-replay-audio-timeline-line');
+    // Named by the approved Replay name (no new word); its length is the whole part's (22.5 s), not the moment's.
+    expect(line.props.accessibilityLabel).toBe(replayEntryCopy(language).replayName);
+    expect(line.props.accessibilityValue.max).toBe(22);
+    // Moment 2 starts 3.5 s into the part (after moment 1's reading pace): the line is the part's time, not the file's.
+    expect(line.props.accessibilityValue.now).toBeGreaterThanOrEqual(5);
+    expect(line.props.accessibilityValue.now).toBeLessThanOrEqual(6);
+    // There is no second play control: the transport's is the only one.
+    expect(view.queryByTestId('qandeel-replay-audio-timeline-play')).toBeNull();
+    await act(async () => { w.player.pause(); });
+    await tick();
+    const before = w.clock()!.place();
+    expect(before?.kind).toBe('RUN');
+    await act(async () => { fireEvent(view.getByTestId('qandeel-replay-audio-timeline-line'), 'accessibilityAction', { nativeEvent: { actionName: 'increment' } }); });
+    await tick();
+    const after = w.clock()!.place();
+    expect(after).toMatchObject({ kind: 'RUN', runIndex: 0 });
+    expect((after as { positionMs: number }).positionMs - (before as { positionMs: number }).positionMs).toBeGreaterThanOrEqual(900);
+    expect((after as { positionMs: number }).positionMs - (before as { positionMs: number }).positionMs).toBeLessThanOrEqual(1_100);
+    expect(w.clock()!.getState().phase).toBe('HELD');
+    expect(w.playing()).toBe(false);
   });
 
   it('the moment of another recording carries RA-05 above it, and its recorded drop RA-06 under it', async () => {
