@@ -3804,6 +3804,14 @@ Admitted by `INTEL-04` at its closing change (2026-11-04) under BG-06. Nothing h
   - **Measured cost:** USD 0.0073 per minute of speech at peak (0.0087 on the long monologue), +25 – 33 % on the approved
     per-call-minute model. Cache hits are 43 %.
   - DeepSeek is `SYNTHETIC_ONLY` (`QAN-BL-AI-01`): the mechanism is proven; the product is not.
+- **Current truth (the HONOR session, 2026-11-27; [record](e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12):**
+  - #414 and #415 are merged (`main` `11e0702d`).
+  - The paid HONOR session was suspended after about 45 s of speech (USD 0.012 of its USD 1.50 ceiling).
+  - It found H-2, the "demonstrated product defect" of the reopen condition above: provisional attention and the call
+    analysis worker reached DeepSeek unattributed, and AI-COST-01's boundary refused every request.
+  - The Product Owner keeps this item `VALIDATION — OPEN`. The defect is corrected before product acceptance by the
+    separate task **CALL-ATTR-01** (approved 2026-11-27; record §12.5), and the same session resumes after its merge.
+  - The validation set below is unchanged.
 - **Validation set (the evidence that closes this item; record §11.7):** the HONOR Live + Replay proof on the physical
   HONOR ALI-NX1, with an iOS simulator pass where named. Each scenario is mandatory:
   - V-1 long continuous speech with ≥ 2 meaningful in-speech map developments, corrections and negations revising them,

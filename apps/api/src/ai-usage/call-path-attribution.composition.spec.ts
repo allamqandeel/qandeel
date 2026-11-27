@@ -1,9 +1,9 @@
 // CALL-ATTR-01 (T-1, 2026-11-27) — the call path's provider work through the REAL production composition and the REAL
 // AI-COST-01 accounting boundary. What runs as shipped:
 //   - `productionLiveCallAttention`, with its `DeepSeekAttentionEvaluator` behind `costLedgerDecorator('LIVE_ATTENTION_EVALUATION')`;
-//   - a `CallAnalysisWorker` over the production `ConversationSemanticEstablishmentService` and its four production
-//     bindings (each a DeepSeek adapter behind its cost-ledger decorator and the foreground guard, as ConversationModule
-//     composes them);
+//   - a `CallAnalysisWorker` over the `ConversationSemanticEstablishmentService` that ConversationModule's own factory
+//     builds from the four binding values it registers (each a DeepSeek adapter behind its cost-ledger decorator and
+//     the foreground guard), read from the module's provider metadata, never re-composed here;
 //   - `productionAiProviderCallAccounting()` → `SupabaseAiProviderCallLedger` → `SupabaseServiceRoleApiService`.
 // What is replaced:
 //   - the NETWORK only: `fetch` answers DeepSeek with a deterministic completion, and the ledger's two service-role RPCs
@@ -12,21 +12,16 @@
 //     PostgREST and PostgreSQL.
 //   - the call's own stores (the 0204 writer, the 0191 queue, the semantic runtime reads), which hold no accounting.
 // Nothing here is a fake evaluator: an evaluator that bypassed the boundary would prove nothing.
-import { guardForegroundBinding } from '../conversation/foreground-turn-work';
-import { deepSeekSegmentationBinding } from '../conversation/conversation.module';
+import { ConversationModule } from '../conversation/conversation.module';
 import type { ConversationTurn } from '../conversation/conversation.types';
-import { deepSeekFocusResolutionBinding } from '../conversational-focus/focus-resolution-binding';
 import type { BackgroundPermitGate } from '../live-analysis/background-permits';
 import type { CallAnalysisClaim, CallAnalysisSettleOutcome, CallAnalysisStore } from '../live-analysis/call-analysis.repository';
 import { CallAnalysisWorker } from '../live-analysis/call-analysis.worker';
 import { productionLiveCallAttention } from '../live-attention/live-attention.provider';
 import { ConversationSemanticEstablishmentService } from '../live-focus/conversation-semantic-establishment.service';
 import type { ConversationSemanticRuntimeBoundary } from '../live-focus/conversation-semantic-runtime.repository';
-import { deepSeekThreadEstablishmentBinding } from '../thread-establishment/thread-establishment-binding';
-import { deepSeekThreadContinuityBinding } from '../thread-lifecycle/thread-continuity-binding';
 import type { LiveCallAttentionChannel } from '../voice/call-turn/live-call-attention.port';
 import { currentAiUsageAttribution } from './ai-usage-attribution';
-import { costLedgerDecorator } from './production-ai-provider-call-accounting';
 
 const LEDGER = 'http://ledger.call-attr-01.test';
 const U1 = 'c0a70001-0000-4000-8000-0000000000a1';
@@ -148,7 +143,9 @@ beforeEach(() => {
 });
 afterEach(() => {
   network.restore();
-  process.env = { ...saved };
+  // Restored in place: ConversationModule's bindings hold the process.env object itself and read it at each use.
+  for (const key of Object.keys(process.env)) if (!(key in saved)) delete process.env[key];
+  Object.assign(process.env, saved);
 });
 
 // ------------------------------------------------------------------------------------------------ provisional attention
@@ -319,16 +316,22 @@ const RUNTIME: ConversationSemanticRuntimeBoundary = {
   commitCallHalfWithFullSemanticChain: async () => { throw new Error('not reached in T-1'); },
 } as unknown as ConversationSemanticRuntimeBoundary;
 
-/** The production analysis composition: ConversationModule's four bindings, exactly as it registers them. */
+interface ModuleProvider { readonly provide?: unknown; readonly useValue?: unknown; readonly useFactory?: (...args: unknown[]) => unknown; readonly inject?: readonly unknown[] }
+/**
+ * The production analysis composition, taken from ConversationModule itself: its ConversationSemanticEstablishmentService
+ * factory over the four binding values it registers (each DeepSeek adapter behind its cost-ledger decorator and the
+ * foreground guard). Only the runtime reads and the permits are this test's.
+ */
+function productionSemanticService(): ConversationSemanticEstablishmentService {
+  const providers = Reflect.getMetadata('providers', ConversationModule) as ModuleProvider[];
+  const registered = (token: unknown): unknown => providers.find((p) => p.provide === token)!.useValue;
+  const service = providers.find((p) => p.provide === ConversationSemanticEstablishmentService)!;
+  const [, segmentation, focus, thread, continuity] = service.inject!;
+  return service.useFactory!(RUNTIME, registered(segmentation), registered(focus), registered(thread), registered(continuity), GRANTED) as ConversationSemanticEstablishmentService;
+}
+
 function analysisWorker(claims: CallAnalysisClaim[]) {
-  const semantic = new ConversationSemanticEstablishmentService(
-    RUNTIME,
-    guardForegroundBinding(deepSeekSegmentationBinding),
-    guardForegroundBinding(deepSeekFocusResolutionBinding(process.env, costLedgerDecorator('FOCUS_RESOLUTION'))),
-    guardForegroundBinding(deepSeekThreadEstablishmentBinding(process.env, costLedgerDecorator('THREAD_FORMATION'))),
-    guardForegroundBinding(deepSeekThreadContinuityBinding(process.env, costLedgerDecorator('THREAD_CONTINUITY'))),
-    GRANTED,
-  );
+  const semantic = productionSemanticService();
   const q = queue(claims);
   const worker = new CallAnalysisWorker({
     store: q.store, semantic, permits: GRANTED, start: 'AT_COMMIT',

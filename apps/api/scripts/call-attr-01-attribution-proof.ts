@@ -7,7 +7,7 @@
  *     0204's writer and readers, 0191's shared background permits;
  *   - a `CallAnalysisWorker` composed as `CallAnalysisWorkerHost` composes it, over 0191's queue, and the
  *     `ConversationSemanticEstablishmentService` with ConversationModule's four production bindings (each a DeepSeek
- *     adapter behind its cost-ledger decorator and the foreground guard);
+ *     adapter behind its cost-ledger decorator and the foreground guard), taken from the module's own provider metadata;
  *   - `productionAiProviderCallAccounting()` -> `SupabaseAiProviderCallLedger` -> `SupabaseServiceRoleApiService`, whose
  *     every request goes to SUPABASE_URL: in the CI PostgREST loop (POSTGREST_URL and POSTGREST_JWT_SECRET set) the real
  *     PostgREST engine of that line, over the WIRE; otherwise a loopback pg shim calling the same functions as
@@ -40,13 +40,11 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { runWithAiUsageAttribution } from '../src/ai-usage/ai-usage-attribution';
 import { costLedgerDecorator } from '../src/ai-usage/production-ai-provider-call-accounting';
-import { guardForegroundBinding } from '../src/conversation/foreground-turn-work';
-import { deepSeekSegmentationBinding } from '../src/conversation/conversation.module';
+import { ConversationModule } from '../src/conversation/conversation.module';
 import { LiveCallReplyService } from '../src/conversation/live-call-reply.service';
 import { SafetyResponseGateService } from '../src/conversation/safety-response-gate.service';
 import type { SupabaseDataApiService } from '../src/conversation/supabase-data-api.service';
 import { SupabaseServiceRoleApiService } from '../src/conversation/supabase-service-role-api.service';
-import { deepSeekFocusResolutionBinding } from '../src/conversational-focus/focus-resolution-binding';
 import { DatabaseBackgroundPermitGate } from '../src/live-analysis/background-permits';
 import { CallAnalysisRepository } from '../src/live-analysis/call-analysis.repository';
 import { CallAnalysisWorker, callAnalysisStart } from '../src/live-analysis/call-analysis.worker';
@@ -56,8 +54,6 @@ import { productionLiveCallAttention, signallingAttentionSettlement } from '../s
 import { ConversationSemanticEstablishmentService } from '../src/live-focus/conversation-semantic-establishment.service';
 import { ConversationSemanticRuntimeRepository } from '../src/live-focus/conversation-semantic-runtime.repository';
 import { createDeepSeekClient } from '../src/model-router/providers/deepseek/deepseek-client';
-import { deepSeekThreadEstablishmentBinding } from '../src/thread-establishment/thread-establishment-binding';
-import { deepSeekThreadContinuityBinding } from '../src/thread-lifecycle/thread-continuity-binding';
 import { LiveCallConversationBinding } from '../src/voice/call-turn/live-call-conversation.port';
 import { LiveCallAnalysisSignal } from '../src/voice/call-turn/live-call-analysis.signal';
 import type { LiveCallAttentionChannel } from '../src/voice/call-turn/live-call-attention.port';
@@ -365,14 +361,15 @@ async function main(): Promise<void> {
 
     // ======================================================================== B: committed call analysis
     process.stdout.write(`B. committed call analysis (the production worker composition, start ${callAnalysisStart()})\n`);
-    const semantic = () => new ConversationSemanticEstablishmentService(
-      new ConversationSemanticRuntimeRepository(serverApi),
-      guardForegroundBinding(deepSeekSegmentationBinding),
-      guardForegroundBinding(deepSeekFocusResolutionBinding(process.env, costLedgerDecorator('FOCUS_RESOLUTION'))),
-      guardForegroundBinding(deepSeekThreadEstablishmentBinding(process.env, costLedgerDecorator('THREAD_FORMATION'))),
-      guardForegroundBinding(deepSeekThreadContinuityBinding(process.env, costLedgerDecorator('THREAD_CONTINUITY'))),
-      permits,
-    );
+    // ConversationModule's own factory over the four binding values it registers, read from its provider metadata.
+    const semantic = (): ConversationSemanticEstablishmentService => {
+      const providers = Reflect.getMetadata('providers', ConversationModule) as Array<{ provide?: unknown; useValue?: unknown; useFactory?: (...args: unknown[]) => unknown; inject?: unknown[] }>;
+      const registered = (token: unknown): unknown => providers.find((entry) => entry.provide === token)!.useValue;
+      const service = providers.find((entry) => entry.provide === ConversationSemanticEstablishmentService)!;
+      const [, segmentation, focus, thread, continuity] = service.inject!;
+      return service.useFactory!(new ConversationSemanticRuntimeRepository(serverApi), registered(segmentation), registered(focus), registered(thread),
+        registered(continuity), permits) as ConversationSemanticEstablishmentService;
+    };
     const endedCallSafety = new LiveCallReplyService(new LiveCallConversationBinding(), {} as SupabaseDataApiService, new SafetyResponseGateService(),
       {} as never, {} as never, {} as never, {} as never, null);
     const worker = () => new CallAnalysisWorker({

@@ -63,8 +63,7 @@ import type { LiveCallAttention } from '../voice/call-turn/live-call-attention.p
  */
 export const CU_SEGMENTATION_BINDING_FACTORY = Symbol('CU_SEGMENTATION_BINDING_FACTORY');
 
-/** CALL-ATTR-01: exported for the call-path composition test (T-1), which composes the four bindings exactly as below. */
-export function deepSeekSegmentationBinding(): CuSegmentationBinding {
+function deepSeekSegmentationBinding(): CuSegmentationBinding {
   const config = loadCuSegmentationDeepSeekConfig();
   return {
     // AI-COST-01: every segmentation attempt passes the one accounting boundary.

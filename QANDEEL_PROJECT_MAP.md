@@ -1,5 +1,18 @@
 # QANDEEL — Project Map
 
+> **CALL-ATTR-01 — CALL-PATH AI USAGE ATTRIBUTION CORRECTION — APPROVED BY THE PO AND DELIVERED / READY FOR PO REVIEW — NOT MERGED — `QAN-BL-INTEL-06` VALIDATION — OPEN — HONOR SESSION STILL SUSPENDED — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's "CALL-ATTR-01 — PO EXECUTION AUTHORIZATION" (2026-11-27): one task, one PR, one checkpoint, no migration. The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.5 is the primary account.
+> - **Where it lives:**
+>   - the provisional attention lane's composition (`apps/api/src/live-attention/live-attention.provider.ts`, `attributedEvaluator`): the call connection's payer and Session, no source turn;
+>   - the call analysis worker (`apps/api/src/live-analysis/call-analysis.worker.ts`, `establish`): the durable claim's payer, Session and own committed turn.
+>   - Both reuse `runWithAiUsageAttribution`; AI-COST-01's boundary, 0170's ownership checks and the ledger are unchanged.
+> - **Permanent tests:**
+>   - T-1 `apps/api/src/ai-usage/call-path-attribution.composition.spec.ts` (API jest);
+>   - T-2 `apps/api/scripts/call-attr-01-attribution-proof.ts`, in API CI's live-PostgREST loop: real PostgreSQL and every PostgREST line;
+>   - T-3, the AI-COST-01 contract's `attributionViolations`.
+>   - Only DeepSeek's transport is replaced. Each test fails without the correction.
+> - **Next:** the PO's review and «ادمج». After the merge the same HONOR session resumes, inside the USD 1.50 ceiling (USD 0.012 spent). No hosted deployment.
+
 > **INTEL-LIVE-01 — MERGED (PRs #414 / #415, `main` `11e0702d`) — HONOR LIVE + REPLAY VALIDATION SUSPENDED ON A PRODUCTION INTEGRATION DEFECT — CALL-ATTR-01 PROPOSED, AWAITING PO REVIEW — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:** the Product Owner's "HONOR VALIDATION — BILLING RECOVERY & USAGE ATTRIBUTION CORRECTION" (2026-11-27). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12 is the primary account.
 > - **Found by the paid HONOR session** (about 45 s of speech, USD 0.011, against a USD 1.50 ceiling):
