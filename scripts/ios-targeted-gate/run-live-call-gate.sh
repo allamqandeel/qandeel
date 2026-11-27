@@ -218,6 +218,14 @@ wait_json() {
 # INTEL-LIVE-01 CP2: the v3 attention checks (attention-checks.mjs over the server's evidence and a fresh /proof/attention).
 ATT_CHECKS="$REPO/scripts/ios-targeted-gate/attention-checks.mjs"
 now_ms() { node -e 'process.stdout.write(String(Date.now()))'; }
+# mic_ready <label>: this app's microphone authorization in the simulator's own TCC record (auth_value 2 = allowed), kept as
+# evidence in host/mic-<label>.txt. Production permission and consent are untouched: this only reads what the harness granted.
+mic_ready() {
+  local db="$HOME/Library/Developer/CoreSimulator/Devices/$UDID/data/Library/TCC/TCC.db" value
+  value="$(sqlite3 "$db" "SELECT auth_value FROM access WHERE service = 'kTCCServiceMicrophone' AND client = '$BUNDLE';" 2>&1)"
+  echo "kTCCServiceMicrophone $BUNDLE auth_value=${value:-none} ($db)" > "$OUT/host/mic-$1.txt"
+  [ "$value" = "2" ]
+}
 # The epoch of the call's ACTIVE connection, from the server (empty when none).
 active_epoch() {
   read_state | node -e 'let s = ""; process.stdin.on("data", (d) => { s += d; }).on("end", () => { try { const j = JSON.parse(s); if (j.call && j.call.state === "ACTIVE" && Number.isInteger(j.call.epoch)) process.stdout.write(String(j.call.epoch)); } catch {} });'
@@ -274,6 +282,10 @@ xcrun simctl uninstall "$UDID" "$BUNDLE" >/dev/null 2>&1 || true
 xcrun simctl privacy "$UDID" reset all "$BUNDLE" >/dev/null 2>&1 || true
 xcrun simctl install "$UDID" "$APP" || fail ITG-01 "the proof build did not install"
 xcrun simctl privacy "$UDID" grant microphone "$BUNDLE" || infrastructure "simctl privacy grant microphone"
+# CALL-ATTR-01 CI R2: this fresh install is the LAST state reset (the launch flow clears no state: Maestro's clearState
+# uninstalls and reinstalls the app, which drops this grant and left its own best-effort re-grant to decide whether iOS
+# would prompt). The grant is read back from the simulator's own TCC record here and again before the start command.
+mic_ready granted || infrastructure "the microphone grant is not in the simulator's TCC record after simctl privacy ($(cat "$OUT/host/mic-granted.txt"))"
 {
   echo "simulator: $UDID / $(xcrun simctl list devices | grep "$UDID" | head -n 1 | sed 's/^ *//')"
   echo "app: $APP"
@@ -291,6 +303,9 @@ flow itg-call-launch.yaml launch -e SHOT=01-launch || fail ITG-01 "the Conversat
 record ITG-01 PASS "the proof build installed and launched; the Conversation's call entry is drawn"
 
 # ITG-02 — connect, by the start command (no touch; see above): the call entry's own owner.start(), then the same checks.
+# The microphone authorization is in place before the command is sent (iOS would otherwise hold the call in PREPARING
+# behind its own prompt): read, never waited for and never re-granted.
+mic_ready before-start || infrastructure "the microphone authorization was not in place before the start command ($(cat "$OUT/host/mic-before-start.txt")); no start command was sent"
 call_command start 02-command \
   || fail ITG-02 "the app did not take and execute the start command within 30 s (host/02-command.jsonl)"
 wait_json 60 read_state 02-call-active 's => s.call != null && s.call.state === "ACTIVE"' \

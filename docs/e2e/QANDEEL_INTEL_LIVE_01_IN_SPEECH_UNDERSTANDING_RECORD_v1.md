@@ -2345,7 +2345,7 @@ USD 1.50 ceiling (USD 0.012 spent). The server-only correction needs no new APK 
 - **Observation, outside this task.** After the S8B-05 CP2 spoken-turn proof, the local clone kept **80**
   `ai_provider_call_usage` and **51** `ai_cost_ratings` rows with no provider call. CP2's teardown deletes the ledger
   rows under replica mode but not their children. Nothing fails on it today, and `main` already behaves this way.
-  CALL-ATTR-01 does not change it; its disposition is the PO's.
+  CALL-ATTR-01 does not change it. The PO approved its registration only (2026-11-27): it is `QAN-BL-CI-05`, admitted in CI R2 (§12.7).
 
 **B. iOS Targeted Gate (run `45927739108`, artifact `15168144036`): ITG-09 was a checker false negative.**
 - ITG-01, 02, 03, 07, 08 and 04 passed. ITG-09 failed with "dropped at the call's ACTIVE", although the phone and its
@@ -2408,4 +2408,76 @@ USD 1.50 ceiling (USD 0.012 spent). The server-only correction needs no new APK 
 again, triggered by `scripts/ios-targeted-gate/**`, `live-attention/**` and `live-analysis/**`. API CI runs in full.
 
 **Backlog:** `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`. Nothing is admitted, re-owned or tombstoned. The observation
-under A is left for the PO's decision.
+under A is left for the PO's decision (registered in R2 as `QAN-BL-CI-05`, §12.7).
+
+### 12.7 CALL-ATTR-01 CI R2 — the iOS gate's microphone prompt, and API CI's 0203 measurement (2026-11-27)
+
+**Authority:** the Product Owner's "PR #416 — CI R2: ITG-02 microphone permission blocker" (independent review of head
+`4cb7c7ea`).
+- Same PR, no new checkpoint.
+- No change to production audio, attention, analysis, COSMOS or Replay code; production permission and consent are
+  unchanged.
+- No paid call, deployment or merge.
+
+**A. iOS Targeted Gate (run `45959082296`, job `140372346670`, artifact `15180684678`): ITG-02 behind iOS's microphone prompt.**
+- **What the artifact shows.** ITG-01 passed. Then:
+  - the start command was taken and acknowledged `STARTED`;
+  - the app stayed `PREPARING`, and the server held `{"call":null}`, with no call-initiation request;
+  - `shots/failure-ITG-02.png` shows iOS's own prompt ("QANDEEL would like to access the Microphone") waiting for Allow;
+  - the runner had a load average of 132.46 and 0 % idle CPU.
+- **Root cause, in the harness.**
+  - The runner uninstalled, reset privacy, installed, then granted the microphone with `simctl privacy`.
+  - The launch flow's `launchApp: clearState: true` then made Maestro **uninstall and reinstall the app again**
+    (`simctl uninstall` / `simctl install` in its log; tccd logged "Handling Application Uninstalled"). That reinstall
+    dropped the grant.
+  - Maestro's only re-grant is `applesimutils --setPermissions microphone=YES`, a direct write to TCC. It took 1.5 s here,
+    against 8 s in R1's passing run. Its "through simctl" step finished in 0 ms and did nothing.
+  - Nothing read the grant back, so whether iOS would prompt was decided by a best-effort tool under load.
+  - **The production permission flow behaved correctly:** with no authorization, iOS asked.
+- **Correction (harness only).**
+  - `apps/mobile/.maestro/itg-call-launch.yaml` clears no state. The runner's fresh install is the last state reset. The
+    flow keeps `stopApp` and its `microphone: allow` statement.
+  - `scripts/ios-targeted-gate/run-live-call-gate.sh` adds `mic_ready <label>`. It reads this app's
+    `kTCCServiceMicrophone` record in the simulator's own TCC database (`auth_value` 2 = allowed) and keeps the result as
+    evidence in `host/mic-<label>.txt`. It runs twice:
+    - after the grant: a missing record is INFRASTRUCTURE, and no Product step has run;
+    - after ITG-01, **before the start command**: a missing record is INFRASTRUCTURE, and no start command is sent.
+  - It never waits, never retries and never re-grants. No timeout is changed.
+- **Regression guard.** `tests/intel-live-01-ios-targeted-gate-contract.test.mjs` refuses:
+  - any `clearState: true` in a gate flow;
+  - any order other than install → grant → read back → launch → read back → start command;
+  - a readiness that is not the TCC record's `auth_value` 2;
+  - a missing authorization that is waited out or re-granted.
+
+  It has seven planted regressions. Against the R1 harness (put back in place, then restored byte-identical) it fails
+  with all three violations.
+- **Not proven locally:** the TCC read itself runs only on the macOS runner, so the gate's next run is its first real
+  execution. A wrong read stops the run as INFRASTRUCTURE with its evidence; it never becomes a FAIL or a PASS.
+- **Not claimed:** ITG-03 – ITG-09 and UT-1 – UT-3 were not reached in run `45959082296`. ITG-09 (corrected in R1) and
+  ITG-05 / ITG-06 stay unverified on this PR.
+
+**B. API CI (run `45959082285`): the 0203 verifier's WAL measurement M-12, not this change.**
+- `verify-api` failed at "Verify S8B-07 RB-2 M-2 live call clock marks (0203)", scenario M-12, with "an unchanged echo
+  adds no mark row".
+  - That assertion compares **WAL volume**: `walPerUnchangedEchoSlot` must stay below `walPerEmptySlot +
+    walPerChangedMark`.
+  - This run measured 1336 bytes against 260 + 216. On R1's run of the same verifier over the same migrations, it
+    measured 273 bytes, and the other metrics were identical.
+  - The PR changes no `database/` file. A WAL burst inside the 100-iteration window (most likely a checkpoint's full-page
+    writes on a loaded runner) explains the difference. This change does not.
+  - VAL-01's failure only records it.
+- **Consequence:** 0203 runs before the live-PostgREST loop, so **T-2 (R1) and the S8B-02 CP2 proof did not run** in this
+  run. R1's correction A is still unproven in CI.
+- **Nothing is changed for it:** 0203 and its verifier belong to S8B-07 RB-2. R2's push re-runs API CI through its own
+  change-aware plan, because `tests/**` changes; there is no manual rerun.
+  - If M-12 fails again, that is evidence for the PO, not a reason to weaken the measurement.
+
+**Backlog:** `QAN-BL-CI-05` is admitted, as the PO approved: the S8B-05 CP2 orphaned ledger rows of §12.6, registration
+only. `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`.
+
+**Local verification of R2:**
+- the gate contract **7 / 7**;
+- the T13 recovery contract **19 / 19**;
+- `bash -n` on the runner;
+- the World gate's impact plan stays **NOT_AFFECTED** (the flow is `NOT_IN_BINARY`);
+- the root contracts and governance results are in the PR's R2 note.

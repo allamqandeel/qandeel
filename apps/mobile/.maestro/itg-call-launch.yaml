@@ -2,11 +2,12 @@
 # the microphone allowed (granted by `simctl privacy` before; stated again so Maestro's launch keeps it) and wait for the
 # Conversation's call entry, which the production runtime draws only after it reached the proof server (the voice
 # capability, the Session, its history). VALIDATION ONLY. Driven by scripts/ios-targeted-gate/run-live-call-gate.sh.
+# It clears no state (CALL-ATTR-01 CI R2): the runner's fresh install is the last reset, and Maestro's clearState
+# uninstalls and reinstalls the app, which drops the runner's microphone grant.
 # Input: PREFIX, SHOT.
 appId: com.qandeel.mobile
 ---
 - launchApp:
-    clearState: true
     stopApp: true
     permissions:
       microphone: allow

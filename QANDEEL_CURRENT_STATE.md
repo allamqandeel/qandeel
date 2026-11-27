@@ -8,7 +8,7 @@
 > - **Implemented on `main`:** INTEL-LIVE-01's lane and Lane B. Its paid HONOR session found two problems:
 >   - H-1: the Google billing account was closed. Resolved by the PO and verified.
 >   - H-2: provisional attention and the call analysis worker reached DeepSeek unattributed, so AI-COST-01 refused every request. No live mark appeared and no call half was established.
-> - **Decided and delivered, not merged:** CALL-ATTR-01 attributes both entries with the existing scope, without a migration. Its tests T-1 – T-3 fail without it and pass with it (record §12.5). CI correction R1 (§12.6): T-2's teardown now leaves the shared CI database exactly as found, and the ITG-09 checker correlates the actual mark removal.
+> - **Decided and delivered, not merged:** CALL-ATTR-01 attributes both entries with the existing scope, without a migration. Its tests T-1 – T-3 fail without it and pass with it (record §12.5). CI correction R1 (§12.6): T-2's teardown now leaves the shared CI database exactly as found, and the ITG-09 checker correlates the actual mark removal. CI R2 (§12.7): the iOS gate no longer clears app state after its microphone grant and reads the grant back before the start command; `QAN-BL-CI-05` (S8B-05 CP2 orphaned ledger rows, registration only) is admitted.
 > - **Open:**
 >   - the PO's review and «ادمج»;
 >   - then the same HONOR session's resumption (V-1 – V-8 unchanged, ceiling USD 1.50, USD 0.012 spent).

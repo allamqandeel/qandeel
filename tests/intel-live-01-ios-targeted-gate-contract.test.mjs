@@ -165,6 +165,29 @@ export function violations({ gate, runner, world, server, flows, commands, root,
   if (!/id: qandeel-call-entry/u.test(flows)) out.push('the launch flow does not wait for the production call entry');
   if (/hideKeyboard|retry:/u.test(code(flows))) out.push('a flow hides the keyboard or retries');
 
+  // CALL-ATTR-01 CI R2 (run 45959082296): the launch flow's clearState reinstalled the app after the runner's grant, and
+  // iOS held the call in PREPARING behind its microphone prompt. The runner's fresh install is the last state reset; the
+  // grant is read back from the simulator's TCC record after it and again before the start command; nothing is waited out.
+  if (/clearState:\s*true/u.test(code(flows))) out.push("a flow clears the app state, which reinstalls the app and drops the runner's microphone grant");
+  {
+    const rc = code(r);
+    const at = [
+      rc.indexOf('xcrun simctl install "$UDID" "$APP"'),
+      rc.indexOf('xcrun simctl privacy "$UDID" grant microphone "$BUNDLE"'),
+      rc.indexOf('mic_ready granted || infrastructure '),
+      rc.indexOf('flow itg-call-launch.yaml launch'),
+      rc.indexOf('mic_ready before-start || infrastructure '),
+      rc.indexOf('call_command start 02-command'),
+    ];
+    if (at.some((i, k) => i < 0 || (k > 0 && i < at[k - 1]))) {
+      out.push('the microphone is not granted after the last install and read back before the launch and again before the start command');
+    }
+    if (!rc.includes(`value="$(sqlite3 "$db" "SELECT auth_value FROM access WHERE service = 'kTCCServiceMicrophone' AND client = '$BUNDLE';" 2>&1)"`) || !rc.includes('[ "$value" = "2" ]')) {
+      out.push("the microphone readiness is not read from the simulator's TCC record as allowed (auth_value 2)");
+    }
+    if (/mic_ready [^\n]*\|\|\s*(?:sleep|xcrun simctl privacy)/u.test(rc)) out.push('a missing microphone authorization is waited out or re-granted instead of stopping the run');
+  }
+
   // INTEL-LIVE-01 CP2: the lane is composed once, bound into the engine, and told of the worker's settlements.
   if (!/const attentionLane = process\.env\.PROOF_ATTENTION === 'ON' \? liveCallAttentionOf\(/u.test(s) || !/if \(attentionLane\) \{\n\s+attentionBinding\.bind\(attentionLane\);/u.test(s)) {
     out.push('the proof server does not compose the production attention lane under PROOF_ATTENTION=ON');
@@ -269,6 +292,13 @@ test('each refusal is real: planted regressions are caught', () => {
     ['the restore not checked', plant('runner', 'wait_check 60 08-restored restored "$EPOCH" "$DROP_AT" || fail ITG-08', 'true || fail ITG-08')],
     ['frames not withheld before the restore', plant('runner', 'curl -s -m 5 -f -X POST "$SERVER/proof/attention-hold?on=1"', 'true')],
     ['the cleanup not checked', plant('runner', 'wait_check 30 09-cleanup cleanup "$END_AT" || fail ITG-09', 'true || fail ITG-09')],
+    ['the launch clearing state again', plant('flows', '- launchApp:\n    stopApp: true', '- launchApp:\n    clearState: true\n    stopApp: true')],
+    ['the grant made before the last install', plant('runner', 'xcrun simctl install "$UDID" "$APP" || fail ITG-01', 'xcrun simctl privacy "$UDID" grant microphone "$BUNDLE" || true\nxcrun simctl install "$UDID" "$APP" || fail ITG-01')],
+    ['the grant not read back', plant('runner', 'mic_ready granted || infrastructure ', 'true || infrastructure ')],
+    ['no readiness before the start command', plant('runner', 'mic_ready before-start || infrastructure ', 'true || infrastructure ')],
+    ['the readiness read after the start command', plant('runner', "mic_ready before-start || infrastructure \"the microphone authorization was not in place before the start command ($(cat \"$OUT/host/mic-before-start.txt\")); no start command was sent\"\n", '')],
+    ['a missing grant waited out', plant('runner', 'mic_ready before-start || infrastructure ', 'mic_ready before-start || sleep 30 || infrastructure ')],
+    ['the readiness not the TCC allow', plant('runner', '[ "$value" = "2" ]', '[ -n "$value" ]')],
     ['the probe on by default', plant('server', "return { on: process.env.PROOF_PROBE === 'ON',", 'return { on: true,')],
     ['the probe ignoring the server', plant('probe', 'if (body?.on !== true) return;', '')],
     ['the probe feeding the layer', plant('probe', '    const call: CallOwner = runtime.call;', '    const call: CallOwner = runtime.call;\n    void dispatch();')],

@@ -312,6 +312,7 @@ This supersedes COSMOS-FINAL-01's backend trigger scope for the World Gate (COSM
 | `QAN-BL-VIS-02` | Replay's Personal Map Still Draws With the Pre-COSMOS Renderer (REPLAY-COSMOS-01) | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-NAV-04` | No Full Personal Detail Surface Beyond the PEEK (PERSONAL-DETAIL-01) | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-CI-04` | iOS World Gate (BG-10): Maestro Hangs Leave Cases NOT TESTED, Evidence Is Lost When the Job Is Cancelled, and the iPhone SE Cell Exceeds Its Time Budget | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
+| `QAN-BL-CI-05` | Test-Fixture Cleanup / CI Hygiene: the S8B-05 CP2 Spoken-Turn Proof Leaves Orphaned Ledger Usage and Rating Rows in the Shared CI Database | `UNASSIGNED` | `LOW` | `OPEN — UNASSIGNED` |
 
 ---
 
@@ -4171,6 +4172,42 @@ document: the contract's §12 / G-7). Nothing here authorizes implementation (BG
 Admitted by `COSMOS-INT-01` at its closure (2026-11-21) under BG-08 (qualifying residue of the closing task, which must
 not survive only in a report). Nothing here authorizes implementation (BG-07).
 
+### `QAN-BL-CI-05` — Test-Fixture Cleanup / CI Hygiene: the S8B-05 CP2 Spoken-Turn Proof Leaves Orphaned Ledger Usage and Rating Rows in the Shared CI Database
+
+- **Title / Finding:** the teardown of `apps/api/scripts/s8b-05-cp2-spoken-turn-synthetic-proof.ts`
+  (`prove:live-call-spoken-turn-synthetic:integration`, in API CI's live-PostgREST loop) deletes its fixtures'
+  `public.ai_provider_calls` rows under replica mode, through its `user_id` sweep.
+  - It leaves their children: `public.ai_provider_call_usage` and `public.ai_cost_ratings` are keyed by
+    `provider_call_id`, so that sweep never reaches them.
+  - Evidence (CALL-ATTR-01 CI R1, 2026-11-27): a local throwaway clone of the migrated database held **80** usage rows
+    and **51** rating rows with no provider call after the S8B-05 CP1 and CP2 (single call) proofs.
+  - T-2 compared its own before and after and found no difference, so these rows are not CALL-ATTR-01's.
+  - Nothing fails on them today. They are pre-existing on `main`.
+- **Source:** the [INTEL-LIVE-01 execution record](e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md)
+  §12.6 (A, "Observation, outside this task"). The Product Owner approved registering it (2026-11-27, review of CALL-ATTR-01
+  CI R1): "Approved for backlog registration only", classified as test-fixture cleanup / CI hygiene, and not to be
+  implemented now.
+- **Why not current work:** the Product Owner registered it without authorizing a correction. CALL-ATTR-01 does not touch
+  the S8B-05 proofs.
+- **Owner task:** `UNASSIGNED` — the Product Owner named no owner, and none is invented (BG-02).
+- **Severity:** `LOW` — fixture residue in a disposable CI database. No Product behaviour is affected.
+  - The risk, if reopened: a later proof that counts ledger usage or ratings database-wide, or that requires every usage row
+    to have its provider call, would read this proof's residue. A residue left by an earlier proof has broken later
+    proofs before: the outbox and the erasure queue, in S8B-05 CP3.
+- **Reopen condition:** any task that changes the S8B-05 CP2 proof or its teardown, a later proof that fails or must be
+  re-anchored because of these rows, or the Product Owner's authorization of a CI hygiene pass.
+- **Required future properties:**
+  - the teardown removes `ai_provider_call_usage` and `ai_cost_ratings` by the fixtures' provider calls, before the calls;
+  - the proof counts what it left of both, as CALL-ATTR-01's T-2 does (T2 / T3);
+  - no other user's ledger row is touched;
+  - the proof's own assertions are not weakened.
+- **Anti-duplication:** checked against all 113 earlier IDs and every tombstone. `QAN-BL-CI-01` – `QAN-BL-CI-04` are
+  simulator, emulator and mirror infrastructure. No item held fixture residue in the ledger.
+- **Status:** `OPEN — UNASSIGNED`
+
+Admitted by `CALL-ATTR-01` (CI R2, 2026-11-27) under BG-06, at the Product Owner's approval of registration only, in the
+first documentation update after it, as the Product Owner directed. Nothing here authorizes implementation (BG-07).
+
 ## 6. Tombstones
 
 ### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
@@ -5048,15 +5085,15 @@ Tombstoned by `S8B-07` CP1-B under the Product Owner's order of 2026-11-08 (BG-0
 | --- | ---: |
 | `DEFERRED — OWNED` | 54 |
 | `VALIDATION — OPEN` | 5 |
-| `OPEN — UNASSIGNED` | 17 |
+| `OPEN — UNASSIGNED` | 18 |
 | `CLOSED — TOMBSTONE` | 37 |
-| **Total** | **113** |
+| **Total** | **114** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 64 |
 | `MEDIUM` | 46 |
-| `LOW` | 3 |
+| `LOW` | 4 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
 
@@ -6728,6 +6765,18 @@ merged; effective from its merge).**
 - **BG-09:** the record's banner carries `CP1–CP4 DELIVERED (SYNTHETIC MECHANISM PROVEN)`, `CP4 CLOSURE DELIVERED / READY
   FOR PO REVIEW AND MERGE DECISION` and the item's `VALIDATION — OPEN`. The locators are updated in the same change.
 - **Index after INTEL-LIVE-01 CP4: 113 items; 54 / 5 / 17 / 37 by status, 64 / 46 / 3 by severity.**
+
+**CALL-ATTR-01 — CI R2, registration of an approved observation (2026-11-27; Draft PR #416, not merged; effective from its
+merge).**
+
+- **Authority:** the Product Owner's review of CALL-ATTR-01 CI R1 (2026-11-27): "Approved for backlog registration only",
+  in "the next appropriate documentation update" and without a CI run of its own. CI R2 is that update.
+- **Admitted (BG-06):** `QAN-BL-CI-05` (`LOW`, `OPEN — UNASSIGNED`). The S8B-05 CP2 spoken-turn proof leaves orphaned
+  ledger usage and rating rows in the shared CI database (test-fixture cleanup / CI hygiene; record §12.6). It is not
+  implemented.
+- **Read and left unchanged:** `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`. CALL-ATTR-01 corrects H-2, its demonstrated
+  defect, before product acceptance.
+- **Index after CALL-ATTR-01 CI R2: 114 items; 54 / 5 / 18 / 37 by status, 64 / 46 / 4 by severity.**
 
 ## 8. What is deliberately not in this backlog
 

@@ -1,7 +1,7 @@
 # QANDEEL — Project Map
 
 > **CALL-ATTR-01 — CALL-PATH AI USAGE ATTRIBUTION CORRECTION — APPROVED BY THE PO AND DELIVERED / READY FOR PO REVIEW — NOT MERGED — `QAN-BL-INTEL-06` VALIDATION — OPEN — HONOR SESSION STILL SUSPENDED — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
-> - **Authority:** the Product Owner's "CALL-ATTR-01 — PO EXECUTION AUTHORIZATION" (2026-11-27): one task, one PR, one checkpoint, no migration. The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.5 is the primary account; §12.6 records the PO's "PR #416 CI CORRECTION" (R1: T-2's teardown and the ITG-09 checker).
+> - **Authority:** the Product Owner's "CALL-ATTR-01 — PO EXECUTION AUTHORIZATION" (2026-11-27): one task, one PR, one checkpoint, no migration. The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.5 is the primary account; §12.6 records the PO's "PR #416 CI CORRECTION" (R1: T-2's teardown and the ITG-09 checker), §12.7 CI R2 (the iOS gate's microphone grant read back before the start command; `QAN-BL-CI-05` registered).
 > - **Where it lives:**
 >   - the provisional attention lane's composition (`apps/api/src/live-attention/live-attention.provider.ts`, `attributedEvaluator`): the call connection's payer and Session, no source turn;
 >   - the call analysis worker (`apps/api/src/live-analysis/call-analysis.worker.ts`, `establish`): the durable claim's payer, Session and own committed turn.
