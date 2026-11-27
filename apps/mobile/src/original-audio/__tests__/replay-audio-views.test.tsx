@@ -81,6 +81,23 @@ describe.each(['ar', 'en'] as const)('the V2 player surface (%s)', (language) =>
     expect(w.server.calls).toHaveLength(0);
   });
 
+  it("S8B-07 CP2-A.1 (PO direction): the part's timeline is there before the first Play, and a step on it asks for nothing", async () => {
+    const { view, w } = await mount(language);
+    const line = view.getByTestId('qandeel-replay-audio-timeline-line');
+    expect(line.props.accessibilityValue.max).toBe(22);
+    expect(line.props.accessibilityValue.now).toBe(0);
+    await act(async () => { fireEvent(line, 'accessibilityAction', { nativeEvent: { actionName: 'increment' } }); });
+    await tick();
+    expect(view.getByTestId('qandeel-replay-audio-timeline-line').props.accessibilityValue.now).toBe(1);
+    expect(w.server.calls).toHaveLength(0);
+    expect(w.playing()).toBe(false);
+  });
+
+  it('S8B-07 CP2-A.1: with no map answer there is no timeline before Play, and no length is claimed', async () => {
+    const { view } = await mount(language, { map: () => Promise.resolve({ kind: 'UNAVAILABLE' }) });
+    expect(view.queryByTestId('qandeel-replay-audio-timeline-line')).toBeNull();
+  });
+
   it('while playing: RA-11 after a second of preparing, then the moment\'s line (RA-14) at its window position', async () => {
     const { view, w } = await mount(language);
     await show(w, 2);
@@ -100,8 +117,6 @@ describe.each(['ar', 'en'] as const)('the V2 player surface (%s)', (language) =>
 
   it('S8B-07 CP2-A.1: one timeline of the whole part under the Spine, at the clock place; a step on it places the clock there', async () => {
     const { view, w } = await mount(language);
-    // Nothing is known before the map arrives: no timeline, and no length claimed.
-    expect(view.queryByTestId('qandeel-replay-audio-timeline-line')).toBeNull();
     await show(w, 2);
     await act(async () => { w.player.play(); });
     await act(async () => { await until(() => w.clock()!.getState().phase === 'RUNNING'); });

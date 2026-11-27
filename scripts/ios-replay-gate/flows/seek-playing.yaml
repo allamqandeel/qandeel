@@ -1,0 +1,32 @@
+# S8B-07 CP2-A.1 iOS Replay gate, C-SEEK-PLAYING, in ONE flow (a Maestro start takes longer than the 22.5 s part): Play;
+# once the long turn (moment 3) speaks, a step BACK on the timeline at P1; once it landed, a step FORWARD at P2; until it
+# landed. The landing places and the rest of the part are judged by the runner from the readout.
+appId: com.qandeel.mobile
+---
+- tapOn:
+    retryTapIfNoChange: false
+    waitToSettleTimeoutMs: 500
+    id: "qandeel-replay-play"
+- extendedWaitUntil:
+    visible:
+      id: "irg-readout"
+      text: "ord=3 .*play=1 .*"
+    timeout: 30000
+- tapOn:
+    retryTapIfNoChange: false
+    waitToSettleTimeoutMs: 500
+    point: "${P1}"
+- extendedWaitUntil:
+    visible:
+      id: "irg-readout"
+      text: ".*lands=[0-9.]+ .*"
+    timeout: 8000
+- tapOn:
+    retryTapIfNoChange: false
+    waitToSettleTimeoutMs: 500
+    point: "${P2}"
+- extendedWaitUntil:
+    visible:
+      id: "irg-readout"
+      text: ".*lands=[0-9.x]+,[0-9.]+ .*"
+    timeout: 8000

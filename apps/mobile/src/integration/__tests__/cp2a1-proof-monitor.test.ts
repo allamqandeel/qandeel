@@ -1,16 +1,23 @@
 /**
  * S8B-07 CP2-A.1 — the iOS Replay gate's readout, on jest's clock over the same fixture world the proof build plays in
- * real time: what the gate expects to read is what the readout says for a continuous part, a seek while playing and a
- * seek while held — and a break in the place is reported, never smoothed over.
+ * real time: what the gate expects to read is what the readout says for a continuous part, steps backward and forward
+ * while playing, steps backward and forward while held, and a step before the first Play — each step's landing place
+ * included — and a break in the place is reported, never smoothed over.
  */
 import type { ReplayDraftHandoff } from '../../replay-entry';
-import { REPLAY, SESSION, run, until, world } from '../../original-audio/__fixtures__/replay-audio-world';
+import { replayPresentationClock, replayTimelineTarget } from '../../replay-cosmos/presentation-clock';
+import { replayMomentPaceMs } from '../../replay-player';
+import { planFor } from '../../original-audio/replay-audio-clock';
+import { CROSS, MOMENTS, REPLAY, RUN0, RUN1, SESSION, run, until, world } from '../../original-audio/__fixtures__/replay-audio-world';
 import { createCp2a1ProofMonitor, formatCp2a1Reading } from '../__validation__/cp2a1-proof-monitor';
 
 jest.setTimeout(60000);
 
 beforeEach(() => jest.useFakeTimers());
 afterEach(() => jest.useRealTimers());
+
+/** The part's presentation clock, as the timeline lays it out (22.5 s). */
+const P = replayPresentationClock(planFor(MOMENTS, [{ durationMs: 9_000, spans: RUN0 }, { durationMs: 5_000, spans: RUN1 }], [CROSS])!, MOMENTS, replayMomentPaceMs)!;
 
 async function opened() {
   const w = world();
@@ -21,8 +28,28 @@ async function opened() {
   await run(0);
   return { w, monitor, stop };
 }
+type Monitor = Awaited<ReturnType<typeof opened>>['monitor'];
+/** A step on the line at that fraction of the part, as the gate's tap makes it. */
+function step(monitor: Monitor, fraction: number): number {
+  const t = Math.round(fraction * P.durationMs);
+  const target = replayTimelineTarget(P, t)!;
+  monitor.controller.seekTo(target.ordinal, target.offsetMs);
+  return t;
+}
+const reachedOrdinal = (monitor: Monitor, ordinal: number) => () => monitor.reading().ordinal === ordinal && monitor.reading().playing;
 
 describe('the CP2-A.1 proof readout', () => {
+  it('reads the whole part before the first Play: its length, at its start, nothing played', async () => {
+    const { monitor, stop } = await opened();
+    await run(200);
+    const r = monitor.reading();
+    expect(r.durationMs).toBe(22_500);
+    expect(r.tMs).toBe(0);
+    expect(r.playing).toBe(false);
+    expect(formatCp2a1Reading(r)).toMatch(/^ord=1 t=0\.0 dur=22\.5 play=0 seeks=0 lands=- visited=- cont=OK max=0\.0 end=0$/);
+    stop();
+  });
+
   it('a part played from Play alone passes every moment, in order, with no break, to its end', async () => {
     const { w, monitor, stop } = await opened();
     w.player.play();
@@ -34,44 +61,76 @@ describe('the CP2-A.1 proof readout', () => {
     expect(r.durationMs).toBe(22_500);
     expect(r.tMs).toBe(22_500);
     expect(r.maxStepMs).toBeLessThanOrEqual(400);
-    expect(formatCp2a1Reading(r)).toMatch(/^ord=6 t=22\.5 dur=22\.5 play=0 seeks=0 visited=1-2-3-5-6 cont=OK max=0\.\d end=1$/);
+    expect(formatCp2a1Reading(r)).toMatch(/^ord=6 t=22\.5 dur=22\.5 play=0 seeks=0 lands=- visited=1-2-3-5-6 cont=OK max=0\.\d end=1$/);
     stop();
   });
 
-  it('a step on the line while playing is counted, lands on its moment, and the part goes on to its end unbroken', async () => {
+  it('C-SEEK-PLAYING: playing, a step back (25%) and then forward (90%) land there, and the part goes on to its end unbroken', async () => {
     const { w, monitor, stop } = await opened();
     w.player.play();
-    await until(() => (monitor.reading().ordinal ?? 0) >= 2 && monitor.reading().durationMs !== null);
-    // 16 875 ms is in the pause before the second recording: it starts that recording's first moment.
-    monitor.controller.seekTo(6, 0);
-    await run(300);
-    expect(monitor.reading().seeks).toBe(1);
+    await until(reachedOrdinal(monitor, 3));
+    await run(1_500);
+    const back = step(monitor, 0.25);
+    await until(() => monitor.reading().landsMs.length === 1);
+    expect(monitor.reading().ordinal).toBe(2);
+    expect(monitor.reading().landsMs[0]! - back).toBeGreaterThanOrEqual(-250);
+    expect(monitor.reading().landsMs[0]! - back).toBeLessThanOrEqual(900);
+    await run(1_500);
+    const forward = step(monitor, 0.9);
+    await until(() => monitor.reading().landsMs.length === 2);
     expect(monitor.reading().ordinal).toBe(6);
+    expect(monitor.reading().landsMs[1]! - forward).toBeGreaterThanOrEqual(-250);
+    expect(monitor.reading().landsMs[1]! - forward).toBeLessThanOrEqual(900);
     await until(() => monitor.reading().ended, 60_000);
-    expect(monitor.reading().continuity).toBe('OK');
-    expect(monitor.reading().visited.slice(-1)).toEqual([6]);
+    const r = monitor.reading();
+    expect(r.continuity).toBe('OK');
+    expect(r.seeks).toBe(2);
+    expect(r.visited.slice(-1)).toEqual([6]);
+    expect(formatCp2a1Reading(r)).toMatch(/ seeks=2 lands=\d+\.\d,\d+\.\d visited=/);
     stop();
   });
 
-  it('a step while held places the line there and holds it; Play goes on from it', async () => {
+  it('C-SEEK-HELD: held in a text moment, a step back (50%) and then forward (80%) are drawn and held there; Play goes on from the last', async () => {
     const { w, monitor, stop } = await opened();
     w.player.play();
-    await until(() => (monitor.reading().ordinal ?? 0) >= 2 && monitor.reading().durationMs !== null);
+    await until(reachedOrdinal(monitor, 5));
     w.player.pause();
     await until(() => !monitor.reading().playing);
-    monitor.controller.seekTo(3, 3_750);
-    await run(1_000);
+    const back = step(monitor, 0.5);
+    await until(() => monitor.reading().landsMs.length === 1);
+    expect(monitor.reading().ordinal).toBe(3);
+    expect(Math.abs(monitor.reading().landsMs[0]! - back)).toBeLessThanOrEqual(250);
+    const forward = step(monitor, 0.8);
+    await until(() => monitor.reading().landsMs.length === 2);
     const held = monitor.reading();
-    expect(held.ordinal).toBe(3);
-    expect(held.tMs).toBeGreaterThanOrEqual(11_000);
-    expect(held.tMs).toBeLessThanOrEqual(11_500);
+    expect(held.ordinal).toBe(6);
+    expect(held.playing).toBe(false);
+    expect(Math.abs(held.landsMs[1]! - forward)).toBeLessThanOrEqual(250);
     await run(2_000);
     expect(monitor.reading().tMs).toBe(held.tMs);
     w.player.play();
-    await run(2_000);
+    await run(3_000);
     expect(monitor.reading().tMs!).toBeGreaterThan(held.tMs! + 1_000);
     await until(() => monitor.reading().ended, 60_000);
     expect(monitor.reading().continuity).toBe('OK');
+    stop();
+  });
+
+  it('C-SEEK-BEFORE-PLAY: a step before any Play (50%) is drawn there with nothing playing; Play goes on from it to the end', async () => {
+    const { w, monitor, stop } = await opened();
+    await run(200);
+    const at = step(monitor, 0.5);
+    await until(() => monitor.reading().landsMs.length === 1);
+    const placed = monitor.reading();
+    expect(placed.ordinal).toBe(3);
+    expect(placed.playing).toBe(false);
+    expect(Math.abs(placed.landsMs[0]! - at)).toBeLessThanOrEqual(250);
+    w.player.play();
+    await run(4_000);
+    expect(monitor.reading().tMs!).toBeGreaterThan(placed.tMs! + 1_000);
+    await until(() => monitor.reading().ended, 60_000);
+    expect(monitor.reading().continuity).toBe('OK');
+    expect(monitor.reading().visited).toEqual([3, 5, 6]);
     stop();
   });
 

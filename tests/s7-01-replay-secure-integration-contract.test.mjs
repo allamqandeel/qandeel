@@ -65,6 +65,13 @@ const S7_04_REPLAY_LIFECYCLE_CLIENT = 'apps/mobile/src/runtime-entry/replay-life
  * `/replay/`. Now: the three routes pinned verbatim, exactly three `/replay/`, no other Replay word, no token-like word in
  * any. The plants are kept (a FOURTH route now; a token in the availability URL) and two are added (a token in the
  * attention URL; the attention read as a write).
+ *
+ * S8B-07 CP2-A.1 RE-ANCHOR (2026-11-27, PO direction "CP2-A.1 FINAL VALIDATION AND CORRECTION", item 2: the unified
+ * timeline visible before the first Play, from the existing presentation clock): the same client gains exactly ONE more
+ * read, the version's playback map alone (`GET /replay/:replayId/versions/:versionId/map`; no set is asked for, served by
+ * 0196's owner-scoped read), through the same seam. Previous pin: three routes, exactly three `/replay/`. Now: the four
+ * routes pinned verbatim, exactly four `/replay/`, no other Replay word, no token-like word in any. The plants are kept
+ * (a FIFTH route now) and two are added (a token in the map URL; the map read as a write).
  */
 const S8B_07_REPLAY_MEDIA_CLIENT = 'apps/mobile/src/original-audio/transient-media-api.ts';
 const API_FILES = ['replay.controller.ts', 'replay.module.ts', 'replay.repository.ts', 'replay.service.ts', 'replay.types.ts'];
@@ -189,15 +196,16 @@ const DETECTORS = {
       const calls = /['`]\/replay\/|\/replay\b['`]/u.test(text);
       // S8B-07 CP1-B: the Replay Media Service's playback set (the command that asks for a version's set); RB-2 / S4: and
       // the read of that version's historical availability; INTEL-LIVE-01 CP3: and the read of its attention events. Nothing
-      // else of Replay, and no token in any URL.
+      // else of Replay, and no token in any URL. S8B-07 CP2-A.1: and the read of its playback map alone (no set).
       if (calls && path === S8B_07_REPLAY_MEDIA_CLIENT
           && (/\/(preview|finalize|reopen|drafts|revisions|capability|conversations|moments|analysis|export|share|publish|download|library)\b/u.test(tsCode(text))
             || !/`\/replay\/\$\{encodeURIComponent\(replayId\)\}\/versions\/\$\{encodeURIComponent\(versionId\)\}\/playback\/\$\{encodeURIComponent\(commandId\)\}`/u.test(text)
             || !/this\.send\('GET', `\/replay\/\$\{encodeURIComponent\(replayId\)\}\/versions\/\$\{encodeURIComponent\(versionId\)\}\/availability`\)/u.test(text)
             || !/this\.send\('GET', `\/replay\/\$\{encodeURIComponent\(replayId\)\}\/versions\/\$\{encodeURIComponent\(versionId\)\}\/attention`\)/u.test(text)
+            || !/this\.send\('GET', `\/replay\/\$\{encodeURIComponent\(replayId\)\}\/versions\/\$\{encodeURIComponent\(versionId\)\}\/map`\)/u.test(text)
             || /`\/replay\/[^`]*(token|bearer|auth|key)/iu.test(text)
-            || (tsCode(text).match(/\/replay\//gu) ?? []).length !== 3)) {
-        out.push(`${path}: the media client asks for a version's playback set, its availability and its attention, and nothing else of Replay`);
+            || (tsCode(text).match(/\/replay\//gu) ?? []).length !== 4)) {
+        out.push(`${path}: the media client asks for a version's playback set, its map, its availability and its attention, and nothing else of Replay`);
       }
       if (calls && path !== S7_02_REPLAY_CLIENT && path !== S7_03_REPLAY_HISTORY_CLIENT && path !== S7_04_REPLAY_LIFECYCLE_CLIENT && path !== S8B_07_REPLAY_MEDIA_CLIENT) {
         out.push(`${path}: S7-01 has no player or client; the clients are ${S7_02_REPLAY_CLIENT} and ${S7_03_REPLAY_HISTORY_CLIENT}`);
@@ -271,11 +279,13 @@ LANGUAGE sql STABLE SECURITY DEFINER`)],
   ['a write method in the S7-03 history client', 'mobileViolations', () => ({ ...shipped(), mobile: shipped().mobile.map(([path, text]) => [path, path === S7_03_REPLAY_HISTORY_CLIENT ? text.replace("{ method: 'GET',", "{ method: 'POST',") : text]) })],
   ['a read in the S7-04 lifecycle client', 'mobileViolations', () => ({ ...shipped(), mobile: shipped().mobile.map(([path, text]) => [path, path === S7_04_REPLAY_LIFECYCLE_CLIENT ? text.replace("method: 'POST',", "method: 'GET',") : text]) })],
   ['a share command in the S7-04 lifecycle client', 'mobileViolations', () => ({ ...shipped(), mobile: shipped().mobile.map(([path, text]) => [path, path === S7_04_REPLAY_LIFECYCLE_CLIENT ? text.replace("act: 'preview' | 'finalize' | 'reopen'", "act: 'preview' | 'finalize' | 'reopen' | 'share'") : text]) })],
-  // RB-2 / S4 plants (INTEL-LIVE-01 CP3: three routes now): the media client keeps its routes and nothing more.
-  ['a fourth Replay route in the media client', 'mobileViolations', () => ({ ...shipped(), mobile: shipped().mobile.map(([path, text]) => [path, path === S8B_07_REPLAY_MEDIA_CLIENT ? `${text}\nconst v = \`/replay/\${encodeURIComponent(replayId)}/versions/\${encodeURIComponent(versionId)}/frames\`;` : text]) })],
+  // RB-2 / S4 plants (INTEL-LIVE-01 CP3: three routes; S8B-07 CP2-A.1: four now): the media client keeps its routes and nothing more.
+  ['a fifth Replay route in the media client', 'mobileViolations', () => ({ ...shipped(), mobile: shipped().mobile.map(([path, text]) => [path, path === S8B_07_REPLAY_MEDIA_CLIENT ? `${text}\nconst v = \`/replay/\${encodeURIComponent(replayId)}/versions/\${encodeURIComponent(versionId)}/frames\`;` : text]) })],
   ['a token in the availability URL', 'mobileViolations', () => ({ ...shipped(), mobile: shipped().mobile.map(([path, text]) => [path, path === S8B_07_REPLAY_MEDIA_CLIENT ? text.replace('/availability`)', '/availability?token=${encodeURIComponent(token)}`)') : text]) })],
   ['a token in the attention URL', 'mobileViolations', () => ({ ...shipped(), mobile: shipped().mobile.map(([path, text]) => [path, path === S8B_07_REPLAY_MEDIA_CLIENT ? text.replace('/attention`)', '/attention?token=${encodeURIComponent(token)}`)') : text]) })],
   ['the attention read as a write', 'mobileViolations', () => ({ ...shipped(), mobile: shipped().mobile.map(([path, text]) => [path, path === S8B_07_REPLAY_MEDIA_CLIENT ? text.replace("this.send('GET', `/replay/${encodeURIComponent(replayId)}/versions/${encodeURIComponent(versionId)}/attention", "this.send('POST', `/replay/${encodeURIComponent(replayId)}/versions/${encodeURIComponent(versionId)}/attention") : text]) })],
+  ['a token in the map URL', 'mobileViolations', () => ({ ...shipped(), mobile: shipped().mobile.map(([path, text]) => [path, path === S8B_07_REPLAY_MEDIA_CLIENT ? text.replace('/map`)', '/map?token=${encodeURIComponent(token)}`)') : text]) })],
+  ['the map read as a write', 'mobileViolations', () => ({ ...shipped(), mobile: shipped().mobile.map(([path, text]) => [path, path === S8B_07_REPLAY_MEDIA_CLIENT ? text.replace("this.send('GET', `/replay/${encodeURIComponent(replayId)}/versions/${encodeURIComponent(versionId)}/map", "this.send('POST', `/replay/${encodeURIComponent(replayId)}/versions/${encodeURIComponent(versionId)}/map") : text]) })],
   ['the availability read as a write', 'mobileViolations', () => ({ ...shipped(), mobile: shipped().mobile.map(([path, text]) => [path, path === S8B_07_REPLAY_MEDIA_CLIENT ? text.replace("this.send('GET', `/replay/", "this.send('POST', `/replay/") : text]) })],
   ['a Replay wrapper named in a mobile test', 'mobileViolations', () => ({ ...shipped(), mobile: [...shipped().mobile, ['apps/mobile/src/replay-entry/__tests__/x.test.ts', "rpc('create_my_replay_draft_v1')"]] })],
   ['the verifier left out of CI', 'wiringViolations', () => plant('workflow', 'run: npm run verify:replay-personal-secure-integration:integration', 'run: true')],

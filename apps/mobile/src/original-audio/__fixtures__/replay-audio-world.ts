@@ -13,7 +13,7 @@ import { createPlaybackOwner, type LiveCallSignal } from '../playback-owner';
 import type { PresentationBoundary, PresentationSpan } from '../presentation-map';
 import { createReplayAudio } from '../replay-audio';
 import type { ReplayAudioAnnouncement } from '../replay-audio-clock';
-import type { TransientAvailabilityResult, TransientMediaApiClient } from '../transient-media-api';
+import type { TransientAvailabilityResult, TransientMapResult, TransientMediaApiClient } from '../transient-media-api';
 import { createFakePlayerPort, FakeTransientServer, MINUTE, type FakeServerOptions } from './fake-transient-world';
 
 export const SESSION = 'a0000000-0000-4000-8000-000000000001';
@@ -79,6 +79,8 @@ export interface WorldOptions {
   readonly availability?: (replayId: string, versionId: string) => Promise<TransientAvailabilityResult>;
   /** INTEL-LIVE-01 CP3: the attention answer (default: UNAVAILABLE — Lane B stays empty; Lane A and the audio are unaffected). */
   readonly attention?: (replayId: string, versionId: string) => Promise<TransientAvailabilityResult>;
+  /** S8B-07 CP2-A.1: the map read before the first Play (default: the server's own map, as the real route reads it). */
+  readonly map?: (replayId: string, versionId: string) => Promise<TransientMapResult>;
 }
 
 export function world(options: WorldOptions = {}) {
@@ -89,7 +91,13 @@ export function world(options: WorldOptions = {}) {
   const replayCalls: string[] = [];
   const availabilityCalls: string[] = [];
   const attentionCalls: string[] = [];
+  const mapCalls: string[] = [];
   const api = {
+    // S8B-07 CP2-A.1: the map GET, kept out of `server.calls` too (no set, no job).
+    presentationMap: (replayId: string, versionId: string) => {
+      mapCalls.push(`${replayId} ${versionId}`);
+      return options.map?.(replayId, versionId) ?? Promise.resolve({ kind: 'MAP' as const, map: server.map() });
+    },
     // RB-2 / S4: the availability GET, kept out of `server.calls` (the playback set's own ledger).
     availability: (replayId: string, versionId: string) => {
       availabilityCalls.push(`${replayId} ${versionId}`);
@@ -152,7 +160,7 @@ export function world(options: WorldOptions = {}) {
   const clock = () => audio.clockOf(VERSION);
   /** Content heard per file (artifact): [from, to] pieces in the order heard. */
   const heard = () => players.audible.map((s) => ({ run: server.sets[0]!.ids.indexOf(s.artifactId), from: s.contentStart, to: s.contentEnd, at: s.wallStart, until: s.wallEnd }));
-  return { server, players, call, owner, audio, player, open, ordinal, playing, clock, heard, announced, replayCalls, availabilityCalls, attentionCalls, analysisReads };
+  return { server, players, call, owner, audio, player, open, ordinal, playing, clock, heard, announced, replayCalls, availabilityCalls, attentionCalls, mapCalls, analysisReads };
 }
 
 export const run = (ms: number) => jest.advanceTimersByTimeAsync(ms);

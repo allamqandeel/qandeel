@@ -92,6 +92,13 @@ export interface ReplayAudioDetail {
   /** The file position the views show for the moment presented (the run playing, or the place held). */
   readonly runIndex: number;
   readonly positionMs: number;
+  /**
+   * CP2-A.1 (R-3): the map the whole part's timeline is drawn on — the played set's map once it is held, before it the
+   * version's map read alone (`prime`). Only the timeline reads it: the audio, the stage and both lanes read `plan`.
+   */
+  readonly timelinePlan: ReplayAudioPlan | null;
+  /** CP2-A.1: a place chosen on the timeline while nothing ran there, which the next start of that moment begins at. */
+  readonly pending: { readonly ordinal: number; readonly offsetMs: number } | null;
 }
 
 export type ReplayAudioAnnouncement =
@@ -121,6 +128,11 @@ export interface ReplayAudioClock extends ReplayMomentClock {
   seekWithin(ordinal: number, offsetMs: number): void;
   /** CP2-A.1 (R-3): a place in the moment's run, `offsetMs` after its window's start (never past the run's file). */
   seekTo(ordinal: number, offsetMs: number): void;
+  /**
+   * CP2-A.1 (R-3): the version's map read alone, before any set is held, so the timeline is drawn before the first Play.
+   * A map that does not describe exactly these moments is ignored (no line until the set's own map arrives).
+   */
+  prime(map: { readonly runs: readonly TransientRunShape[]; readonly boundaries: readonly PresentationBoundary[] }): void;
 }
 
 export interface ReplayAudioClockOptions {
@@ -149,6 +161,8 @@ export function createReplayAudioClock(options: ReplayAudioClockOptions): Replay
   let revision = 0;
   let retired = false;
   let plan: ReplayAudioPlan | null = null;
+  /** CP2-A.1: the version's map read alone, for the timeline only, until the set's own map is held. */
+  let preview: ReplayAudioPlan | null = null;
   let refused = false;
   /** The run whose end is reported (DONE), until the next run is asked for. */
   let finished: number | null = null;
@@ -246,11 +260,15 @@ export function createReplayAudioClock(options: ReplayAudioClockOptions): Replay
   }
 
   /** Where a moment starts in the file: its window's start, or a place inside it chosen while it was not running. */
-  function startOf(ordinal: number, located: { runIndex: number; window: Window }): { runIndex: number; positionMs: number } {
+  function startOf(ordinal: number, located: { runIndex: number; window: Window }, using: ReplayAudioPlan | null = plan): { runIndex: number; positionMs: number } {
     const pending = pendingOffset !== null && pendingOffset.ordinal === ordinal ? pendingOffset : null;
     pendingOffset = null;
+    return placeIn(located, pending, using);
+  }
+
+  function placeIn(located: { runIndex: number; window: Window }, pending: typeof pendingOffset, using: ReplayAudioPlan | null): { runIndex: number; positionMs: number } {
     const { window } = located;
-    const limit = pending?.beyond === true ? (plan?.runs[located.runIndex]?.durationMs ?? window.toMs) : window.toMs;
+    const limit = pending?.beyond === true ? (using?.runs[located.runIndex]?.durationMs ?? window.toMs) : window.toMs;
     return { runIndex: located.runIndex, positionMs: Math.min(limit - 1, window.fromMs + Math.max(0, pending?.offsetMs ?? 0)) };
   }
 
@@ -282,7 +300,7 @@ export function createReplayAudioClock(options: ReplayAudioClockOptions): Replay
         const ok = engine.play(0, 0, (shapes) => {
           const read = planFor(moments, shapes, engine.getState().boundaries);
           const located = read?.windowOf.get(asked);
-          return read === null || located === undefined ? null : startOf(asked, located);
+          return read === null || located === undefined ? null : startOf(asked, located, read);
         });
         if (!ok) return false;
         changed({ phase: 'PREPARING', ordinal: null, through: null });
@@ -355,7 +373,11 @@ export function createReplayAudioClock(options: ReplayAudioClockOptions): Replay
     },
     detail() {
       const e = engine.getState();
-      return { engine: e, plan, refused, between: boundary === null ? null : boundary.of, runIndex: e.runIndex, positionMs: e.positionMs };
+      return {
+        engine: e, plan, refused, between: boundary === null ? null : boundary.of, runIndex: e.runIndex, positionMs: e.positionMs,
+        timelinePlan: refused ? null : plan ?? preview,
+        pending: pendingOffset === null ? null : { ordinal: pendingOffset.ordinal, offsetMs: pendingOffset.offsetMs },
+      };
     },
     place() {
       if (retired || refused || plan === null) return null;
@@ -366,6 +388,10 @@ export function createReplayAudioClock(options: ReplayAudioClockOptions): Replay
       }
       const e = engine.getState();
       if (e.phase === 'IDLE' || e.phase === 'ENDED' || e.phase === 'FAILED') return null;
+      // CP2-A.1 (R-3): preparing a start whose place was chosen before it (a step before the first Play): that place,
+      // not the file's start, so neither the line nor the stage goes back to the recording's start while it prepares.
+      const chosen = e.phase === 'PREPARING' && pendingOffset !== null ? plan.windowOf.get(pendingOffset.ordinal) : undefined;
+      if (chosen !== undefined) return { kind: 'RUN', ...placeIn(chosen, pendingOffset, plan) };
       return { kind: 'RUN', runIndex: e.runIndex, positionMs: engine.positionNow?.() ?? e.positionMs };
     },
     revision: () => revision,
@@ -383,6 +409,13 @@ export function createReplayAudioClock(options: ReplayAudioClockOptions): Replay
       const { window } = located;
       engine.seek(located.runIndex, Math.min(window.toMs - 1, window.fromMs + Math.max(0, offsetMs)));
       derive();
+    },
+    prime(map) {
+      if (retired || refused || plan !== null || preview !== null) return;
+      const read = planFor(moments, map.runs, map.boundaries);
+      if (read === null) return;
+      preview = read;
+      changed(null);
     },
     seekTo(ordinal, offsetMs) {
       if (retired || refused || !audio.has(ordinal) || state.phase === 'ENDED') return;

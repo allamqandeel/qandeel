@@ -259,7 +259,8 @@ export function replayExportAudio(clock: ReplayPresentationClock): readonly { re
  * Unlike the stage time, no allowance is subtracted: the line shows where the presentation is, and the stage alone draws
  * behind it (FC-0), so no knowledge is drawn earlier by this.
  */
-export function replayTimelinePosition(clock: ReplayPresentationClock, shown: number, audio: ReplayStageAudioState, pacedElapsedMs: number | null): number {
+export function replayTimelinePosition(clock: ReplayPresentationClock, shown: number, audio: ReplayStageAudioState, pacedElapsedMs: number | null,
+  pending: { readonly ordinal: number; readonly offsetMs: number } | null = null): number {
   const index = clock.inputs.findIndex((m) => m.ordinal === shown);
   if (index < 0) return 0;
   const text = clock.blocks.find((b) => b.kind === 'TEXT' && b.ordinal === shown);
@@ -281,6 +282,13 @@ export function replayTimelinePosition(clock: ReplayPresentationClock, shown: nu
   const presentedBy = (ordinal: number) => clock.inputs.find((m) => m.ordinal === ordinal)?.presentedBy ?? ordinal;
   const presents = audio.ordinal === null || presentedBy(audio.ordinal) === own.presentedBy;
   if (audio.phase === 'DONE' && presents && end === clock.durationMs) return clock.durationMs;
+  // CP2-A.1 (R-3): a place chosen while nothing runs there (before the first Play, or held before the run is placed) is
+  // where the next start of that moment begins: shown there, within its run, until the clock places it.
+  if (pending !== null && pending.ordinal === shown && (audio.place === null || !FOLLOWING.includes(audio.phase))) {
+    const window = clock.windows.find((w) => w.momentOrdinal === shown);
+    const run = window === undefined ? undefined : clock.blocks.find((b) => b.kind === 'RUN' && b.runIndex === window.runIndex);
+    if (window !== undefined && run !== undefined) return Math.min(run.endMs, window.startMs + Math.max(0, pending.offsetMs));
+  }
   if (audio.place === null || !FOLLOWING.includes(audio.phase) || !presents) return start;
   return Math.min(clock.durationMs, Math.max(0, clock.at(audio.place)));
 }

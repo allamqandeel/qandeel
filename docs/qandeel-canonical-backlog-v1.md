@@ -6918,21 +6918,27 @@ merge).**
 **S8B-07 CP2-A.1 — continuous in-app Replay, the execution checkpoint (2026-11-27; one Draft PR from `main` at `b842fd0d`,
 not merged; effective from its merge).**
 
-- **Authority:** the Product Owner's "EXECUTION AUTHORIZATION — S8B-07 CP2-A.1" and "CP2-A.1 COPY GATE APPROVED"
-  (2026-11-27). The [S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §21 is the primary account.
+- **Authority:** the Product Owner's "EXECUTION AUTHORIZATION — S8B-07 CP2-A.1", "CP2-A.1 COPY GATE APPROVED" and
+  "CP2-A.1 FINAL VALIDATION AND CORRECTION" (2026-11-27). The
+  [S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §21 is the primary account.
 - **BG-05:** CP2-A.1 owns no item by name. It works `QAN-BL-VOICE-01` for Stage 8B (unchanged: `DEFERRED — OWNED`; its
   current truth is updated when S8B-07 closes). O-3 / O-4 / O-5 are CP2-A scope, not items.
 - **Read and left unchanged:**
   - `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`;
   - `QAN-BL-VIS-02` stays `OPEN — UNASSIGNED`; its close condition is the exported video, which is CP2-A.2 / CP2-B;
-  - the release blockers registered on PR #417 (Draft, unmerged) are not touched here.
+  - the two mandatory release blockers registered by the directive above, `QAN-BL-INTEL-07` and `QAN-BL-VOICE-10`, are
+    not touched here. This PR carries PR #417's commit `bbc0335d` by a merge, so their entries and evidence are
+    identical in both PRs, whichever merges first. PR #417 stays separate and unchanged.
 - **No item admitted (BG-06).** What CP2-A.1 leaves open stays inside S8B-07's own scope, in the record:
-  - the device pass (§21.8);
+  - the consolidated HONOR acceptance session, prepared (§21.10);
   - the native audio on iOS, NOT TESTED by construction in the new iOS Replay gate (§21.7);
   - CP2-A.2 and CP2-B.
 - **BG-09:** S8B-07 is not closed. The record carries CP2-A.1's `DELIVERED / READY FOR PO REVIEW — NOT MERGED`, and the
   locators are updated in the same change.
-- **Index after S8B-07 CP2-A.1: 114 items (unchanged on `main`); 54 / 5 / 18 / 37 by status, 64 / 46 / 4 by severity.**
+- **The iOS Replay gate's first run (46007215812):** the failures belong to the proof harness and are corrected without
+  weakening any criterion (record §21.9). They are inside CP2-A.1's own scope, not items.
+- **Index after S8B-07 CP2-A.1: 116 items, unchanged by CP2-A.1 (it adds and removes none); 55 / 5 / 19 / 37 by status,
+  66 / 46 / 4 by severity.**
 
 ## 8. What is deliberately not in this backlog
 

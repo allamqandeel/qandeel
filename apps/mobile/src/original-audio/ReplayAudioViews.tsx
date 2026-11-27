@@ -229,12 +229,13 @@ const noToggle = () => undefined;
 /**
  * CP2-A.1 (R-2, R-3): the whole selected part's ONE timeline. Its length and position are the presentation clock's — the
  * same `replayPresentationClock` the stage and the video read, from the map this clock holds and the player's own reading
- * pace — and its seek is the player's `seekTo` (the clock's place, or the reading pace's). Nothing before the map is known.
+ * pace — and its seek is the player's `seekTo` (the clock's place, or the reading pace's). PO direction (CP2-A.1 final
+ * validation): drawn before the first Play from the version's map read alone (`timelinePlan`), the set's own once held.
  */
 function TimelineLine({ clock, controller, language }: { readonly clock: ReplayAudioClock; readonly controller: ReplayPlayerController; readonly language: ChromeLanguage }) {
   useSyncExternalStore(clock.subscribe, clock.revision);
   const open = useSyncExternalStore(controller.subscribe, () => controller.getState().open);
-  const plan = clock.detail().plan;
+  const plan = clock.detail().timelinePlan;
   const presentation = useMemo(() => (plan === null ? null : replayPresentationClock(plan, clock.moments, replayMomentPaceMs)), [plan, clock.moments]);
   const playing = open?.playing === true;
   const [, redraw] = useState(0);
@@ -247,7 +248,7 @@ function TimelineLine({ clock, controller, language }: { readonly clock: ReplayA
   const state = clock.getState();
   const paced = controller.pacedElapsed();
   const positionMs = replayTimelinePosition(presentation, open.ordinal, { phase: state.phase, ordinal: state.ordinal, place: clock.place() },
-    paced !== null && paced.ordinal === open.ordinal ? paced.elapsedMs : null);
+    paced !== null && paced.ordinal === open.ordinal ? paced.elapsedMs : null, clock.detail().pending);
   return (
     <AudioLine
       language={language}

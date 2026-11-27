@@ -353,6 +353,9 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'GET /replay/:replayId/versions/:versionId/availability': 'AUTHENTICATED',
   // INTEL-LIVE-01 CP3 (D-CP3, 2026-11-26): the attention read (Lane B), a bounded database read like the availability read.
   'GET /replay/:replayId/versions/:versionId/attention': 'AUTHENTICATED',
+  // S8B-07 CP2-A.1 (PO final validation, 2026-11-27): the map read before the first Play, a bounded database read like
+  // the availability read (0196's owner-scoped map; no set, no job); no new class.
+  'GET /replay/:replayId/versions/:versionId/map': 'AUTHENTICATED',
 });
 
 const segments = (path: unknown): string[] =>

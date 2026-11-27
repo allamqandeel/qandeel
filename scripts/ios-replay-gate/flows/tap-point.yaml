@@ -1,7 +1,8 @@
-# S8B-07 CP2-A.1 iOS Replay gate: one tap at a point given in screen percentages ("x%,y%") (no retry).
+# S8B-07 CP2-A.1 iOS Replay gate: one tap at a point given in whole screen percentages ("x%,y%"; Maestro takes no
+# decimals there) (no retry).
 appId: com.qandeel.mobile
 ---
 - tapOn:
     retryTapIfNoChange: false
-    waitToSettleTimeoutMs: 1500
+    waitToSettleTimeoutMs: 500
     point: "${P}"

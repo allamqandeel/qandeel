@@ -11,15 +11,21 @@
 #   J-SAVED-LINE   R-1 / O-3: after a part is chosen and saved, the saved line says RS-01 (the S7-02 `savedPart`, verbatim).
 #   J-OPEN-ACTION  its one action is RS-02 «فتح إعادة العرض» / "Open Replay".
 #   J-OPENS-SAVED  that action opens the Replay player at once.
+#   C-TIMELINE     R-3 / O-5 (PO direction of 2026-11-27: before the first Play): one line of the whole part (the Replay's
+#                  name, 22.5 s), at its start, before anything is played.
 #   C-PLAY-THROUGH R-2 / O-4: from one Play, every moment of the part in order (1-2-3-5-6: text, audio, audio, text, audio
 #                  of another recording), across every message boundary, to the end, with no second touch, and the place
 #                  on the timeline never goes back or jumps while it plays.
-#   C-TIMELINE     R-3 / O-5: one line of the whole part (the Replay's name, 22.5 s) under the moment.
-#   C-SEEK-PLAYING a step on that line while playing (75% of the part: the pause before the second recording) lands on the
-#                  second recording's moment (6), and the part goes on from there to its end unbroken.
-#   C-SEEK-HELD    a step while held (50% of the part: inside the long turn, moment 3, 11.25 s) places the line there and
-#                  holds it; Play goes on from that place.
+#   C-SEEK-PLAYING while playing, a step BACK (25% of the part, inside moment 2) and then FORWARD (90%, inside the second
+#                  recording, moment 6) each land where the touch was (judged from the point actually tapped), and the
+#                  part goes on from there to its end unbroken.
+#   C-SEEK-HELD    held in the text moment 5, a step BACK (50%, inside the long turn, moment 3) and then FORWARD (80%,
+#                  moment 6) are each drawn where the touch was and stay there; Play goes on from the last to the end.
+#   C-SEEK-BEFORE-PLAY before any Play, a step (50%, moment 3) is drawn there with nothing playing; Play goes on from it.
 # NOT TESTED here, by construction: what the native audio engine makes audible on iOS (the synthetic player plays nothing).
+#
+# A Maestro start takes 10-30 s on the runner, longer than the part itself: every timed sequence (Play, a moment
+# reached, a step) is ONE flow, and the runner judges from the readout afterwards (S8B-07 record §21.9, run 46007215812).
 #
 # usage: GATE_LANG=en|ar run-replay-gate.sh <OUT> <UDID>   (the app is installed; the simulator language is set; the driver is ready)
 set -u
@@ -36,27 +42,29 @@ shot() { xcrun simctl io "$UDID" screenshot "$OUT/$1.png" >/dev/null 2>&1; }
 dump() { curl --silent --max-time 30 -X POST -H 'Content-Type: application/json' \
   --data '{"appIds":["com.qandeel.mobile"],"excludeKeyboardElements":false}' "http://127.0.0.1:$PORT/viewHierarchy" > "$OUT/$1.json"; }
 q() { node "$ROOT/scripts/cosmos-ios-world/hier.mjs" "$OUT/$1.json" "${@:2}"; }
-# readout <name>: the proof readout's one line ("ord=… t=… dur=… play=… seeks=… visited=… cont=… max=… end=…"), or "none"
+# readout <name>: the proof readout's one line ("ord=… t=… dur=… play=… seeks=… lands=… visited=… cont=… max=… end=…"), or "none"
 readout() { dump "$1"; q "$1" id-label irg-readout | head -n 1; }
 field() { printf '%s\n' "$1" | tr ' ' '\n' | sed -n "s/^$2=//p"; }
-# until_readout <name> <seconds> <awk condition on $ord $t $dur $play $seeks $end>: poll until it holds; prints the last line
-until_readout() { local n="$1" s="$2" cond="$3" i r; for i in $(seq 1 "$s"); do r="$(readout "$n")"
-    if [ "$r" != none ] && printf '%s\n' "$r" | awk -v c="$cond" '{ for (i = 1; i <= NF; i++) { split($i, kv, "="); v[kv[1]] = kv[2] } }
-      END { ord = v["ord"]; t = v["t"]; dur = v["dur"]; play = v["play"]; seeks = v["seeks"]; end = v["end"]; cont = v["cont"];
-            if (c == "audio") exit !(ord + 0 >= 2 && dur != "-");
-            if (c == "ended") exit !(end == "1");
-            if (c == "held") exit !(play == "0");
-            if (c == "seek6") exit !(seeks == "1" && ord == "6");
-            if (c == "seek3") exit !(seeks == "1" && ord == "3" && play == "0");
-            exit 1 }'; then echo "$r"; return 0; fi; sleep 1; done; echo "${r:-none}"; return 1; }
-# line_point <name> <logical fraction>: the screen point ("x%,y%") of that fraction of the timeline line, read from the
-# hierarchy. The line runs from the reader's start: right to left in Arabic.
+# land <reading> <i>: the i-th step's landing place (s), or "x"
+land() { field "$1" lands | tr ',' '\n' | sed -n "${2}p"; }
+# until_ended <name> <seconds>: poll until the part reports its end; prints the last reading
+until_ended() { local n="$1" s="$2" i r=none; for i in $(seq 1 "$s"); do r="$(readout "$n")"
+    [ "$(field "$r" end)" = 1 ] && { echo "$r"; return 0; }; sleep 1; done; echo "$r"; return 1; }
+# near <got s> <expected ms> <below s> <above s>: "yes" when expected - below <= got <= expected + above
+near() { node -e 'const [g, e, b, a] = process.argv.slice(1).map(Number); process.stdout.write(Number.isFinite(g) && g >= e / 1000 - b && g <= e / 1000 + a ? "yes" : "no")' "$1" "$2" "$3" "$4"; }
+later() { node -e 'process.stdout.write(Number(process.argv[2]) > Number(process.argv[1]) + 1 ? "yes" : "no")' "$1" "$2"; }
+# line_point <name> <logical fraction>: "x%,y% ms" — the whole-percent screen point (Maestro takes no decimals there) of
+# that fraction of the timeline, and the part's instant that point really is, as the line computes it from the touch
+# (AudioLine: the aperture's half width, 17, at each end; from the reader's start, right to left in Arabic).
 line_point() { local f="$2" fr root; dump "$1"
   fr="$(q "$1" id qandeel-replay-audio-timeline-line | head -n 1 | sed -n 's/.*frame=\([0-9,.-]*\).*/\1/p')"; root="$(q "$1" root)"
   [ -n "$fr" ] && [ "$root" != none ] || { echo none; return 1; }
   node -e 'const [f, fr, root, lang] = process.argv.slice(1); const [x, y, w, h] = fr.split(",").map(Number); const [rx, ry, rw, rh] = root.split(",").map(Number);
-    const v = lang === "ar" ? 1 - Number(f) : Number(f); const px = ((x + v * w) - rx) / rw * 100, py = ((y + h / 2) - ry) / rh * 100;
-    process.stdout.write(`${px.toFixed(1)}%,${py.toFixed(1)}%`)' "$f" "$fr" "$root" "$L"; }
+    const A = 17, width = Math.floor(w), run = width - 2 * A, ar = lang === "ar";
+    const logical = A + Number(f) * run, sx = ar ? x + width - logical : x + logical;
+    const px = Math.round((sx - rx) / rw * 100), py = Math.round(((y + h / 2) - ry) / rh * 100);
+    const tx = rx + px / 100 * rw - x, back = ar ? width - tx : tx, at = Math.min(1, Math.max(0, (back - A) / run));
+    process.stdout.write(`${px}%,${py}% ${Math.round(at * 22500)}`)' "$f" "$fr" "$root" "$L"; }
 
 if [ "$L" = ar ]; then RS01='^حُفظ الجزء المختار لإعادة العرض\.'; RS02='فتح إعادة العرض'; NAME='إعادة عرض المحادثة'
 else RS01='^The selected part was saved for a Replay\.'; RS02='Open Replay'; NAME='Conversation replay'; fi
@@ -70,7 +78,7 @@ journey() {
   sleep 8
   mt j-entry tap.yaml ID=qandeel-replay-entry && mt j-choose-part tap.yaml ID=qandeel-replay-choose-part || { JWHY='the Replay entry or "choose a part" did not take the tap'; return 1; }
   sleep 1; dump j-selectables; q j-selectables id-prefix qandeel-selectable- > "$OUT/j-selectables.txt"
-  mt j-first reveal-tap.yaml "ID=$U1" DIR=UP && mt j-last reveal-tap.yaml "ID=$R2" DIR=DOWN || { JWHY="the part's first or last message could not be chosen (see j-selectables.txt)"; return 1; }
+  mt j-first reveal-up.yaml "ID=$U1" && mt j-last reveal-down.yaml "ID=$R2" || { JWHY="the part's first or last message could not be chosen (see j-selectables.txt)"; return 1; }
   mt j-save tap.yaml ID=qandeel-replay-save || { JWHY='Save did not take the tap'; return 1; }
   return 0
 }
@@ -93,61 +101,85 @@ else
 fi
 
 # ── Continuous (R-2 / O-4, R-3 / O-5) ──────────────────────────────────────────────────────────────────────────────
-# open <name>: a cold launch into the continuous scene, the player shown, then Play and the first audio moment reached.
-open_and_play() {
-  mt "$1-launch" launch.yaml && mt "$1-choose" tap.yaml ID=irg-choose-continuous && mt "$1-player" wait-id.yaml ID=qandeel-replay-play MS=60000 || return 1
-  sleep 3; mt "$1-play" tap.yaml ID=qandeel-replay-play || return 1
-  until_readout "$1-audio" 30 audio > "$OUT/$1-audio.txt" || return 1
+# open_player <name>: a cold launch into the continuous scene, the player shown with its timeline read (nothing played).
+open_player() {
+  mt "$1-launch" launch.yaml && mt "$1-choose" tap.yaml ID=irg-choose-continuous && mt "$1-player" wait-id.yaml ID=qandeel-replay-play MS=60000 \
+    && mt "$1-ready" wait-readout.yaml 'RE=ord=1 t=0.0 dur=22.5 play=0 .*' MS=60000
 }
+NOPEN='precondition: the continuous player did not open with its timeline'
 
-if open_and_play c1; then
-  shot c1-audio; dump c1-timeline
-  tl="$(q c1-timeline id-label qandeel-replay-audio-timeline-line)"; r="$(cat "$OUT/c1-audio.txt")"
-  if [ "$tl" = "$NAME" ] && [ "$(field "$r" dur)" = 22.5 ]; then result C-TIMELINE PASS "one line of the whole part, \"$tl\", $(field "$r" dur) s"
-  else result C-TIMELINE FAIL "timeline label \"$tl\" (expected \"$NAME\"), duration $(field "$r" dur) s (expected 22.5)"; fi
-  r="$(until_readout c1-end 60 ended)"; shot c1-end; echo "$r" > "$OUT/c1-end.txt"
+if open_player c1; then
+  shot c1-before-play; dump c1-timeline
+  tl="$(q c1-timeline id-label qandeel-replay-audio-timeline-line)"; r="$(readout c1-ready)"
+  if [ "$tl" = "$NAME" ] && [ "$(field "$r" dur)" = 22.5 ] && [ "$(field "$r" t)" = 0.0 ] && [ "$(field "$r" play)" = 0 ]; then
+    result C-TIMELINE PASS "before the first Play: one line of the whole part, \"$tl\", $(field "$r" dur) s, at 0.0"
+  else result C-TIMELINE FAIL "before the first Play: timeline label \"$tl\" (expected \"$NAME\"); read: $r"; fi
+  mt c1-play tap.yaml ID=qandeel-replay-play
+  r="$(until_ended c1-end 90)"; shot c1-end; echo "$r" > "$OUT/c1-end.txt"
   if [ "$(field "$r" end)" = 1 ] && [ "$(field "$r" visited)" = 1-2-3-5-6 ] && [ "$(field "$r" cont)" = OK ] && [ "$(field "$r" seeks)" = 0 ]; then
     result C-PLAY-THROUGH PASS "one Play: $r"
   else result C-PLAY-THROUGH FAIL "expected end=1 visited=1-2-3-5-6 cont=OK seeks=0; read: $r"; fi
 else
   shot c1-failed; dump c1-failed
-  result C-TIMELINE 'NOT TESTED' 'precondition: the continuous player did not open, play or reach its first audio moment'
-  result C-PLAY-THROUGH 'NOT TESTED' 'precondition: the continuous player did not open, play or reach its first audio moment'
+  result C-TIMELINE 'NOT TESTED' "$NOPEN"; result C-PLAY-THROUGH 'NOT TESTED' "$NOPEN"
 fi
 
-if open_and_play c2; then
-  p="$(line_point c2-line 0.75)"
-  if [ "$p" = none ]; then result C-SEEK-PLAYING 'NOT TESTED' 'the timeline line was not found'
+if open_player c2; then
+  b="$(line_point c2-line 0.25)"; f="$(line_point c2-line2 0.9)"
+  if [ "$b" = none ] || [ "$f" = none ]; then result C-SEEK-PLAYING 'NOT TESTED' 'the timeline line was not found'
   else
-    mt c2-step tap-point.yaml "P=$p"; r="$(until_readout c2-seek 6 seek6)"; ok=$?; shot c2-seek; echo "$r" > "$OUT/c2-seek.txt"
-    if [ $ok -ne 0 ]; then result C-SEEK-PLAYING FAIL "a step at 75% ($p) did not land on moment 6 within 6 s: $r"
-    else r="$(until_readout c2-end 40 ended)"; shot c2-end
-      if [ "$(field "$r" end)" = 1 ] && [ "$(field "$r" cont)" = OK ]; then result C-SEEK-PLAYING PASS "step at $p -> moment 6, then to the end unbroken: $r"
-      else result C-SEEK-PLAYING FAIL "after the step the part did not end unbroken: $r"; fi
-    fi
+    bp="${b% *}"; be="${b#* }"; fp="${f% *}"; fe="${f#* }"
+    mt c2-steps seek-playing.yaml "P1=$bp" "P2=$fp"; rc=$?; shot c2-steps
+    r="$(until_ended c2-end 60)"; shot c2-end; echo "$r" > "$OUT/c2-end.txt"
+    l1="$(land "$r" 1)"; l2="$(land "$r" 2)"
+    if [ $rc -ne 0 ]; then result C-SEEK-PLAYING FAIL "the steps at $bp / $fp were not both taken and landed while playing (see c2-steps.log): $r"
+    elif [ "$(near "$l1" "$be" 0.25 1.0)" = yes ] && [ "$(near "$l2" "$fe" 0.25 1.0)" = yes ] && [ "$(field "$r" seeks)" = 2 ] \
+      && printf '%s' "$(field "$r" visited)" | grep -Eq -- '-3-2-(3-)?6$' && [ "$(field "$r" end)" = 1 ] && [ "$(field "$r" cont)" = OK ]; then
+      result C-SEEK-PLAYING PASS "back at $bp -> $l1 s (asked ${be} ms), forward at $fp -> $l2 s (asked ${fe} ms), then to the end unbroken: $r"
+    else result C-SEEK-PLAYING FAIL "back at $bp (asked ${be} ms) / forward at $fp (asked ${fe} ms) while playing: $r"; fi
   fi
-else shot c2-failed; result C-SEEK-PLAYING 'NOT TESTED' 'precondition: the continuous player did not open, play or reach its first audio moment'; fi
+else shot c2-failed; result C-SEEK-PLAYING 'NOT TESTED' "$NOPEN"; fi
 
-if open_and_play c3; then
-  mt c3-pause tap.yaml ID=qandeel-replay-play; r="$(until_readout c3-held 10 held)"
-  p="$(line_point c3-line 0.5)"
-  if [ "$(field "$r" play)" != 0 ] || [ "$p" = none ]; then result C-SEEK-HELD 'NOT TESTED' "precondition: held ($r), line point ($p)"
+if open_player c3; then
+  b="$(line_point c3-line 0.5)"; f="$(line_point c3-line2 0.8)"
+  if [ "$b" = none ] || [ "$f" = none ]; then result C-SEEK-HELD 'NOT TESTED' 'the timeline line was not found'
   else
-    mt c3-step tap-point.yaml "P=$p"; r="$(until_readout c3-seek 6 seek3)"; ok=$?; shot c3-seek; t1="$(field "$r" t)"
-    sleep 2; r2="$(readout c3-still)"; t2="$(field "$r2" t)"
-    within="$(node -e 'const t = Number(process.argv[1]); process.stdout.write(t >= 10.6 && t <= 11.9 ? "yes" : "no")' "$t1")"
-    if [ $ok -ne 0 ] || [ "$within" != yes ] || [ "$t1" != "$t2" ]; then
-      result C-SEEK-HELD FAIL "a step at 50% ($p) while held: expected moment 3 at 10.6..11.9 s, held; read: $r, then $r2"
+    bp="${b% *}"; be="${b#* }"; fp="${f% *}"; fe="${f#* }"
+    mt c3-steps seek-held.yaml "P1=$bp" "P2=$fp"; rc=$?; shot c3-steps
+    r="$(readout c3-held)"; sleep 2; r2="$(readout c3-still)"
+    l1="$(land "$r" 1)"; l2="$(land "$r" 2)"; t1="$(field "$r" t)"
+    if [ $rc -ne 0 ]; then result C-SEEK-HELD FAIL "held in moment 5, the steps at $bp / $fp were not both taken and landed (see c3-steps.log): $r"
+    elif [ "$(field "$r" play)" != 0 ] || [ "$(field "$r" ord)" != 6 ] || [ "$(near "$l1" "$be" 0.3 0.3)" != yes ] || [ "$(near "$l2" "$fe" 0.3 0.3)" != yes ] \
+      || [ "$(near "$t1" "$fe" 0.3 0.3)" != yes ] || [ "$(field "$r2" t)" != "$t1" ] || ! printf '%s' "$(field "$r" visited)" | grep -Eq -- '-5-3-6$'; then
+      result C-SEEK-HELD FAIL "held: back at $bp (asked ${be} ms), forward at $fp (asked ${fe} ms), expected moment 6 held there; read: $r, then $r2"
     else
-      mt c3-play tap.yaml ID=qandeel-replay-play; sleep 4; r3="$(readout c3-on)"
-      on="$(node -e 'process.stdout.write(Number(process.argv[2]) > Number(process.argv[1]) + 1 ? "yes" : "no")' "$t1" "$(field "$r3" t)")"
-      r4="$(until_readout c3-end 40 ended)"; shot c3-end
-      if [ "$on" = yes ] && [ "$(field "$r4" end)" = 1 ] && [ "$(field "$r4" cont)" = OK ]; then
-        result C-SEEK-HELD PASS "held at $t1 s on moment 3; Play went on ($(field "$r3" t) s) to the end unbroken: $r4"
-      else result C-SEEK-HELD FAIL "Play after the held step: $r3; end: $r4"; fi
+      mt c3-play tap.yaml ID=qandeel-replay-play; sleep 3; r3="$(readout c3-on)"
+      r4="$(until_ended c3-end 40)"; shot c3-end
+      if [ "$(later "$t1" "$(field "$r3" t)")" = yes ] && [ "$(field "$r4" end)" = 1 ] && [ "$(field "$r4" cont)" = OK ]; then
+        result C-SEEK-HELD PASS "held: back -> $l1 s, forward -> $l2 s, held at $t1 s on moment 6; Play went on ($(field "$r3" t) s) to the end unbroken: $r4"
+      else result C-SEEK-HELD FAIL "Play after the held steps (held at $t1 s): $r3; end: $r4"; fi
     fi
   fi
-else shot c3-failed; result C-SEEK-HELD 'NOT TESTED' 'precondition: the continuous player did not open, play or reach its first audio moment'; fi
+else shot c3-failed; result C-SEEK-HELD 'NOT TESTED' "$NOPEN"; fi
+
+if open_player c4; then
+  p="$(line_point c4-line 0.5)"
+  if [ "$p" = none ]; then result C-SEEK-BEFORE-PLAY 'NOT TESTED' 'the timeline line was not found'
+  else
+    pp="${p% *}"; pe="${p#* }"
+    mt c4-step tap-point.yaml "P=$pp" && mt c4-landed wait-readout.yaml 'RE=.*lands=[0-9.]+ .*' MS=8000; rc=$?
+    r="$(readout c4-placed)"; shot c4-placed; l1="$(land "$r" 1)"
+    if [ $rc -ne 0 ] || [ "$(field "$r" play)" != 0 ] || [ "$(field "$r" ord)" != 3 ] || [ "$(near "$l1" "$pe" 0.3 0.3)" != yes ]; then
+      result C-SEEK-BEFORE-PLAY FAIL "a step at $pp (asked ${pe} ms) before any Play: expected moment 3 there, nothing playing; read: $r"
+    else
+      mt c4-play tap.yaml ID=qandeel-replay-play; sleep 4; r3="$(readout c4-on)"
+      r4="$(until_ended c4-end 40)"; shot c4-end
+      if [ "$(later "$l1" "$(field "$r3" t)")" = yes ] && [ "$(field "$r4" end)" = 1 ] && [ "$(field "$r4" cont)" = OK ] && [ "$(field "$r4" visited)" = 3-5-6 ]; then
+        result C-SEEK-BEFORE-PLAY PASS "before Play: at $pp -> $l1 s on moment 3, nothing playing; Play went on ($(field "$r3" t) s) to the end unbroken: $r4"
+      else result C-SEEK-BEFORE-PLAY FAIL "Play after the step before Play (at $l1 s): $r3; end: $r4"; fi
+    fi
+  fi
+else shot c4-failed; result C-SEEK-BEFORE-PLAY 'NOT TESTED' "$NOPEN"; fi
 
 result IOS-NATIVE-AUDIO 'NOT TESTED' 'by construction: the synthetic player plays nothing audible; the native audio is the device pass'"'"'s (HONOR / iPhone)'
 say "done"

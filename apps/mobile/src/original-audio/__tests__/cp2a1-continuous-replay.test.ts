@@ -41,7 +41,7 @@ function position(w: W): number {
   const state = clock.getState();
   const paced = w.player.pacedElapsed();
   return replayTimelinePosition(P, w.ordinal()!, { phase: state.phase, ordinal: state.ordinal, place: clock.place() },
-    paced !== null && paced.ordinal === w.ordinal() ? paced.elapsedMs : null);
+    paced !== null && paced.ordinal === w.ordinal() ? paced.elapsedMs : null, clock.detail().pending);
 }
 const lastHeard = (w: W) => w.heard().at(-1)!;
 
@@ -105,6 +105,137 @@ describe('one continuous piece across message boundaries (R-2)', () => {
     expect(Math.max(...steps)).toBeLessThanOrEqual(400);
     // It plays once, without stopping at a message: every moment in order, one set, both files heard in full.
     expect(w.server.sets).toHaveLength(1);
+  });
+
+  it('in the last moment, Play goes on from a held step or a pause part-way — it starts again from the first only after the end', async () => {
+    const w = world();
+    await w.open();
+    w.player.play();
+    await until(() => w.ordinal() === 6 && w.clock()!.getState().phase === 'RUNNING');
+    await run(1_000);
+    w.player.pause();
+    await run(0);
+    const paused = position(w);
+    expect(paused).toBeGreaterThan(RUN1_AT);
+    w.player.play();
+    await run(0);
+    expect(w.ordinal()).toBe(6);
+    expect(position(w)).toBeGreaterThanOrEqual(paused);
+    w.player.pause();
+    await run(0);
+    // A held step into the last moment: Play goes on from it.
+    w.player.seekTo(6, 3_000);
+    await run(0);
+    expect(position(w)).toBe(RUN1_AT + 3_000);
+    w.player.play();
+    await run(500);
+    expect(w.ordinal()).toBe(6);
+    expect(position(w)).toBeGreaterThanOrEqual(RUN1_AT + 3_000);
+    // Played to its end, Play starts the part again from its first moment, as before.
+    await until(() => !w.playing());
+    expect(position(w)).toBe(P.durationMs);
+    w.player.play();
+    await run(0);
+    expect(w.ordinal()).toBe(1);
+  });
+});
+
+describe('the timeline before the first Play (PO direction, CP2-A.1 final validation)', () => {
+  it("is drawn from the version's map read alone: the same clock and length, with no set asked for and no audio", async () => {
+    const w = world();
+    await w.open();
+    await run(0);
+    expect(w.mapCalls).toHaveLength(1);
+    expect(w.server.calls).toHaveLength(0);
+    const detail = w.clock()!.detail();
+    // The audio's map is still unknown (nothing is played from a preview); only the timeline reads it.
+    expect(detail.plan).toBeNull();
+    expect(detail.timelinePlan).not.toBeNull();
+    expect(replayPresentationClock(detail.timelinePlan!, MOMENTS, replayMomentPaceMs)!.durationMs).toBe(P.durationMs);
+    expect(position(w)).toBe(0);
+    expect(w.playing()).toBe(false);
+  });
+
+  it('a step before Play shows that place, asks for nothing, and Play starts the audio exactly there', async () => {
+    const w = world();
+    await w.open();
+    await run(0);
+    const target = replayTimelineTarget(P, RUN0_AT + 6_500)!;
+    expect(target).toEqual({ ordinal: 3, offsetMs: 2_500 });
+    w.player.seekTo(target.ordinal, target.offsetMs);
+    await run(0);
+    expect(w.ordinal()).toBe(3);
+    expect(w.playing()).toBe(false);
+    expect(w.server.calls).toHaveLength(0);
+    expect(position(w)).toBe(RUN0_AT + 6_500);
+    w.player.play();
+    await until(() => w.heard().length > 0);
+    expect(lastHeard(w).run).toBe(0);
+    expect(lastHeard(w).from).toBeGreaterThanOrEqual(6_500);
+    expect(lastHeard(w).from).toBeLessThanOrEqual(6_600);
+  });
+
+  it("a step backward before Play, into the first recording's start, plays from there", async () => {
+    const w = world();
+    await w.open();
+    await run(0);
+    const late = replayTimelineTarget(P, RUN1_AT + 2_000)!;
+    w.player.seekTo(late.ordinal, late.offsetMs);
+    await run(0);
+    expect(position(w)).toBe(RUN1_AT + 2_000);
+    const early = replayTimelineTarget(P, RUN0_AT + 1_000)!;
+    expect(early).toEqual({ ordinal: 2, offsetMs: 1_000 });
+    w.player.seekTo(early.ordinal, early.offsetMs);
+    await run(0);
+    expect(w.ordinal()).toBe(2);
+    expect(position(w)).toBe(RUN0_AT + 1_000);
+    w.player.play();
+    await until(() => w.heard().length > 0);
+    expect(lastHeard(w).run).toBe(0);
+    expect(lastHeard(w).from).toBeGreaterThanOrEqual(1_000);
+    expect(lastHeard(w).from).toBeLessThanOrEqual(1_100);
+  });
+
+  it('while the first Play prepares after a step, the place stays the chosen one — never the recording\'s start', async () => {
+    const w = world();
+    await w.open();
+    await run(0);
+    w.player.seekTo(3, 3_750);
+    await run(0);
+    w.player.play();
+    const seen: number[] = [];
+    for (let i = 0; i < 30; i += 1) {
+      await run(100);
+      seen.push(position(w));
+    }
+    expect(w.clock()!.getState().phase).toBe('RUNNING');
+    expect(Math.min(...seen)).toBeGreaterThanOrEqual(RUN0_AT + 7_750);
+  });
+
+  it("no map answer: no line until the set's own map is held — nothing is invented", async () => {
+    const w = world({ map: () => Promise.resolve({ kind: 'UNAVAILABLE' }) });
+    await w.open();
+    await run(0);
+    expect(w.clock()!.detail().timelinePlan).toBeNull();
+    w.player.play();
+    await until(() => w.clock()!.getState().phase === 'RUNNING');
+    expect(w.clock()!.detail().timelinePlan).toBe(w.clock()!.detail().plan);
+  });
+
+  it("a map that does not describe these moments is ignored, and the set's own map governs once held", async () => {
+    const stray = world({ map: () => Promise.resolve({ kind: 'MAP', map: { runs: [{ artifactId: null, durationMs: 5_000, spans: RUN1 }], boundaries: [] } }) });
+    await stray.open();
+    await run(0);
+    expect(stray.clock()!.detail().timelinePlan).toBeNull();
+    // A preview that differs from the set's map: the set's wins for the timeline too, the moment it is held.
+    const longer = world({ map: () => Promise.resolve({ kind: 'MAP', map: { runs: [{ artifactId: null, durationMs: 9_000, spans: RUN0 }, { artifactId: null, durationMs: 6_000, spans: RUN1 }], boundaries: [CROSS] } }) });
+    await longer.open();
+    await run(0);
+    expect(replayPresentationClock(longer.clock()!.detail().timelinePlan!, MOMENTS, replayMomentPaceMs)!.durationMs).toBe(P.durationMs + 1_000);
+    longer.player.play();
+    await until(() => longer.clock()!.getState().phase === 'RUNNING');
+    expect(longer.clock()!.detail().timelinePlan).toBe(longer.clock()!.detail().plan);
+    expect(replayPresentationClock(longer.clock()!.detail().timelinePlan!, MOMENTS, replayMomentPaceMs)!.durationMs).toBe(P.durationMs);
   });
 });
 

@@ -242,12 +242,15 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
    * timer runs. It belongs to the moment shown, and goes when another moment is shown.
    */
   let paced: { readonly ordinal: number; readonly offsetMs: number; readonly since: number | null } | null = null;
+  /** CP2-A.1 (R-3): the moment a step on the timeline placed the reader in; it goes when another moment is shown. */
+  let placedIn: number | null = null;
 
   const live = () => !retired && isCurrent();
   const view = () => state.open;
 
   function publish(open: ReplayPlayerView | null): void {
     if (paced !== null && (open === null || open.ordinal !== paced.ordinal)) paced = null;
+    if (placedIn !== null && (open === null || open.ordinal !== placedIn)) placedIn = null;
     state = Object.freeze({ open: open === null ? null : Object.freeze(open) });
     for (const listener of Array.from(listeners)) listener();
     rearm();
@@ -346,6 +349,17 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
     if (instance === null) return null;
     clock = { versionId: read.version.versionId, instance, unsubscribe: instance.subscribe(onClock) };
     return instance;
+  }
+
+  /** Paused part-way through this moment: the clock holds a place in it, or its reading pace has a part left. */
+  function heldInside(ordinal: number): boolean {
+    const instance = clock?.instance ?? null;
+    if (instance !== null && instance.owns(ordinal)) {
+      const now = instance.getState();
+      return now.phase === 'HELD' && (now.ordinal ?? asked) === ordinal;
+    }
+    const text = settledText();
+    return paced !== null && paced.ordinal === ordinal && paced.offsetMs > 0 && text !== null && paced.offsetMs < readingPaceMs(text);
   }
 
   function clockEnded(): boolean {
@@ -726,9 +740,12 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
       if (!live() || current === null || order === null || current.command !== null) return;
       // A clock that has ENDED is never replaced by the reading pace (no fallback): nothing plays.
       if (clockEnded()) return;
-      // At the last moment, Play starts again from the first.
+      // At the last moment, Play starts again from the first — unless there is a place inside it to go on from (CP2-A.1,
+      // R-2 / R-3): a step on the timeline put the reader there, or it was paused part-way through.
       const atLast = order.indexOf(current.ordinal) === order.length - 1;
-      patch({ playing: true, ...(atLast ? { ordinal: order[0] } : {}) });
+      const inside = placedIn === current.ordinal || heldInside(current.ordinal);
+      placedIn = null;
+      patch({ playing: true, ...(atLast && !inside ? { ordinal: order[0] } : {}) });
     },
     pause() {
       if (live() && view()?.playing) patch({ playing: false });
@@ -754,9 +771,11 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
           asked = ordinal;
           instance.seekTo(ordinal, at);
         }
+        placedIn = current.playing ? null : ordinal;
       } else {
         // A paced moment: its reading pace runs from that offset.
         paced = { ordinal, offsetMs: at, since: null };
+        placedIn = current.playing ? null : ordinal;
       }
       // Published even inside the moment shown: what reads the timeline redraws at the new place.
       patch({ ordinal });

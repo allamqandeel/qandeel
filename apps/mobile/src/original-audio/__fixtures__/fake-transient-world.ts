@@ -60,6 +60,11 @@ export class FakeTransientServer {
   failFromGeneration: number | null = null;
   readonly leadMs: number;
 
+  /** S8B-07 CP2-A.1: the version's playback map alone (GET …/map), as the server reads it without a set. */
+  map(): { readonly runs: readonly { readonly artifactId: null; readonly durationMs: number; readonly spans: readonly PresentationSpan[] }[]; readonly boundaries: readonly PresentationBoundary[] } {
+    return { runs: this.options.runs.map((durationMs, i) => ({ artifactId: null, durationMs, spans: this.options.spans?.[i] ?? [] })), boundaries: this.options.boundaries ?? [] };
+  }
+
   constructor(private readonly options: FakeServerOptions) {
     this.sourceEnd = Date.now() + options.sourceEndsInMs;
     this.sourceReason = options.sourceReason ?? 'EXPIRED';

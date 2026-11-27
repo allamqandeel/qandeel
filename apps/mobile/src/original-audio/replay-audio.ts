@@ -150,6 +150,13 @@ export function createReplayAudio(options: ReplayAudioOptions): ReplayAudio {
     });
     source.observe(clock.detail().plan);
     attention.observe(clock.detail().plan);
+    // S8B-07 CP2-A.1 (R-3): the version's map alone, read once per opening and never awaited, so the timeline is drawn
+    // before the first Play. It asks for no set (no job, no audio); the set's own map still governs the audio once held.
+    if (api !== null) {
+      void api.presentationMap(replayId, versionId).then((read) => {
+        if (read.kind === 'MAP') clock.prime(read.map);
+      }, () => undefined);
+    }
     clocks.set(versionId, { clock, stage, source, attention, unsubscribe });
     changed();
     return clock;

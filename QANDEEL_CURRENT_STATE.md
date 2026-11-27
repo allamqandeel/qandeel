@@ -1,21 +1,26 @@
 # QANDEEL — Current State
 
-> **S8B-07 CP2-A.1 — CONTINUOUS IN-APP REPLAY — DELIVERED / READY FOR PO REVIEW — NOT MERGED — COPY GATE CLOSED — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> **S8B-07 CP2-A.1 — CONTINUOUS IN-APP REPLAY — DELIVERED / READY FOR PO REVIEW — NOT MERGED — COPY GATE CLOSED — FINAL VALIDATION AND CORRECTION APPLIED — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:**
 >   - the Product Owner's "EXECUTION AUTHORIZATION — S8B-07 CP2-A.1" (2026-11-27). Replay resumes at CP2-A, split into three tasks: CP2-A.1, CP2-A.2 and CP2-B;
->   - "CP2-A.1 COPY GATE APPROVED" (2026-11-27).
+>   - "CP2-A.1 COPY GATE APPROVED" (2026-11-27);
+>   - "CP2-A.1 FINAL VALIDATION AND CORRECTION" (2026-11-27).
 >   - The [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §21 is the primary account.
->   - The "RETURN TO REPLAY" directive and the two release blockers it registered are recorded on the documentation PR #417 (Draft, unmerged).
+>   - The "RETURN TO REPLAY" directive and its two mandatory release blockers (`QAN-BL-INTEL-07`, `QAN-BL-VOICE-10`) come from the documentation PR #417, which stays separate and unchanged at `bbc0335d`. This PR carries that commit by a merge, so both PRs hold the same 116 items.
 > - **Delivered (one Draft PR, branch `replay/s8b-07-cp2a1-continuous-replay`, from `main` at `b842fd0d`):**
 >   - R-1 / O-3: a "saved" line that stays, with one action that opens the exact saved Replay. A failed save is stated, with Try again.
 >   - R-2 / O-4: one Play through every message boundary to the end.
->   - R-3 / O-5: one timeline of the whole part, and seeking to any instant inside long speech, while playing or paused.
+>   - R-3 / O-5: one timeline of the whole part, **shown before the first Play** (from the version's map read alone: `GET …/map`, no set, no job, no migration), and seeking to any instant inside long speech: before Play, while playing or while paused.
 >   - R-5 (in-app): a text moment's stage follows the player's own paced time.
 >   - All of it on RB-1's presentation clock. **No second timing authority.**
 >   - A new **iOS Replay gate** (`.github/workflows/ios-replay-gate.yml`), on the iOS simulator by real touch, in BG-10's three cells.
+> - **CI on `eda0482f`:** API CI, Mobile CI and the iOS World gate (all three cells) PASS. The iOS Replay gate FAILED in all three cells (run 46007215812). C-TIMELINE and C-PLAY-THROUGH passed everywhere; every failure was the proof harness (record §21.9).
+>   - The harness is corrected without weakening a criterion.
+>   - Two product defects found on the way are corrected: Play after a held step in the last moment restarted the part, and the line went back while the first Play prepared.
+>   - The correction head's CI round is recorded when it completes.
 > - **Copy:** RS-01 – RS-05 APPROVED. RS-01 and RS-05 are existing approved rows, reused verbatim. RS-02 – RS-04 are new, in `replay-entry/save-copy.ts`.
 > - **Not done:**
->   - the HONOR device pass, left for the Product Owner's return;
+>   - the consolidated HONOR acceptance session: prepared (record §21.10), not run;
 >   - the native audio on iOS: NOT TESTED by construction (synthetic player);
 >   - CP2-A.2 (CA-RL-01 A – G, the font route, F2, VG-CP2A) and CP2-B;
 >   - no prompt, provider, TTS, quota or hosted change, and no paid call.
@@ -24,7 +29,7 @@
 >   - HONOR-CORR-01 suspended;
 >   - COSMOS, CALL-ATTR-01 and the completed Replay checkpoints not reopened.
 >   - No migration; the next one is still `0206`.
-> - **Next:** the Product Owner's review and the device pass. **Merge only on «ادمج».**
+> - **Next:** the Product Owner's review and the consolidated HONOR acceptance session (record §21.10). **Merge only on «ادمج».**
 
 > **PO DIRECTIVE — RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER — HONOR-CORR-01 SUSPENDED (NOTHING IMPLEMENTED) — `QAN-BL-INTEL-07` (`INTEL-SEMANTIC-REVIEW-01`, CRITICAL) AND `QAN-BL-VOICE-10` REGISTERED AS MANDATORY RELEASE BLOCKERS — NEXT: S8B-07 CP2-A — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:** the Product Owner's directive of 2026-11-27. The [INTEL-LIVE-01 record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.11 records it, and the [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §20.3 holds the remaining Replay scope.

@@ -7,8 +7,12 @@
 //               with RS-05; the saved line's one action says RS-02 and opens the exact saved Replay (`openSaved`)
 //   one clock   the timeline is drawn and stepped by the presentation clock's own functions, defined once; the player and
 //               the audio clock take a step (`seekTo`) and the engine is placed there — no second timing authority
+//   before Play (PO direction "CP2-A.1 FINAL VALIDATION AND CORRECTION", item 2) the line is drawn before the first Play
+//               from the version's map read alone (GET …/map: no set, no job), which only the timeline reads; the audio,
+//               the stage and both lanes keep the set's own map; a step there is where the first Play starts
 //   iOS gate    the proof build reached only through a selector that needs its flag; the workflow's three BG-10 cells, its
-//               pinned Maestro, and every case PASS except the one NOT TESTED by construction (native audio)
+//               pinned Maestro, and every case PASS except the one NOT TESTED by construction (native audio); each timed
+//               sequence is one flow, whole-percent points, and the landing tolerances are pinned (run 46007215812)
 //   CI          wired
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -35,6 +39,11 @@ const playerController = tsCode(read(`${SRC}/replay-player/player-controller.ts`
 const audioClock = tsCode(read(`${SRC}/original-audio/replay-audio-clock.ts`));
 const audioViews = tsCode(read(`${SRC}/original-audio/ReplayAudioViews.tsx`));
 const presentation = tsCode(read(`${SRC}/replay-cosmos/presentation-clock.ts`));
+const replayAudio = tsCode(read(`${SRC}/original-audio/replay-audio.ts`));
+const mediaClient = tsCode(read(`${SRC}/original-audio/transient-media-api.ts`));
+const service = tsCode(read('apps/api/src/replay-media/transient-playback.service.ts'));
+const controller = tsCode(read('apps/api/src/replay-media/transient-media.controller.ts'));
+const flow = (name) => read(`scripts/ios-replay-gate/flows/${name}`);
 const record = read('docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md');
 const workflow = read('.github/workflows/ios-replay-gate.yml');
 const worldGate = read('.github/workflows/cosmos-ios-world-gate.yml');
@@ -92,6 +101,27 @@ test('one clock: the timeline is drawn and stepped by the presentation clock alo
   assert.match(playerController, /export function replayMomentPaceMs\(moment: \{ readonly text: string \| null \}\): number \{\s*return readingPaceMs\(moment\.text \?\? ''\);/u);
 });
 
+test('before Play: the line is drawn from the map read alone, which no set, job or audio follows', () => {
+  // The server: a read of the version's map (0196's owner-scoped read), never the set's request.
+  assert.match(controller, /@Get\('replay\/:replayId\/versions\/:versionId\/map'\)/u);
+  const body = service.slice(service.indexOf('async presentationMap('), service.indexOf('async presentationMap(') + 900);
+  assert.match(body, /this\.repository\.map\(userId, replayId, versionId\)/u);
+  assert.doesNotMatch(body, /this\.repository\.request|artifactId|readableForMs/u);
+  // The client: one GET, read once per opening, never awaited, and only primes the clock.
+  assert.match(mediaClient, /async presentationMap\(replayId: string, versionId: string\): Promise<TransientMapResult> \{\s*const answer = await this\.send\('GET', /u);
+  assert.match(replayAudio, /void api\.presentationMap\(replayId, versionId\)\.then\(\(read\) => \{\s*if \(read\.kind === 'MAP'\) clock\.prime\(read\.map\);/u);
+  // Only the timeline reads it: `preview` is declared, checked, set in `prime` and offered as `timelinePlan` — nothing else.
+  assert.equal((audioClock.match(/\bpreview\b/gu) ?? []).length, 4);
+  assert.match(audioClock, /timelinePlan: refused \? null : plan \?\? preview,/u);
+  assert.match(audioViews, /const plan = clock\.detail\(\)\.timelinePlan;/u);
+  assert.match(audioViews, /paced\.elapsedMs : null, clock\.detail\(\)\.pending\);/u);
+  // A step before Play is where the first Play starts, and it is shown there while that Play prepares.
+  assert.match(audioClock, /startOf\(asked, located, read\)/u);
+  assert.match(audioClock, /const chosen = e\.phase === 'PREPARING' && pendingOffset !== null \? plan\.windowOf\.get\(pendingOffset\.ordinal\) : undefined;/u);
+  // In the last moment, Play goes on from a held step or a pause part-way; only after the end does it start again.
+  assert.match(playerController, /patch\(\{ playing: true, \.\.\.\(atLast && !inside \? \{ ordinal: order\[0\] \} : \{\}\) \}\);/u);
+});
+
 test('iOS gate: the proof build only behind its flag; three BG-10 cells; pinned Maestro; every testable case PASS', () => {
   assert.equal(mobilePkg.main, 'expo-router/entry', 'the Product entry is the manifest\'s');
   assert.match(selector, /process\.env\.S807_CP2A1_PROOF !== '1'/u);
@@ -104,13 +134,28 @@ test('iOS gate: the proof build only behind its flag; three BG-10 cells; pinned 
   assert.match(workflow, /S807_CP2A1_PROOF: '1'/u);
   assert.match(workflow, /bash scripts\/ios-replay-gate\/run-replay-gate\.sh/u);
   assert.match(workflow, /grep -v '\^IOS-NATIVE-AUDIO' \| awk -F'\\t' '\$2 != "PASS"'/u);
-  for (const id of ['J-SAVED-LINE', 'J-OPEN-ACTION', 'J-OPENS-SAVED', 'C-PLAY-THROUGH', 'C-TIMELINE', 'C-SEEK-PLAYING', 'C-SEEK-HELD']) {
+  for (const id of ['J-SAVED-LINE', 'J-OPEN-ACTION', 'J-OPENS-SAVED', 'C-PLAY-THROUGH', 'C-TIMELINE', 'C-SEEK-PLAYING', 'C-SEEK-HELD', 'C-SEEK-BEFORE-PLAY']) {
     assert.match(gate, new RegExp(`result ${id} PASS`, 'u'), `${id} has a PASS`);
     assert.match(gate, new RegExp(`result ${id} (FAIL|'NOT TESTED')`, 'u'), `${id} can fail`);
   }
   assert.match(gate, /result IOS-NATIVE-AUDIO 'NOT TESTED'/u);
   assert.match(gate, /visited\)" = 1-2-3-5-6/u);
   assert.doesNotMatch(gate, /retry|--repeat/iu);
+  // Run 46007215812: Maestro takes no variable in `direction:` and no decimal point, and starts slower than the part.
+  assert.match(gate, /result C-TIMELINE PASS "before the first Play: /u);
+  assert.match(gate, /'RE=ord=1 t=0\.0 dur=22\.5 play=0 \.\*'/u);
+  assert.match(gate, /const px = Math\.round\(\(sx - rx\) \/ rw \* 100\), py = Math\.round\(/u);
+  assert.match(gate, /mt c2-steps seek-playing\.yaml /u);
+  assert.match(gate, /mt c3-steps seek-held\.yaml /u);
+  // The landing tolerances (s, below / above the instant the tapped point really is): playing, held, before Play.
+  assert.match(gate, /near "\$l1" "\$be" 0\.25 1\.0\)" = yes \] && \[ "\$\(near "\$l2" "\$fe" 0\.25 1\.0\)" = yes/u);
+  assert.match(gate, /near "\$l1" "\$be" 0\.3 0\.3\)" != yes \] \|\| \[ "\$\(near "\$l2" "\$fe" 0\.3 0\.3\)" != yes/u);
+  assert.match(gate, /near "\$l1" "\$pe" 0\.3 0\.3\)" != yes/u);
+  for (const name of readdirSync(join(root, 'scripts/ios-replay-gate/flows'))) {
+    assert.doesNotMatch(flow(name), /direction: \$|retryTapIfNoChange: true|repeat:/u, `${name}: no variable direction, no retry`);
+  }
+  assert.match(flow('seek-playing.yaml'), /text: "ord=3 \.\*play=1 \.\*"[\s\S]*point: "\$\{P1\}"[\s\S]*point: "\$\{P2\}"/u);
+  assert.match(flow('seek-held.yaml'), /text: "ord=5 \.\*play=1 \.\*"[\s\S]*id: "qandeel-replay-play"[\s\S]*text: "\.\*play=0 \.\*"[\s\S]*point: "\$\{P1\}"[\s\S]*point: "\$\{P2\}"/u);
 });
 
 test('CI: wired', () => {

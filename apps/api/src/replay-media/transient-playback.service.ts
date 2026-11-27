@@ -64,6 +64,12 @@ export interface ReplayPlaybackAnswer {
   readonly reason: Reason;
 }
 
+/** S8B-07 CP2-A.1: the playback map alone, with no set (each run's length and spans, and the boundaries between runs). */
+export interface ReplayPresentationMapAnswer {
+  readonly runs: readonly ReplayRunAnswer[];
+  readonly boundaries: readonly PresentationBoundary[];
+}
+
 /** RB-2 / S3: where a moment's analysis may appear — inside a run of the playback map, or after the whole Replay. */
 export type ReplayMomentPlacement =
   | { readonly kind: 'IN_RECORDING'; readonly runIndex: number; readonly fileMs: number }
@@ -253,6 +259,24 @@ export class TransientPlaybackService {
       })),
       boundaries: map.boundaries, readableForMs, reason,
     };
+  }
+
+  /**
+   * S8B-07 CP2-A.1 (R-3; the Product Owner's "CP2-A.1 FINAL VALIDATION AND CORRECTION", 2026-11-27): the version's playback
+   * map alone — the runs, their lengths and spans, and the boundaries — from the same plan rows and the same
+   * `buildPresentationMap` as the playback answer, so the phone draws the whole part's timeline before the first Play. It
+   * asks for no set: no command, no file, no job, no lease, nothing to erase. Not this person's CURRENT V2 version, or no
+   * plan: NOT_FOUND. A map that cannot be built: BUSY, never repaired.
+   */
+  async presentationMap(userId: string, replayId: string, versionId: string): Promise<ReplayPresentationMapAnswer> {
+    if (!UUID.test(replayId) || !UUID.test(versionId)) throw this.refused('map', notFound());
+    const read = await settle(this.repository.map(userId, replayId, versionId));
+    if (!read.ok) throw this.refused('map', busy(), 'transport_failure');
+    if (read.value.length === 0) throw this.refused('map', notFound());
+    const map = buildPresentationMap(read.value);
+    if (map === null || map.runs.length === 0) throw this.refused('map', busy(), 'integrity_failure');
+    this.signal('map', 'success');
+    return { runs: map.runs.map((run) => ({ durationMs: run.durationMs, spans: run.spans })), boundaries: map.boundaries };
   }
 
   /**
