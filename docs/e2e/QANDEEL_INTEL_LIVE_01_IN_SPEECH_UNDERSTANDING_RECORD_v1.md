@@ -2046,3 +2046,134 @@ The impact planner answers `NOT_AFFECTED` for this change over `755192c5`: no fi
 
 **Next (the Product Owner's sequence):** the Product Owner's CP4 review and merge decision («ادمج»). Then the HONOR Live +
 Replay proof, under its own authorization, and the return to Replay video production (S8B-07 CP2-A, then CP2-B).
+
+## 12. The HONOR session's first paid minutes: a production integration defect (2026-11-26 / 27)
+
+**State:** the paid HONOR session (§11.7) is **SUSPENDED** by the Product Owner. `QAN-BL-INTEL-06` stays
+**`VALIDATION — OPEN`**. V-1 – V-8 are unchanged and none is claimed. UT-3 and CP3-F10 are among them. V-5 (iOS) stays
+open for its separate targeted test. Main is `11e0702d` (PRs #414 / #415 merged); migrations `0204` / `0205` are merged
+and not hosted.
+
+### 12.1 What the session showed
+
+The paid session was authorized on 2026-11-26: every provider real, a fictional Egyptian Arabic script, at most 10 minutes
+of calls, and a hard ceiling of USD 1.50. The harness is outside the repository. The first two calls, about 45 s of speech
+and USD 0.011 in all, showed three failures on the phone:
+- no voice was heard;
+- no mark ever appeared on the map;
+- the call analysis never established a half.
+
+The reply's text was generated every time. Two independent causes were found.
+
+| # | Cause | Kind | State |
+|---|---|---|---|
+| **H-1** | The Google Cloud billing account behind the speech project was **closed**. Vertex answered `403 BILLING_DISABLED`, which the shipped adapter correctly classifies as `UNAUTHORIZED`, so every reply ended `FAILED` with no audio. | Account, not product | **Resolved** (2026-11-27). The PO updated the payment card; the account is open and `billingEnabled` is true. One minimal real synthesis through the shipped route (`gemini-3.8-flash-tts`, Achird, ADC, the keep-alive transport) returned 20 PCM chunks, 1.04 s of 24 kHz audio, usage `COMPLETE` and `PROVIDER_REPORTED` (16 input and 26 audio tokens), ≈ USD 0.0005. |
+| **H-2** | **The call path's AI usage attribution is missing** (§12.2). | **Product defect in merged `main`** | Root cause confirmed. Correction proposed as **CALL-ATTR-01** (§12.3). No production code has changed. |
+
+### 12.2 H-2 — the failure chain
+
+AI-COST-01's accounting boundary refuses any DeepSeek attempt that runs outside an attribution scope, by design:
+- `AiProviderCallAccounting.track` (`ai-provider-call-accounting.ts`) reads `currentAiUsageAttribution()`
+  (`ai-usage-attribution.ts`, an `AsyncLocalStorage`);
+- with no scope it signals `begin / unattributed` and throws `AiProviderCallAccountingUnavailableError` (status 503);
+- this happens **before** the ledger's `begin` and before any provider request.
+
+`ai-usage-attribution.ts` names the entries that must open a scope. The call path opens one in only one place:
+- **Live call reply** (`live-call-reply.service.ts`): `reply()` runs `replyOnce` inside
+  `runWithAiUsageAttribution({ userId, sessionId, sourceTurnId: userTurnId })`. It is attributed, and it worked.
+- **Provisional attention** (`live-attention.provider.ts` → `CallAttentionTracker` → `DeepSeekAttentionEvaluator` behind
+  `costLedgerDecorator('LIVE_ATTENTION_EVALUATION')`) opens **no scope**. The tracker evaluates from its own loop,
+  started by recognition events in the call connection's context, so every evaluation is refused. The evaluator
+  classifies the refusal as `PROVIDER_FAILED` in 0–2 ms, and it is recorded in 0204 as `PROVIDER_FAILED` with no usage.
+  Disclosure never starts, so **no mark can ever appear**.
+- **Committed call analysis** (`call-analysis.worker.ts` → `ConversationSemanticEstablishmentService.establishCallHalf` /
+  `establishExchange` → the four production bindings: CU segmentation, focus resolution, thread establishment, thread
+  continuity) opens **no scope**. Every half settles `PROVIDER_FAILURE / PROVIDER_UNAVAILABLE`. After the retry budget
+  it is `PARKED`. The analysis worker never establishes a half.
+
+The text conversation is unaffected: `ConversationService.createTurn` opens the scope, and the same bindings succeed
+there.
+
+**Adjacent call entries, audited:**
+
+| Entry | Provider | Attributed? |
+|---|---|---|
+| Live call reply (Model Router `forLiveCall`) | DeepSeek | yes |
+| Provisional attention evaluator | DeepSeek | **no (H-2)** |
+| Call analysis worker: USER / ASSISTANT halves and pre-call EXCHANGE items | DeepSeek ×4 bindings | **no (H-2)** |
+| Call analysis S3 sweep (`settleEndedCallSafety`) | none (deterministic safety gate) | n/a |
+| Post-response intelligence of committed turns | DeepSeek | yes, from the verified envelope |
+| Speechmatics recognition, Gemini speech (call) | voice ledger, explicit `userId` | not scope-based; unaffected |
+
+**Harness vs product.** The HONOR harness routes the service role's RPCs to the local PostgreSQL. That route worked
+through the same accounting boundary in the same process:
+- the local ledger recorded every reply (`CONVERSATION_REPLY` ×3);
+- it recorded the transcription and speech rows;
+- it recorded **zero** rows for `LIVE_ATTENTION_EVALUATION`, `CU_SEGMENTATION`, `FOCUS_RESOLUTION` or `THREAD_*`;
+- the shim logged no failed RPC.
+
+The refusal therefore happened before the ledger was reached. A diagnostic evaluation through the production evaluator
+and decorator, outside a scope, reproduced `AiProviderCallAccountingUnavailableError` with no request sent. An earlier
+remark during the session that the ledger "was not connected to the database" was wrong and is withdrawn.
+
+**Why no earlier gate saw it:**
+- CP1 – CP3 proved the mechanism with a fake evaluator and fake semantic providers. These are composed **without** the
+  accounting decorator.
+- A8′, the real-evaluator recall, ran the evaluator outside the production composition.
+- S8B-05 CP3's analysis proof used fake providers.
+- No test ran a production provider composition through the accounting boundary from a call-path entry.
+
+### 12.3 The proposed correction — CALL-ATTR-01 (one task, one PR; awaiting PO review)
+
+**Scope:** open the existing attribution scope at the two call-path entries, from trusted server-side identities only.
+
+1. **Attention** (`live-attention.provider.ts`):
+   - `liveCallAttentionOf(...).open(channel)` gives the tracker an evaluator that runs each `evaluate` inside
+     `runWithAiUsageAttribution({ userId: channel.userId, sessionId: channel.sessionId })`.
+   - The channel is the authenticated call connection's.
+   - **No `sourceTurnId`:** provisional speech has no committed turn, and none is invented. The ledger's attempt
+     number is then 1, as 0170 defines.
+   - The scope opens at each provider admission, not at the connection. A reconnect's new channel carries its own
+     identity, and no scope outlives its call.
+2. **Call analysis** (`call-analysis.worker.ts`):
+   - `establish()` runs the semantic calls inside `runWithAiUsageAttribution({ userId: claim.userId, sessionId,
+     sourceTurnId: claim.turnId })`.
+   - The identities come from 0191's durable claim, so a recovered, re-claimed or replayed item is attributed exactly
+     as the first attempt was.
+3. **Static contract:** the AI-COST-01 contract's `attributionViolations` names the two new entries, with
+   planted-negative cases. The INTEL-LIVE-01 and S8B-05 contracts that pin these files are re-anchored where needed,
+   without loosening any assertion.
+
+**Unchanged:**
+- the accounting boundary, its fail-closed refusal and invalid-identity rule, and the ledger;
+- the database's ownership checks (0170: the session must be the payer's, the turn the payer's in that session; else
+  `42501`);
+- prompts, models, the recognizer, the voice engine, COSMOS, the camera and Replay.
+
+No migration. Nothing is added on the First Audio path (the reply is already attributed); attention and analysis are
+background work.
+
+### 12.4 Targeted tests (in the same PR)
+
+**T-1, composition (API jest).** The production compositions are used: `productionLiveCallAttention` and a
+`CallAnalysisWorker` over the production `ConversationSemanticEstablishmentService` bindings. The real decorator, the
+`AiProviderCallAccounting` and the `SupabaseAiProviderCallLedger` stay in place. **Only the DeepSeek transport is
+replaced**, by a deterministic fake at the HTTP boundary that answers each feature's schema. The ledger's service-role
+RPC is recorded. The tests prove:
+- **before the correction**, by in-place revert, never a stash: refused unattributed, with zero provider requests;
+- **after the correction**: admitted, with `begin` carrying the right user, session and turn (none for attention) and
+  the right family;
+- `settle` `SUCCEEDED` with the reported usage;
+- both attention and the USER, ASSISTANT and EXCHANGE analysis items;
+- **two users' calls interleaved concurrently**, each attributed only to its own identity;
+- **a missing or invalid identity still fails closed**, with no provider request.
+
+**T-2, database (focused DB workflow).** The same compositions on real PostgreSQL through the 0170 commands:
+- the rows land with the right family and identities;
+- settlement is recorded;
+- a cross-user session or turn is refused `42501` before any provider request.
+
+**T-3, static.** The contract additions of §12.3(3), each with its planted negative.
+
+After T-1 – T-3 pass and the PO accepts the change, the **same** HONOR session resumes. It is not a full rerun. Its
+remaining paid budget stays inside the approved USD 1.50 ceiling (USD 0.012 spent so far).

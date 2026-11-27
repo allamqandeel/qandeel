@@ -1,5 +1,16 @@
 # QANDEEL — Project Map
 
+> **INTEL-LIVE-01 — MERGED (PRs #414 / #415, `main` `11e0702d`) — HONOR LIVE + REPLAY VALIDATION SUSPENDED ON A PRODUCTION INTEGRATION DEFECT — CALL-ATTR-01 PROPOSED, AWAITING PO REVIEW — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's "HONOR VALIDATION — BILLING RECOVERY & USAGE ATTRIBUTION CORRECTION" (2026-11-27). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12 is the primary account.
+> - **Found by the paid HONOR session** (about 45 s of speech, USD 0.011, against a USD 1.50 ceiling):
+>   - **H-1:** the Google Cloud billing account was closed (`BILLING_DISABLED`), so no voice was heard. Resolved by the PO (2026-11-27), and verified by one minimal real synthesis through the shipped route.
+>   - **H-2, a product defect in merged `main`:** the provisional attention evaluator (`live-attention.provider.ts`) and the call analysis worker (`call-analysis.worker.ts`) reach DeepSeek through AI-COST-01's accounting boundary without an attribution scope. The boundary refuses them `unattributed` before any request. So no live mark ever appears and no call half is ever established. Only the live call reply (`live-call-reply.service.ts`) opens its scope.
+> - **Correction:** **CALL-ATTR-01**, one task and one PR, proposed (record §12.3 / §12.4) and awaiting PO review. It opens the existing scope at those two entries from the call connection's and the durable claim's identities, with no turn invented for provisional speech, and it adds production-composition tests with only the DeepSeek transport faked. No migration; INTEL-LIVE-01 CP1 – CP3 and S8B-05 CP3 are not reopened as tasks.
+> - **Unchanged:**
+>   - V-1 – V-8, including UT-3 and CP3-F10; V-5 (iOS) is a separate targeted test;
+>   - no hosted deployment, no merge and no full paid rerun without separate authorization;
+>   - S8B-07 CP2-A waits for the acceptance of `QAN-BL-INTEL-06`.
+
 > **INTEL-LIVE-01 — CP1–CP4 DELIVERED (SYNTHETIC MECHANISM PROVEN) — CP3 + R1 ACCEPTED WITH A PO EXCEPTION (Product Owner, 2026-11-26, head `755192c5`) — CP4 CLOSURE DELIVERED / READY FOR PO REVIEW AND MERGE DECISION — `QAN-BL-INTEL-06` VALIDATION — OPEN — NOT MERGED — 2026-11-26 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:** the Product Owner's "INTEL-LIVE-01 — CP3 R1 ACCEPTANCE & CP4 EXECUTION AUTHORIZATION" (2026-11-26). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) is the task's primary document: §10.13 covers CP3's acceptance and §11 covers CP4.
 > - **CP3 + R1 accepted** on `755192c5`:
