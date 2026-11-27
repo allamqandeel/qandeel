@@ -2527,3 +2527,151 @@ HONOR) stays mandatory in the resumed session.
 - no hosted deployment.
 
 `QAN-BL-INTEL-06` stays `VALIDATION — OPEN` until the PO accepts the required evidence.
+
+### 12.9 The resumed HONOR session: results, consolidated diagnosis and correction proposal (2026-11-27)
+
+**Authority:**
+- the Product Owner's "CALL-ATTR-01 MERGED — RESUME HONOR VALIDATION";
+- the Product Owner's "HONOR VALIDATION — PO DIRECTION" (2026-11-27).
+
+CALL-ATTR-01 is **accepted**. Successful device evidence is preserved.
+
+**Sitting:**
+- merged `main` `b842fd0d`, with the reused test APK;
+- a clean paid database;
+- real providers: Speechmatics, DeepSeek Flash, and Gemini Flash TTS with the Achird voice on Vertex;
+- synthetic, fictional speech.
+
+**Calls:** Call A (the café, about 81 s) and Call B (the car, about 77 s, with one connection cut).
+
+**Spend:** about USD 0.154 of the USD 1.50 authorized:
+- the suspended session: 0.012;
+- Call A: 0.062;
+- Call B and the analysis retries: 0.080.
+
+**Cleanup (plan §4) is done:**
+- the processes are stopped and the harness copy is removed;
+- the recorded audio and temporary media are deleted (55 objects);
+- `qandeel_replay_media` is `NOLOGIN PASSWORD NULL`;
+- the ADB reverse ports are removed;
+- the test app's microphone is revoked and its locale reset.
+
+Kept as diagnostic evidence: the local database (text and identifiers only, no audio), the event logs (counts, instants and identifiers) and the session report outside the repository.
+
+#### A. Results against the §11.7 conditions
+
+| Condition | Result | Evidence |
+|---|---|---|
+| CALL-ATTR-01 on the device | **PASS** | Ledger rows attributed: `LIVE_ATTENTION_EVALUATION` 36 (no source turn, by design); `CU_SEGMENTATION` 17, `FOCUS_RESOLUTION` 32, `THREAD_FORMATION` 1. No `unattributed` refusal. All 16 call halves end `COMPLETE`. |
+| **V-1** live marks | **PASS** | Call A: 14 `DEVELOPMENTS` before the speech ended; the PO saw them appear after the words. Re-measured per evaluation in the event log: tokens, cache-hit tokens and admissions. |
+| **V-1** durable understanding | **NOT PASSED — H-3** | The café topic never became a Thread (B below). |
+| **V-2 / CP3-F10** | **PASS** | 4 barge-ins. The speech said over QANDEEL's reply was kept and committed. |
+| **V-3 / UT-3 Android** | **PASS** | Both calls ended `USER_ENDED` by the PO's own press of the physical End button; the next call started normally. |
+| **V-4 / C8** | **PASS** | Real Replay of Call A. Original audio streamed `COMPLETE`. The 0205 read returned 24 events, each from a `DEVELOPMENTS` evaluation or its settlement; nothing for `MISSED_HANDOVER`, `REFUSED` or `DEFERRED_PERMIT`; every floor is at or after its anchor. The one SET + settlement pair left out lies after the selected part. No Call B mark inside Call A. Play, pause and seek behaved consistently. **C8 is no longer PARTIAL.** |
+| **V-5** iOS | **OPEN** | iOS Replay Lane B and UT-1 / UT-3 are not tested. Android evidence is never counted as iOS. |
+| **V-6** pan | **PASS** | COSMOS-V5 method (presented frames on the app layer, 18 × 700 ms swipes): 1 704 frames, 60.0 fps, p50 / p95 / max 16.7 ms, 0 stalls, 0 freezes. Accepted baseline: 60 fps, p95 16.7, max 33.3, 0 stalls. |
+| **V-6** opening speed; Lane B stage preparation cost (CP3-F6) | **NOT MEASURED** | Accounted separately; this sitting measured neither. |
+| **V-7** | **PASS** | A connection cut mid-call resumed on epoch 2 after about 1.06 s; the call stayed `ACTIVE`, unnoticed by the PO. No `4005` was observed. |
+| **V-8** successful live disclosure | **MEASURED** | 25 event frames, all reached the phone's stage. T4 (server send → stage digest change): P50 18 ms; 22 of 25 within 5 – 32 ms; 3 at 1.8 – 2.4 s (the call's first two, and one mid-call frame with no digest row of its own, not yet explained). The car's marks were on the stage before its durable Lane A disclosure; the café never had one (H-3). |
+| First Audio | **positive, separate** | Commit → first audio 1.63 – 2.05 s over 5 turns. Not V-8. |
+
+#### B. H-3 — the café topic was lost (consolidated root cause)
+
+**What the evidence shows:**
+- 25 conversation units were committed. Units 1 – 22 (the café, then the car's first mention) all ended `NO_THREAD_ACTION`, and no emerging focus was ever created for them.
+- Only unit 23 («لا، أنا بتكلم على العربية») produced an emerging focus and Thread (`ESTABLISH_NEW`); unit 25 attended it.
+- **The decisive fact is the reference states.** Across units 1 – 22 the focus provider returned 9 references, and **every one is `UNRESOLVED`**: «يا أنديل», «الكافيهات الموجودة», «مدينة نصر» (QANDEEL's unit), «سوق كبير ومتنوع», «تقسيمك للميزانية», «الناس», «مشروب واحد», «أصلحها».
+- The units that carried the topic returned **no reference at all**:
+  - «بفكر أفتح في مدينة نصر» (the plan and the place);
+  - «المكان ده يكون مخصص…»;
+  - «ميزانية حوالي 800 ألف»;
+  - «المشروع ما يكسب».
+- The session's only `RESOLVED` references are unit 23's «العربية» (`newReference`, the one handle) and unit 25's «لتصليحها» (to that handle).
+
+**The mechanism** (`focus-resolution-validator.ts`, unchanged):
+- `START_NEW_FOCUS` is valid only when its `groundingAnchor` is the anchor of a reference that the same unit resolved `RESOLVED`, either to a prior handle or as a `newReference`. Otherwise the proposal is refused `FOCUS_GROUNDING_REQUIRED`.
+- `ATTEND_EXISTING_FOCUS` is valid only when the continuity is grounded through the unit's resolved references. Otherwise it is refused `UNGROUNDED_FOCUS_CONTINUITY`.
+- With no `RESOLVED` reference in any café unit, no proposal could ever start a café focus.
+
+**The exact reasons for the two refusal codes:**
+- **`FOCUS_GROUNDING_REQUIRED`** (Call A, exchange 4, user half; the earlier exchange 3 user half was PARKED after 3 such attempts, codes not yet captured then). The provider proposed `START_NEW_FOCUS` for the café concern, but its grounding was not a `RESOLVED` reference: that unit's references were `UNRESOLVED` («الناس», «مشروب واحد»).
+- **`UNGROUNDED_FOCUS_CONTINUITY`** (Call B, exchange 3, user half). The provider attended unit 23's new focus from a later unit whose reference was not yet resolved to that focus's handle. The next attempt resolved «لتصليحها» to it and was accepted.
+
+**Why all 16 halves became `COMPLETE`:**
+- A refusal is retryable (`PROVIDER_UNAVAILABLE`, then `RETRY_WAIT` or `PARKED`).
+- A later attempt returned a *valid* proposal with `NO_INDEPENDENT_FOCUS`, which is a legitimate outcome, so the unit closed `NO_THREAD_ACTION` and the half `COMPLETE`.
+- At the queue level, "nothing to focus on" is indistinguishable from "the provider never grounded the topic". No signal says that a conversation's main topic was never established, and the queue records only `PROVIDER_UNAVAILABLE`, not the refusal code.
+
+**Comparison with the car:**
+- The car became a topic only when the person named it as the explicit target of a correction: «أنا بتكلم على العربية». The provider then marked «العربية» `RESOLVED` / `newReference`, and the chain ran exactly as designed.
+- Its first mention (unit 15, «العربية أنديل كل شوية», a recognition error) produced no reference, so recognition delayed the car by about 8 units. It did not decide the café.
+
+**Classification:**
+- **Model output**, in its reference-state discipline. The focus provider (DeepSeek Flash, the production focus prompt) labels first mentions of new entities, places, plans and situations `UNRESOLVED`, or omits them, instead of `RESOLVED` with `newReference=true`. The prompt defines the latter ("newReference=true for a reference first grounded in this unit").
+- This meets a topic carried **elliptically** in natural Egyptian Arabic. The café is never named; «أفتح» has no object, then «المكان ده», then «المشروع». The only explicit café noun, «الكافيهات الموجودة», names *other* cafés.
+- **Not ASR:** the café units are transcribed adequately.
+- **Not evidence matching:** no anchor-mapping refusal appears; every recorded anchor maps.
+- **Not focus continuity:** continuity only refused once, on the car, and recovered.
+- **The grounding rules behaved correctly:** they refused ungrounded focus, as frozen.
+
+**What remains unproven from saved evidence:** raw provider proposals are not stored, so the exact `groundingAnchor` of each refused proposal, and whether the behaviour is systematic or stochastic, are inferred, not observed.
+
+#### C. H-TTS — a product reliability and capacity finding
+
+**Requests:**
+- 34 synthesis requests in about 2.5 minutes of calls: 22 succeeded, 12 failed.
+- Each reply is split into 4 – 7 segments, so 4 – 7 requests per reply.
+- Peak rate: 19 requests in one 60 s window. Peak concurrency: 2, the per-user database bound.
+
+**Failures:**
+- 10 of the 12 failed fast (129 – 438 ms), the shape of an immediate provider refusal.
+- Call B's three were logged `OVERLOADED` (HTTP 429). Call A's class was not yet logged.
+- Two Call A failures (about 1 s each, exchange 1) coincide with the person's barge-in, which suggests cancellations.
+- Each `OVERLOADED` segment is retried once before audio, by design, which adds load under a 429.
+
+**The circuit breaker** (5 capacity or system errors in 60 s open it for 30 s, per instance) opened in Call A at about 66 s. Exchange 4's segments had already failed; exchange 5 was refused at once, before any provider request. The breaker would have closed 30 s later; the call ended first.
+
+**What the person experiences:**
+- F-01 is **`NOT_INSTALLED` on `main`** (`apps/api/fixtures/voice-tts/manifest.json`, D-05-02 awaiting the PO's choice of recording). So in production as in this sitting, a reply whose synthesis fails is **silent**, and its text is not kept as a heard reply.
+
+**The actual Google quota is not established:**
+- The plan's "10 RPM" was the Gemini API Tier 1 note; this route is Vertex AI, location `global`, model `gemini-3.8-flash-tts`.
+- The project's quota could not be read: the Cloud Quotas and Service Usage APIs are not enabled on it, and enabling them is the PO's decision.
+- So it is open whether the 429s are a fixed per-project limit or shared-capacity refusals.
+
+Nothing was changed: the provider, model, voice and breaker thresholds are unchanged.
+
+#### D. O-2 — the old café question took priority
+
+- Contract §3 (`foldCallExchanges`): a user turn whose heard reply is empty stays in the context and is joined to the **next** user message.
+- Call A's exchanges 4 and 5 had no heard reply (H-TTS). Call B's first reply therefore received *one* user message: the café concern, "another idea", then the car.
+- The model answered the café first. This is the contract working as written, across a call boundary and after a synthesis failure.
+
+#### E. Replay and COSMOS
+
+- **C8:** proven (A).
+- **CP2-A inputs:** O-3 (save confirmation and access to the saved Replay), O-4 (continuous playback across message boundaries) and O-5 (accurate seeking inside long speech) are carried into S8B-07 CP2-A's scope; see the S8B-07 record §20.2.
+- **O-6 (deferred observation):** the first pinch-zoom is not centred on the conversation's content; a further zoom corrects it. COSMOS is not reopened and its renderer is unchanged. Escalation only on evidence of a regression.
+
+#### F. Consolidated correction proposal (not implemented; for PO review)
+
+**One task, three bounded parts. No grounding, evidence-integrity or anti-hallucination rule is weakened.**
+
+1. **H-3, focus reference-state discipline.**
+   - A new focus prompt version stating that the first explicit introduction of an entity, place, plan, project or situation is `RESOLVED` with `newReference=true`, anchored on its verbatim surface (an elliptical object on the inflected verb that carries it). `UNRESOLVED` is reserved for a mention whose identity should exist but cannot be determined.
+   - The validator is unchanged.
+   - Gated by the existing focus suites, plus Arabic dialect cases including this session's elliptical café sequence and small-talk negatives.
+   - Plus **observability:** the queue keeps the focus refusal code of each failed attempt (a code, never text), so "no focus" and "never grounded" become distinguishable.
+2. **H-TTS.**
+   - Install F-01 (the PO chooses the recording), so a failed spoken reply is never silent.
+   - Establish the real Vertex quota (the PO enables a read-only quota API, or reads it in the Console).
+   - The segmentation, the retry-under-429 policy and the per-instance breaker are then reviewed against measured capacity, without changing thresholds before that.
+3. **O-2:** a §3 amendment so that a user turn left without a heard reply because of a *failure* is not silently merged into a new call's first user message. Its words are kept, marked as an earlier unanswered turn. This is a contract decision for the PO.
+
+**Proposed paid diagnosis (at most USD 0.05, subject to approval):**
+- Replay the production focus-resolution request for the saved café units (2, 3, 7, 8, 9, 12, 13), each 3 times, from the database's exact prior context, capturing the raw proposals.
+- This proves the exact refused `groundingAnchor` and reference states, and whether the failure is systematic.
+- An optional second arm runs the candidate prompt text on the same units and on small-talk units (1, 4, 5). It proves whether the clarification grounds the café without new false focuses.
+- Estimate: 21 – 42 Flash calls, about USD 0.02 – 0.04. No live call.
+
+`QAN-BL-INTEL-06` stays `VALIDATION — OPEN`. The open items are H-3 (the durable understanding of V-1), V-5, V-6's opening speed and stage-preparation cost, H-TTS and O-2.

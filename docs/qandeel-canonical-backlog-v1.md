@@ -6787,6 +6787,16 @@ merge).**
   locators. They are validation observations of that item, not new items.
 - **Index unchanged: 114 items; 54 / 5 / 18 / 37 by status, 64 / 46 / 4 by severity.**
 
+**HONOR Live + Replay session — consolidated diagnosis (2026-11-27).**
+
+- **Authority:** the Product Owner's "HONOR VALIDATION — PO DIRECTION" (2026-11-27); record §12.9.
+- **Read and left unchanged:** `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`. Its open evidence is H-3 (V-1's durable
+  understanding), V-5, and V-6's opening speed and stage-preparation cost.
+- **Not admitted as backlog items, by the PO's direction:** H-3, H-TTS and O-2 are validation findings of
+  `QAN-BL-INTEL-06`, diagnosed in one record section with one correction proposal. H-3 is explicitly not deferred.
+  O-3 / O-4 / O-5 are inside S8B-07 CP2-A's scope (S8B-07 record §20.2). O-6 is a deferred observation recorded there.
+- **Index unchanged: 114 items; 54 / 5 / 18 / 37 by status, 64 / 46 / 4 by severity.**
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.

@@ -1,5 +1,15 @@
 # QANDEEL — Project Map
 
+> **HONOR LIVE + REPLAY SESSION COMPLETED — CONSOLIDATED DIAGNOSIS (H-3, H-TTS, O-2) AWAITS PO REVIEW — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's "HONOR VALIDATION — PO DIRECTION" (2026-11-27); record §12.9.
+> - **Where the findings live (read, not changed):**
+>   - H-3: `apps/api/src/conversational-focus/focus-resolution-validator.ts` (the grounding rules, which behaved as frozen) and `deepseek-focus-resolution.provider.ts` (the prompt's reference states); `thread-establishment/conversation-thread-establishment.service.ts` maps refusals to `PROVIDER_UNAVAILABLE`.
+>   - H-TTS: `apps/api/src/voice/speech-admission.guard.ts` (the per-instance breaker), `voice/vertex-speech/vertex-speech.config.ts`, `apps/api/fixtures/voice-tts/manifest.json` (F-01 `NOT_INSTALLED`).
+>   - O-2: `apps/api/src/conversation/live-call-reply.service.ts` (`foldCallExchanges`).
+> - **Replay:** C8 proven on a real call. CP2-A's scope now includes O-3 / O-4 / O-5 (S8B-07 record §20.2). O-6 deferred; COSMOS not reopened.
+> - **Next:** the PO's review of the correction proposal and of the optional USD 0.05 diagnosis; then S8B-07 CP2-A.
+
+
 > **CALL-ATTR-01 — MERGED (PR #416, `main` `b842fd0d`, accepted head `8f52f6df`) — HONOR SESSION RESUMED FROM MERGED `main` — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:** the Product Owner's "CALL-ATTR-01 MERGED — RESUME HONOR VALIDATION" (2026-11-27); record §12.8.
 > - **Where it lives (now on `main`):** `apps/api/src/live-attention/live-attention.provider.ts` (`attributedEvaluator`) and `apps/api/src/live-analysis/call-analysis.worker.ts` (`establish`), both through `runWithAiUsageAttribution`. Permanent tests T-1 – T-3 as listed in the addendum below.

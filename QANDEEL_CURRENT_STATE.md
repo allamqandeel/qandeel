@@ -1,5 +1,18 @@
 # QANDEEL — Current State
 
+> **HONOR LIVE + REPLAY SESSION COMPLETED ON MERGED `main` `b842fd0d` — CALL-ATTR-01 ACCEPTED ON THE DEVICE — C8, V-2, V-3 (ANDROID), V-4, V-6 PAN, V-7 PASS — H-3 (CAFÉ TOPIC NOT ESTABLISHED), H-TTS AND O-2 DIAGNOSED, CORRECTION PROPOSED, NOT IMPLEMENTED — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's "HONOR VALIDATION — PO DIRECTION" (2026-11-27). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.9 is the primary account.
+> - **Proven on HONOR (two real calls, about USD 0.154 of USD 1.50 spent):** attribution on every ledger row; V-1 live marks; V-2 / CP3-F10; V-3 / UT-3 Android (physical End button); V-4 with C8 on a real call; V-6 pan (60 fps, p95 16.7 ms, 0 stalls); V-7. V-8: T4 P50 18 ms (P95 1 823 ms). First Audio 1.63 – 2.05 s, a separate measurement.
+> - **Not passed or not measured:**
+>   - **H-3:** V-1's durable understanding. The café topic never became a Thread. Every café reference was `UNRESOLVED` or absent, so the unchanged grounding rules could never start a focus. Classified as model output in reference-state discipline, not ASR, evidence matching or continuity.
+>   - **H-TTS:** 12 of 34 synthesis requests failed (429 `OVERLOADED`); the breaker opened; F-01 is `NOT_INSTALLED` on `main`, so a failed reply is silent. The real Vertex quota is not yet readable.
+>   - **O-2:** unanswered café turns were folded into Call B's first user message (contract §3).
+>   - V-5 (iOS Replay Lane B, UT-1 / UT-3) open; V-6 opening speed and Lane B stage preparation cost not measured.
+> - **Proposed, not implemented (record §12.9 F):** one task in three parts (the focus prompt's reference-state discipline with refusal-code observability; F-01 and the quota review; a §3 amendment for O-2), and an optional paid focus diagnosis of at most USD 0.05. Both await the PO.
+> - **CP2-A scope:** O-3 / O-4 / O-5 added (S8B-07 record §20.2). O-6 is a deferred COSMOS observation.
+> - **Cleanup done:** the audio and temporary media deleted, pool access revoked, ADB reverse ports removed, no further live call.
+
+
 > **CALL-ATTR-01 MERGED (PR #416, `main` `b842fd0d`, accepted head `8f52f6df`) — HONOR LIVE + REPLAY VALIDATION RESUMED FROM MERGED `main` (FREE READINESS PASS; PAID SESSION PENDING) — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:** the Product Owner's "CALL-ATTR-01 MERGED — RESUME HONOR VALIDATION" (2026-11-27). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.8 is the primary account.
 > - **Implemented on `main`:** CALL-ATTR-01. The provisional attention lane and the call analysis worker reach DeepSeek attributed. All mandatory CI passed: T-2 **18 / 18** on all four PostgREST lines; the iOS Targeted Gate **9 / 9**.

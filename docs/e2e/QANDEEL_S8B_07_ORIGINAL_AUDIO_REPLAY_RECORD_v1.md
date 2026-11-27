@@ -2021,3 +2021,30 @@ is drawn in the next, and no provisional mark survives the closing display. The 
 - **Unchanged:** Lane A, `presentation-clock.ts`, the camera plan, the COSMOS renderer, §19's policy, `QAN-BL-VIS-02`
   (`OPEN — UNASSIGNED`).
 - **Sequence:** INTEL-LIVE-01's merge decision → HONOR Live + Replay proof → CP2-A → CP2-B. S8B-07 is not closed.
+
+### 20.2 After the HONOR Live + Replay proof (2026-11-27)
+
+**Authority:** the Product Owner's "HONOR VALIDATION — PO DIRECTION" (2026-11-27). The evidence is in the
+[INTEL-LIVE-01 record](QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.9.
+
+- **Proven on HONOR (V-4 / C8, a real call):**
+  - the original audio streamed `COMPLETE`;
+  - `0205` returned 24 events, each from a `DEVELOPMENTS` evaluation or its settlement;
+  - nothing for `MISSED_HANDOVER`, `REFUSED` or `DEFERRED_PERMIT`;
+  - no floor before its anchor; no other call's marks inside the call;
+  - play, pause and seek consistent.
+
+  C8 is no longer PARTIAL. V-6 pan passed against the COSMOS-V5 baseline.
+- **Still open from §20.1:**
+  - V-5 (the iOS simulator Replay Lane B pass);
+  - V-6's COSMOS opening speed;
+  - Lane B's stage-preparation cost (CP3-F6), each to be measured separately.
+- **Added to CP2-A's scope (Product Owner's observations O-3, O-4, O-5).** CP2-A must deliver, and prove on device:
+  1. **A clear save confirmation and access to the saved Replay.** After saving a part, the person sees that it was saved and has a direct way to open it (O-3: the PO saw neither).
+  2. **Continuous in-app playback across message boundaries.** The conversation plays as one continuous piece, not message by message (O-4).
+  3. **One unified timeline** for the whole selected part.
+  4. **Accurate seeking inside long speech**, not only at message boundaries (O-5: a seek inside a long message landed at its start).
+  5. **The original audio with a synchronized map** throughout.
+  6. **Continuous video generation** from the same timeline (the CP3-F8 facts, `attentionOnFrame`, are ready).
+- **Deferred observation O-6:** the first pinch-zoom is not centred on the conversation's content; a further zoom corrects it. COSMOS is not reopened and its renderer is unchanged; escalation only on evidence of a regression.
+- **Sequence:** the PO's review of the INTEL-LIVE-01 consolidated diagnosis → CP2-A → CP2-B. S8B-07 is not closed.
