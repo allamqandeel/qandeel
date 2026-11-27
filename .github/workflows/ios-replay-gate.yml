@@ -105,7 +105,9 @@ jobs:
         run: xcrun simctl install "$IOS_SIM_UDID" "$APP"
       - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified)
         run: |
-          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          # Run 46037104976 (i17-en): the runner could not resolve github.com and nothing was tested. The download (never
+          # a case) is attempted up to four times; the archive is still verified against its pinned SHA-256 below.
+          curl --fail --location --silent --show-error --retry 3 --retry-delay 15 --retry-all-errors --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
           echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | shasum -a 256 --check --strict
           unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
           mkdir -p "$HOME/.maestro" && cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"

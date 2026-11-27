@@ -12,13 +12,17 @@
 //               the stage and both lanes keep the set's own map; a step there is where the first Play starts
 //   iOS gate    the proof build reached only through a selector that needs its flag; the workflow's three BG-10 cells, its
 //               pinned Maestro, and every case PASS except the one NOT TESTED by construction (native audio); each timed
-//               sequence is one flow, whole-percent points, and the landing tolerances are pinned (run 46007215812)
+//               sequence is one flow, whole-percent points, and the landing tolerances are pinned (run 46007215812);
+//               the results file is one row per case, exactly the case set, a multi-line detail kept on its row, and a
+//               touch Maestro delivered too late is NOT TESTED, never PASS (run 46037104976)
 //   CI          wired
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { createHarnessMirror, removeHarnessMirror } from './harness-temp-dir.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const read = (file) => readFileSync(join(root, file), 'utf8').replace(/\r\n/gu, '\n');
@@ -149,13 +153,71 @@ test('iOS gate: the proof build only behind its flag; three BG-10 cells; pinned 
   assert.match(gate, /mt c3-steps seek-held\.yaml /u);
   // The landing tolerances (s, below / above the instant the tapped point really is): playing, held, before Play.
   assert.match(gate, /near "\$l1" "\$be" 0\.25 1\.0\)" = yes \] && \[ "\$\(near "\$l2" "\$fe" 0\.25 1\.0\)" = yes/u);
-  assert.match(gate, /near "\$l1" "\$be" 0\.3 0\.3\)" != yes \] \|\| \[ "\$\(near "\$l2" "\$fe" 0\.3 0\.3\)" != yes/u);
+  assert.match(gate, /near "\$l0" "\$te" 0\.3 0\.3\)" != yes \] \|\| \[ "\$\(near "\$l1" "\$be" 0\.3 0\.3\)" != yes \] \|\| \[ "\$\(near "\$l2" "\$fe" 0\.3 0\.3\)" != yes/u);
   assert.match(gate, /near "\$l1" "\$pe" 0\.3 0\.3\)" != yes/u);
   for (const name of readdirSync(join(root, 'scripts/ios-replay-gate/flows'))) {
     assert.doesNotMatch(flow(name), /direction: \$|retryTapIfNoChange: true|repeat:/u, `${name}: no variable direction, no retry`);
   }
   assert.match(flow('seek-playing.yaml'), /text: "ord=3 \.\*play=1 \.\*"[\s\S]*point: "\$\{P1\}"[\s\S]*point: "\$\{P2\}"/u);
-  assert.match(flow('seek-held.yaml'), /text: "ord=5 \.\*play=1 \.\*"[\s\S]*id: "qandeel-replay-play"[\s\S]*text: "\.\*play=0 \.\*"[\s\S]*point: "\$\{P1\}"[\s\S]*point: "\$\{P2\}"/u);
+  // Run 46037104976: held, a step into moment 5, then back and forward, every touch taken held; the visited order kept.
+  assert.match(flow('seek-held.yaml'), /text: "ord=\[2-6\] \.\*play=1 \.\*"[\s\S]*id: "qandeel-replay-play"[\s\S]*text: "\.\*play=0 \.\*"[\s\S]*point: "\$\{P0\}"[\s\S]*point: "\$\{P1\}"[\s\S]*point: "\$\{P2\}"/u);
+  assert.match(gate, /m="\$\(line_point c3-line0 0\.6\)"; b="\$\(line_point c3-line 0\.5\)"; f="\$\(line_point c3-line2 0\.8\)"/u);
+  assert.match(gate, /\[ "\$\(field "\$r" seeks\)" != 3 \] \|\| \[ "\$\(all_held "\$\(field "\$r" at\)" 3\)" != yes \]/u);
+  assert.match(gate, /grep -Eq -- '-5-3-6\$'/u);
+  assert.match(gate, /grep -Eq -- '-3-2-\(3-\)\?6\$'/u);
+  // Playing: the step back taken while playing in the long turn, the step forward while playing before its target;
+  // otherwise NOT TESTED (Maestro too late) or FAIL (held part-way with nothing pausing it) — never PASS.
+  assert.match(gate, /else if \(a\[0\]\.t < 7\.5 \|\| a\[0\]\.t >= 12\.5 \|\| a\[1\]\.t >= Number\(fe\) \/ 1000\) v = "late";/u);
+  assert.match(gate, /if \[ "\$pre" = late \]; then result C-SEEK-PLAYING 'NOT TESTED' "precondition: /u);
+  assert.match(gate, /elif \[ "\$pre" = stopped \]; then result C-SEEK-PLAYING FAIL /u);
+  assert.match(gate, /case "\$n" in \*-steps\) d=\(--debug-output "\$OUT\/maestro\/\$n" --flatten-debug-output\);; esac/u);
+  // The results file: sourced, one row per case, and validated against the exact case set before it is judged.
+  assert.match(gate, /^\. "\$HERE\/results\.sh"$/mu);
+  assert.doesNotMatch(gate, /^(say|result)\(\)/mu);
+  assert.match(gate, /^CASES=\(J-SAVED-LINE J-OPEN-ACTION J-OPENS-SAVED C-TIMELINE C-PLAY-THROUGH C-SEEK-PLAYING C-SEEK-HELD C-SEEK-BEFORE-PLAY IOS-NATIVE-AUDIO\)$/mu);
+  assert.match(gate, /validate_results "\$\{CASES\[@\]\}" \| tee -a "\$LOG"; \[ "\$\{PIPESTATUS\[0\]\}" -eq 0 \] \|\| exit 1/u);
+});
+
+// The results file, run (run 46037104976, small-en: eight cases passed, and J-SAVED-LINE's three label lines made two
+// rows with no result, so the cell was red). bash is the runner's; on Windows, Git's.
+test('iOS gate results: a multi-line detail stays on its row; the file is exactly the case set', () => {
+  const mirror = createHarnessMirror('qandeel-irg-results-');
+  const dir = mirror;
+  const posix = (path) => path.replace(/\\/gu, '/');
+  const sh = (body) => spawnSync('bash', ['-c', `. "$1"; ${body}`, 'irg', posix(join(root, 'scripts/ios-replay-gate/results.sh'))], {
+    cwd: mirror, encoding: 'utf8', env: { ...process.env, RES: posix(join(dir, 'results.tsv')), LOG: posix(join(dir, 'gate.log')) },
+  });
+  const header = 'case\tresult\tdetail\n';
+  try {
+    writeFileSync(join(dir, 'results.tsv'), header);
+    // J-SAVED-LINE's evidence as the label query returned it: three lines (one with a carriage return), and a tab.
+    const wrote = sh(String.raw`result A PASS "$(printf 'The selected part was saved for a Replay.\nThe selected part was saved for a Replay.\r\nThe selected part was saved for a Replay.')"; result B 'NOT TESTED' "$(printf 'one\ttab\nnext')"; validate_results A B`);
+    assert.equal(wrote.status, 0, `${wrote.stdout}${wrote.stderr}`);
+    const rows = readFileSync(join(dir, 'results.tsv'), 'utf8').split('\n').filter(Boolean);
+    assert.equal(rows.length, 3, 'the header and one row per case');
+    assert.deepEqual(rows.map((row) => row.split('\t').length), [3, 3, 3]);
+    assert.equal(rows[1], 'A\tPASS\tThe selected part was saved for a Replay. | The selected part was saved for a Replay. | The selected part was saved for a Replay.');
+    assert.equal(rows[2], 'B\tNOT TESTED\tone tab | next');
+    // The defect itself, as run 46037104976 wrote it: lines of their own with no result.
+    writeFileSync(join(dir, 'results.tsv'), `${header}A\tPASS\tThe selected part was saved for a Replay.\nThe selected part was saved for a Replay.\nB\tPASS\tok\n`);
+    const planted = sh('validate_results A B');
+    assert.notEqual(planted.status, 0);
+    assert.match(planted.stdout, /line 3 has 1 fields, not 3/u);
+    // A missing case, a duplicate, a case out of order, an unknown result: each refused.
+    for (const [body, why] of [
+      ['A\tPASS\tok\n', /1 expected case\(s\) missing/u],
+      ['A\tPASS\tok\nA\tPASS\tok\nB\tPASS\tok\n', /line 3 is "A", expected "B"/u],
+      ['B\tPASS\tok\nA\tPASS\tok\n', /line 2 is "B", expected "A"/u],
+      ['A\tPASS\tok\nB\tSKIPPED\tok\n', /has the result "SKIPPED"/u],
+    ]) {
+      writeFileSync(join(dir, 'results.tsv'), `${header}${body}`);
+      const refused = sh('validate_results A B');
+      assert.notEqual(refused.status, 0, body);
+      assert.match(refused.stdout, why);
+    }
+  } finally {
+    removeHarnessMirror(mirror);
+  }
 });
 
 test('CI: wired', () => {

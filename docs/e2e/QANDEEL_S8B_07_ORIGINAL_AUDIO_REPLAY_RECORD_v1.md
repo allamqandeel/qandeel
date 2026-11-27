@@ -2307,15 +2307,20 @@ No iOS gate exercised the Replay (V-5 was open), so CP2-A.1 adds one: `.github/w
 | J-OPENS-SAVED | That action opens the Replay player. |
 | C-TIMELINE | **Before the first Play:** one line of the whole part (the Replay's name, 22.5 s), at 0.0 s, nothing played. |
 | C-PLAY-THROUGH | One Play passes moments 1-2-3-5-6 (text, audio, audio, text, another recording) to the end. The place never goes back or jumps. |
-| C-SEEK-PLAYING | While playing (in the long turn, moment 3), a step **back** at 25 % of the line lands inside moment 2, then a step **forward** at 90 % lands inside the second recording (moment 6). Each lands within −0.25 / +1.0 s of the instant the tapped point really is. The part continues to its end without a break. |
-| C-SEEK-HELD | Paused in the text moment 5, a step **back** at 50 % lands inside the long turn (moment 3), then a step **forward** at 80 % lands inside moment 6. Each is within ±0.3 s, and the place stays put for 2 s. Play continues from the last step to the end without a break. |
+| C-SEEK-PLAYING | While playing (in the long turn, moment 3), a step **back** at 25 % of the line lands inside moment 2, then a step **forward** at 90 % lands inside the second recording (moment 6). Each lands within −0.25 / +1.0 s of the instant the tapped point really is. The part continues to its end without a break. **Precondition**, read from the player's state at each touch (`at=`): the step back was taken while playing in moment 3 (7.5 – 12.5 s), and the step forward while playing before 90 %. If Maestro delivered a touch too late for that, the case is NOT TESTED, with its timing. A touch that finds the part held part-way, with nothing pausing it, is FAIL. |
+| C-SEEK-HELD | Paused part-way (wherever the Pause falls), a step into the text moment 5 at 60 % is drawn there. Then a step **back** at 50 % lands inside the long turn (moment 3), and a step **forward** at 80 % lands inside moment 6. Every touch is taken held. Each landing is within ±0.3 s, the visited order ends 5-3-6, and the place stays put for 2 s. Play continues from the last step to the end without a break. |
 | C-SEEK-BEFORE-PLAY | Before any Play, a step at 50 % is shown inside moment 3 (±0.3 s) with nothing playing. Play continues from there, 3-5-6, to the end without a break. |
 | IOS-NATIVE-AUDIO | **NOT TESTED by construction:** the continuous scene uses the labelled synthetic player, which makes no sound. |
 
 - The continuous scene runs in real time: the shipped player and the shipped original-audio surface, over the player
   tests' synthetic Replay Media Service.
-- A one-line validation readout reads the place with the timeline's own functions, and records where each step landed
-  (`lands=`: the place shown 300 ms after the step).
+- A one-line validation readout reads the place with the timeline's own functions. It records where each step landed
+  (`lands=`: the place shown 300 ms after the step), and the player's state when each step was taken (`at=`: `p` playing
+  or `h` held, and the place).
+- Each timed flow keeps Maestro's own timing of every command (`<flow>.timing.txt`: kind, status, start, duration; no
+  screen content).
+- `results.tsv` holds one row per case, its detail on one line, and the runner validates it against the exact case set
+  before it is judged.
 - **Accuracy is judged from the point actually tapped.** Maestro takes whole-percent screen points only. The runner
   computes the instant that point really is, exactly as the line computes it from a touch (the 17 pt aperture at each
   end; right to left in Arabic), and judges each landing against that instant. On the run's own hierarchy those
@@ -2395,7 +2400,62 @@ The acceptance criteria are not weakened. The same cases remain, and C-TIMELINE 
 C-SEEK-PLAYING and C-SEEK-HELD now each assert a step backward and a step forward, with a landing tolerance. C-SEEK-BEFORE-PLAY
 is added. The tolerances and the one-flow sequences are pinned by the CP2-A.1 contract.
 
-**Round 2 — the correction head:** recorded with the run identifiers once its runs complete (one CI round, VAL-01 / BG-10).
+**Round 2 — head `3e5e2b49` (the final-validation correction):**
+
+| Run | Workflow | Result |
+|---|---|---|
+| 46037104980 | API CI | PASS |
+| 46037105014 | Mobile CI | PASS |
+| 46037105052 | iOS World gate | still running when round 3 was prepared; recorded with round 3 |
+| 46037104976 | iOS Replay gate | FAIL in all three cells (below) |
+
+The Replay gate's cases on `3e5e2b49`:
+
+| Case | iPhone 17 en | iPhone 17 ar | small iPhone en |
+|---|---|---|---|
+| J-SAVED-LINE, J-OPEN-ACTION, J-OPENS-SAVED | NOT TESTED | PASS | PASS |
+| C-TIMELINE | NOT TESTED | PASS | PASS |
+| C-PLAY-THROUGH | NOT TESTED | PASS (`visited=1-2-3-5-6 cont=OK max=0.1 end=1`) | PASS (same) |
+| C-SEEK-PLAYING | NOT TESTED | FAIL (`lands=5.6,20.2 visited=1-2-3-5-6-2-6 play=0 end=0`) | PASS (`lands=5.8,20.3 visited=1-2-3-2-6 end=1`) |
+| C-SEEK-HELD | NOT TESTED | FAIL (`lands=11.4,18.0 visited=1-2-3-5-6-3-6`) | PASS (`lands=11.2,18.1 visited=1-2-3-5-3-6`) |
+| C-SEEK-BEFORE-PLAY | NOT TESTED | PASS (`lands=11.4 visited=3-5-6 end=1`) | PASS (`lands=11.2 visited=3-5-6 end=1`) |
+| IOS-NATIVE-AUDIO | NOT TESTED (by construction) | NOT TESTED (by construction) | NOT TESTED (by construction) |
+
+**Diagnosis, from the run's own results, logs and readouts:**
+- **iPhone 17 en: environmental.** The Maestro download failed (`curl: (6) Could not resolve host: github.com`) before
+  any case ran. Corrected: the download (never a case) is attempted up to four times, and the archive is still verified
+  against its pinned SHA-256.
+- **Small iPhone: every case passed, and the file was malformed.** The label query behind J-SAVED-LINE returned three
+  matching lines. `result()` wrote them raw, so two lines became rows with no result, and the judging step counted them
+  as not PASS. Corrected: the detail is written on one line, and `results.tsv` is validated against the exact case set
+  (header, nine cases in order, three fields each, a known result). A regression proof in the CP2-A.1 contract runs the
+  same `results.sh` on a three-line detail and on the malformed file itself. With the fix reverted in place, the proof
+  fails.
+- **iPhone 17 ar, C-SEEK-PLAYING: the touches came after the end.** Both landings were inside their tolerances, and the
+  place never broke (`cont=OK`). But the part was held at 20.2 s with `end=0`, and it never reached its end.
+  - In the readout's own test, two steps taken while playing, from moment 6 back to 2 and forward to 6, play on to the
+    end (`end=1`).
+  - The run's exact reading, `ord=6 t=20.x play=0 seeks=2 lands=5.x,20.x visited=1-2-3-5-6-2-6 cont=OK end=0`, is
+    reproduced only by two steps taken after the part had ended (`cp2a1-proof-monitor.test.ts`, "late touches").
+  - In Arabic every Maestro command took about twice as long (the steps flow took 61 s against 27 s on the small
+    iPhone), so the first touch arrived after 22.5 s.
+  - Not a product defect. The product is unchanged.
+- **iPhone 17 ar, C-SEEK-HELD: the Pause came late.** It was meant for moment 5 and fell in moment 6
+  (`visited=1-2-3-5-6-3-6`), so `-5-3-6` was not met. Both held steps landed inside ±0.3 s and stayed. Not a product
+  defect.
+
+**Corrected for round 3 (harness only; the tolerances, the visited orders and every acceptance criterion unchanged):**
+- The readout records the player's state at each touch (`at=`).
+- C-SEEK-PLAYING judges its precondition from `at=`. A touch delivered too late is NOT TESTED, never PASS (§21.7).
+- C-SEEK-HELD no longer depends on when the Pause falls. It is held part-way, then a step is made into moment 5, then the
+  same step back and forward, each touch asserted held (§21.7).
+- Maestro's command timing is kept for each timed flow.
+- C-SEEK-BEFORE-PLAY, C-TIMELINE, C-PLAY-THROUGH and the J cases are unchanged.
+- No product code changed. The World gate's impact plan classifies every changed file as unable to reach it
+  (`NOT_AFFECTED`).
+
+**Round 3 — the round-2 correction head:** recorded with the run identifiers once its runs complete (one targeted CI
+round, VAL-01 / BG-10).
 
 ### 21.10 The consolidated HONOR acceptance session (prepared; to be run with the Product Owner)
 

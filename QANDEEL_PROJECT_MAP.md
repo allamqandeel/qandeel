@@ -1,7 +1,7 @@
 # QANDEEL — Project Map
 
 > **S8B-07 CP2-A.1 — CONTINUOUS IN-APP REPLAY — DELIVERED / READY FOR PO REVIEW — NOT MERGED — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
-> - **Authority:** the Product Owner's "EXECUTION AUTHORIZATION — S8B-07 CP2-A.1", "CP2-A.1 COPY GATE APPROVED" and "CP2-A.1 FINAL VALIDATION AND CORRECTION" (2026-11-27). The [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §21 is the primary account.
+> - **Authority:** the Product Owner's "EXECUTION AUTHORIZATION — S8B-07 CP2-A.1", "CP2-A.1 COPY GATE APPROVED", "CP2-A.1 FINAL VALIDATION AND CORRECTION" and "CP2-A.1 — CI ROUND 2 TARGETED CORRECTION" (2026-11-27). The [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §21 is the primary account.
 > - **Where it lives:**
 >   - **the one timing authority (unchanged owner):** `apps/mobile/src/replay-cosmos/presentation-clock.ts`. It now also holds `replayTimelinePosition` and `replayTimelineTarget`, which draw and seek the timeline.
 >   - **seeking:** `ReplayPlayerController.seekTo` (`replay-player/player-controller.ts`) → `ReplayMomentClock.seekTo` (`moment-clock.ts`) → `ReplayAudioClock.seekTo` (`original-audio/replay-audio-clock.ts`) → the engine's seek. A text moment's paced time is `pacedElapsed()`.
@@ -13,7 +13,7 @@
 > - **Tests and gates:**
 >   - mobile Jest (`cp2a1-continuous-replay.test.ts`, `cp2a1-proof-monitor.test.ts`, and the changed Replay suites);
 >   - the root contract `tests/s8b-07-cp2a1-continuous-replay-contract.test.mjs` (Mobile CI), and S7-01's media-client pin, re-anchored to four routes;
->   - the **iOS Replay gate**: `.github/workflows/ios-replay-gate.yml`, `scripts/ios-replay-gate/` (each timed sequence one Maestro flow: `seek-playing.yaml`, `seek-held.yaml`), and the proof root `apps/mobile/src/integration/__validation__/S807Cp2a1ProofRoot.tsx`, selected only by `apps/mobile/scripts/select-s807cp2a1-proof-entry.mjs` with `S807_CP2A1_PROOF=1`.
+>   - the **iOS Replay gate**: `.github/workflows/ios-replay-gate.yml`, `scripts/ios-replay-gate/` (each timed sequence one Maestro flow: `seek-playing.yaml`, `seek-held.yaml`; `results.sh` writes one row per case and validates the exact case set; `maestro-timing.mjs` reads Maestro's command timing), and the proof root `apps/mobile/src/integration/__validation__/S807Cp2a1ProofRoot.tsx`, selected only by `apps/mobile/scripts/select-s807cp2a1-proof-entry.mjs` with `S807_CP2A1_PROOF=1`.
 > - **What binds over what:** RB-1's presentation clock, historical binding (§15 – §19), Lane A and Lane B (§20) and COSMOS bind unchanged. CP2-A.2 (video) must read the same presentation clock.
 
 > **PO DIRECTIVE — RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**

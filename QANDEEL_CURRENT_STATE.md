@@ -4,7 +4,8 @@
 > - **Authority:**
 >   - the Product Owner's "EXECUTION AUTHORIZATION — S8B-07 CP2-A.1" (2026-11-27). Replay resumes at CP2-A, split into three tasks: CP2-A.1, CP2-A.2 and CP2-B;
 >   - "CP2-A.1 COPY GATE APPROVED" (2026-11-27);
->   - "CP2-A.1 FINAL VALIDATION AND CORRECTION" (2026-11-27).
+>   - "CP2-A.1 FINAL VALIDATION AND CORRECTION" (2026-11-27);
+>   - "CP2-A.1 — CI ROUND 2 TARGETED CORRECTION" (2026-11-27).
 >   - The [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §21 is the primary account.
 >   - The "RETURN TO REPLAY" directive and its two mandatory release blockers (`QAN-BL-INTEL-07`, `QAN-BL-VOICE-10`) come from the documentation PR #417, which stays separate and unchanged at `bbc0335d`. This PR carries that commit by a merge, so both PRs hold the same 116 items.
 > - **Delivered (one Draft PR, branch `replay/s8b-07-cp2a1-continuous-replay`, from `main` at `b842fd0d`):**
@@ -17,7 +18,14 @@
 > - **CI on `eda0482f`:** API CI, Mobile CI and the iOS World gate (all three cells) PASS. The iOS Replay gate FAILED in all three cells (run 46007215812). C-TIMELINE and C-PLAY-THROUGH passed everywhere; every failure was the proof harness (record §21.9).
 >   - The harness is corrected without weakening a criterion.
 >   - Two product defects found on the way are corrected: Play after a held step in the last moment restarted the part, and the line went back while the first Play prepared.
->   - The correction head's CI round is recorded when it completes.
+> - **CI on `3e5e2b49` (round 2):** API CI and Mobile CI PASS. The iOS World gate (46037105052) was still running when round 3 was prepared. The iOS Replay gate (46037104976) was red in all three cells, and none of it was a product defect (record §21.9):
+>   - iPhone 17 en: a DNS failure while downloading Maestro; nothing ran;
+>   - the small iPhone: all eight cases PASS, but a three-line detail made the results file malformed;
+>   - iPhone 17 ar: six PASS. The two seek cases' touches arrived late: after the end, and a Pause past moment 5.
+> - **Round 3, under "CP2-A.1 — CI ROUND 2 TARGETED CORRECTION" (2026-11-27):**
+>   - harness only: one row per case, validated against the exact case set, with a regression proof; the player's state at each touch (`at=`); Maestro's timing for each timed flow; C-SEEK-HELD held by a step into moment 5;
+>   - tolerances and criteria unchanged; a touch Maestro delivered too late is NOT TESTED, never PASS;
+>   - recorded when it completes.
 > - **Copy:** RS-01 – RS-05 APPROVED. RS-01 and RS-05 are existing approved rows, reused verbatim. RS-02 – RS-04 are new, in `replay-entry/save-copy.ts`.
 > - **Not done:**
 >   - the consolidated HONOR acceptance session: prepared (record §21.10), not run;

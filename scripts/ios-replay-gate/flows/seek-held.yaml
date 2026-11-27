@@ -1,6 +1,7 @@
-# S8B-07 CP2-A.1 iOS Replay gate, C-SEEK-HELD, in ONE flow: Play; once the text moment 5 is read, Pause; once held, a
-# step BACK on the timeline at P1; once it landed, a step FORWARD at P2; until it landed. Still held: the runner judges
-# the places, that they stay, and Play from the last.
+# S8B-07 CP2-A.1 iOS Replay gate, C-SEEK-HELD, in ONE flow: Play; once it plays past the first moment, Pause; once held,
+# a step into the text moment 5 at P0; once it landed, a step BACK at P1; once it landed, a step FORWARD at P2; until it
+# landed. Still held: the runner judges the places, that every touch was taken held, that they stay, and Play from the
+# last. Where the Pause falls does not matter (run 46037104976, i17-ar: a Pause meant for moment 5 fell in moment 6).
 appId: com.qandeel.mobile
 ---
 - tapOn:
@@ -10,7 +11,7 @@ appId: com.qandeel.mobile
 - extendedWaitUntil:
     visible:
       id: "irg-readout"
-      text: "ord=5 .*play=1 .*"
+      text: "ord=[2-6] .*play=1 .*"
     timeout: 30000
 - tapOn:
     retryTapIfNoChange: false
@@ -24,7 +25,7 @@ appId: com.qandeel.mobile
 - tapOn:
     retryTapIfNoChange: false
     waitToSettleTimeoutMs: 500
-    point: "${P1}"
+    point: "${P0}"
 - extendedWaitUntil:
     visible:
       id: "irg-readout"
@@ -33,9 +34,18 @@ appId: com.qandeel.mobile
 - tapOn:
     retryTapIfNoChange: false
     waitToSettleTimeoutMs: 500
-    point: "${P2}"
+    point: "${P1}"
 - extendedWaitUntil:
     visible:
       id: "irg-readout"
       text: ".*lands=[0-9.x]+,[0-9.]+ .*"
+    timeout: 8000
+- tapOn:
+    retryTapIfNoChange: false
+    waitToSettleTimeoutMs: 500
+    point: "${P2}"
+- extendedWaitUntil:
+    visible:
+      id: "irg-readout"
+      text: ".*lands=[0-9.x]+,[0-9.x]+,[0-9.]+ .*"
     timeout: 8000

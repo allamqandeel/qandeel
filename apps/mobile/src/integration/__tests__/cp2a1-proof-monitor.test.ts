@@ -46,7 +46,7 @@ describe('the CP2-A.1 proof readout', () => {
     expect(r.durationMs).toBe(22_500);
     expect(r.tMs).toBe(0);
     expect(r.playing).toBe(false);
-    expect(formatCp2a1Reading(r)).toMatch(/^ord=1 t=0\.0 dur=22\.5 play=0 seeks=0 lands=- visited=- cont=OK max=0\.0 end=0$/);
+    expect(formatCp2a1Reading(r)).toMatch(/^ord=1 t=0\.0 dur=22\.5 play=0 seeks=0 lands=- at=- visited=- cont=OK max=0\.0 end=0$/);
     stop();
   });
 
@@ -61,7 +61,7 @@ describe('the CP2-A.1 proof readout', () => {
     expect(r.durationMs).toBe(22_500);
     expect(r.tMs).toBe(22_500);
     expect(r.maxStepMs).toBeLessThanOrEqual(400);
-    expect(formatCp2a1Reading(r)).toMatch(/^ord=6 t=22\.5 dur=22\.5 play=0 seeks=0 lands=- visited=1-2-3-5-6 cont=OK max=0\.\d end=1$/);
+    expect(formatCp2a1Reading(r)).toMatch(/^ord=6 t=22\.5 dur=22\.5 play=0 seeks=0 lands=- at=- visited=1-2-3-5-6 cont=OK max=0\.\d end=1$/);
     stop();
   });
 
@@ -86,26 +86,37 @@ describe('the CP2-A.1 proof readout', () => {
     expect(r.continuity).toBe('OK');
     expect(r.seeks).toBe(2);
     expect(r.visited.slice(-1)).toEqual([6]);
-    expect(formatCp2a1Reading(r)).toMatch(/ seeks=2 lands=\d+\.\d,\d+\.\d visited=/);
+    expect(formatCp2a1Reading(r)).toMatch(/ seeks=2 lands=\d+\.\d,\d+\.\d at=p\d+\.\d,p\d+\.\d visited=/);
+    // Taken while playing: the step back from later than where it lands, the step forward from earlier.
+    expect(r.at.every((a) => a.playing)).toBe(true);
+    expect(r.at[0]!.tMs!).toBeGreaterThan(back);
+    expect(r.at[1]!.tMs!).toBeLessThan(forward);
     stop();
   });
 
-  it('C-SEEK-HELD: held in a text moment, a step back (50%) and then forward (80%) are drawn and held there; Play goes on from the last', async () => {
+  it('C-SEEK-HELD: held, a step into the text moment 5 (60%), then back (50%) and forward (80%) are drawn and held there; Play goes on from the last', async () => {
     const { w, monitor, stop } = await opened();
     w.player.play();
-    await until(reachedOrdinal(monitor, 5));
+    await until(reachedOrdinal(monitor, 2));
     w.player.pause();
     await until(() => !monitor.reading().playing);
-    const back = step(monitor, 0.5);
+    const inText = step(monitor, 0.6);
     await until(() => monitor.reading().landsMs.length === 1);
-    expect(monitor.reading().ordinal).toBe(3);
-    expect(Math.abs(monitor.reading().landsMs[0]! - back)).toBeLessThanOrEqual(250);
-    const forward = step(monitor, 0.8);
+    expect(monitor.reading().ordinal).toBe(5);
+    expect(Math.abs(monitor.reading().landsMs[0]! - inText)).toBeLessThanOrEqual(250);
+    const back = step(monitor, 0.5);
     await until(() => monitor.reading().landsMs.length === 2);
+    expect(monitor.reading().ordinal).toBe(3);
+    expect(Math.abs(monitor.reading().landsMs[1]! - back)).toBeLessThanOrEqual(250);
+    const forward = step(monitor, 0.8);
+    await until(() => monitor.reading().landsMs.length === 3);
     const held = monitor.reading();
     expect(held.ordinal).toBe(6);
     expect(held.playing).toBe(false);
-    expect(Math.abs(held.landsMs[1]! - forward)).toBeLessThanOrEqual(250);
+    expect(Math.abs(held.landsMs[2]! - forward)).toBeLessThanOrEqual(250);
+    expect(held.at.every((a) => !a.playing)).toBe(true);
+    expect(held.visited.join('-')).toMatch(/-5-3-6$/);
+    expect(formatCp2a1Reading(held)).toMatch(/ seeks=3 lands=\d+\.\d,\d+\.\d,\d+\.\d at=h\d+\.\d,h\d+\.\d,h\d+\.\d visited=/);
     await run(2_000);
     expect(monitor.reading().tMs).toBe(held.tMs);
     w.player.play();
@@ -113,6 +124,21 @@ describe('the CP2-A.1 proof readout', () => {
     expect(monitor.reading().tMs!).toBeGreaterThan(held.tMs! + 1_000);
     await until(() => monitor.reading().ended, 60_000);
     expect(monitor.reading().continuity).toBe('OK');
+    stop();
+  });
+
+  it('late touches: steps taken after the part ended are recorded as held, exactly the reading of run 46007215812 (i17-ar)', async () => {
+    const { w, monitor, stop } = await opened();
+    w.player.play();
+    await until(() => monitor.reading().ended, 60_000);
+    step(monitor, 0.25);
+    await until(() => monitor.reading().landsMs.length === 1);
+    step(monitor, 0.9);
+    await until(() => monitor.reading().landsMs.length === 2);
+    const r = monitor.reading();
+    expect(r.at.map((a) => a.playing)).toEqual([false, false]);
+    expect(r.at[0]!.tMs).toBe(22_500);
+    expect(formatCp2a1Reading(r)).toMatch(/^ord=6 t=20\.\d dur=22\.5 play=0 seeks=2 lands=5\.\d,20\.\d at=h22\.5,h5\.\d visited=1-2-3-5-6-2-6 cont=OK max=0\.\d end=0$/);
     stop();
   });
 
@@ -124,6 +150,7 @@ describe('the CP2-A.1 proof readout', () => {
     const placed = monitor.reading();
     expect(placed.ordinal).toBe(3);
     expect(placed.playing).toBe(false);
+    expect(placed.at.map((a) => a.playing)).toEqual([false]);
     expect(Math.abs(placed.landsMs[0]! - at)).toBeLessThanOrEqual(250);
     w.player.play();
     await run(4_000);

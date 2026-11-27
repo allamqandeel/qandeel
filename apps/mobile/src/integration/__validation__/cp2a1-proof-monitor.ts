@@ -6,7 +6,8 @@
  * the moments passed through while playing, whether the place ever went back or jumped while it played with no step on
  * the line (a seek), the longest forward step, and whether the part was played to its end. A step on the line goes
  * through `controller.seekTo` of the wrapped controller this returns, so the readout knows a jump was asked for, and
- * where each step landed (the place shown once it settled), so the gate judges its accuracy. The line is read before the
+ * where each step landed (the place shown once it settled), so the gate judges its accuracy, and the state each step was
+ * taken in (playing or held, and the place shown at the touch), so the gate judges its precondition. The line is read before the
  * first Play too, from the map the timeline is drawn on (`timelinePlan`) and a place chosen there (`pending`).
  * Nothing here is Product behaviour, and nothing in the Product imports it.
  */
@@ -32,6 +33,8 @@ export interface Cp2a1ProofReading {
   readonly seeks: number;
   /** Each step's landing place, in order. */
   readonly landsMs: readonly number[];
+  /** The state each step was taken in: playing or not, and the place shown at that touch (the last sample's). */
+  readonly at: readonly { readonly playing: boolean; readonly tMs: number | null }[];
   readonly visited: readonly number[];
   readonly continuity: 'OK' | 'BROKEN';
   readonly maxStepMs: number;
@@ -53,13 +56,14 @@ export function createCp2a1ProofMonitor(player: ReplayPlayerController, clockOf:
   let seekAt = Number.NEGATIVE_INFINITY;
   let landing = false;
   let lands: number[] = [];
+  let at: { playing: boolean; tMs: number | null }[] = [];
   let prevT: number | null = null;
   let visited: number[] = [];
   let broken = false;
   let maxStep = 0;
   let presentation: { plan: unknown; clock: ReplayPresentationClock | null } | null = null;
   let last: Cp2a1ProofReading = Object.freeze({
-    ordinal: null, tMs: null, durationMs: null, playing: false, seeks: 0, landsMs: [], visited: [], continuity: 'OK', maxStepMs: 0, ended: false,
+    ordinal: null, tMs: null, durationMs: null, playing: false, seeks: 0, landsMs: [], at: [], visited: [], continuity: 'OK', maxStepMs: 0, ended: false,
   });
 
   const controller: ReplayPlayerController = {
@@ -67,6 +71,7 @@ export function createCp2a1ProofMonitor(player: ReplayPlayerController, clockOf:
     seekTo(ordinal, offsetMs) {
       seeks += 1;
       seekAt = Date.now();
+      at = [...at, { playing: last.playing, tMs: last.tMs }];
       // A step before the last one landed lands nowhere of its own: its place is recorded as not judged (NaN).
       if (landing) lands = [...lands, Number.NaN];
       landing = true;
@@ -110,6 +115,7 @@ export function createCp2a1ProofMonitor(player: ReplayPlayerController, clockOf:
       playing,
       seeks,
       landsMs: lands,
+      at,
       visited,
       continuity: broken ? 'BROKEN' : 'OK',
       maxStepMs: maxStep,
@@ -141,6 +147,7 @@ export function formatCp2a1Reading(r: Cp2a1ProofReading): string {
   return [
     `ord=${r.ordinal ?? '-'}`, `t=${seconds(r.tMs)}`, `dur=${seconds(r.durationMs)}`, `play=${r.playing ? 1 : 0}`, `seeks=${r.seeks}`,
     `lands=${r.landsMs.map((ms) => (Number.isNaN(ms) ? 'x' : seconds(ms))).join(',') || '-'}`,
+    `at=${r.at.map((a) => `${a.playing ? 'p' : 'h'}${seconds(a.tMs)}`).join(',') || '-'}`,
     `visited=${r.visited.join('-') || '-'}`, `cont=${r.continuity}`, `max=${seconds(r.maxStepMs)}`, `end=${r.ended ? 1 : 0}`,
   ].join(' ');
 }
