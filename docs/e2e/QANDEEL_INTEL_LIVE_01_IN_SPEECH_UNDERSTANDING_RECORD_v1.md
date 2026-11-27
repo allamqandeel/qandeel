@@ -2675,3 +2675,76 @@ Nothing was changed: the provider, model, voice and breaker thresholds are uncha
 - Estimate: 21 – 42 Flash calls, about USD 0.02 – 0.04. No live call.
 
 `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`. The open items are H-3 (the durable understanding of V-1), V-5, V-6's opening speed and stage-preparation cost, H-TTS and O-2.
+
+### 12.10 The bounded diagnosis under "HONOR CONSOLIDATED CORRECTION" and the proposed execution contract (2026-11-27)
+
+**Authority:** the Product Owner's "HONOR CONSOLIDATED CORRECTION — PO DIRECTION" (2026-11-27):
+- one consolidated task (HONOR-CORR-01), one implementation PR, one checkpoint;
+- no implementation before its execution contract is accepted.
+
+**Records outside the repository:**
+- the contract: `QANDEEL_REPORTS/INTEL-LIVE-01/HONOR-CORRECTION/HONOR_CORR_01_EXECUTION_CONTRACT_v1.0.md`, PROPOSED;
+- the experiment: `INTEL-LIVE-01/HONOR/h3-experiment/` (raw requests and responses, fictional content only);
+- the F-01 takes: `f01-candidates/`.
+
+**Spend:**
+- the DeepSeek experiment: USD 0.0459 of the USD 0.05 authorized (70 requests, metered at Flash's peak list price, an upper bound);
+- the F-01 takes: four Achird requests, under USD 0.001;
+- session total: about USD 0.201 of USD 1.50.
+
+**A. H-3, the offline focus experiment.**
+- **Method:** the production evaluator, provider, parser and validator from `main`'s build ran against real DeepSeek Flash on the saved session units. Nothing was written to any database.
+- **Arms:**
+  - Arm E is the production prompt, byte for byte.
+  - Arm C changes only the instruction text; the schema, envelope, parser and validator are unchanged.
+- **Reproduced with Arm E, on the exact historical context:**
+  - The model proposes `START_NEW_FOCUS` with a `groundingAnchor` that it does not list among the unit's references.
+  - Unit 2 («بفكر أفتح في مدينة نصر», grounded on «مدينة نصر»): 3 of 3 attempts were refused `FOCUS_GROUNDING_REQUIRED`, and the half was `PARKED`.
+  - Units 7 and 1 failed the same way.
+  - The retry then returns a valid `NO_INDEPENDENT_FOCUS`, so the half completes without the café.
+  - The grounding rules refused correctly every time.
+  - One attempt grounded «مدينة نصر» validly (QANDEEL's unit 6), which the sitting never did. The outcome is stochastic, but the dominant failure is systematic.
+- **Historical inference only:**
+  - The original refused proposals were not retained.
+  - Whether the person said «كافيه» in unit 2 cannot be determined: the scripted line contained it, and the audio was deleted under the plan.
+- **Arm C (the candidate text):**
+  - It established the café focus at unit 2 («أفتح» / «بفكر أفتح») in both runs, and the car correction («لا، أنا بتكلم على العربية») took priority, with units 24 and 25 attending it.
+  - It is **not acceptable as tested**:
+    - a false focus on the vocative «يا أنديل» in both runs;
+    - fragmentation: new focuses for «مشكلة», «فكرة تانية», «قلق», «المكان ده» and «تقسيمك للميزانية»;
+    - speaker and generic mentions still listed, which broke continuity (`UNGROUNDED_FOCUS_CONTINUITY` × 5);
+    - focus ids returned as handle ids (`UNKNOWN_REFERENCE_HANDLE` × 6; partly a harness artefact of look-alike prepared ids);
+    - one misresolution of «العربية» to the café handle, caught by `EXISTING_FOCUS_CONTINUITY_REQUIRED`;
+    - 4 of 12 halves `PARKED`.
+  - The regression cases were not run, because the cap stopped the experiment first. The contract makes them an acceptance gate.
+
+**B. H-TTS, from the existing evidence.**
+- **The project's quota is still unread.** Enabling the Cloud Quotas API requires the Service Usage API first, a further settings change that is not authorized. Nothing was enabled.
+- **The evidence fits a fixed per-minute request limit of about 10 – 11 requests per minute:**
+  - in both calls, nine minutes apart, the first 11 requests succeeded and the 12th failed at once;
+  - every fast failure had at least 11 requests in the preceding 60 s, and none with 10 or fewer failed.
+- **Classification of the 12 failures:**
+  - 3 are confirmed HTTP 429;
+  - 7 fast failures are unclassified;
+  - 2 of about 1 s are probable barge-in cancellations, which the breaker correctly ignores.
+- **Capacity:** each reply is 4 – 7 sentence segments (2 concurrent, 1 retry before audio). At such a limit, that is about two replies per minute for the whole project.
+- **Retries and breaker:**
+  - The 429 retries did not recover.
+  - The breaker's 30 s open is shorter than the minute window.
+- **F-01:** the approved wording now has four Achird takes, which load through the call's own encoder. S-01 is recommended; the S-06 takes peak at 0 dBFS.
+
+**C. O-2.** Call A's exchanges reach Call B as earlier exchanges, and `foldCallExchanges` joins an unanswered turn to the next user message, even when that message is the first of a new call.
+
+**The proposed correction** (contract §§1 – 3) changes no validator, parser, schema or grounding rule, and no provider, model, voice or breaker threshold.
+- **A1:** a focus prompt v2 with five bounded rules, including "the grounding anchor must be a listed RESOLVED reference".
+- **A2:** call-local aliases for ids in the provider payload.
+- **A3:** the real refusal code is recorded in the queue's existing `last_failure`, plus a code-only signal when a half completes after a grounding refusal.
+- **B1:** install F-01 after the PO's acceptance. **B2:** a failure-kind code for every failed synthesis attempt.
+- **C:** a §3 amendment: a previous call's unanswered turn becomes marked historical context and is never merged into the new call's first message.
+
+Measurable acceptance: H3-1 … H3-14 (a real gate of at most USD 0.40, awaiting approval), TTS-1 … TTS-6 and O2-1 … O2-6. The PO's decisions D-TTS-1 (reading the quota) and D-TTS-2 (after it) stay open.
+
+**Unchanged:**
+- `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`.
+- These evidence items stay visible: V-5, V-6's opening speed and stage-preparation cost, and V-8's unexplained 2.36 s mid-call frame.
+- The successful HONOR and C8 evidence is preserved.

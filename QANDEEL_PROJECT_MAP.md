@@ -1,5 +1,13 @@
 # QANDEEL — Project Map
 
+> **HONOR-CORR-01 — BOUNDED DIAGNOSIS DONE, EXECUTION CONTRACT v1.0 PROPOSED, NOTHING IMPLEMENTED — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's "HONOR CONSOLIDATED CORRECTION — PO DIRECTION" (2026-11-27). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.10 is the primary account.
+> - **H-3 reproduced offline** (USD 0.0459 of 0.05): the production focus model proposes a café focus whose grounding it never lists as a reference, so it is refused `FOCUS_GROUNDING_REQUIRED` and falls back to no focus. The grounding rules are correct. A candidate prompt established the café, but it created false and fragmented focuses, so it was not accepted.
+> - **H-TTS:** the evidence fits a fixed limit of about 10 – 11 synthesis requests per minute for the project; the quota is still unread (D-TTS-1). F-01 takes are ready for the PO's choice.
+> - **O-2:** a §3 amendment is proposed.
+> - **Open:** the PO's acceptance of the contract, the H-3 gate budget (at most USD 0.40), F-01's take, and D-TTS-1. Then S8B-07 CP2-A.
+
+
 > **HONOR LIVE + REPLAY SESSION COMPLETED — CONSOLIDATED DIAGNOSIS (H-3, H-TTS, O-2) AWAITS PO REVIEW — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:** the Product Owner's "HONOR VALIDATION — PO DIRECTION" (2026-11-27); record §12.9.
 > - **Where the findings live (read, not changed):**

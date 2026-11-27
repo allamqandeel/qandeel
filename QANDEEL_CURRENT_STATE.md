@@ -1,5 +1,13 @@
 # QANDEEL — Current State
 
+> **HONOR-CORR-01 — BOUNDED DIAGNOSIS DONE, EXECUTION CONTRACT v1.0 PROPOSED, NOTHING IMPLEMENTED — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's "HONOR CONSOLIDATED CORRECTION — PO DIRECTION" (2026-11-27). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.10 is the primary account.
+> - **H-3 reproduced offline** (USD 0.0459 of 0.05): the production focus model proposes a café focus whose grounding it never lists as a reference, so it is refused `FOCUS_GROUNDING_REQUIRED` and falls back to no focus. The grounding rules are correct. A candidate prompt established the café, but it created false and fragmented focuses, so it was not accepted.
+> - **H-TTS:** the evidence fits a fixed limit of about 10 – 11 synthesis requests per minute for the project; the quota is still unread (D-TTS-1). F-01 takes are ready for the PO's choice.
+> - **O-2:** a §3 amendment is proposed.
+> - **Open:** the PO's acceptance of the contract, the H-3 gate budget (at most USD 0.40), F-01's take, and D-TTS-1. Then S8B-07 CP2-A.
+
+
 > **HONOR LIVE + REPLAY SESSION COMPLETED ON MERGED `main` `b842fd0d` — CALL-ATTR-01 ACCEPTED ON THE DEVICE — C8, V-2, V-3 (ANDROID), V-4, V-6 PAN, V-7 PASS — H-3 (CAFÉ TOPIC NOT ESTABLISHED), H-TTS AND O-2 DIAGNOSED, CORRECTION PROPOSED, NOT IMPLEMENTED — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:** the Product Owner's "HONOR VALIDATION — PO DIRECTION" (2026-11-27). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.9 is the primary account.
 > - **Proven on HONOR (two real calls, about USD 0.154 of USD 1.50 spent):** attribution on every ledger row; V-1 live marks; V-2 / CP3-F10; V-3 / UT-3 Android (physical End button); V-4 with C8 on a real call; V-6 pan (60 fps, p95 16.7 ms, 0 stalls); V-7. V-8: T4 P50 18 ms (P95 1 823 ms). First Audio 1.63 – 2.05 s, a separate measurement.
