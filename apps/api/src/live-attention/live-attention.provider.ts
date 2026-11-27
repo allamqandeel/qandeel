@@ -5,8 +5,14 @@
 // (AI-COST-01 `costLedgerDecorator('LIVE_ATTENTION_EVALUATION')`), the writer is 0204's, and the permits are 0191's shared
 // background permits (PROVISIONAL_ATTENTION, no wait, L2 respected). EMERGENCY_CALL_SPEND_USD (A2 §1) is unset by default:
 // the guard is then disabled.
+//
+// CALL-ATTR-01 (2026-11-27): each provisional evaluation runs inside ONE AI-COST-01 attribution scope made of the call
+// connection's verified payer and session. Provisional speech has no committed turn, so no source turn is given (none is
+// invented). The scope opens at each evaluation, never at the connection: a reconnect's tracker carries its own channel's
+// identity. Without it the accounting boundary refuses every evaluation before it starts.
 
 import { Inject, Injectable, Optional, type OnModuleInit } from '@nestjs/common';
+import { runWithAiUsageAttribution } from '../ai-usage/ai-usage-attribution';
 import { costLedgerDecorator } from '../ai-usage/production-ai-provider-call-accounting';
 import type { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
 import type { BackgroundPermitGate } from '../live-analysis/background-permits';
@@ -50,7 +56,7 @@ export function liveCallAttentionOf(parts: LiveAttentionParts): LiveCallAttentio
   return {
     open(channel: LiveCallAttentionChannel): LiveCallAttentionSession {
       const tracker = new CallAttentionTracker({
-        userId: channel.userId, callId: channel.callId, epoch: channel.epoch, evaluator: parts.evaluator, store: parts.store,
+        userId: channel.userId, callId: channel.callId, epoch: channel.epoch, evaluator: attributedEvaluator(parts.evaluator, channel), store: parts.store,
         permits: parts.permits, captureClock: () => channel.latestCaptureMs(), config: parts.config,
         observe: parts.observe ? (o) => parts.observe!(channel.callId, o) : undefined, signal: parts.signal,
         disclose: channel.discloseAttention ? (d) => channel.discloseAttention!(d) : undefined,
@@ -86,6 +92,12 @@ export function liveCallAttentionOf(parts: LiveAttentionParts): LiveCallAttentio
       }
     },
   };
+}
+
+/** CALL-ATTR-01: the lane's evaluator, each evaluation attributed to the call connection's payer and session (no turn). */
+function attributedEvaluator(evaluator: AttentionEvaluator, channel: Pick<LiveCallAttentionChannel, 'userId' | 'sessionId'>): AttentionEvaluator {
+  const attribution = { userId: channel.userId, sessionId: channel.sessionId };
+  return { evaluate: (input, signal) => runWithAiUsageAttribution(attribution, () => evaluator.evaluate(input, signal)) };
 }
 
 /**

@@ -306,6 +306,7 @@
     "verify:live-call-spoken-turn:integration": "node --env-file-if-exists=.env database/verify-migration-0190.mjs",
     "prove:live-call-synthetic:integration": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/s8b-05-live-call-synthetic-proof.ts",
     "prove:live-call-spoken-turn-synthetic:integration": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/s8b-05-cp2-spoken-turn-synthetic-proof.ts",
+    "prove:call-attr-01-attribution:integration": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/call-attr-01-attribution-proof.ts",
     "verify:live-call-ordered-halves:integration": "node --env-file-if-exists=.env database/verify-migration-0191.mjs",
     "prove:live-analysis-synthetic:integration": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/s8b-05-cp3-live-analysis-proof.ts",
     "verify:live-call-barge-in-text-turn:integration": "node --env-file-if-exists=.env database/verify-migration-0192.mjs",
