@@ -7,7 +7,11 @@
 // the API and the database are no longer its inputs; BG-10's clarification is in the backlog and AGENTS.md.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createHarnessMirror, removeHarnessMirror } from './harness-temp-dir.mjs';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const code = (text) => text.replace(/^\s*#[^\n]*$/gmu, '');
@@ -161,6 +165,29 @@ export function violations({ gate, runner, world, server, flows, commands, root,
   if (!/id: qandeel-call-entry/u.test(flows)) out.push('the launch flow does not wait for the production call entry');
   if (/hideKeyboard|retry:/u.test(code(flows))) out.push('a flow hides the keyboard or retries');
 
+  // CALL-ATTR-01 CI R2 (run 45959082296): the launch flow's clearState reinstalled the app after the runner's grant, and
+  // iOS held the call in PREPARING behind its microphone prompt. The runner's fresh install is the last state reset; the
+  // grant is read back from the simulator's TCC record after it and again before the start command; nothing is waited out.
+  if (/clearState:\s*true/u.test(code(flows))) out.push("a flow clears the app state, which reinstalls the app and drops the runner's microphone grant");
+  {
+    const rc = code(r);
+    const at = [
+      rc.indexOf('xcrun simctl install "$UDID" "$APP"'),
+      rc.indexOf('xcrun simctl privacy "$UDID" grant microphone "$BUNDLE"'),
+      rc.indexOf('mic_ready granted || infrastructure '),
+      rc.indexOf('flow itg-call-launch.yaml launch'),
+      rc.indexOf('mic_ready before-start || infrastructure '),
+      rc.indexOf('call_command start 02-command'),
+    ];
+    if (at.some((i, k) => i < 0 || (k > 0 && i < at[k - 1]))) {
+      out.push('the microphone is not granted after the last install and read back before the launch and again before the start command');
+    }
+    if (!rc.includes(`value="$(sqlite3 "$db" "SELECT auth_value FROM access WHERE service = 'kTCCServiceMicrophone' AND client = '$BUNDLE';" 2>&1)"`) || !rc.includes('[ "$value" = "2" ]')) {
+      out.push("the microphone readiness is not read from the simulator's TCC record as allowed (auth_value 2)");
+    }
+    if (/mic_ready [^\n]*\|\|\s*(?:sleep|xcrun simctl privacy)/u.test(rc)) out.push('a missing microphone authorization is waited out or re-granted instead of stopping the run');
+  }
+
   // INTEL-LIVE-01 CP2: the lane is composed once, bound into the engine, and told of the worker's settlements.
   if (!/const attentionLane = process\.env\.PROOF_ATTENTION === 'ON' \? liveCallAttentionOf\(/u.test(s) || !/if \(attentionLane\) \{\n\s+attentionBinding\.bind\(attentionLane\);/u.test(s)) {
     out.push('the proof server does not compose the production attention lane under PROOF_ATTENTION=ON');
@@ -265,6 +292,13 @@ test('each refusal is real: planted regressions are caught', () => {
     ['the restore not checked', plant('runner', 'wait_check 60 08-restored restored "$EPOCH" "$DROP_AT" || fail ITG-08', 'true || fail ITG-08')],
     ['frames not withheld before the restore', plant('runner', 'curl -s -m 5 -f -X POST "$SERVER/proof/attention-hold?on=1"', 'true')],
     ['the cleanup not checked', plant('runner', 'wait_check 30 09-cleanup cleanup "$END_AT" || fail ITG-09', 'true || fail ITG-09')],
+    ['the launch clearing state again', plant('flows', '- launchApp:\n    stopApp: true', '- launchApp:\n    clearState: true\n    stopApp: true')],
+    ['the grant made before the last install', plant('runner', 'xcrun simctl install "$UDID" "$APP" || fail ITG-01', 'xcrun simctl privacy "$UDID" grant microphone "$BUNDLE" || true\nxcrun simctl install "$UDID" "$APP" || fail ITG-01')],
+    ['the grant not read back', plant('runner', 'mic_ready granted || infrastructure ', 'true || infrastructure ')],
+    ['no readiness before the start command', plant('runner', 'mic_ready before-start || infrastructure ', 'true || infrastructure ')],
+    ['the readiness read after the start command', plant('runner', "mic_ready before-start || infrastructure \"the microphone authorization was not in place before the start command ($(cat \"$OUT/host/mic-before-start.txt\")); no start command was sent\"\n", '')],
+    ['a missing grant waited out', plant('runner', 'mic_ready before-start || infrastructure ', 'mic_ready before-start || sleep 30 || infrastructure ')],
+    ['the readiness not the TCC allow', plant('runner', '[ "$value" = "2" ]', '[ -n "$value" ]')],
     ['the probe on by default', plant('server', "return { on: process.env.PROOF_PROBE === 'ON',", 'return { on: true,')],
     ['the probe ignoring the server', plant('probe', 'if (body?.on !== true) return;', '')],
     ['the probe feeding the layer', plant('probe', '    const call: CallOwner = runtime.call;', '    const call: CallOwner = runtime.call;\n    void dispatch();')],
@@ -308,5 +342,52 @@ test('each refusal is real: planted regressions are caught', () => {
     ['a World gate suite removed', plant('world', 'run: npm run test:cosmos-ios-world-gate-composition-contract', 'run: true')],
   ]) {
     assert.notDeepEqual(violations(mutated), [], `${what} must be refused`);
+  }
+});
+
+// CALL-ATTR-01 CI R1 (PR #416, run 45927739108): ITG-09 failed although the phone and its stage held no mark and the call
+// had ENDED. The USER half's settlement expired the mark (the database's latest event, seq 10, open set empty) while the
+// call was ACTIVE, about 190 ms before the end command; the phone's `applied` row reached the server after the runner's
+// END_AT, and the check took the first `applied` row after END_AT as the end's drop. The check now correlates the actual
+// removal (the held row after the last one holding a mark) at the phone's own instant. These run the checker itself.
+test("ITG-09's cleanup check correlates the actual mark removal, and still refuses a kept mark or a premature drop", () => {
+  const END = 1_000_000;
+  const mirror = createHarnessMirror('qandeel-itg09-cleanup-');
+  const checker = fileURLToPath(new URL(`../${CHECKS}`, import.meta.url));
+  const row = (kind, phoneAt, seq, marks, stage, at = phoneAt + 80) => ({ at, kind: 'probe', row: kind, phoneAt, seq, marks, digest: kind === 'digest' ? `d${marks}` : null, stage });
+  const held = [row('applied', END - 11_000, 9, 1, 'ACTIVE'), row('tick', END - 1_300, 9, 1, 'ACTIVE')];
+  const run = (name, rows, attention, endAt = END) => {
+    writeFileSync(join(mirror, `${name}.jsonl`), rows.map((r) => JSON.stringify(r)).join('\n'));
+    writeFileSync(join(mirror, `${name}.json`), JSON.stringify(attention));
+    const r = spawnSync(process.execPath, [checker, `${name}.jsonl`, `${name}.json`, 'cleanup', String(endAt)], { cwd: mirror, encoding: 'utf8' });
+    return { ok: r.status === 0, out: `${r.stdout}${r.stderr}`.trim() };
+  };
+  const bare = row('digest', END + 5_900, 0, 0, 'IDLE');
+  try {
+    // The CI R1 shape: removed by the database's latest event while ACTIVE, received after END_AT (and, either way, the race).
+    const dbRemoval = [...held, row('applied', END - 40, 10, 0, 'ACTIVE', END + 40), row('tick', END + 650, 10, 0, 'ENDING'), bare];
+    for (const endAt of [END, END - 100, END + 100]) {
+      const r = run(`db-${endAt}`, dbRemoval, { lastSeq: 10, open: [] }, endAt);
+      assert.ok(r.ok, `the database's own removal is not a premature cleanup (END_AT ${endAt - END}): ${r.out}`);
+      assert.match(r.out, /left with the database's latest event \(seq 10, open 0\) at the call's ACTIVE/u);
+    }
+    // The end's cleanup: a mark still shown at the end is dropped with the call no longer ACTIVE.
+    const byEnd = [...held, row('tick', END + 650, 9, 0, 'ENDING'), bare];
+    assert.ok(run('end', byEnd, { lastSeq: 9, open: [{ n: 1 }] }).ok, 'the end drops a mark it still showed');
+    for (const [what, rows, attention] of [
+      ['a mark kept after the end', [...held, row('tick', END + 650, 9, 1, 'ENDING'), bare], { lastSeq: 9, open: [{ n: 1 }] }],
+      ['a mark kept by the stage', [...held, row('tick', END + 650, 9, 0, 'ENDING'), row('digest', END + 5_900, 9, 1, 'IDLE')], { lastSeq: 9, open: [{ n: 1 }] }],
+      ['a premature drop while ACTIVE without an event', [...held, row('tick', END - 500, 9, 0, 'ACTIVE'), row('tick', END + 650, 9, 0, 'ENDING'), bare], { lastSeq: 9, open: [{ n: 1 }] }],
+      ['a premature drop while ACTIVE received after the end', [...held, row('tick', END + 300, 9, 0, 'ACTIVE'), row('tick', END + 650, 9, 0, 'ENDING'), bare], { lastSeq: 9, open: [{ n: 1 }] }],
+      ['a drop by an event that is not the database\'s latest', [...held, row('applied', END - 40, 10, 0, 'ACTIVE'), bare], { lastSeq: 11, open: [] }],
+      ['a drop by an event while the database still holds a subject', [...held, row('applied', END - 40, 10, 0, 'ACTIVE'), bare], { lastSeq: 10, open: [{ n: 1 }] }],
+      ['a drop not ACTIVE but before the end, without an event', [...held, row('tick', END - 300, 9, 0, 'ENDING'), bare], { lastSeq: 9, open: [{ n: 1 }] }],
+      ['no stage compiled', [...held, row('tick', END + 650, 9, 0, 'ENDING')], { lastSeq: 9, open: [{ n: 1 }] }],
+    ]) {
+      const r = run(what.replace(/\W+/gu, '-'), rows, attention);
+      assert.ok(!r.ok, `${what} must be refused: ${r.out}`);
+    }
+  } finally {
+    removeHarnessMirror(mirror);
   }
 });

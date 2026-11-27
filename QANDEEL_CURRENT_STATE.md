@@ -1,5 +1,19 @@
 # QANDEEL — Current State
 
+> **INTEL-LIVE-01 MERGED (PRs #414 / #415, `main` `11e0702d`) — HONOR LIVE + REPLAY VALIDATION SUSPENDED — CALL-ATTR-01 DELIVERED / READY FOR PO REVIEW — NOT MERGED — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:**
+>   - the Product Owner's "HONOR VALIDATION — BILLING RECOVERY & USAGE ATTRIBUTION CORRECTION" (2026-11-27);
+>   - the Product Owner's "CALL-ATTR-01 — PO EXECUTION AUTHORIZATION" (2026-11-27).
+>   - The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12 is the primary account.
+> - **Implemented on `main`:** INTEL-LIVE-01's lane and Lane B. Its paid HONOR session found two problems:
+>   - H-1: the Google billing account was closed. Resolved by the PO and verified.
+>   - H-2: provisional attention and the call analysis worker reached DeepSeek unattributed, so AI-COST-01 refused every request. No live mark appeared and no call half was established.
+> - **Decided and delivered, not merged:** CALL-ATTR-01 attributes both entries with the existing scope, without a migration. Its tests T-1 – T-3 fail without it and pass with it (record §12.5). CI correction R1 (§12.6): T-2's teardown now leaves the shared CI database exactly as found, and the ITG-09 checker correlates the actual mark removal. CI R2 (§12.7): the iOS gate no longer clears app state after its microphone grant and reads the grant back before the start command; `QAN-BL-CI-05` (S8B-05 CP2 orphaned ledger rows, registration only) is admitted.
+> - **Open:**
+>   - the PO's review and «ادمج»;
+>   - then the same HONOR session's resumption (V-1 – V-8 unchanged, ceiling USD 1.50, USD 0.012 spent).
+>   - S8B-07 CP2-A still waits for `QAN-BL-INTEL-06`'s acceptance.
+
 > **INTEL-LIVE-01 — CP1–CP4 DELIVERED (SYNTHETIC MECHANISM PROVEN) — CP3 + R1 ACCEPTED WITH A PO EXCEPTION (Product Owner, 2026-11-26, head `755192c5`) — CP4 CLOSURE DELIVERED / READY FOR PO REVIEW AND MERGE DECISION — `QAN-BL-INTEL-06` VALIDATION — OPEN — NOT MERGED — 2026-11-26 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:** the Product Owner's "INTEL-LIVE-01 — CP3 R1 ACCEPTANCE & CP4 EXECUTION AUTHORIZATION" (2026-11-26). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) is the task's primary document: §10.13 covers CP3's acceptance and §11 covers CP4.
 > - **CP3 + R1 accepted** on `755192c5`:

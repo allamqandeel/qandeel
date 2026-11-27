@@ -1664,6 +1664,11 @@ jobs:
             if [ "$version" = "v12.2.9" ] || [ "$version" = "v16.4" ]; then
               S8B05_CP2_PROOF_SINGLE_CALL=1 POSTGREST_VERSION="$version" npm run --silent prove:live-call-spoken-turn-synthetic:integration || { docker logs "postgrest-$version"; exit 1; }
             fi
+            # CALL-ATTR-01 (T-2): the call path's provider work over the wire - provisional attention and committed call
+            # analysis through their production compositions and AI-COST-01's boundary, every 0170 ledger, 0204 and 0191
+            # command through this PostgREST line (42501 as it answers it); only DeepSeek's transport is replaced. It ends
+            # every call it opens, so it takes no capacity from a later line's live call proofs.
+            POSTGREST_VERSION="$version" npm run --silent prove:call-attr-01-attribution:integration || { docker logs "postgrest-$version"; exit 1; }
             docker stop "postgrest-$version" >/dev/null
           done
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DROP ROLE authenticator"

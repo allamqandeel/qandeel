@@ -116,6 +116,8 @@ const FILES = {
   // evaluator and its one composition, under its own 0204 family LIVE_ATTENTION_EVALUATION.
   attentionAdapter: 'apps/api/src/live-attention/deepseek-attention-evaluator.ts',
   attentionModule: 'apps/api/src/live-attention/live-attention.provider.ts',
+  // CALL-ATTR-01 (2026-11-27): the call analysis worker, whose claimed items reach the semantic bindings' providers.
+  callAnalysisWorker: 'apps/api/src/live-analysis/call-analysis.worker.ts',
   migration0175: 'database/migrations/0175_s8a_04_shared_social_memory_v1.sql',
   consumer: 'apps/api/src/post-response-intelligence/post-response-intelligence-consumer.service.ts',
   brainEvalPricing: 'apps/api/src/brain-eval/brain-eval.pricing.ts',
@@ -531,6 +533,17 @@ function attributionViolations(world) {
   if (!/return runWithAiUsageAttribution\(\{ userId \}, \(\) => runForegroundTurnWork\(gate, foregroundTurnWorkDeadlineMs\(\), async \(\) => \{\s*const turn = await this\.repository\.findTurn\(/u.test(ts(world.conversationService))) out.push('the committed voice-note turn does not attribute its provider calls to its owner');
   // S8B-05 CP2: the live call's REALTIME reply is charged to the call's owner, correlated with its Session and spoken turn.
   if (!/return runWithAiUsageAttribution\(\{ userId: request\.userId, sessionId: request\.sessionId, sourceTurnId: request\.userTurnId \}, \(\) => this\.replyOnce\(request\)\);/u.test(ts(world.liveCallReply))) out.push('the live call reply is not attributed to the call\'s owner and turn');
+  // CALL-ATTR-01: each provisional attention evaluation is charged to the call connection's payer and Session, with no
+  // source turn (provisional speech has none, and none is invented); each claimed call analysis item to the durable
+  // claim's payer, Session and own committed turn.
+  const attention = ts(world.attentionModule);
+  if (!/evaluator: attributedEvaluator\(parts\.evaluator, channel\),/u.test(attention)
+    || !/const attribution = \{ userId: channel\.userId, sessionId: channel\.sessionId \};\s*return \{ evaluate: \(input, signal\) => runWithAiUsageAttribution\(attribution, \(\) => evaluator\.evaluate\(input, signal\)\) \};/u.test(attention)) {
+    out.push('the provisional attention evaluation is not attributed to the call connection\'s payer and Session alone');
+  }
+  if (!/return runWithAiUsageAttribution\(\{ userId: claim\.userId, sessionId, sourceTurnId: claim\.turnId \}, \(\) => this\.establishAttributed\(sessionId, claim\)\);/u.test(ts(world.callAnalysisWorker))) {
+    out.push('the call analysis item is not attributed to its claim\'s payer, Session and turn');
+  }
   if (!/withPostResponseAiUsageAttribution\(entry\.envelope, \(\) => this\.dispatcher\.dispatch\(entry\.envelope\)\)/u.test(ts(world.consumer))) out.push('post-response provider calls are not attributed');
   // S8A-04 CP1: the Shared semantic reading is charged to the sender the 0089 resolver names as the author of its message.
   // S8A-04 CP2 (0175): with the World and the causing message, for the reading and the placement alike.
@@ -755,6 +768,11 @@ const PLANTED = [
   ['attribution: the foreground request is unattributed', 'attributionViolations', () => plant('conversationService', 'return runWithAiUsageAttribution({ userId }, () =>\n      runForegroundTurnWork(', 'return (() =>\n      runForegroundTurnWork(')],
   ['attribution: the committed voice-note turn is unattributed', 'attributionViolations', () => plant('conversationService', 'return runWithAiUsageAttribution({ userId }, () => runForegroundTurnWork(gate, foregroundTurnWorkDeadlineMs(), async () => {', 'return (() => runForegroundTurnWork(gate, foregroundTurnWorkDeadlineMs(), async () => {')],
   ['attribution: the live call reply is unattributed', 'attributionViolations', () => plant('liveCallReply', 'return runWithAiUsageAttribution({ userId: request.userId, sessionId: request.sessionId, sourceTurnId: request.userTurnId }, () => this.replyOnce(request));', 'return this.replyOnce(request);')],
+  // CALL-ATTR-01: the two call-path entries the HONOR session found unattributed, and the wrong identities they could carry.
+  ['attribution: the provisional attention evaluation is unattributed', 'attributionViolations', () => plant('attentionModule', 'evaluator: attributedEvaluator(parts.evaluator, channel),', 'evaluator: parts.evaluator,')],
+  ['attribution: provisional attention invents a source turn', 'attributionViolations', () => plant('attentionModule', 'const attribution = { userId: channel.userId, sessionId: channel.sessionId };', 'const attribution = { userId: channel.userId, sessionId: channel.sessionId, sourceTurnId: channel.callId };')],
+  ['attribution: the call analysis item is unattributed', 'attributionViolations', () => plant('callAnalysisWorker', 'return runWithAiUsageAttribution({ userId: claim.userId, sessionId, sourceTurnId: claim.turnId }, () => this.establishAttributed(sessionId, claim));', 'return this.establishAttributed(sessionId, claim);')],
+  ['attribution: the call analysis item is charged to the wrong turn', 'attributionViolations', () => plant('callAnalysisWorker', 'sourceTurnId: claim.turnId }, () => this.establishAttributed', 'sourceTurnId: claim.assistantTurnId ?? claim.turnId }, () => this.establishAttributed')],
 ];
 
 for (const [name, detector, world] of PLANTED) {

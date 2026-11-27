@@ -1,5 +1,29 @@
 # QANDEEL — Project Map
 
+> **CALL-ATTR-01 — CALL-PATH AI USAGE ATTRIBUTION CORRECTION — APPROVED BY THE PO AND DELIVERED / READY FOR PO REVIEW — NOT MERGED — `QAN-BL-INTEL-06` VALIDATION — OPEN — HONOR SESSION STILL SUSPENDED — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's "CALL-ATTR-01 — PO EXECUTION AUTHORIZATION" (2026-11-27): one task, one PR, one checkpoint, no migration. The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.5 is the primary account; §12.6 records the PO's "PR #416 CI CORRECTION" (R1: T-2's teardown and the ITG-09 checker), §12.7 CI R2 (the iOS gate's microphone grant read back before the start command; `QAN-BL-CI-05` registered).
+> - **Where it lives:**
+>   - the provisional attention lane's composition (`apps/api/src/live-attention/live-attention.provider.ts`, `attributedEvaluator`): the call connection's payer and Session, no source turn;
+>   - the call analysis worker (`apps/api/src/live-analysis/call-analysis.worker.ts`, `establish`): the durable claim's payer, Session and own committed turn.
+>   - Both reuse `runWithAiUsageAttribution`; AI-COST-01's boundary, 0170's ownership checks and the ledger are unchanged.
+> - **Permanent tests:**
+>   - T-1 `apps/api/src/ai-usage/call-path-attribution.composition.spec.ts` (API jest);
+>   - T-2 `apps/api/scripts/call-attr-01-attribution-proof.ts`, in API CI's live-PostgREST loop: real PostgreSQL and every PostgREST line;
+>   - T-3, the AI-COST-01 contract's `attributionViolations`.
+>   - Only DeepSeek's transport is replaced. Each test fails without the correction.
+> - **Next:** the PO's review and «ادمج». After the merge the same HONOR session resumes, inside the USD 1.50 ceiling (USD 0.012 spent). No hosted deployment.
+
+> **INTEL-LIVE-01 — MERGED (PRs #414 / #415, `main` `11e0702d`) — HONOR LIVE + REPLAY VALIDATION SUSPENDED ON A PRODUCTION INTEGRATION DEFECT — CALL-ATTR-01 PROPOSED, AWAITING PO REVIEW — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's "HONOR VALIDATION — BILLING RECOVERY & USAGE ATTRIBUTION CORRECTION" (2026-11-27). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12 is the primary account.
+> - **Found by the paid HONOR session** (about 45 s of speech, USD 0.011, against a USD 1.50 ceiling):
+>   - **H-1:** the Google Cloud billing account was closed (`BILLING_DISABLED`), so no voice was heard. Resolved by the PO (2026-11-27), and verified by one minimal real synthesis through the shipped route.
+>   - **H-2, a product defect in merged `main`:** the provisional attention evaluator (`live-attention.provider.ts`) and the call analysis worker (`call-analysis.worker.ts`) reach DeepSeek through AI-COST-01's accounting boundary without an attribution scope. The boundary refuses them `unattributed` before any request. So no live mark ever appears and no call half is ever established. Only the live call reply (`live-call-reply.service.ts`) opens its scope.
+> - **Correction:** **CALL-ATTR-01**, one task and one PR, proposed (record §12.3 / §12.4) and awaiting PO review. It opens the existing scope at those two entries from the call connection's and the durable claim's identities, with no turn invented for provisional speech, and it adds production-composition tests with only the DeepSeek transport faked. No migration; INTEL-LIVE-01 CP1 – CP3 and S8B-05 CP3 are not reopened as tasks.
+> - **Unchanged:**
+>   - V-1 – V-8, including UT-3 and CP3-F10; V-5 (iOS) is a separate targeted test;
+>   - no hosted deployment, no merge and no full paid rerun without separate authorization;
+>   - S8B-07 CP2-A waits for the acceptance of `QAN-BL-INTEL-06`.
+
 > **INTEL-LIVE-01 — CP1–CP4 DELIVERED (SYNTHETIC MECHANISM PROVEN) — CP3 + R1 ACCEPTED WITH A PO EXCEPTION (Product Owner, 2026-11-26, head `755192c5`) — CP4 CLOSURE DELIVERED / READY FOR PO REVIEW AND MERGE DECISION — `QAN-BL-INTEL-06` VALIDATION — OPEN — NOT MERGED — 2026-11-26 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:** the Product Owner's "INTEL-LIVE-01 — CP3 R1 ACCEPTANCE & CP4 EXECUTION AUTHORIZATION" (2026-11-26). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) is the task's primary document: §10.13 covers CP3's acceptance and §11 covers CP4.
 > - **CP3 + R1 accepted** on `755192c5`:

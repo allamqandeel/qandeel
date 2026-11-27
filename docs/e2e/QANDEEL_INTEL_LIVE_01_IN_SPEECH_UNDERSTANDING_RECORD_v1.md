@@ -2046,3 +2046,438 @@ The impact planner answers `NOT_AFFECTED` for this change over `755192c5`: no fi
 
 **Next (the Product Owner's sequence):** the Product Owner's CP4 review and merge decision («ادمج»). Then the HONOR Live +
 Replay proof, under its own authorization, and the return to Replay video production (S8B-07 CP2-A, then CP2-B).
+
+## 12. The HONOR session's first paid minutes: a production integration defect (2026-11-26 / 27)
+
+**State:** the paid HONOR session (§11.7) is **SUSPENDED** by the Product Owner. `QAN-BL-INTEL-06` stays
+**`VALIDATION — OPEN`**. V-1 – V-8 are unchanged and none is claimed. UT-3 and CP3-F10 are among them. V-5 (iOS) stays
+open for its separate targeted test. Main is `11e0702d` (PRs #414 / #415 merged); migrations `0204` / `0205` are merged
+and not hosted.
+
+### 12.1 What the session showed
+
+The paid session was authorized on 2026-11-26: every provider real, a fictional Egyptian Arabic script, at most 10 minutes
+of calls, and a hard ceiling of USD 1.50. The harness is outside the repository. The first two calls, about 45 s of speech
+and USD 0.011 in all, showed three failures on the phone:
+- no voice was heard;
+- no mark ever appeared on the map;
+- the call analysis never established a half.
+
+The reply's text was generated every time. Two independent causes were found.
+
+| # | Cause | Kind | State |
+|---|---|---|---|
+| **H-1** | The Google Cloud billing account behind the speech project was **closed**. Vertex answered `403 BILLING_DISABLED`, which the shipped adapter correctly classifies as `UNAUTHORIZED`, so every reply ended `FAILED` with no audio. | Account, not product | **Resolved** (2026-11-27). The PO updated the payment card; the account is open and `billingEnabled` is true. One minimal real synthesis through the shipped route (`gemini-3.8-flash-tts`, Achird, ADC, the keep-alive transport) returned 20 PCM chunks, 1.04 s of 24 kHz audio, usage `COMPLETE` and `PROVIDER_REPORTED` (16 input and 26 audio tokens), ≈ USD 0.0005. |
+| **H-2** | **The call path's AI usage attribution is missing** (§12.2). | **Product defect in merged `main`** | Root cause confirmed. Correction proposed as **CALL-ATTR-01** (§12.3). No production code has changed. |
+
+### 12.2 H-2 — the failure chain
+
+AI-COST-01's accounting boundary refuses any DeepSeek attempt that runs outside an attribution scope, by design:
+- `AiProviderCallAccounting.track` (`ai-provider-call-accounting.ts`) reads `currentAiUsageAttribution()`
+  (`ai-usage-attribution.ts`, an `AsyncLocalStorage`);
+- with no scope it signals `begin / unattributed` and throws `AiProviderCallAccountingUnavailableError` (status 503);
+- this happens **before** the ledger's `begin` and before any provider request.
+
+`ai-usage-attribution.ts` names the entries that must open a scope. The call path opens one in only one place:
+- **Live call reply** (`live-call-reply.service.ts`): `reply()` runs `replyOnce` inside
+  `runWithAiUsageAttribution({ userId, sessionId, sourceTurnId: userTurnId })`. It is attributed, and it worked.
+- **Provisional attention** (`live-attention.provider.ts` → `CallAttentionTracker` → `DeepSeekAttentionEvaluator` behind
+  `costLedgerDecorator('LIVE_ATTENTION_EVALUATION')`) opens **no scope**. The tracker evaluates from its own loop,
+  started by recognition events in the call connection's context, so every evaluation is refused. The evaluator
+  classifies the refusal as `PROVIDER_FAILED` in 0–2 ms, and it is recorded in 0204 as `PROVIDER_FAILED` with no usage.
+  Disclosure never starts, so **no mark can ever appear**.
+- **Committed call analysis** (`call-analysis.worker.ts` → `ConversationSemanticEstablishmentService.establishCallHalf` /
+  `establishExchange` → the four production bindings: CU segmentation, focus resolution, thread establishment, thread
+  continuity) opens **no scope**. Every half settles `PROVIDER_FAILURE / PROVIDER_UNAVAILABLE`. After the retry budget
+  it is `PARKED`. The analysis worker never establishes a half.
+
+The text conversation is unaffected: `ConversationService.createTurn` opens the scope, and the same bindings succeed
+there.
+
+**Adjacent call entries, audited:**
+
+| Entry | Provider | Attributed? |
+|---|---|---|
+| Live call reply (Model Router `forLiveCall`) | DeepSeek | yes |
+| Provisional attention evaluator | DeepSeek | **no (H-2)** |
+| Call analysis worker: USER / ASSISTANT halves and pre-call EXCHANGE items | DeepSeek ×4 bindings | **no (H-2)** |
+| Call analysis S3 sweep (`settleEndedCallSafety`) | none (deterministic safety gate) | n/a |
+| Post-response intelligence of committed turns | DeepSeek | yes, from the verified envelope |
+| Speechmatics recognition, Gemini speech (call) | voice ledger, explicit `userId` | not scope-based; unaffected |
+
+**Harness vs product.** The HONOR harness routes the service role's RPCs to the local PostgreSQL. That route worked
+through the same accounting boundary in the same process:
+- the local ledger recorded every reply (`CONVERSATION_REPLY` ×3);
+- it recorded the transcription and speech rows;
+- it recorded **zero** rows for `LIVE_ATTENTION_EVALUATION`, `CU_SEGMENTATION`, `FOCUS_RESOLUTION` or `THREAD_*`;
+- the shim logged no failed RPC.
+
+The refusal therefore happened before the ledger was reached. A diagnostic evaluation through the production evaluator
+and decorator, outside a scope, reproduced `AiProviderCallAccountingUnavailableError` with no request sent. An earlier
+remark during the session that the ledger "was not connected to the database" was wrong and is withdrawn.
+
+**Why no earlier gate saw it:**
+- CP1 – CP3 proved the mechanism with a fake evaluator and fake semantic providers. These are composed **without** the
+  accounting decorator.
+- A8′, the real-evaluator recall, ran the evaluator outside the production composition.
+- S8B-05 CP3's analysis proof used fake providers.
+- No test ran a production provider composition through the accounting boundary from a call-path entry.
+
+### 12.3 The proposed correction — CALL-ATTR-01 (one task, one PR; *approved by the PO 2026-11-27 and implemented: §12.5*)
+
+**Scope:** open the existing attribution scope at the two call-path entries, from trusted server-side identities only.
+
+1. **Attention** (`live-attention.provider.ts`):
+   - `liveCallAttentionOf(...).open(channel)` gives the tracker an evaluator that runs each `evaluate` inside
+     `runWithAiUsageAttribution({ userId: channel.userId, sessionId: channel.sessionId })`.
+   - The channel is the authenticated call connection's.
+   - **No `sourceTurnId`:** provisional speech has no committed turn, and none is invented. The ledger's attempt
+     number is then 1, as 0170 defines.
+   - The scope opens at each provider admission, not at the connection. A reconnect's new channel carries its own
+     identity, and no scope outlives its call.
+2. **Call analysis** (`call-analysis.worker.ts`):
+   - `establish()` runs the semantic calls inside `runWithAiUsageAttribution({ userId: claim.userId, sessionId,
+     sourceTurnId: claim.turnId })`.
+   - The identities come from 0191's durable claim, so a recovered, re-claimed or replayed item is attributed exactly
+     as the first attempt was.
+3. **Static contract:** the AI-COST-01 contract's `attributionViolations` names the two new entries, with
+   planted-negative cases. The INTEL-LIVE-01 and S8B-05 contracts that pin these files are re-anchored where needed,
+   without loosening any assertion.
+
+**Unchanged:**
+- the accounting boundary, its fail-closed refusal and invalid-identity rule, and the ledger;
+- the database's ownership checks (0170: the session must be the payer's, the turn the payer's in that session; else
+  `42501`);
+- prompts, models, the recognizer, the voice engine, COSMOS, the camera and Replay.
+
+No migration. Nothing is added on the First Audio path (the reply is already attributed); attention and analysis are
+background work.
+
+### 12.4 Targeted tests (in the same PR)
+
+**T-1, composition (API jest).** The production compositions are used: `productionLiveCallAttention` and a
+`CallAnalysisWorker` over the production `ConversationSemanticEstablishmentService` bindings. The real decorator, the
+`AiProviderCallAccounting` and the `SupabaseAiProviderCallLedger` stay in place. **Only the DeepSeek transport is
+replaced**, by a deterministic fake at the HTTP boundary that answers each feature's schema. The ledger's service-role
+RPC is recorded. The tests prove:
+- **before the correction**, by in-place revert, never a stash: refused unattributed, with zero provider requests;
+- **after the correction**: admitted, with `begin` carrying the right user, session and turn (none for attention) and
+  the right family;
+- `settle` `SUCCEEDED` with the reported usage;
+- both attention and the USER, ASSISTANT and EXCHANGE analysis items;
+- **two users' calls interleaved concurrently**, each attributed only to its own identity;
+- **a missing or invalid identity still fails closed**, with no provider request.
+
+**T-2, database (focused DB workflow; *run in API CI's live-PostgREST step instead, §12.5*).** The same compositions on
+real PostgreSQL through the 0170 commands:
+- the rows land with the right family and identities;
+- settlement is recorded;
+- a cross-user session or turn is refused `42501` before any provider request.
+
+**T-3, static.** The contract additions of §12.3(3), each with its planted negative.
+
+After T-1 – T-3 pass and the PO accepts the change, the **same** HONOR session resumes. It is not a full rerun. Its
+remaining paid budget stays inside the approved USD 1.50 ceiling (USD 0.012 spent so far).
+
+### 12.5 CALL-ATTR-01 — implementation and evidence (2026-11-27)
+
+**Authority:** the Product Owner's "CALL-ATTR-01 — PO EXECUTION AUTHORIZATION" (2026-11-27). It approves §12.3 and T-1,
+T-2 and T-3 as one task, one PR and one execution checkpoint, with no migration and no reopening of the INTEL-LIVE-01 or
+S8B-05 checkpoints. It explicitly authorizes the focused real PostgreSQL CI run for T-2. No hosted deployment, and no
+merge without the PO's «ادمج».
+
+**What changed (production code, two entries):**
+- `apps/api/src/live-attention/live-attention.provider.ts`: `liveCallAttentionOf(...).open(channel)` gives each tracker
+  `attributedEvaluator(parts.evaluator, channel)`. Each `evaluate` runs inside
+  `runWithAiUsageAttribution({ userId: channel.userId, sessionId: channel.sessionId })`. There is **no `sourceTurnId`**.
+  The scope opens at each evaluation, and a reconnect's tracker carries its own channel.
+- `apps/api/src/live-analysis/call-analysis.worker.ts`: `establish()` runs the claimed item inside
+  `runWithAiUsageAttribution({ userId: claim.userId, sessionId, sourceTurnId: claim.turnId })` (the half's own committed
+  turn; the USER turn of an EXCHANGE). The former body is `establishAttributed()`, unchanged.
+Nothing else in production code changes; `conversation.module.ts` is untouched. T-1 and T-2 take the analysis
+composition from ConversationModule's own provider metadata: its `ConversationSemanticEstablishmentService` factory,
+over the four binding values it registers. They never re-compose it, and so they stay inside the T-03 contracts that
+allow only ConversationModule to reference the semantic binding directories.
+
+The accounting boundary, the attribution rule (a non-UUID identity opens no scope), the 0170 ownership checks, the
+ledger, prompts, models, the recognizer, the voice engine, COSMOS, the camera and Replay are unchanged. No migration.
+Nothing is added on the First Audio path.
+
+**T-1 — composition (API jest), `apps/api/src/ai-usage/call-path-attribution.composition.spec.ts`.**
+- The production compositions run as shipped:
+  - `productionLiveCallAttention`;
+  - a `CallAnalysisWorker` over the `ConversationSemanticEstablishmentService` that ConversationModule's factory builds;
+  - `productionAiProviderCallAccounting()` → `SupabaseAiProviderCallLedger` → `SupabaseServiceRoleApiService`.
+- `fetch` is the only network replaced:
+  - DeepSeek gets a deterministic completion with reported usage. Attention and segmentation get valid answers; the
+    later layers get an empty object, which their adapter refuses **after** the accounted attempt settled.
+  - The two 0170 RPCs get their ownership rule (session the payer's, turn the payer's in it, else `42501`).
+  - The call's own stores are in memory; they hold no accounting.
+- Nine cases:
+  - attention admitted with no turn and settled;
+  - a reconnect;
+  - two concurrent calls;
+  - an invalid identity fails closed;
+  - a cross-user Session is refused;
+  - EXCHANGE, USER and ASSISTANT items under the claim's turn;
+  - a recovered item re-claimed by a second worker instance;
+  - a cross-user claim is refused;
+  - an invalid claim user fails closed.
+- **With the correction: 9 / 9 pass.**
+- **Without it** (the two production files put back to `11e0702d` in place, never a stash, then restored): **7 / 9 fail.**
+  The attention evaluations are never admitted, and analysis makes zero ledger begins. The two that pass either way are
+  the fail-closed cases, which must hold both before and after.
+
+**T-2 — real PostgreSQL, `apps/api/scripts/call-attr-01-attribution-proof.ts`** (`npm run prove:call-attr-01-attribution:integration`).
+- The same production compositions run over a REAL PostgreSQL carrying every migration (through `0205`). Every 0170,
+  0204 and 0191 command goes through `SupabaseServiceRoleApiService` to `SUPABASE_URL`.
+- Only DeepSeek's transport is replaced; any other non-loopback request is refused.
+- Fifteen checks:
+  - A1: attention admitted under the connection's payer and Session with no source turn, settled
+    `SUCCEEDED_USAGE_REPORTED` / `COMPLETE` with the reported usage, and recorded by 0204;
+  - A2: the reconnect (epoch 2);
+  - A3: two concurrent calls, each charged to its own payer and Session (usage 111 against 222);
+  - A4: another person's Session refused by 0170, `begin_ai_provider_call_v1 403 42501`, with no ledger row and no
+    provider request (`PROVIDER_FAILED` recorded);
+  - B1: a real call (begin, activate, commit, Safety, reply, playout, close, end), whose USER half is admitted under the
+    claim's payer, Session and own committed turn for `CU_SEGMENTATION` and `FOCUS_RESOLUTION`, every attempt settled,
+    the refused layer answer a counted retry (`RETRY_WAIT`, attempt 1);
+  - B2: the same item recovered by another worker instance, attributed exactly as the first (attempt number 2);
+  - B3: a turn that is not the payer's in that Session refused at the boundary by 0170 (`403 42501`) before any
+    provider request.
+- **Locally** (pg shim as service_role, on a throwaway clone of the local database): **15 / 15 PASS.**
+- **Without the correction** (same in-place revert, fresh clone): **A1 FAILS**. There is no ledger row, and 0204
+  records `PROVIDER_FAILED` with no tokens: the HONOR symptom. The proof then stops at A2.
+- **Placement, a deviation from §12.4:** T-2 runs in **API CI's live-PostgREST loop**, once per PostgREST release line,
+  over the WIRE through the real engine. It does not run in the Focused Database Verification workflow, which cannot
+  run it for two reasons:
+  - it dispatches from `main` only, so the new script cannot be dispatched before the merge;
+  - it runs database verifiers, never the API composition (ts-node, `apps/api`).
+
+  The PostgREST loop is a stage of the API CI run this PR triggers anyway, so T-2 adds no separate run. The invalid
+  identity case refuses before the ledger is reached, so it needs no database: T-1 proves it.
+
+**T-3 — static, `tests/ai-cost-01-provider-neutral-cost-credit-ledger-contract.test.mjs`.**
+- `attributionViolations` now requires both entries in their exact form: the attention scope is the channel's payer and
+  Session alone, and the worker's scope is the claim's payer, Session and turn.
+- Four planted defects are rejected:
+  - attention unattributed;
+  - attention inventing a source turn;
+  - the analysis item unattributed;
+  - the analysis item charged to the wrong turn.
+- **87 / 87 with the correction.** Without it: 5 fail (the shipped tree and the four plants).
+- No other contract needed re-anchoring.
+
+**Local verification on the committed tree (`E:/intellive`, no untracked files):**
+- `tsc --noEmit` passes for `apps/api` and for its scripts project.
+- API jest: **353 / 353 suites, 7936 passed**; the 1 skipped test is pre-existing and unrelated (`shared-qandeel-reply.evidence-linked-prototype.spec.ts`).
+- Root contracts (`node --test tests/*.test.mjs`): **1895 / 1895**.
+- `npm run test:task-closure-governance-contract`: **25 / 25**.
+- One full API jest run made in parallel with the root suite failed one case of `live-call-turn.engine.spec.ts` (a timing case under load). That spec passed alone (20 / 20), and the full suite passed again when run alone, so this is not a defect of this change.
+
+**CI impact (BG-10):**
+- The World gate's impact plan is **NOT_AFFECTED** for every file in the PR: `package.json` is `MANIFEST_SCRIPTS_ONLY`
+  and everything else is outside the iOS binary.
+- The iOS Targeted Gate is triggered by `apps/api/src/live-attention/**` and `apps/api/src/live-analysis/**`, and runs as
+  required.
+- API CI runs in full, T-2 included. No permanent gate is weakened.
+
+**Backlog (BG-08):**
+- `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`, with V-1 – V-8 unchanged. H-2 is the "demonstrated product defect" of its
+  reopen condition, and is corrected by this task before product acceptance.
+- Nothing is admitted, re-owned or tombstoned. CALL-ATTR-01 leaves no residue: its tests are permanent and its
+  correction is complete.
+
+**Next:** PO review of the Draft PR. After «ادمج» and the merge, the **same** HONOR session resumes inside the remaining
+USD 1.50 ceiling (USD 0.012 spent). The server-only correction needs no new APK (`c30f6faa` stays compatible).
+
+### 12.6 CALL-ATTR-01 CI R1 — PR #416's two CI failures (2026-11-27)
+
+**Authority:** the Product Owner's "CALL-ATTR-01 — PR #416 CI CORRECTION" (independent review of head `e4aa60f2`).
+- Same PR, no new checkpoint, no product change; the attribution correction of §12.5 is unchanged.
+- Both corrections are tested locally and pushed together.
+- No paid call, hosted deployment or merge.
+
+**A. API CI (run `45927739043`): T-2 left the shared CI database dirty.**
+- **The chain, confirmed in the job log and reproduced locally.**
+  - T-2 passed 15 / 15 on PostgREST v12.2.9.
+  - On the v13.0.8 line, the S8B-02 CP2 proof (`prove-0185`) failed at V01 B12 with "the four scopes start DISABLED", `3 !== 4`.
+  - Its fixture removal then failed with "no voice row, consent text, open gate … behind", `1 !== 0`.
+- **Root cause.** T-2's `finally` restored the gate through `set_voice_launch_capability_v1` with the column
+  `gate.condition_state`, which does not exist. The column is `launch_requirements_state`.
+  - The command therefore raised `null value in column "launch_requirements_state" … violates not-null constraint`.
+  - `.catch(() => undefined)` swallowed that error, so `PERSONAL_LIVE_CALL` stayed `ENABLED / SATISFIED` (restriction
+    version 2), plus one capability event.
+  - T-2 also never removed its fixture humans. One local run of the old T-2 changed **23 tables**: six users, five
+    calls and recordings, eight ledger rows with 24 usage rows and 8 ratings, the analysis queue, the outbox, and the
+    erasure-queue keys.
+- **Correction (`apps/api/scripts/call-attr-01-attribution-proof.ts`, the proof only).**
+  - The teardown is the S8B-05 CP3 proof's: one transaction under replica mode removes:
+    - the fixture humans' recordings, gaps, objects and erasure-queue keys;
+    - the outbox;
+    - every `user_id` row of `voice_private`, `public` and `private`;
+    - the users;
+    - and, beyond CP3, the ledger's `ai_provider_call_usage` and `ai_cost_ratings`. These are keyed by the provider
+      call, so the `user_id` sweep never reaches them.
+  - Every voice capability row is restored exactly as read before the proof, all columns of all four scopes. The capability
+    events after the snapshot are deleted only when every one was written by the proof itself; otherwise the teardown
+    refuses.
+  - The teardown runs whether or not the proof failed. It first closes every tracker and stops every worker the proof
+    opened. Its failure rolls the transaction back and fails the run (an `AggregateError` when both fail); nothing is
+    swallowed.
+  - **Before** the summary line, three checks:
+    - T1: the capability rows are identical and the last event id is unchanged;
+    - T2: every base table's row count is exactly as before the proof (406 tables);
+    - T3: no fixture human, call, ledger row, runtime event (by `subject_user_id`) or erasure-queue key (the fixtures' storage keys, read before the teardown) remains. These are the explicit counts the S8B-05 live call contract requires of every proof whose teardown sweeps by `user_id`.
+- **Local evidence** (throwaway clones of the migrated template, pg shim; prove-0185 itself needs PostgREST and rclone,
+  so it runs in CI):
+
+| | Run | Result |
+|---|---|---|
+| Old T-2 | one run, then prove-0185's own V01 and residue queries | 15 / 15, then **DISABLED = 3** and **open gates = 1**, exactly CI's `3 !== 4` and `1 !== 0`; 23 tables changed |
+| Corrected T-2 | twice in a row on one clone | **18 / 18 both times**; an outside snapshot shows **0** table differences and identical capability rows |
+| Compatibility | the same clone: V01's queries, then the S8B-05 CP1 and CP2 (single call) live call proofs, then T-2 a third time | DISABLED = **4**, open gates = **0**; CP1 and CP2 pass; T-2 **18 / 18** |
+| N1 (control) | the proof made to fail after A1 | exit 1; T1 – T3 PASS; 0 table differences |
+| N2 (control) | the teardown made to fail | exit 1 with the error, no PASS line; the failure is not swallowed |
+| N3 (control) | the usage delete removed | **T2 FAILS** (`public.ai_provider_call_usage 0 -> 24`), exit 1 |
+
+  The controls were in-place edits from a copy, never a stash, and the file was restored byte-identical.
+- **Observation, outside this task.** After the S8B-05 CP2 spoken-turn proof, the local clone kept **80**
+  `ai_provider_call_usage` and **51** `ai_cost_ratings` rows with no provider call. CP2's teardown deletes the ledger
+  rows under replica mode but not their children. Nothing fails on it today, and `main` already behaves this way.
+  CALL-ATTR-01 does not change it. The PO approved its registration only (2026-11-27): it is `QAN-BL-CI-05`, admitted in CI R2 (§12.7).
+
+**B. iOS Targeted Gate (run `45927739108`, artifact `15168144036`): ITG-09 was a checker false negative.**
+- ITG-01, 02, 03, 07, 08 and 04 passed. ITG-09 failed with "dropped at the call's ACTIVE", although the phone and its
+  stage held 0 marks and the call was `ENDED USER_ENDED`.
+- **Timeline from the artifact**, relative to the end command being queued (0 ms). The simulator, the proof server and
+  the runner share the host clock, and the probe's `phoneAt` is on the server's clock.
+  - −11 391 ms: the phone applied seq 9 (one mark).
+  - −249 ms: the USER half SETTLED `COMPLETE` (0191). 0204's settlement expired the provisional mark, so the database's
+    latest event became seq 10 with an empty open set.
+  - −208 ms: the lane SENT `ATTENTION_STATE` seq 10 with 0 entries.
+  - −190 ms: the phone applied it (`phoneAt`) while the call was still ACTIVE. The server received that row at −111 ms.
+  - 0 ms: the end was queued (END_AT is taken shortly before this).
+  - +603 ms: the end was executed, stage `ENDING`.
+  - +655 ms: tick seq 10, 0 marks, `ENDING`.
+  - +5 941 ms: stage digest `881ea49b…`, 0 marks, `IDLE`.
+- **Root cause, in `scripts/ios-targeted-gate/attention-checks.mjs` `cleanup`.**
+  - The check took the **first `applied` row the server received after END_AT**, not the transition that removed the mark.
+  - It compared the server's receipt time `at`, not the phone's instant `phoneAt`.
+  - The settlement's removal reached the server after END_AT, so it was read as the end's drop at ACTIVE.
+  - Replaying the artifact with END_AT anywhere before the −111 ms receipt fails; END_AT at the queue instant passes. So the
+    verdict rested on a ~100 ms race.
+  - **No premature cleanup happened:** the phone held exactly the database's open set at its latest event, which is what
+    ITG-07 and ITG-08 require.
+- **Correction (the checker only).** The check now finds the actual removal (the held row after the last one holding a
+  mark), at `phoneAt`. It accepts that removal only in two cases:
+  - **the database's own latest event:** an `applied` row at a new seq equal to `/proof/attention`'s `lastSeq`, whose
+    open set is empty;
+  - **the end's cleanup:** the call no longer ACTIVE, after END_AT.
+
+  A drop while ACTIVE without that event fails, as does a mark kept by the phone or the stage, or no stage at all. The
+  acceptance condition is not weakened. It is stricter than before: the old check passed a drop while ACTIVE, without an
+  event, whenever no `applied` row followed END_AT.
+- **Evidence.**
+  - The artifact replayed through the corrected check passes for every END_AT tried (−307, −157, −117 and 0 ms, relative to the
+    queue): "its last mark left with the database's latest event (seq 10, open 0) at the call's ACTIVE".
+  - A new behavioural test in `tests/intel-live-01-ios-targeted-gate-contract.test.mjs` runs the checker itself. It
+    accepts this run's shape at three END_AT offsets, and the end's drop of a mark it still showed.
+  - The same test refuses eight cases:
+    - a mark kept after the end;
+    - a mark kept by the stage;
+    - a premature drop while ACTIVE without an event, received before the end;
+    - the same drop received after the end;
+    - a drop by an event that is not the database's latest;
+    - a drop while the database still holds a subject;
+    - a drop not ACTIVE but before the end, without an event;
+    - no stage compiled.
+  - Contract: **7 / 7**. Against the old checker (put back in place, then restored byte-identical) the new test **fails**
+    on this run's shape.
+- **Not claimed:** ITG-05 and ITG-06 and the UI touch checks UT-1 – UT-3 were **not reached** in run `45927739108`. They
+  stay NOT TESTED until the gate runs them on the new head.
+
+**Local verification of R1:**
+- T-1: **9 / 9**.
+- T-2: **18 / 18** (twice, then again after the sibling proofs).
+- `tsc --noEmit` passes for the scripts project.
+- The gate contract: **7 / 7**.
+- On the committed R1 tree (`4d154043`, no untracked files): root contracts (`node --test tests/*.test.mjs`) **1896 / 1896**; `test:task-closure-governance-contract` **25 / 25**. Before the commit, the first full run found 14 failures, all from this change: the S8B-05 live call contract's explicit outbox and erasure-key counts, and the QAN-INF-02 harness lifecycle (the new test first used `mkdtempSync`). The forward-safety mirror tests failed on those same assertions. All are corrected in `4d154043`.
+
+**CI impact (BG-10):** the World gate's impact plan stays **NOT_AFFECTED** for every file. The iOS Targeted Gate runs
+again, triggered by `scripts/ios-targeted-gate/**`, `live-attention/**` and `live-analysis/**`. API CI runs in full.
+
+**Backlog:** `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`. Nothing is admitted, re-owned or tombstoned. The observation
+under A is left for the PO's decision (registered in R2 as `QAN-BL-CI-05`, §12.7).
+
+### 12.7 CALL-ATTR-01 CI R2 — the iOS gate's microphone prompt, and API CI's 0203 measurement (2026-11-27)
+
+**Authority:** the Product Owner's "PR #416 — CI R2: ITG-02 microphone permission blocker" (independent review of head
+`4cb7c7ea`).
+- Same PR, no new checkpoint.
+- No change to production audio, attention, analysis, COSMOS or Replay code; production permission and consent are
+  unchanged.
+- No paid call, deployment or merge.
+
+**A. iOS Targeted Gate (run `45959082296`, job `140372346670`, artifact `15180684678`): ITG-02 behind iOS's microphone prompt.**
+- **What the artifact shows.** ITG-01 passed. Then:
+  - the start command was taken and acknowledged `STARTED`;
+  - the app stayed `PREPARING`, and the server held `{"call":null}`, with no call-initiation request;
+  - `shots/failure-ITG-02.png` shows iOS's own prompt ("QANDEEL would like to access the Microphone") waiting for Allow;
+  - the runner had a load average of 132.46 and 0 % idle CPU.
+- **Root cause, in the harness.**
+  - The runner uninstalled, reset privacy, installed, then granted the microphone with `simctl privacy`.
+  - The launch flow's `launchApp: clearState: true` then made Maestro **uninstall and reinstall the app again**
+    (`simctl uninstall` / `simctl install` in its log; tccd logged "Handling Application Uninstalled"). That reinstall
+    dropped the grant.
+  - Maestro's only re-grant is `applesimutils --setPermissions microphone=YES`, a direct write to TCC. It took 1.5 s here,
+    against 8 s in R1's passing run. Its "through simctl" step finished in 0 ms and did nothing.
+  - Nothing read the grant back, so whether iOS would prompt was decided by a best-effort tool under load.
+  - **The production permission flow behaved correctly:** with no authorization, iOS asked.
+- **Correction (harness only).**
+  - `apps/mobile/.maestro/itg-call-launch.yaml` clears no state. The runner's fresh install is the last state reset. The
+    flow keeps `stopApp` and its `microphone: allow` statement.
+  - `scripts/ios-targeted-gate/run-live-call-gate.sh` adds `mic_ready <label>`. It reads this app's
+    `kTCCServiceMicrophone` record in the simulator's own TCC database (`auth_value` 2 = allowed) and keeps the result as
+    evidence in `host/mic-<label>.txt`. It runs twice:
+    - after the grant: a missing record is INFRASTRUCTURE, and no Product step has run;
+    - after ITG-01, **before the start command**: a missing record is INFRASTRUCTURE, and no start command is sent.
+  - It never waits, never retries and never re-grants. No timeout is changed.
+- **Regression guard.** `tests/intel-live-01-ios-targeted-gate-contract.test.mjs` refuses:
+  - any `clearState: true` in a gate flow;
+  - any order other than install → grant → read back → launch → read back → start command;
+  - a readiness that is not the TCC record's `auth_value` 2;
+  - a missing authorization that is waited out or re-granted.
+
+  It has seven planted regressions. Against the R1 harness (put back in place, then restored byte-identical) it fails
+  with all three violations.
+- **Not proven locally:** the TCC read itself runs only on the macOS runner, so the gate's next run is its first real
+  execution. A wrong read stops the run as INFRASTRUCTURE with its evidence; it never becomes a FAIL or a PASS.
+- **Not claimed:** ITG-03 – ITG-09 and UT-1 – UT-3 were not reached in run `45959082296`. ITG-09 (corrected in R1) and
+  ITG-05 / ITG-06 stay unverified on this PR.
+
+**B. API CI (run `45959082285`): the 0203 verifier's WAL measurement M-12, not this change.**
+- `verify-api` failed at "Verify S8B-07 RB-2 M-2 live call clock marks (0203)", scenario M-12, with "an unchanged echo
+  adds no mark row".
+  - That assertion compares **WAL volume**: `walPerUnchangedEchoSlot` must stay below `walPerEmptySlot +
+    walPerChangedMark`.
+  - This run measured 1336 bytes against 260 + 216. On R1's run of the same verifier over the same migrations, it
+    measured 273 bytes, and the other metrics were identical.
+  - The PR changes no `database/` file. A WAL burst inside the 100-iteration window (most likely a checkpoint's full-page
+    writes on a loaded runner) explains the difference. This change does not.
+  - VAL-01's failure only records it.
+- **Consequence:** 0203 runs before the live-PostgREST loop, so **T-2 (R1) and the S8B-02 CP2 proof did not run** in this
+  run. R1's correction A is still unproven in CI.
+- **Nothing is changed for it:** 0203 and its verifier belong to S8B-07 RB-2. R2's push re-runs API CI through its own
+  change-aware plan, because `tests/**` changes; there is no manual rerun.
+  - If M-12 fails again, that is evidence for the PO, not a reason to weaken the measurement.
+
+**Backlog:** `QAN-BL-CI-05` is admitted, as the PO approved: the S8B-05 CP2 orphaned ledger rows of §12.6, registration
+only. `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`.
+
+**Local verification of R2:**
+- the gate contract **7 / 7**;
+- the T13 recovery contract **19 / 19**;
+- `bash -n` on the runner;
+- the World gate's impact plan stays **NOT_AFFECTED** (the flow is `NOT_IN_BINARY`);
+- the root contracts and governance results are in the PR's R2 note.

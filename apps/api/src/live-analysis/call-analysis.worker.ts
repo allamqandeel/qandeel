@@ -26,10 +26,16 @@
 // or expires the provisional subjects of its window). Best effort: a lost settlement is found by the scan's sweep
 // (`settleDue`); no model is called and nothing waits on the voice path.
 //
+// CALL-ATTR-01 (2026-11-27): each claimed item's provider work runs inside ONE AI-COST-01 attribution scope made of the
+// durable claim's own identities (0191: the payer, the session drained, the item's committed source turn), so a
+// recovered or re-claimed item is attributed exactly as its first attempt; without it the accounting boundary refuses
+// every analysis provider call before it starts.
+//
 // Nothing here logs. Observations carry identifiers, instants and counts, never words.
 
 import { randomUUID } from 'node:crypto';
 import type { ConversationTurn } from '../conversation/conversation.types';
+import { runWithAiUsageAttribution } from '../ai-usage/ai-usage-attribution';
 import { CALL_CONTEXT_POLICY } from '../conversation/live-call-reply.service';
 import { establishmentIntegrityReason, type ConversationSemanticEstablishmentService } from '../live-focus/conversation-semantic-establishment.service';
 import { CallHalfOrderError, ConversationSemanticUnavailableError } from '../live-focus/conversation-semantic-runtime.types';
@@ -265,7 +271,15 @@ export class CallAnalysisWorker implements LiveCallAnalysisListener {
   }
 
   /** Establishes the claimed item; null when it is established (now or already), else how to settle it. */
-  private async establish(
+  private establish(
+    sessionId: string,
+    claim: Extract<CallAnalysisClaim, { outcome: 'CLAIMED' }>,
+  ): Promise<{ readonly outcome: Exclude<CallAnalysisSettleOutcome, 'COMPLETE'>; readonly code: string | null } | null> {
+    // CALL-ATTR-01: the claim's payer, session and committed source turn (the half's own turn; the USER turn of an EXCHANGE).
+    return runWithAiUsageAttribution({ userId: claim.userId, sessionId, sourceTurnId: claim.turnId }, () => this.establishAttributed(sessionId, claim));
+  }
+
+  private async establishAttributed(
     sessionId: string,
     claim: Extract<CallAnalysisClaim, { outcome: 'CLAIMED' }>,
   ): Promise<{ readonly outcome: Exclude<CallAnalysisSettleOutcome, 'COMPLETE'>; readonly code: string | null } | null> {
