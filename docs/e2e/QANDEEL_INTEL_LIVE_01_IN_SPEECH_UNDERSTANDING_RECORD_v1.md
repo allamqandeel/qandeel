@@ -6,6 +6,12 @@
 - Merging needs the Product Owner's explicit «ادمج». Migrations `0204` and `0205` are **not hosted**; the next migration is `0206`.
 - The lane is **OFF** unless `LIVE_CALL_PROVISIONAL_ATTENTION=ON`; every voice gate stays `DISABLED`.
 
+**Addendum (2026-11-27, the Product Owner's "RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER"; §12.11):** INTEL-LIVE-01 is
+merged (`11e0702d`; CALL-ATTR-01 `b842fd0d`). HONOR-CORR-01 is **SUSPENDED**, with nothing implemented. H-3 and O-2 are
+carried to `QAN-BL-INTEL-07` (`INTEL-SEMANTIC-REVIEW-01`, a CRITICAL mandatory release blocker after S8B-07 CP2-A / CP2-B),
+and H-TTS to `QAN-BL-VOICE-10` (a mandatory release-readiness blocker). `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`. Next:
+S8B-07 CP2-A. *(The status line above is kept as written.)*
+
 **Product readiness (carried in every record from CP1 on, CP0 v1.1 §8.2):** DeepSeek is `SYNTHETIC_ONLY`; synthetic
 acceptance proves the mechanism, not the product; the product gate is the HONOR Live + Replay proof (the Product Owner's
 sequence, step 3).
@@ -2748,3 +2754,83 @@ Measurable acceptance: H3-1 … H3-14 (a real gate of at most USD 0.40, awaiting
 - `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`.
 - These evidence items stay visible: V-5, V-6's opening speed and stage-preparation cost, and V-8's unexplained 2.36 s mid-call frame.
 - The successful HONOR and C8 evidence is preserved.
+
+### 12.11 The Product Owner's "RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER" (2026-11-27): HONOR-CORR-01 suspended, two release blockers registered
+
+**What happened before it.** The Product Owner's "HONOR-CORR-01 — CONTRACT REVIEW AND CONDITIONAL ACCEPTANCE" (2026-11-27)
+accepted contract v1.0's direction with bounded amendments for a v1.1:
+- **A:** a USD 0.40 gate, a screening sample, independent holdout cases, no fabricated topics, and durable Threads proven
+  through the production path.
+- **B:** Service Usage API and Cloud Quotas API enabled on the Vertex project for inspection only.
+- **C:** accepted.
+
+Under it, the quota was read (B below), and an assembler-safe O-2 fold was written with its tests on a local branch. v1.1
+was not written, and nothing was committed to a shared branch or pushed. **The directive below supersedes that execution.**
+
+**The directive (2026-11-27), as recorded:**
+1. **New release blocker `INTEL-SEMANTIC-REVIEW-01`:**
+   - CRITICAL; a mandatory release blocker; it blocks production deployment and commercial launch;
+   - it is **not** a blocker to Replay development;
+   - it is scheduled after S8B-07 CP2-A and CP2-B;
+   - it cannot be waived or closed without the Product Owner's explicit approval;
+   - its scope is contextual understanding, topics and subtopics, durable knowledge formation, continuity, implicit
+     introductions, corrections / negation / intent change, loss versus fragmentation, and current intent versus history.
+
+   H-3 and O-2 and all their evidence are carried into it. The Product Owner will define the semantic philosophy before
+   any implementation is authorized. **Neither the candidate prompt nor HONOR-CORR-01 v1.0 is the approved semantic
+   solution.**
+2. **HONOR-CORR-01 suspended:**
+   - none of A1 / A2 / A3 or O-2 is implemented;
+   - no further paid DeepSeek experiment;
+   - no new prompt version;
+   - no new semantic task.
+
+   `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`.
+3. **TTS:** H-TTS, the quota findings and the F-01 takes are kept as a **separate mandatory release-readiness blocker**. No
+   quota change and no paid TTS experiment is authorized. Live TTS capacity does not block Replay development, which uses
+   valid recorded audio or controlled fixtures.
+4. **Return to S8B-07 CP2-A**, closing only what affects Replay's correctness and usability (S8B-07 record §20.3).
+
+**Registered (backlog §5 and the §7 log):**
+- **`QAN-BL-INTEL-07`:** `HIGH`, `DEFERRED — OWNED`, owned by the proposed `INTEL-SEMANTIC-REVIEW-01`; classified
+  CRITICAL — MANDATORY RELEASE BLOCKER.
+- **`QAN-BL-VOICE-10`:** `HIGH`, `OPEN — UNASSIGNED`; a mandatory release-readiness blocker.
+
+The index goes to 116 items.
+
+**What is preserved (nothing deleted; none of it on `main`):**
+- **H-3 evidence:** `E:/QANDEEL_REPORTS/INTEL-LIVE-01/HONOR/h3-experiment/`. It holds the harness, every request and raw
+  response (fictional content only), the refusal codes and the cumulative meter: USD 0.0459, 70 calls.
+- **F-01 takes:** `…/HONOR/f01-candidates/`, the four Achird takes with their sha256 values. S-01 is preferred, subject to
+  the Product Owner's audio acceptance.
+- **The contract:** `…/HONOR-CORRECTION/HONOR_CORR_01_EXECUTION_CONTRACT_v1.0.md`, PROPOSED, now marked SUSPENDED.
+- **The O-2 work, suspended:**
+  - local commit `c9eb1a29` on the never-pushed branch `honor/honor-corr-01`, from `main` `b842fd0d`;
+  - the same diff as `…/HONOR-CORRECTION/HONOR_CORR_01_O2_SUSPENDED_WIP.patch`.
+
+  It is not a solution and not for merge. Its 25 tests passed locally, and it was never run in CI.
+
+**B. The quota, as read (2026-11-27; inspection only).**
+- **What was read:** the Product Owner approved enabling Service Usage API and Cloud Quotas API on the Vertex project.
+  Both are enabled; nothing else was changed. `aiplatform` lists 399 quota entries.
+- **For `gemini-3.8-flash-tts`, no explicit per-project limit is set:**
+  - `GlobalGenerateContentRequestsPerMinutePerProjectPerBaseModel` has explicit 5 RPM values only for the
+    `gemini-2.5-*-tts` models, and its default dimension has no value.
+  - The increase eligibility is `NOT_ENOUGH_USAGE_HISTORY`.
+- **Google's documentation:** Vertex pay-as-you-go runs on Dynamic Shared Quota. A 429 means shared capacity is
+  momentarily constrained, and bursts above a usage-tier threshold are throttled first. The guidance is backoff with
+  jitter (not an immediate retry) and smoothing the traffic.
+- **What this changes:** §12.10's "fixed ~10 – 11 RPM" reading is **not established**. A burst threshold on a project with
+  little history fits the evidence equally well.
+- **Not changed:** no quota, quota adjuster, billing, IAM or provider setting.
+- **Found in passing, now part of `QAN-BL-VOICE-10`:** the call engine's telemetry domain `VOICE_LIVE_CALL_TURN` is not in
+  the operational-outcome allowlist, so every call-turn signal, failure classes included, is dropped. The `clock_echo` /
+  `clock_slot` operations of `VOICE_LIVE_CALL` are dropped the same way.
+
+**Unchanged:**
+- `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`.
+- These stay open: V-5; V-6's opening speed and Lane B stage-preparation cost; V-8's unexplained 2.36 s frame.
+- The proven HONOR evidence stays proven (C8, V-2, V-3 Android, V-4, V-6 pan, V-7), together with historical binding,
+  audio and reconnection. None of it is repeated.
+- COSMOS, CALL-ATTR-01 and the completed Replay checkpoints are not reopened.
+- Nothing is deployed. No production deployment while `QAN-BL-INTEL-07` or `QAN-BL-VOICE-10` is open.

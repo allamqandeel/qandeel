@@ -1,5 +1,22 @@
 # QANDEEL — Current State
 
+> **PO DIRECTIVE — RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER — HONOR-CORR-01 SUSPENDED (NOTHING IMPLEMENTED) — `QAN-BL-INTEL-07` (`INTEL-SEMANTIC-REVIEW-01`, CRITICAL) AND `QAN-BL-VOICE-10` REGISTERED AS MANDATORY RELEASE BLOCKERS — NEXT: S8B-07 CP2-A — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's directive of 2026-11-27. The [INTEL-LIVE-01 record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.11 records it, and the [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §20.3 holds the remaining Replay scope.
+> - **Replay development blockers:** only the Product Owner's open CP2-A decisions: execution authorization, CA-RL-01 A – G, the label-font route, F2 and VG-CP2A. Nothing semantic and nothing about TTS.
+> - **Production release blockers:**
+>   - **new:** `QAN-BL-INTEL-07` (H-3, O-2; owner `INTEL-SEMANTIC-REVIEW-01`, proposed; CRITICAL, scheduled after CP2-A and CP2-B, closable only by the PO) and `QAN-BL-VOICE-10` (H-TTS, F-01);
+>   - **existing, unchanged:** `QAN-BL-INTEL-06` `VALIDATION — OPEN`, `QAN-BL-INTEL-05`, the hosted-deployment items, and every voice gate `DISABLED`.
+>
+>   No production deployment while either mandatory blocker is open.
+> - **Deferred improvements (not reopened):** O-6, the COSMOS first-tap limitation, and V-8's 2.36 s frame (kept visible).
+> - **HONOR-CORR-01 suspended:**
+>   - none of A1 / A2 / A3 / O-2 is implemented; no new prompt version; no further paid DeepSeek or TTS experiment; no quota change;
+>   - the diagnosis, raw evidence, contract v1.0, F-01 takes and the suspended O-2 work are preserved outside `main`.
+>   - **Quota read (inspection only):** Vertex runs on Dynamic Shared Quota, and `gemini-3.8-flash-tts` has no explicit per-project limit. The "fixed ~10 – 11 RPM" reading is therefore not established.
+> - **Backlog:** 116 items (55 / 5 / 19 / 37; 66 / 46 / 4).
+> - **Next:** S8B-07 CP2-A.1, in-app Replay correctness (O-3 / O-4 / O-5, unified timeline, precise seeking), on the Product Owner's execution authorization. Then CP2-A.2 (video), then CP2-B.
+
+
 > **HONOR-CORR-01 — BOUNDED DIAGNOSIS DONE, EXECUTION CONTRACT v1.0 PROPOSED, NOTHING IMPLEMENTED — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:** the Product Owner's "HONOR CONSOLIDATED CORRECTION — PO DIRECTION" (2026-11-27). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.10 is the primary account.
 > - **H-3 reproduced offline** (USD 0.0459 of 0.05): the production focus model proposes a café focus whose grounding it never lists as a reference, so it is refused `FOCUS_GROUNDING_REQUIRED` and falls back to no focus. The grounding rules are correct. A candidate prompt established the café, but it created false and fragmented focuses, so it was not accepted.
