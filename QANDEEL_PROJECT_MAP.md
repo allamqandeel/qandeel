@@ -5,14 +5,14 @@
 > - **Where the blockers live:**
 >   - `docs/qandeel-canonical-backlog-v1.md` holds `QAN-BL-INTEL-07` (`INTEL-SEMANTIC-REVIEW-01`, CRITICAL, a mandatory release blocker, not a Replay development blocker) and `QAN-BL-VOICE-10` (a TTS release-readiness blocker).
 >   - The H-3 / O-2 code locations are unchanged and listed in the addendum below. HONOR-CORR-01's proposals are **not** the approved semantic solution.
-> - **Suspended work (never on `main`):** local commit `c9eb1a29` on branch `honor/honor-corr-01`, plus its patch, contract v1.0 and the H-3 / F-01 evidence under `E:/QANDEEL_REPORTS/INTEL-LIVE-01/`.
+> - **Suspended work (not production code; in no PR, never on `main`, never pushed):** local commit `c9eb1a29` on branch `honor/honor-corr-01`, plus its patch, contract v1.0 and the H-3 / F-01 evidence under `E:/QANDEEL_REPORTS/INTEL-LIVE-01/`.
 > - **Current task:** S8B-07 CP2-A (scope R-1 – R-8, S8B-07 record §20.3). It uses valid fixtures and accepted knowledge evidence, never fabricated knowledge. COSMOS, CALL-ATTR-01 and the completed Replay checkpoints are not reopened.
 
 
 > **HONOR-CORR-01 — BOUNDED DIAGNOSIS DONE, EXECUTION CONTRACT v1.0 PROPOSED, NOTHING IMPLEMENTED — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:** the Product Owner's "HONOR CONSOLIDATED CORRECTION — PO DIRECTION" (2026-11-27). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.10 is the primary account.
 > - **H-3 reproduced offline** (USD 0.0459 of 0.05): the production focus model proposes a café focus whose grounding it never lists as a reference, so it is refused `FOCUS_GROUNDING_REQUIRED` and falls back to no focus. The grounding rules are correct. A candidate prompt established the café, but it created false and fragmented focuses, so it was not accepted.
-> - **H-TTS:** the evidence fits a fixed limit of about 10 – 11 synthesis requests per minute for the project; the quota is still unread (D-TTS-1). F-01 takes are ready for the PO's choice.
+> - **H-TTS:** the evidence fits a fixed limit of about 10 – 11 synthesis requests per minute for the project; the quota is still unread (D-TTS-1). F-01 takes are ready for the PO's choice. *(Superseded 2026-11-27, kept as historical evidence: this was a hypothesis, not an established fact. The quota reading shows Dynamic Shared Quota, with no explicit per-project limit for `gemini-3.8-flash-tts`; INTEL-LIVE-01 record §12.11.)*
 > - **O-2:** a §3 amendment is proposed.
 > - **Open:** the PO's acceptance of the contract, the H-3 gate budget (at most USD 0.40), F-01's take, and D-TTS-1. Then S8B-07 CP2-A.
 

@@ -2726,7 +2726,7 @@ Nothing was changed: the provider, model, voice and breaker thresholds are uncha
 
 **B. H-TTS, from the existing evidence.**
 - **The project's quota is still unread.** Enabling the Cloud Quotas API requires the Service Usage API first, a further settings change that is not authorized. Nothing was enabled.
-- **The evidence fits a fixed per-minute request limit of about 10 – 11 requests per minute:**
+- **The evidence fits a fixed per-minute request limit of about 10 – 11 requests per minute:** *(superseded by §12.11 and kept as historical evidence: a hypothesis, not an established fact)*
   - in both calls, nine minutes apart, the first 11 requests succeeded and the 12th failed at once;
   - every fast failure had at least 11 requests in the preceding 60 s, and none with 10 or fewer failed.
 - **Classification of the 12 failures:**
@@ -2804,7 +2804,7 @@ The index goes to 116 items.
 - **F-01 takes:** `…/HONOR/f01-candidates/`, the four Achird takes with their sha256 values. S-01 is preferred, subject to
   the Product Owner's audio acceptance.
 - **The contract:** `…/HONOR-CORRECTION/HONOR_CORR_01_EXECUTION_CONTRACT_v1.0.md`, PROPOSED, now marked SUSPENDED.
-- **The O-2 work, suspended:**
+- **The O-2 work, suspended — not production code** (in no PR, not on `main`, never run in CI, not deployed):
   - local commit `c9eb1a29` on the never-pushed branch `honor/honor-corr-01`, from `main` `b842fd0d`;
   - the same diff as `…/HONOR-CORRECTION/HONOR_CORR_01_O2_SUSPENDED_WIP.patch`.
 
@@ -2834,3 +2834,17 @@ The index goes to 116 items.
   audio and reconnection. None of it is repeated.
 - COSMOS, CALL-ATTR-01 and the completed Replay checkpoints are not reopened.
 - Nothing is deployed. No production deployment while `QAN-BL-INTEL-07` or `QAN-BL-VOICE-10` is open.
+
+**Documentation corrections (the Product Owner's "PO EXECUTION AUTHORIZATION — S8B-07 CP2-A.1" §4, 2026-11-27):**
+- **The classification binds.** `QAN-BL-INTEL-07` is CRITICAL — MANDATORY RELEASE BLOCKER, and `QAN-BL-VOICE-10` is a MANDATORY
+  RELEASE-READINESS BLOCKER. Both classifications are explicit and binding whatever the backlog's severity taxonomy
+  says. Both items stay open.
+- **The TTS failure classification is corrected.** The earlier summaries said "12 of 34 failed (429 `OVERLOADED`)". Of
+  the 12, 3 are confirmed HTTP 429, 7 are unclassified fast failures and 2 are probable cancellations (§12.9, §12.10). The
+  locators carry the annotation in place.
+- **The quota hypothesis is superseded.** §12.10's "fixed ~10 – 11 RPM" is kept as historical evidence. It is a
+  hypothesis, not an established fact.
+- **Suspended work is not production code.** The O-2 work is a local, never-pushed commit and a patch. It is in no PR,
+  not on `main`, never run in CI and not deployed. Nothing of HONOR-CORR-01 is implemented in production code.
+- **The prohibition is narrow.** Production deployment and commercial launch are prohibited while either blocker is open.
+  Unrelated preparation work, such as hosted-deployment readiness, CI or infrastructure, is not.

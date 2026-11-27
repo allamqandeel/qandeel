@@ -4232,7 +4232,7 @@ first documentation update after it, as the Product Owner directed. Nothing here
   prompt v2, identifier aliases, refusal-code observability, the O-2 fold) are **not** the approved solution.
 - **Owner task:** `INTEL-SEMANTIC-REVIEW-01 — Semantic Understanding & Knowledge Formation Review` (the Product Owner's
   proposed canonical identifier; not started, not authorized).
-- **Severity:** `HIGH`. **Product Owner's classification: CRITICAL — MANDATORY RELEASE BLOCKER.** It blocks production
+- **Severity:** `HIGH`. **Product Owner's classification: CRITICAL — MANDATORY RELEASE BLOCKER.** The classification is explicit and binding whatever the §2 severity taxonomy says. `HIGH` is only that taxonomy's highest value, not a downgrade, and no severity rule may weaken, waive or reclassify it. It blocks production
   deployment and commercial launch. It does **not** block Replay development. It cannot be waived or closed without the
   Product Owner's explicit approval.
 - **Scope (the Product Owner's list):** contextual understanding; topic proposal and establishment; durable knowledge
@@ -4243,11 +4243,11 @@ first documentation update after it, as the Product Owner directed. Nothing here
   - the HONOR session's results (record §12.9);
   - the offline H-3 experiment: its script, every request and raw response, the refusal codes, USD 0.0459 spent;
   - the HONOR-CORR-01 contract v1.0, PROPOSED, now suspended;
-  - the suspended O-2 work, as a local commit and a patch, never pushed (record §12.11).
+  - the suspended O-2 work, as a local commit and a patch, never pushed (record §12.11). It is not production code: it is in no PR, not on `main`, and was never run in CI.
 
   What was reproduced is kept apart from what is historical inference only (record §12.10).
 - **Reopen condition:** S8B-07 CP2-A and CP2-B are closed, and the Product Owner authorizes `INTEL-SEMANTIC-REVIEW-01` with
-  its defined semantic philosophy. Production deployment or launch preparation may not proceed while this item is open.
+  its defined semantic philosophy. **Production deployment and commercial launch** may not proceed while this item is open. Unrelated preparation work (for example hosted-deployment readiness items, or CI and infrastructure work) is not prohibited by it.
 - **Required future properties:** set by the Product Owner's semantic definition. Already stated:
   - no fabricated topic or identity (including from vocatives and small talk);
   - grounding, evidence matching and anti-hallucination rules are not weakened;
@@ -4290,8 +4290,10 @@ Admitted at the Product Owner's explicit direction (2026-11-27). Nothing here au
   No quota change and no further paid TTS experiment is authorized. Live TTS capacity must not block Replay development,
   which uses valid recorded audio or controlled fixtures.
 - **Owner task:** `UNASSIGNED` — the Product Owner named no owner, and none is invented (BG-02).
-- **Severity:** `HIGH` — the spoken reply fails under ordinary conversational load, and a failure is silent. It blocks
-  production deployment of live calls.
+- **Severity:** `HIGH` — the spoken reply fails under ordinary conversational load, and a failure is silent. **Product
+  Owner's classification: MANDATORY RELEASE-READINESS BLOCKER**, explicit and binding whatever the §2 taxonomy says. It
+  blocks the production deployment and commercial launch of live calls, not unrelated preparation work or Replay
+  development.
 - **Reopen condition:** the Product Owner authorizes a TTS readiness task, or any task prepares live calls for production.
 - **Required future properties:**
   - F-01 is installed from pinned prerecorded files, needs no runtime provider request, is interruptible, and is never

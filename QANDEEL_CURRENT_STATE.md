@@ -7,11 +7,11 @@
 >   - **new:** `QAN-BL-INTEL-07` (H-3, O-2; owner `INTEL-SEMANTIC-REVIEW-01`, proposed; CRITICAL, scheduled after CP2-A and CP2-B, closable only by the PO) and `QAN-BL-VOICE-10` (H-TTS, F-01);
 >   - **existing, unchanged:** `QAN-BL-INTEL-06` `VALIDATION — OPEN`, `QAN-BL-INTEL-05`, the hosted-deployment items, and every voice gate `DISABLED`.
 >
->   No production deployment while either mandatory blocker is open.
+>   No production deployment and no commercial launch while either mandatory blocker is open. Unrelated preparation work is not prohibited.
 > - **Deferred improvements (not reopened):** O-6, the COSMOS first-tap limitation, and V-8's 2.36 s frame (kept visible).
 > - **HONOR-CORR-01 suspended:**
 >   - none of A1 / A2 / A3 / O-2 is implemented; no new prompt version; no further paid DeepSeek or TTS experiment; no quota change;
->   - the diagnosis, raw evidence, contract v1.0, F-01 takes and the suspended O-2 work are preserved outside `main`.
+>   - the diagnosis, raw evidence, contract v1.0, F-01 takes and the suspended O-2 work are preserved outside `main`. The O-2 work is a local, never-pushed commit (`c9eb1a29`) plus a patch. It is **not production code**: it is in no PR, not on `main`, never run in CI, and not deployed.
 >   - **Quota read (inspection only):** Vertex runs on Dynamic Shared Quota, and `gemini-3.8-flash-tts` has no explicit per-project limit. The "fixed ~10 – 11 RPM" reading is therefore not established.
 > - **Backlog:** 116 items (55 / 5 / 19 / 37; 66 / 46 / 4).
 > - **Next:** S8B-07 CP2-A.1, in-app Replay correctness (O-3 / O-4 / O-5, unified timeline, precise seeking), on the Product Owner's execution authorization. Then CP2-A.2 (video), then CP2-B.
@@ -20,7 +20,7 @@
 > **HONOR-CORR-01 — BOUNDED DIAGNOSIS DONE, EXECUTION CONTRACT v1.0 PROPOSED, NOTHING IMPLEMENTED — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:** the Product Owner's "HONOR CONSOLIDATED CORRECTION — PO DIRECTION" (2026-11-27). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.10 is the primary account.
 > - **H-3 reproduced offline** (USD 0.0459 of 0.05): the production focus model proposes a café focus whose grounding it never lists as a reference, so it is refused `FOCUS_GROUNDING_REQUIRED` and falls back to no focus. The grounding rules are correct. A candidate prompt established the café, but it created false and fragmented focuses, so it was not accepted.
-> - **H-TTS:** the evidence fits a fixed limit of about 10 – 11 synthesis requests per minute for the project; the quota is still unread (D-TTS-1). F-01 takes are ready for the PO's choice.
+> - **H-TTS:** the evidence fits a fixed limit of about 10 – 11 synthesis requests per minute for the project; the quota is still unread (D-TTS-1). F-01 takes are ready for the PO's choice. *(Superseded 2026-11-27, kept as historical evidence: this was a hypothesis, not an established fact. The quota reading shows Dynamic Shared Quota, with no explicit per-project limit for `gemini-3.8-flash-tts`; INTEL-LIVE-01 record §12.11.)*
 > - **O-2:** a §3 amendment is proposed.
 > - **Open:** the PO's acceptance of the contract, the H-3 gate budget (at most USD 0.40), F-01's take, and D-TTS-1. Then S8B-07 CP2-A.
 
@@ -30,7 +30,7 @@
 > - **Proven on HONOR (two real calls, about USD 0.154 of USD 1.50 spent):** attribution on every ledger row; V-1 live marks; V-2 / CP3-F10; V-3 / UT-3 Android (physical End button); V-4 with C8 on a real call; V-6 pan (60 fps, p95 16.7 ms, 0 stalls); V-7. V-8: T4 P50 18 ms (P95 1 823 ms). First Audio 1.63 – 2.05 s, a separate measurement.
 > - **Not passed or not measured:**
 >   - **H-3:** V-1's durable understanding. The café topic never became a Thread. Every café reference was `UNRESOLVED` or absent, so the unchanged grounding rules could never start a focus. Classified as model output in reference-state discipline, not ASR, evidence matching or continuity.
->   - **H-TTS:** 12 of 34 synthesis requests failed (429 `OVERLOADED`); the breaker opened; F-01 is `NOT_INSTALLED` on `main`, so a failed reply is silent. The real Vertex quota is not yet readable.
+>   - **H-TTS:** 12 of 34 synthesis requests failed (429 `OVERLOADED`) *(corrected 2026-11-27: of the 12, 3 are confirmed HTTP 429, 7 are unclassified fast failures and 2 are probable cancellations; record §12.9 – §12.10)*; the breaker opened; F-01 is `NOT_INSTALLED` on `main`, so a failed reply is silent. The real Vertex quota is not yet readable.
 >   - **O-2:** unanswered café turns were folded into Call B's first user message (contract §3).
 >   - V-5 (iOS Replay Lane B, UT-1 / UT-3) open; V-6 opening speed and Lane B stage preparation cost not measured.
 > - **Proposed, not implemented (record §12.9 F):** one task in three parts (the focus prompt's reference-state discipline with refusal-code observability; F-01 and the quota review; a §3 amendment for O-2), and an optional paid focus diagnosis of at most USD 0.05. Both await the PO.

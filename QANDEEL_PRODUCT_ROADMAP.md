@@ -3,7 +3,7 @@
 > **PO SEQUENCING — RETURN TO REPLAY (2026-11-27; status only; authorizes no implementation):** the Product Owner's directive "RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER" ([INTEL-LIVE-01 record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.11).
 > - **Sequence:** S8B-07 CP2-A (CP2-A.1 in-app Replay correctness → CP2-A.2 video; [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §20.3) → CP2-B → **INTEL-SEMANTIC-REVIEW-01** (`QAN-BL-INTEL-07`). The Product Owner defines its semantic philosophy before any implementation is authorized.
 > - **Release:**
->   - `QAN-BL-INTEL-07` (CRITICAL) and `QAN-BL-VOICE-10` (TTS capacity, F-01) are mandatory release blockers; no production deployment or commercial launch while either is open;
+>   - `QAN-BL-INTEL-07` (CRITICAL) and `QAN-BL-VOICE-10` (TTS capacity, F-01) are mandatory release blockers; no production deployment or commercial launch while either is open (unrelated preparation work is not prohibited);
 >   - neither blocks Replay development.
 > - **Suspended:** HONOR-CORR-01, with nothing implemented.
 > - **Unchanged:** `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`; COSMOS, CALL-ATTR-01 and the completed Replay checkpoints are not reopened.
