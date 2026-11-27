@@ -15,6 +15,40 @@
 >   - the **iOS Replay gate**: `.github/workflows/ios-replay-gate.yml`, `scripts/ios-replay-gate/`, and the proof root `apps/mobile/src/integration/__validation__/S807Cp2a1ProofRoot.tsx`, selected only by `apps/mobile/scripts/select-s807cp2a1-proof-entry.mjs` with `S807_CP2A1_PROOF=1`.
 > - **What binds over what:** RB-1's presentation clock, historical binding (§15 – §19), Lane A and Lane B (§20) and COSMOS bind unchanged. CP2-A.2 (video) must read the same presentation clock.
 
+> **PO DIRECTIVE — RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's directive of 2026-11-27; INTEL-LIVE-01 record §12.11; S8B-07 record §20.3.
+> - **Where the blockers live:**
+>   - `docs/qandeel-canonical-backlog-v1.md` holds `QAN-BL-INTEL-07` (`INTEL-SEMANTIC-REVIEW-01`, CRITICAL, a mandatory release blocker, not a Replay development blocker) and `QAN-BL-VOICE-10` (a TTS release-readiness blocker).
+>   - The H-3 / O-2 code locations are unchanged and listed in the addendum below. HONOR-CORR-01's proposals are **not** the approved semantic solution.
+> - **Suspended work (not production code; in no PR, never on `main`, never pushed):** local commit `c9eb1a29` on branch `honor/honor-corr-01`, plus its patch, contract v1.0 and the H-3 / F-01 evidence under `E:/QANDEEL_REPORTS/INTEL-LIVE-01/`.
+> - **Current task:** S8B-07 CP2-A (scope R-1 – R-8, S8B-07 record §20.3). It uses valid fixtures and accepted knowledge evidence, never fabricated knowledge. COSMOS, CALL-ATTR-01 and the completed Replay checkpoints are not reopened.
+
+
+> **HONOR-CORR-01 — BOUNDED DIAGNOSIS DONE, EXECUTION CONTRACT v1.0 PROPOSED, NOTHING IMPLEMENTED — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's "HONOR CONSOLIDATED CORRECTION — PO DIRECTION" (2026-11-27). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.10 is the primary account.
+> - **H-3 reproduced offline** (USD 0.0459 of 0.05): the production focus model proposes a café focus whose grounding it never lists as a reference, so it is refused `FOCUS_GROUNDING_REQUIRED` and falls back to no focus. The grounding rules are correct. A candidate prompt established the café, but it created false and fragmented focuses, so it was not accepted.
+> - **H-TTS:** the evidence fits a fixed limit of about 10 – 11 synthesis requests per minute for the project; the quota is still unread (D-TTS-1). F-01 takes are ready for the PO's choice. *(Superseded 2026-11-27, kept as historical evidence: this was a hypothesis, not an established fact. The quota reading shows Dynamic Shared Quota, with no explicit per-project limit for `gemini-3.8-flash-tts`; INTEL-LIVE-01 record §12.11.)*
+> - **O-2:** a §3 amendment is proposed.
+> - **Open:** the PO's acceptance of the contract, the H-3 gate budget (at most USD 0.40), F-01's take, and D-TTS-1. Then S8B-07 CP2-A.
+
+
+> **HONOR LIVE + REPLAY SESSION COMPLETED — CONSOLIDATED DIAGNOSIS (H-3, H-TTS, O-2) AWAITS PO REVIEW — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's "HONOR VALIDATION — PO DIRECTION" (2026-11-27); record §12.9.
+> - **Where the findings live (read, not changed):**
+>   - H-3: `apps/api/src/conversational-focus/focus-resolution-validator.ts` (the grounding rules, which behaved as frozen) and `deepseek-focus-resolution.provider.ts` (the prompt's reference states); `thread-establishment/conversation-thread-establishment.service.ts` maps refusals to `PROVIDER_UNAVAILABLE`.
+>   - H-TTS: `apps/api/src/voice/speech-admission.guard.ts` (the per-instance breaker), `voice/vertex-speech/vertex-speech.config.ts`, `apps/api/fixtures/voice-tts/manifest.json` (F-01 `NOT_INSTALLED`).
+>   - O-2: `apps/api/src/conversation/live-call-reply.service.ts` (`foldCallExchanges`).
+> - **Replay:** C8 proven on a real call. CP2-A's scope now includes O-3 / O-4 / O-5 (S8B-07 record §20.2). O-6 deferred; COSMOS not reopened.
+> - **Next:** the PO's review of the correction proposal and of the optional USD 0.05 diagnosis; then S8B-07 CP2-A.
+
+
+> **CALL-ATTR-01 — MERGED (PR #416, `main` `b842fd0d`, accepted head `8f52f6df`) — HONOR SESSION RESUMED FROM MERGED `main` — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's "CALL-ATTR-01 MERGED — RESUME HONOR VALIDATION" (2026-11-27); record §12.8.
+> - **Where it lives (now on `main`):** `apps/api/src/live-attention/live-attention.provider.ts` (`attributedEvaluator`) and `apps/api/src/live-analysis/call-analysis.worker.ts` (`establish`), both through `runWithAiUsageAttribution`. Permanent tests T-1 – T-3 as listed in the addendum below.
+> - **Merge evidence:** all mandatory CI passed; T-2 18 / 18 on all four PostgREST lines; the iOS Targeted Gate 9 / 9.
+> - **Kept open:** iOS touch **UT-1 PASS, UT-2 FAIL, UT-3 NOT TESTED**; `QAN-BL-CI-05` (`OPEN — UNASSIGNED`); `QAN-BL-INTEL-06` until the HONOR evidence (V-1 – V-8, the physical End button, CP3-F10, C8, First Audio latency, COSMOS performance) is accepted.
+> - **Next:** the paid HONOR session within USD 1.488 remaining; then S8B-07 CP2-A.
+
 > **CALL-ATTR-01 — CALL-PATH AI USAGE ATTRIBUTION CORRECTION — APPROVED BY THE PO AND DELIVERED / READY FOR PO REVIEW — NOT MERGED — `QAN-BL-INTEL-06` VALIDATION — OPEN — HONOR SESSION STILL SUSPENDED — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:** the Product Owner's "CALL-ATTR-01 — PO EXECUTION AUTHORIZATION" (2026-11-27): one task, one PR, one checkpoint, no migration. The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.5 is the primary account; §12.6 records the PO's "PR #416 CI CORRECTION" (R1: T-2's teardown and the ITG-09 checker), §12.7 CI R2 (the iOS gate's microphone grant read back before the start command; `QAN-BL-CI-05` registered).
 > - **Where it lives:**
