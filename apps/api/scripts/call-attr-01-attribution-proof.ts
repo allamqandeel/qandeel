@@ -23,12 +23,18 @@
  *   A4  a Session that is not the payer's is refused by 0170 (42501) before any provider request;
  *   B1  a committed call half is admitted under the durable claim's payer, Session and own committed turn, and settled;
  *   B2  the same item, recovered by ANOTHER worker instance, is attributed exactly as its first attempt;
- *   B3  the boundary refuses (42501) a turn that is not the payer's in that Session, before any provider request.
+ *   B3  the boundary refuses (42501) a turn that is not the payer's in that Session, before any provider request;
+ *   T1  every voice capability row is restored exactly, and the capability events the proof wrote are gone;
+ *   T2  every base table's row count is exactly as before the proof (no fixture residue, the ledger's usage included);
+ *   T3  no fixture human, call or ledger row remains.
  * The invalid-identity case (an identity that is not a UUID opens no scope) refuses before the ledger is reached, so it
  * needs no database: the T-1 composition spec proves it.
  *
- * It refuses anything but a loopback database and changes the database it is given (the PERSONAL_LIVE_CALL gate, restored
- * at the end; its synthetic fixtures): run it only on a disposable local clone or the CI job's own database.
+ * It refuses anything but a loopback database and changes the database it is given while it runs (the PERSONAL_LIVE_CALL
+ * gate; its synthetic fixtures). The teardown restores it under replica mode, whether or not the proof failed, and a
+ * teardown failure fails the run: in API CI the later PostgREST lines' proofs share this database (CALL-ATTR-01 CI R1:
+ * the S8B-02 CP2 proof's V01 asserts every voice capability DISABLED). Run it only on a disposable local clone or the CI
+ * job's own database, never alongside another proof.
  *
  *   DATABASE_URL=postgres://postgres:postgres@127.0.0.1:55470/call_attr_t2 \
  *     node node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/call-attr-01-attribution-proof.ts
@@ -60,7 +66,7 @@ import type { LiveCallAttentionChannel } from '../src/voice/call-turn/live-call-
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { Pool } = require('pg') as { Pool: new (config: { connectionString: string; max: number }) => PgPool };
-interface PgClient { query(text: string, values?: unknown[]): Promise<{ rows: Array<Record<string, unknown>> }>; release(): void }
+interface PgClient { query(text: string, values?: unknown[]): Promise<{ rows: Array<Record<string, unknown>>; rowCount: number | null }>; release(): void }
 interface PgPool { connect(): Promise<PgClient>; query(text: string, values?: unknown[]): Promise<{ rows: Array<Record<string, unknown>> }>; end(): Promise<void> }
 
 const VOICE_CONSENT_V3 = 'VOICE_RECORDING_V3';
@@ -202,6 +208,66 @@ function check(name: string, ok: boolean, detail: unknown = ''): void {
   process.stdout.write(`  ${line}\n`);
 }
 
+type Rows = (text: string, values?: unknown[]) => Promise<Array<Record<string, unknown>>>;
+
+/** Every base table's row count: the witness that the teardown left the shared CI database exactly as it found it. */
+async function tableCounts(sql: Rows): Promise<Record<string, number>> {
+  const tables = await sql(`SELECT table_schema AS s, table_name AS t FROM information_schema.tables WHERE table_type = 'BASE TABLE'
+    AND table_schema NOT IN ('pg_catalog', 'information_schema') ORDER BY 1, 2`);
+  const counts: Record<string, number> = {};
+  for (const { s, t } of tables) counts[`${String(s)}.${String(t)}`] = Number((await sql(`SELECT count(*) AS n FROM "${String(s)}"."${String(t)}"`))[0]!.n);
+  return counts;
+}
+
+/**
+ * Leaves the database as it was before the proof (the S8B-05 CP3 proof's teardown): every fixture human's rows under
+ * replica mode, the ledger's usage and ratings (keyed by the provider call, so the user_id sweep never reaches them), and
+ * every voice capability row exactly as read before the proof with the capability events the proof's own command wrote.
+ * Nothing is swallowed: a failure rolls the whole removal back and is thrown.
+ */
+async function teardown(pool: PgPool, humans: string[], gates: Array<Record<string, unknown>>, lastEvent: number): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query("SET LOCAL session_replication_role = 'replica'");
+    const recordings = 'SELECT id FROM voice_private.recordings WHERE user_id = ANY($1::uuid[])';
+    await client.query(`DELETE FROM voice_private.recording_gaps WHERE recording_id IN (${recordings})`, [humans]);
+    // A call's end seals its recording, which queues every never-uploaded segment's key for erasure (keyed on storage_key).
+    await client.query(`DELETE FROM introduction_sharing_private.media_erasure_queue WHERE storage_key IN
+      (SELECT o.storage_key FROM voice_private.recording_objects o WHERE o.recording_id IN (${recordings}))`, [humans]);
+    await client.query(`DELETE FROM voice_private.recording_objects WHERE recording_id IN (${recordings})`, [humans]);
+    await client.query('DELETE FROM public.runtime_event_outbox WHERE subject_user_id = ANY($1::uuid[])', [humans]);
+    const providerCalls = 'SELECT id FROM public.ai_provider_calls WHERE user_id = ANY($1::uuid[])';
+    await client.query(`DELETE FROM public.ai_provider_call_usage WHERE provider_call_id IN (${providerCalls})`, [humans]);
+    await client.query(`DELETE FROM public.ai_cost_ratings WHERE provider_call_id IN (${providerCalls})`, [humans]);
+    const owned = await client.query(`SELECT table_schema, table_name FROM information_schema.columns
+      WHERE column_name = 'user_id' AND table_schema IN ('voice_private', 'public', 'private') AND table_name NOT IN ('users')
+        AND table_name IN (SELECT table_name FROM information_schema.tables t WHERE t.table_schema = columns.table_schema AND t.table_type = 'BASE TABLE')`);
+    for (const row of owned.rows) {
+      await client.query(`DELETE FROM "${String(row.table_schema)}"."${String(row.table_name)}" WHERE user_id = ANY($1::uuid[])`, [humans]);
+    }
+    await client.query('DELETE FROM public.users WHERE id = ANY($1::uuid[])', [humans]);
+    await client.query('DELETE FROM auth.users WHERE id = ANY($1::uuid[])', [humans]);
+    // The capability events after the snapshot are this proof's own (the CI steps run one at a time); anything else is refused.
+    const foreign = await client.query("SELECT id, decided_by FROM voice_private.voice_launch_capability_events WHERE id > $1 AND decided_by <> 'call-attr-01-proof'", [lastEvent]);
+    if (foreign.rows.length > 0) throw new Error(`CALL_ATTR_01_TEARDOWN_REFUSED: capability events not written by this proof: ${JSON.stringify(foreign.rows)}`);
+    await client.query('DELETE FROM voice_private.voice_launch_capability_events WHERE id > $1', [lastEvent]);
+    for (const gate of gates) {
+      const columns = Object.keys(gate).filter((key) => key !== 'capability_scope');
+      const restored = await client.query(`UPDATE voice_private.voice_launch_capability_states SET ${columns.map((key, i) => `"${key}" = $${i + 2}`).join(', ')}
+        WHERE capability_scope = $1`, [gate.capability_scope, ...columns.map((key) => gate[key])]);
+      if (restored.rowCount !== 1) throw new Error(`CALL_ATTR_01_TEARDOWN_FAILED: the ${String(gate.capability_scope)} capability row was not restored`);
+    }
+    await client.query("SET LOCAL session_replication_role = 'origin'");
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function main(): Promise<void> {
   const pool = new Pool({ connectionString: loopbackUrl(), max: 16 });
   const sql = async (text: string, values: unknown[] = []) => (await pool.query(text, values)).rows;
@@ -222,7 +288,12 @@ async function main(): Promise<void> {
   const permits = new DatabaseBackgroundPermitGate(serverApi);
   const humans: string[] = [];
   const calls: string[] = [];
-  const gatesBefore = await sql("SELECT * FROM voice_private.voice_launch_capability_states WHERE capability_scope = 'PERSONAL_LIVE_CALL'");
+  // What the teardown restores and is checked against: every capability row, the last capability event, every table's count.
+  const gatesBefore = await sql('SELECT * FROM voice_private.voice_launch_capability_states ORDER BY capability_scope');
+  const lastEventBefore = Number((await sql('SELECT coalesce(max(id), 0) AS id FROM voice_private.voice_launch_capability_events'))[0]!.id);
+  const countsBefore = await tableCounts(sql);
+  const trackers: Array<{ close(): void }> = [];
+  const workers: CallAnalysisWorker[] = [];
 
   /** The ledger's rows for a person, oldest first, with their usage (ids, identities and quantities; never content). */
   const ledgerOf = async (user: string) => (await sql(`SELECT c.id, c.user_id, c.session_id, c.source_turn_id, c.feature_family, c.attempt_number,
@@ -250,12 +321,18 @@ async function main(): Promise<void> {
     return { user, session };
   };
 
+  let failure: unknown = null;
   try {
     await sql("SELECT * FROM voice_private.set_voice_launch_capability_v1('PERSONAL_LIVE_CALL', 'ENABLED', 'SATISFIED', 'call-attr-01-proof', 'local synthetic proof')");
 
     // ======================================================================== A: provisional attention
     const lane = productionLiveCallAttention(process.env, serverApi, permits)!;
     assert.ok(lane, 'the lane is ON');
+    const open = (ch: LiveCallAttentionChannel) => {
+      const tracker = lane.open(ch);
+      trackers.push(tracker);
+      return tracker;
+    };
     /** An ACTIVE call with its recording (the fixture shape of the INTEL-LIVE-01 CP1 corpus proof). */
     const attentionCall = async (p: { user: string; session: string }) => {
       const call = randomUUID();
@@ -291,7 +368,7 @@ async function main(): Promise<void> {
     process.stdout.write('A. provisional attention (the production lane)\n');
     const a = await person();
     const aCall = await attentionCall(a);
-    const first = lane.open(channel(a.user, a.session, aCall, 1));
+    const first = open(channel(a.user, a.session, aCall, 1));
     first.evidence('USER', USER_TEXT, 0, 2_000);
     await waitFor(async () => (await evaluationsOf(aCall)).length >= 1, 'A1 the evaluation record');
     const a1 = await ledgerOf(a.user);
@@ -305,7 +382,7 @@ async function main(): Promise<void> {
 
     await first.handover();
     await sql('UPDATE voice_private.calls SET connection_epoch = connection_epoch + 1 WHERE id = $1', [aCall]);
-    const second = lane.open(channel(a.user, a.session, aCall, 2));
+    const second = open(channel(a.user, a.session, aCall, 2));
     second.evidence('USER', `${USER_TEXT} تاني`, 2_000, 4_000);
     await waitFor(async () => (await evaluationsOf(aCall)).some((e) => e.epoch === 2 && e.outcome === 'NONE'), 'A2 the second connection\'s record');
     const a2 = await ledgerOf(a.user);
@@ -321,8 +398,8 @@ async function main(): Promise<void> {
     let release!: () => void;
     deepseek.hold = new Promise<void>((resolve) => { release = resolve; });
     const before = deepseek.requests.length;
-    const one = lane.open(channel(b.user, b.session, bCall, 1));
-    const two = lane.open(channel(c.user, c.session, cCall, 1));
+    const one = open(channel(b.user, b.session, bCall, 1));
+    const two = open(channel(c.user, c.session, cCall, 1));
     one.evidence('USER', `${USER_TEXT} marker-one`, 0, 2_000);
     two.evidence('USER', `${USER_TEXT} marker-two`, 0, 2_000);
     await waitFor(async () => deepseek.requests.length - before === 2, 'A3 both provider requests in flight');
@@ -343,7 +420,7 @@ async function main(): Promise<void> {
     const xCall = await attentionCall(x);
     const beforeRefusal = deepseek.requests.length;
     const refusalsBeforeA4 = refusals.length;
-    const refused = lane.open(channel(x.user, c.session, xCall, 1)); // a Session that is not the payer's
+    const refused = open(channel(x.user, c.session, xCall, 1)); // a Session that is not the payer's
     refused.evidence('USER', USER_TEXT, 0, 2_000);
     await waitFor(async () => (await evaluationsOf(xCall)).length >= 1, 'A4 the refused evaluation\'s record');
     refused.close();
@@ -372,10 +449,14 @@ async function main(): Promise<void> {
     };
     const endedCallSafety = new LiveCallReplyService(new LiveCallConversationBinding(), {} as SupabaseDataApiService, new SafetyResponseGateService(),
       {} as never, {} as never, {} as never, {} as never, null);
-    const worker = () => new CallAnalysisWorker({
-      store: new CallAnalysisRepository(serverApi), semantic: semantic(), permits, safety: endedCallSafety, start: callAnalysisStart(),
-      attentionSettlement: signallingAttentionSettlement(new CallAttentionRepository(serverApi), lane),
-    });
+    const worker = () => {
+      const instance = new CallAnalysisWorker({
+        store: new CallAnalysisRepository(serverApi), semantic: semantic(), permits, safety: endedCallSafety, start: callAnalysisStart(),
+        attentionSettlement: signallingAttentionSettlement(new CallAttentionRepository(serverApi), lane),
+      });
+      workers.push(instance);
+      return instance;
+    };
     const queueOf = async (session: string) => (await sql(`SELECT call_turn_index i, half, turn_id, queue_state s, attempt_count a
       FROM voice_private.call_analysis_queue WHERE session_id = $1 ORDER BY call_turn_index, CASE half WHEN 'EXCHANGE' THEN 0 WHEN 'USER' THEN 1 ELSE 2 END`, [session]))
       .map((r) => ({ item: `${r.i}:${r.half}`, turn: String(r.turn_id), state: String(r.s), attempts: Number(r.a) }));
@@ -454,19 +535,45 @@ async function main(): Promise<void> {
         && deepseek.requests.length === beforeTurnRefusal && (await ledgerOf(q.user)).length === 0,
       { outcome: crossTurn, refusals: refusals.slice(refusalsBeforeB3).map((r) => `${r.rpc} ${r.status} ${r.code}`), providerRequests: deepseek.requests.length - beforeTurnRefusal });
     check('B3 nothing more was charged to the turn\'s owner', (await ledgerOf(p.user)).length === b1.length * 2);
-  } finally {
-    deepseek.restore();
-    // No call outlives the proof (a later proof's capacity counts ACTIVE calls); no queue item stays claimable.
-    await sql(`UPDATE voice_private.calls SET state = 'ENDED', end_reason = 'USER_ENDED', ended_at = clock_timestamp(), grace_until = NULL,
-      seat_lease_until = NULL WHERE id = ANY($1::uuid[]) AND state <> 'ENDED'`, [calls]).catch(() => undefined);
-    await sql('DELETE FROM voice_private.call_analysis_queue WHERE user_id = ANY($1::uuid[])', [humans]).catch(() => undefined);
-    for (const gate of gatesBefore) {
-      await sql('SELECT * FROM voice_private.set_voice_launch_capability_v1($1, $2, $3, $4, $5)',
-        [gate.capability_scope, gate.feature_flag_state, gate.condition_state, 'call-attr-01-proof', 'restored after the local synthetic proof']).catch(() => undefined);
-    }
-    await new Promise<void>((resolve) => gateway.close(() => resolve()));
-    await pool.end();
+  } catch (error) {
+    failure = error;
   }
+
+  // The fixture removal runs whether or not the proof failed, and its own failure is never swallowed: a later proof on this
+  // CI database (the S8B-02 CP2 proof starts by asserting every voice capability DISABLED) depends on it.
+  process.stdout.write('T. teardown (the shared CI database is left exactly as found)\n');
+  const removal = await (async () => {
+    for (const tracker of trackers) tracker.close();
+    for (const instance of workers) await instance.stop();
+    await sleep(1_000); // a closed tracker's last write and a stopped worker's drain settle before anything is removed
+    deepseek.restore();
+    // The fixtures' sealed segment keys, read before the teardown removes the objects that name them.
+    const mediaKeys = (await sql(`SELECT o.storage_key FROM voice_private.recording_objects o JOIN voice_private.recordings r ON r.id = o.recording_id
+      WHERE r.user_id = ANY($1::uuid[])`, [humans])).map((r) => String(r.storage_key));
+    await teardown(pool, humans, gatesBefore, lastEventBefore);
+    const gatesAfter = await sql('SELECT * FROM voice_private.voice_launch_capability_states ORDER BY capability_scope');
+    const lastEventAfter = Number((await sql('SELECT coalesce(max(id), 0) AS id FROM voice_private.voice_launch_capability_events'))[0]!.id);
+    check('T1 every voice capability row is exactly as before the proof, and no capability event of the proof remains',
+      JSON.stringify(gatesAfter) === JSON.stringify(gatesBefore) && lastEventAfter === lastEventBefore,
+      { scopes: gatesAfter.map((g) => `${String(g.capability_scope)}=${String(g.feature_flag_state)}/${String(g.launch_requirements_state)} v${String(g.restriction_version)}`), lastEventBefore, lastEventAfter });
+    const countsAfter = await tableCounts(sql);
+    const changed = Object.keys({ ...countsBefore, ...countsAfter }).filter((key) => countsBefore[key] !== countsAfter[key])
+      .map((key) => `${key} ${countsBefore[key] ?? 'absent'} -> ${countsAfter[key] ?? 'absent'}`);
+    check(`T2 no fixture residue: every base table's row count is exactly as before the proof (${Object.keys(countsAfter).length} tables)`, changed.length === 0, changed);
+    const [left] = await sql(`SELECT (SELECT count(*) FROM public.users WHERE id = ANY($1::uuid[]))::int AS users,
+        (SELECT count(*) FROM auth.users WHERE id = ANY($1::uuid[]))::int AS auth_users,
+        (SELECT count(*) FROM voice_private.calls WHERE id = ANY($3::uuid[]))::int AS calls,
+        (SELECT count(*) FROM public.ai_provider_calls WHERE user_id = ANY($1::uuid[]))::int AS ledger_rows,
+        (SELECT count(*) FROM public.runtime_event_outbox WHERE subject_user_id = ANY($1::uuid[]))::int AS outbox_events,
+        (SELECT count(*) FROM introduction_sharing_private.media_erasure_queue WHERE storage_key = ANY($2::text[]))::int AS erasure_queue_keys`, [humans, mediaKeys, calls]);
+    check(`T3 none of the proof's ${humans.length} fixture humans, ${calls.length} calls, ledger rows, runtime events or ${mediaKeys.length} erasure keys remains`,
+      Object.values(left!).every((n) => n === 0), left);
+  })().then(() => null, (error: unknown) => error ?? new Error('CALL_ATTR_01_TEARDOWN_FAILED'));
+  await new Promise<void>((resolve) => gateway.close(() => resolve()));
+  await pool.end();
+  if (failure && removal) throw new AggregateError([failure, removal], `${(failure as Error).message ?? failure}; the fixture removal ALSO failed: ${(removal as Error).message ?? removal}`);
+  if (failure) throw failure;
+  if (removal) throw removal;
   const failed = checks.filter((line) => line.startsWith('FAIL'));
   process.stdout.write(`CALL-ATTR-01 T-2: ${checks.length - failed.length}/${checks.length} PASS\n`);
   if (failed.length > 0) process.exitCode = 1;

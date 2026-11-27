@@ -15,8 +15,9 @@
 //                              then applied the latest event and holds exactly the open subjects
 //   cosmos <sinceAt>           after <sinceAt>: the production Personal owner (the probe's mirror) compiled a stage with a mark
 //                              whose digest differs from the last stage it compiled without one
-//   cleanup <sinceAt>          the phone holds no mark and its latest stage has none; a mark still shown at <sinceAt> (the
-//                              end) was dropped with the call no longer ACTIVE
+//   cleanup <sinceAt>          the phone holds no mark and its latest stage has none; its last mark left either with the
+//                              database's latest event (open set empty) or, after <sinceAt> (the end), with the call no
+//                              longer ACTIVE - never dropped while ACTIVE without that event
 import { readFileSync } from 'node:fs';
 
 const [file, attentionFile, check, ...args] = process.argv.slice(2);
@@ -85,16 +86,31 @@ switch (check) {
     break;
   }
   case 'cleanup': {
+    // CALL-ATTR-01 CI R1: the check correlates the phone's actual mark REMOVAL (the held row after the last one holding a
+    // mark), at the phone's own instant (`phoneAt`, on the server's clock), never the first `applied` row the server
+    // happened to receive after <sinceAt>. A removal is accepted only as the database's own latest event (the phone
+    // applied a new seq, the database's lastSeq, whose open set is empty) or as the end's cleanup (the call no longer
+    // ACTIVE, after <sinceAt>). A drop while ACTIVE without that event, or a mark kept, fails.
     const sinceAt = Number(args[0]);
-    const applied = probe('applied');
+    const a = attention();
     const digests = probe('digest');
     const rows = held();
+    const when = (r) => r.phoneAt ?? r.at;
+    const fromEnd = (r) => (when(r) < sinceAt ? `${sinceAt - when(r)} ms before the end` : `${when(r) - sinceAt} ms after the end`);
     const last = rows[rows.length - 1] ?? null;
     const stage = digests[digests.length - 1] ?? null;
-    const atEnd = applied.find((r) => r.at > sinceAt) ?? null;
-    const phone = last === null ? 'applied nothing'
-      : `holds ${last.marks} mark(s), ${atEnd === null ? 'none shown at the end (dropped before it)' : `dropped at the call's ${atEnd.stage}`}`;
-    done(last !== null && last.marks === 0 && stage !== null && stage.marks === 0 && (atEnd === null || atEnd.stage !== 'ACTIVE'),
+    const lastHolding = rows.findLastIndex((r) => r.marks > 0);
+    const removal = lastHolding < 0 ? null : rows[lastHolding + 1] ?? null;
+    const byDatabase = removal !== null && removal.row === 'applied' && removal.seq > rows[lastHolding].seq
+      && removal.seq === a.lastSeq && openTotal(a) === 0;
+    const byEnd = removal !== null && removal.stage !== 'ACTIVE' && when(removal) > sinceAt;
+    const how = lastHolding < 0 ? 'never held a mark'
+      : removal === null ? `still holds the mark(s) seen at seq ${rows[lastHolding].seq}`
+        : byDatabase ? `its last mark left with the database's latest event (seq ${removal.seq}, open ${openTotal(a)}) at the call's ${removal.stage}, ${fromEnd(removal)}`
+          : byEnd ? `its last mark was dropped at the call's ${removal.stage}, ${fromEnd(removal)}`
+            : `its last mark was dropped at the call's ${removal.stage} at seq ${removal.seq} (${removal.row}) without the database's latest event (lastSeq ${a.lastSeq}, open ${openTotal(a)})`;
+    const phone = last === null ? 'applied nothing' : `holds ${last.marks} mark(s), ${how}`;
+    done(last !== null && last.marks === 0 && stage !== null && stage.marks === 0 && (lastHolding < 0 || byDatabase || byEnd),
       `phone: ${phone}; stage: ${stage === null ? 'never compiled' : `${stage.digest} with ${stage.marks} mark(s)`}`);
     break;
   }

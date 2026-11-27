@@ -7,7 +7,11 @@
 // the API and the database are no longer its inputs; BG-10's clarification is in the backlog and AGENTS.md.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createHarnessMirror, removeHarnessMirror } from './harness-temp-dir.mjs';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const code = (text) => text.replace(/^\s*#[^\n]*$/gmu, '');
@@ -308,5 +312,52 @@ test('each refusal is real: planted regressions are caught', () => {
     ['a World gate suite removed', plant('world', 'run: npm run test:cosmos-ios-world-gate-composition-contract', 'run: true')],
   ]) {
     assert.notDeepEqual(violations(mutated), [], `${what} must be refused`);
+  }
+});
+
+// CALL-ATTR-01 CI R1 (PR #416, run 45927739108): ITG-09 failed although the phone and its stage held no mark and the call
+// had ENDED. The USER half's settlement expired the mark (the database's latest event, seq 10, open set empty) while the
+// call was ACTIVE, about 190 ms before the end command; the phone's `applied` row reached the server after the runner's
+// END_AT, and the check took the first `applied` row after END_AT as the end's drop. The check now correlates the actual
+// removal (the held row after the last one holding a mark) at the phone's own instant. These run the checker itself.
+test("ITG-09's cleanup check correlates the actual mark removal, and still refuses a kept mark or a premature drop", () => {
+  const END = 1_000_000;
+  const mirror = createHarnessMirror('qandeel-itg09-cleanup-');
+  const checker = fileURLToPath(new URL(`../${CHECKS}`, import.meta.url));
+  const row = (kind, phoneAt, seq, marks, stage, at = phoneAt + 80) => ({ at, kind: 'probe', row: kind, phoneAt, seq, marks, digest: kind === 'digest' ? `d${marks}` : null, stage });
+  const held = [row('applied', END - 11_000, 9, 1, 'ACTIVE'), row('tick', END - 1_300, 9, 1, 'ACTIVE')];
+  const run = (name, rows, attention, endAt = END) => {
+    writeFileSync(join(mirror, `${name}.jsonl`), rows.map((r) => JSON.stringify(r)).join('\n'));
+    writeFileSync(join(mirror, `${name}.json`), JSON.stringify(attention));
+    const r = spawnSync(process.execPath, [checker, `${name}.jsonl`, `${name}.json`, 'cleanup', String(endAt)], { cwd: mirror, encoding: 'utf8' });
+    return { ok: r.status === 0, out: `${r.stdout}${r.stderr}`.trim() };
+  };
+  const bare = row('digest', END + 5_900, 0, 0, 'IDLE');
+  try {
+    // The CI R1 shape: removed by the database's latest event while ACTIVE, received after END_AT (and, either way, the race).
+    const dbRemoval = [...held, row('applied', END - 40, 10, 0, 'ACTIVE', END + 40), row('tick', END + 650, 10, 0, 'ENDING'), bare];
+    for (const endAt of [END, END - 100, END + 100]) {
+      const r = run(`db-${endAt}`, dbRemoval, { lastSeq: 10, open: [] }, endAt);
+      assert.ok(r.ok, `the database's own removal is not a premature cleanup (END_AT ${endAt - END}): ${r.out}`);
+      assert.match(r.out, /left with the database's latest event \(seq 10, open 0\) at the call's ACTIVE/u);
+    }
+    // The end's cleanup: a mark still shown at the end is dropped with the call no longer ACTIVE.
+    const byEnd = [...held, row('tick', END + 650, 9, 0, 'ENDING'), bare];
+    assert.ok(run('end', byEnd, { lastSeq: 9, open: [{ n: 1 }] }).ok, 'the end drops a mark it still showed');
+    for (const [what, rows, attention] of [
+      ['a mark kept after the end', [...held, row('tick', END + 650, 9, 1, 'ENDING'), bare], { lastSeq: 9, open: [{ n: 1 }] }],
+      ['a mark kept by the stage', [...held, row('tick', END + 650, 9, 0, 'ENDING'), row('digest', END + 5_900, 9, 1, 'IDLE')], { lastSeq: 9, open: [{ n: 1 }] }],
+      ['a premature drop while ACTIVE without an event', [...held, row('tick', END - 500, 9, 0, 'ACTIVE'), row('tick', END + 650, 9, 0, 'ENDING'), bare], { lastSeq: 9, open: [{ n: 1 }] }],
+      ['a premature drop while ACTIVE received after the end', [...held, row('tick', END + 300, 9, 0, 'ACTIVE'), row('tick', END + 650, 9, 0, 'ENDING'), bare], { lastSeq: 9, open: [{ n: 1 }] }],
+      ['a drop by an event that is not the database\'s latest', [...held, row('applied', END - 40, 10, 0, 'ACTIVE'), bare], { lastSeq: 11, open: [] }],
+      ['a drop by an event while the database still holds a subject', [...held, row('applied', END - 40, 10, 0, 'ACTIVE'), bare], { lastSeq: 10, open: [{ n: 1 }] }],
+      ['a drop not ACTIVE but before the end, without an event', [...held, row('tick', END - 300, 9, 0, 'ENDING'), bare], { lastSeq: 9, open: [{ n: 1 }] }],
+      ['no stage compiled', [...held, row('tick', END + 650, 9, 0, 'ENDING')], { lastSeq: 9, open: [{ n: 1 }] }],
+    ]) {
+      const r = run(what.replace(/\W+/gu, '-'), rows, attention);
+      assert.ok(!r.ok, `${what} must be refused: ${r.out}`);
+    }
+  } finally {
+    removeHarnessMirror(mirror);
   }
 });

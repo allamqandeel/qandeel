@@ -2290,3 +2290,122 @@ Nothing is added on the First Audio path.
 
 **Next:** PO review of the Draft PR. After «ادمج» and the merge, the **same** HONOR session resumes inside the remaining
 USD 1.50 ceiling (USD 0.012 spent). The server-only correction needs no new APK (`c30f6faa` stays compatible).
+
+### 12.6 CALL-ATTR-01 CI R1 — PR #416's two CI failures (2026-11-27)
+
+**Authority:** the Product Owner's "CALL-ATTR-01 — PR #416 CI CORRECTION" (independent review of head `e4aa60f2`).
+- Same PR, no new checkpoint, no product change; the attribution correction of §12.5 is unchanged.
+- Both corrections are tested locally and pushed together.
+- No paid call, hosted deployment or merge.
+
+**A. API CI (run `45927739043`): T-2 left the shared CI database dirty.**
+- **The chain, confirmed in the job log and reproduced locally.**
+  - T-2 passed 15 / 15 on PostgREST v12.2.9.
+  - On the v13.0.8 line, the S8B-02 CP2 proof (`prove-0185`) failed at V01 B12 with "the four scopes start DISABLED", `3 !== 4`.
+  - Its fixture removal then failed with "no voice row, consent text, open gate … behind", `1 !== 0`.
+- **Root cause.** T-2's `finally` restored the gate through `set_voice_launch_capability_v1` with the column
+  `gate.condition_state`, which does not exist. The column is `launch_requirements_state`.
+  - The command therefore raised `null value in column "launch_requirements_state" … violates not-null constraint`.
+  - `.catch(() => undefined)` swallowed that error, so `PERSONAL_LIVE_CALL` stayed `ENABLED / SATISFIED` (restriction
+    version 2), plus one capability event.
+  - T-2 also never removed its fixture humans. One local run of the old T-2 changed **23 tables**: six users, five
+    calls and recordings, eight ledger rows with 24 usage rows and 8 ratings, the analysis queue, the outbox, and the
+    erasure-queue keys.
+- **Correction (`apps/api/scripts/call-attr-01-attribution-proof.ts`, the proof only).**
+  - The teardown is the S8B-05 CP3 proof's: one transaction under replica mode removes:
+    - the fixture humans' recordings, gaps, objects and erasure-queue keys;
+    - the outbox;
+    - every `user_id` row of `voice_private`, `public` and `private`;
+    - the users;
+    - and, beyond CP3, the ledger's `ai_provider_call_usage` and `ai_cost_ratings`. These are keyed by the provider
+      call, so the `user_id` sweep never reaches them.
+  - Every voice capability row is restored exactly as read before the proof, all columns of all four scopes. The capability
+    events after the snapshot are deleted only when every one was written by the proof itself; otherwise the teardown
+    refuses.
+  - The teardown runs whether or not the proof failed. It first closes every tracker and stops every worker the proof
+    opened. Its failure rolls the transaction back and fails the run (an `AggregateError` when both fail); nothing is
+    swallowed.
+  - **Before** the summary line, three checks:
+    - T1: the capability rows are identical and the last event id is unchanged;
+    - T2: every base table's row count is exactly as before the proof (406 tables);
+    - T3: no fixture human, call, ledger row, runtime event (by `subject_user_id`) or erasure-queue key (the fixtures' storage keys, read before the teardown) remains. These are the explicit counts the S8B-05 live call contract requires of every proof whose teardown sweeps by `user_id`.
+- **Local evidence** (throwaway clones of the migrated template, pg shim; prove-0185 itself needs PostgREST and rclone,
+  so it runs in CI):
+
+| | Run | Result |
+|---|---|---|
+| Old T-2 | one run, then prove-0185's own V01 and residue queries | 15 / 15, then **DISABLED = 3** and **open gates = 1**, exactly CI's `3 !== 4` and `1 !== 0`; 23 tables changed |
+| Corrected T-2 | twice in a row on one clone | **18 / 18 both times**; an outside snapshot shows **0** table differences and identical capability rows |
+| Compatibility | the same clone: V01's queries, then the S8B-05 CP1 and CP2 (single call) live call proofs, then T-2 a third time | DISABLED = **4**, open gates = **0**; CP1 and CP2 pass; T-2 **18 / 18** |
+| N1 (control) | the proof made to fail after A1 | exit 1; T1 – T3 PASS; 0 table differences |
+| N2 (control) | the teardown made to fail | exit 1 with the error, no PASS line; the failure is not swallowed |
+| N3 (control) | the usage delete removed | **T2 FAILS** (`public.ai_provider_call_usage 0 -> 24`), exit 1 |
+
+  The controls were in-place edits from a copy, never a stash, and the file was restored byte-identical.
+- **Observation, outside this task.** After the S8B-05 CP2 spoken-turn proof, the local clone kept **80**
+  `ai_provider_call_usage` and **51** `ai_cost_ratings` rows with no provider call. CP2's teardown deletes the ledger
+  rows under replica mode but not their children. Nothing fails on it today, and `main` already behaves this way.
+  CALL-ATTR-01 does not change it; its disposition is the PO's.
+
+**B. iOS Targeted Gate (run `45927739108`, artifact `15168144036`): ITG-09 was a checker false negative.**
+- ITG-01, 02, 03, 07, 08 and 04 passed. ITG-09 failed with "dropped at the call's ACTIVE", although the phone and its
+  stage held 0 marks and the call was `ENDED USER_ENDED`.
+- **Timeline from the artifact**, relative to the end command being queued (0 ms). The simulator, the proof server and
+  the runner share the host clock, and the probe's `phoneAt` is on the server's clock.
+  - −11 391 ms: the phone applied seq 9 (one mark).
+  - −249 ms: the USER half SETTLED `COMPLETE` (0191). 0204's settlement expired the provisional mark, so the database's
+    latest event became seq 10 with an empty open set.
+  - −208 ms: the lane SENT `ATTENTION_STATE` seq 10 with 0 entries.
+  - −190 ms: the phone applied it (`phoneAt`) while the call was still ACTIVE. The server received that row at −111 ms.
+  - 0 ms: the end was queued (END_AT is taken shortly before this).
+  - +603 ms: the end was executed, stage `ENDING`.
+  - +655 ms: tick seq 10, 0 marks, `ENDING`.
+  - +5 941 ms: stage digest `881ea49b…`, 0 marks, `IDLE`.
+- **Root cause, in `scripts/ios-targeted-gate/attention-checks.mjs` `cleanup`.**
+  - The check took the **first `applied` row the server received after END_AT**, not the transition that removed the mark.
+  - It compared the server's receipt time `at`, not the phone's instant `phoneAt`.
+  - The settlement's removal reached the server after END_AT, so it was read as the end's drop at ACTIVE.
+  - Replaying the artifact with END_AT anywhere before the −111 ms receipt fails; END_AT at the queue instant passes. So the
+    verdict rested on a ~100 ms race.
+  - **No premature cleanup happened:** the phone held exactly the database's open set at its latest event, which is what
+    ITG-07 and ITG-08 require.
+- **Correction (the checker only).** The check now finds the actual removal (the held row after the last one holding a
+  mark), at `phoneAt`. It accepts that removal only in two cases:
+  - **the database's own latest event:** an `applied` row at a new seq equal to `/proof/attention`'s `lastSeq`, whose
+    open set is empty;
+  - **the end's cleanup:** the call no longer ACTIVE, after END_AT.
+
+  A drop while ACTIVE without that event fails, as does a mark kept by the phone or the stage, or no stage at all. The
+  acceptance condition is not weakened. It is stricter than before: the old check passed a drop while ACTIVE, without an
+  event, whenever no `applied` row followed END_AT.
+- **Evidence.**
+  - The artifact replayed through the corrected check passes for every END_AT tried (−307, −157, −117 and 0 ms, relative to the
+    queue): "its last mark left with the database's latest event (seq 10, open 0) at the call's ACTIVE".
+  - A new behavioural test in `tests/intel-live-01-ios-targeted-gate-contract.test.mjs` runs the checker itself. It
+    accepts this run's shape at three END_AT offsets, and the end's drop of a mark it still showed.
+  - The same test refuses eight cases:
+    - a mark kept after the end;
+    - a mark kept by the stage;
+    - a premature drop while ACTIVE without an event, received before the end;
+    - the same drop received after the end;
+    - a drop by an event that is not the database's latest;
+    - a drop while the database still holds a subject;
+    - a drop not ACTIVE but before the end, without an event;
+    - no stage compiled.
+  - Contract: **7 / 7**. Against the old checker (put back in place, then restored byte-identical) the new test **fails**
+    on this run's shape.
+- **Not claimed:** ITG-05 and ITG-06 and the UI touch checks UT-1 – UT-3 were **not reached** in run `45927739108`. They
+  stay NOT TESTED until the gate runs them on the new head.
+
+**Local verification of R1:**
+- T-1: **9 / 9**.
+- T-2: **18 / 18** (twice, then again after the sibling proofs).
+- `tsc --noEmit` passes for the scripts project.
+- The gate contract: **7 / 7**.
+- Root contracts (`node --test tests/*.test.mjs`) and `test:task-closure-governance-contract`: run on the committed tree; results in the closing note below.
+
+**CI impact (BG-10):** the World gate's impact plan stays **NOT_AFFECTED** for every file. The iOS Targeted Gate runs
+again, triggered by `scripts/ios-targeted-gate/**`, `live-attention/**` and `live-analysis/**`. API CI runs in full.
+
+**Backlog:** `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`. Nothing is admitted, re-owned or tombstoned. The observation
+under A is left for the PO's decision.
