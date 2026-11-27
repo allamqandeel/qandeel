@@ -18,7 +18,7 @@
 > - **CI on `eda0482f`:** API CI, Mobile CI and the iOS World gate (all three cells) PASS. The iOS Replay gate FAILED in all three cells (run 46007215812). C-TIMELINE and C-PLAY-THROUGH passed everywhere; every failure was the proof harness (record §21.9).
 >   - The harness is corrected without weakening a criterion.
 >   - Two product defects found on the way are corrected: Play after a held step in the last moment restarted the part, and the line went back while the first Play prepared.
-> - **CI on `3e5e2b49` (round 2):** API CI and Mobile CI PASS. The iOS World gate (46037105052) was still running when round 3 was prepared. The iOS Replay gate (46037104976) was red in all three cells, and none of it was a product defect (record §21.9):
+> - **CI on `3e5e2b49` (round 2):** API CI and Mobile CI PASS. The iOS World gate (46037105052) FAILED and is **not** an all-cells PASS: en cancelled; small iPhone NOT TESTED in five cases (orientation, screens that did not open, no visual match); ar one FAIL, X-PAN-AFTER-PINCH (−88 against −120 pt). No COSMOS regression is established: nothing in this PR reaches those maps, and COSMOS code is unchanged (record §21.9). The iOS Replay gate (46037104976) was red in all three cells, and none of it was a product defect (record §21.9):
 >   - iPhone 17 en: a DNS failure while downloading Maestro; nothing ran;
 >   - the small iPhone: all eight cases PASS, but a three-line detail made the results file malformed;
 >   - iPhone 17 ar: six PASS. The two seek cases' touches arrived late: after the end, and a Pause past moment 5.

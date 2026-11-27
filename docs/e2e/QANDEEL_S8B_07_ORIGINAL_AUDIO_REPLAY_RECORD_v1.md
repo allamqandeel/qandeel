@@ -2406,8 +2406,30 @@ is added. The tolerances and the one-flow sequences are pinned by the CP2-A.1 co
 |---|---|---|
 | 46037104980 | API CI | PASS |
 | 46037105014 | Mobile CI | PASS |
-| 46037105052 | iOS World gate | still running when round 3 was prepared; recorded with round 3 |
+| 46037105052 | iOS World gate | FAIL: **not** an all-cells PASS (below) |
 | 46037104976 | iOS Replay gate | FAIL in all three cells (below) |
+
+The World gate on `3e5e2b49` (46037105052):
+- **iPhone 17 en: CANCELLED**, with no results file.
+- **The small iPhone: FAIL.**
+  - Every case reached passed, except these, which were NOT TESTED:
+    - U-LAND: Maestro could not turn the simulator (`setOrientation`);
+    - S-EMPTY, U-EMPTY and P-LAND, whose screens did not open after it;
+    - X-PAN-ZOOMED: no unambiguous visual match of node cores.
+  - NOT TESTED is not PASS.
+- **iPhone 17 ar: FAIL**, in one case.
+  - X-PAN-AFTER-PINCH: the shift measured from the screenshots was −88 pt against an expected −120; the worst pair was off
+    by 32 pt.
+  - Every other case passed, including S-LAND, the twelve native XCUITest cases and X-ANCHOR.
+- **No COSMOS regression is established, and no COSMOS code is changed.**
+  - Nothing in this PR can reach the world maps those cases exercise: only Replay code imports `replay-cosmos/`.
+  - Between `eda0482f`, where every World gate cell passed, and `3e5e2b49`, only Replay files changed.
+  - X-PAN-AFTER-PINCH is the screenshot analyser's measurement. Its native counterpart,
+    `testPersonalPinchStepsInAndThePanStillMovesTheWorld`, passed in the same cell.
+  - The failure stands as recorded. It is not counted as a PASS.
+- **No earlier World gate evidence is reused for this PR's later heads.** `eda0482f` was every-cell PASS, but the Replay
+  files changed since then are a protected surface (`world-gate-impact.mjs`: `RUN`), so the gate runs every cell again.
+  The evidence of 46037105052 is kept as recorded.
 
 The Replay gate's cases on `3e5e2b49`:
 
@@ -2451,8 +2473,8 @@ The Replay gate's cases on `3e5e2b49`:
   same step back and forward, each touch asserted held (§21.7).
 - Maestro's command timing is kept for each timed flow.
 - C-SEEK-BEFORE-PLAY, C-TIMELINE, C-PLAY-THROUGH and the J cases are unchanged.
-- No product code changed. The World gate's impact plan classifies every changed file as unable to reach it
-  (`NOT_AFFECTED`).
+- No product code changed. The World gate's impact plan classifies every file changed in round 3 as unable to reach
+  it (`NOT_AFFECTED`). Its PR-wide decision is still `RUN`: no earlier head passed every cell with equivalent inputs.
 
 **Round 3 — the round-2 correction head:** recorded with the run identifiers once its runs complete (one targeted CI
 round, VAL-01 / BG-10).
