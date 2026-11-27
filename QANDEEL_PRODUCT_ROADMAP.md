@@ -1,5 +1,14 @@
 # QANDEEL — Product Roadmap
 
+> **PO SEQUENCING — RETURN TO REPLAY (2026-11-27; status only; authorizes no implementation):** the Product Owner's directive "RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER" ([INTEL-LIVE-01 record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.11).
+> - **Sequence:** S8B-07 CP2-A (CP2-A.1 in-app Replay correctness → CP2-A.2 video; [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §20.3) → CP2-B → **INTEL-SEMANTIC-REVIEW-01** (`QAN-BL-INTEL-07`). The Product Owner defines its semantic philosophy before any implementation is authorized.
+> - **Release:**
+>   - `QAN-BL-INTEL-07` (CRITICAL) and `QAN-BL-VOICE-10` (TTS capacity, F-01) are mandatory release blockers; no production deployment or commercial launch while either is open (unrelated preparation work is not prohibited);
+>   - neither blocks Replay development.
+> - **Suspended:** HONOR-CORR-01, with nothing implemented.
+> - **Unchanged:** `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`; COSMOS, CALL-ATTR-01 and the completed Replay checkpoints are not reopened.
+
+
 > **PO SEQUENCING AFTER COSMOS (2026-11-21; status only; authorizes no implementation):** COSMOS-INT-01 (with COSMOS-FINAL-01 and E-2) is **ACCEPTED / MERGED / CLOSED**: PR #402 → `90819192`; [COSMOS contract](docs/e2e/QANDEEL_COSMOS_INT_01_PRODUCTION_INTEGRATION_CONTRACT_v1.md) §31.11.
 > - **The next planned product task is S8B-07 Replay**, resumed on its approved and frozen scope ([S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §14, CP2-A WP0 v0.3.1). It is not started; its planning is not reopened; its execution needs the Product Owner's authorization.
 > - Still separately controlled: hosted application of migrations 0197 – 0200 and the release / deployment work (HOSTED-DEPLOY-01).

@@ -1,5 +1,10 @@
 # QANDEEL S8B-07 — Original Audio Replay, Media Rendering & Distribution: Implementation Record v1
 
+**Slice (2026-11-27, the Product Owner's "RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER"):** Replay development **resumes at
+CP2-A** (§20.3: the remaining scope R-1 – R-8 and the next step, CP2-A.1). The unresolved semantic quality
+(`QAN-BL-INTEL-07`, CRITICAL) and live TTS capacity (`QAN-BL-VOICE-10`) are production release blockers, not Replay
+development blockers. INTEL-LIVE-01 is merged (`11e0702d`). S8B-07 is not closed. *(The lines below are kept as written.)*
+
 **Slice (2026-11-26, INTEL-LIVE-01 CP4):** Lane B's producer (§20) is **ACCEPTED by the Product Owner** (CP3 + R1, head
 `755192c5`) and INTEL-LIVE-01's closure (CP4) is delivered — **NOT MERGED** (PR #415); `0205` not hosted. Replay Lane B on a
 device stays mandatory in the HONOR Live + Replay proof (§20.1). *(The lines below are kept as written.)*
@@ -2021,3 +2026,94 @@ is drawn in the next, and no provisional mark survives the closing display. The 
 - **Unchanged:** Lane A, `presentation-clock.ts`, the camera plan, the COSMOS renderer, §19's policy, `QAN-BL-VIS-02`
   (`OPEN — UNASSIGNED`).
 - **Sequence:** INTEL-LIVE-01's merge decision → HONOR Live + Replay proof → CP2-A → CP2-B. S8B-07 is not closed.
+
+### 20.2 After the HONOR Live + Replay proof (2026-11-27)
+
+**Authority:** the Product Owner's "HONOR VALIDATION — PO DIRECTION" (2026-11-27). The evidence is in the
+[INTEL-LIVE-01 record](QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.9.
+
+- **Proven on HONOR (V-4 / C8, a real call):**
+  - the original audio streamed `COMPLETE`;
+  - `0205` returned 24 events, each from a `DEVELOPMENTS` evaluation or its settlement;
+  - nothing for `MISSED_HANDOVER`, `REFUSED` or `DEFERRED_PERMIT`;
+  - no floor before its anchor; no other call's marks inside the call;
+  - play, pause and seek consistent.
+
+  C8 is no longer PARTIAL. V-6 pan passed against the COSMOS-V5 baseline.
+- **Still open from §20.1:**
+  - V-5 (the iOS simulator Replay Lane B pass);
+  - V-6's COSMOS opening speed;
+  - Lane B's stage-preparation cost (CP3-F6), each to be measured separately.
+- **Added to CP2-A's scope (Product Owner's observations O-3, O-4, O-5).** CP2-A must deliver, and prove on device:
+  1. **A clear save confirmation and access to the saved Replay.** After saving a part, the person sees that it was saved and has a direct way to open it (O-3: the PO saw neither).
+  2. **Continuous in-app playback across message boundaries.** The conversation plays as one continuous piece, not message by message (O-4).
+  3. **One unified timeline** for the whole selected part.
+  4. **Accurate seeking inside long speech**, not only at message boundaries (O-5: a seek inside a long message landed at its start).
+  5. **The original audio with a synchronized map** throughout.
+  6. **Continuous video generation** from the same timeline (the CP3-F8 facts, `attentionOnFrame`, are ready).
+- **Deferred observation O-6:** the first pinch-zoom is not centred on the conversation's content; a further zoom corrects it. COSMOS is not reopened and its renderer is unchanged; escalation only on evidence of a regression.
+- **Sequence:** the PO's review of the INTEL-LIVE-01 consolidated diagnosis → CP2-A → CP2-B. S8B-07 is not closed.
+
+### 20.3 Return to Replay: the remaining CP2-A scope (2026-11-27)
+
+**Authority:** the Product Owner's "RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER" (2026-11-27). The [INTEL-LIVE-01
+record](QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.11 records it.
+
+- **Replay development resumes** at CP2-A. The unresolved semantic quality (H-3, O-2 → `QAN-BL-INTEL-07`) and live TTS
+  capacity (H-TTS → `QAN-BL-VOICE-10`) do **not** block it. They are production release blockers.
+- **What Replay must do:** reproduce faithfully the authorized knowledge and audio that exist. Its correctness is judged
+  independently of the upstream understanding's quality.
+- **Test inputs:**
+  - valid semantic fixtures and previously accepted knowledge evidence (the C8 corpus call; the REPLAY-LOCAL fixtures);
+  - recorded audio or controlled fixtures, never a live TTS dependency.
+- **H-3 is not concealed:** a topic the analysis never established is shown absent, never fabricated.
+
+**The remaining CP2-A scope.** Only what affects Replay's correctness and usability is listed, each item against what is
+already on `main`:
+
+| # | Item | On `main` already | Remaining |
+|---|---|---|---|
+| R-1 | O-3: a clear save confirmation and direct access to the saved Replay | saving a part (CP1-B) | the confirmation and the access path, with a Copy Gate for new wording |
+| R-2 | O-4: continuous in-app playback across message boundaries | the presentation clock (RB-1, `presentation-clock.ts`); original audio playback (CP1-B) | one continuous player over the whole selected part |
+| R-3 | O-5: one unified timeline and precise seeking inside long speech | message-level seeking; Lane A placement (RB-2 S1 – S4) | seeking to any instant inside a message, map state recomputed at that instant |
+| R-4 | Original user and QANDEEL audio | in-app original audio (CP1-B); a two-voice phone mix proven on synthetic data only (REPLAY-LOCAL-02) | both voices in the production video path |
+| R-5 | Accurate synchronization of audio and map developments | Lane A (certified or source-order placement, §19); Lane B (§20); C8 proven in-app on HONOR | the same facts on video frames (`attentionOnFrame`, CP3-F8); RB-1's audible A/V on a real device (§7 C, NOT proven) |
+| R-6 | Continuous video generation | a synthetic on-device export proof (H.264 Main@4.0, AAC; REPLAY-LOCAL-01 / 02) | the production export engine on the CA-RL-01 route; the label-font route; F2 (causal frame rule); VG-CP2A |
+| R-7 | Replay-specific iOS and performance validation | — | V-5 (iOS simulator Replay Lane B pass); V-6 opening speed and Lane B stage preparation (CP3-F6); the CP1-B synthetic MP4 device proof (transferred to CP2-A V-I) |
+| R-8 | COSMOS visual fidelity and performance preservation | the COSMOS Replay map (REPLAY-COSMOS-01); V-6 pan PASS on HONOR | `QAN-BL-VIS-02`'s close condition: in-app Replay verified against the exported video on a real device (CA-RL-01 row N) |
+
+CP2-B (export and sharing) follows CP2-A unchanged.
+
+**Classified as the Product Owner directed:**
+- **Replay development blockers:** only the Product Owner's open CP2-A decisions:
+  - CP2-A execution authorization;
+  - CA-RL-01's decisions A – G (the on-device export route);
+  - the label-font route;
+  - F2;
+  - VG-CP2A.
+
+  Nothing semantic and nothing about TTS blocks it.
+- **Production release blockers:**
+  - the two new ones, `QAN-BL-INTEL-07` (CRITICAL) and `QAN-BL-VOICE-10`;
+  - existing ones, unchanged: `QAN-BL-INTEL-06` `VALIDATION — OPEN`; `QAN-BL-INTEL-05` (handled before the live analysis
+    launches); the hosted-deployment items (`QAN-BL-PROD-11`, `QAN-BL-PROD-12`; `0201` – `0205` not hosted); every voice gate
+    `DISABLED`.
+
+  No production deployment while either mandatory blocker is open.
+- **Deferred improvements, not reopened:**
+  - O-6 (the first pinch-zoom);
+  - the COSMOS first-tap limitation (SE-FU-1 class);
+  - V-8's unexplained 2.36 s frame, kept visible.
+
+**Preserved, not repeated:** HONOR's C8, historical binding, original audio and reconnection evidence (§20.2).
+
+**Not reopened:** COSMOS, CALL-ATTR-01, and the completed Replay checkpoints (CP1-A, CP1-B, RB-1, RB-2 S1 – S4).
+
+**Next execution step:** **CP2-A.1, in-app Replay correctness (R-1 – R-3, with R-5's in-app part):**
+- one continuous player and one unified timeline over the selected part;
+- precise seeking inside long speech, on the existing presentation clock;
+- the save confirmation and access.
+
+It is tested on fixtures and the C8 evidence, with real iOS simulator interaction (BG-10) and one HONOR pass. It needs the
+Product Owner's execution authorization and a Copy Gate for R-1's wording. Then **CP2-A.2, video (R-4 – R-6, R-8)**, after
+the CA-RL-01 decisions; R-7's measurements join the checkpoint each one belongs to. S8B-07 is not closed.
