@@ -11,9 +11,11 @@
  *               timeline included) over the labelled SYNTHETIC Replay Media Service and streaming player of the player
  *               tests (`original-audio/__fixtures__`), in real time: 1 text · 2 and 3 audio · 5 text · 6 audio, two
  *               recordings. The synthetic player plays nothing audible: what the native audio does on iOS is NOT TESTED
- *               here (the device pass's). A one-line readout (`cp2a1-proof-monitor.ts`) is laid OVER the screen, where
- *               the gate reads it — absolutely placed at the top edge, so it takes no room and moves nothing (CP2-A.1
- *               correction round, "REPLAY UI FINAL CORRECTION" §3); everything else on the screen is the Product's.
+ *               here (the device pass's). A one-line readout (`cp2a1-proof-monitor.ts`) is laid over the timeline's
+ *               held status line, where the gate reads it — absolutely placed, so it takes no room and moves nothing
+ *               (CP2-A.1 correction round, "REPLAY UI FINAL CORRECTION" §3). It is drawn INSIDE the player: the player's
+ *               root is `accessibilityViewIsModal`, so iOS hides anything beside it from the tree Maestro reads (CI on
+ *               385c1b36: every continuous case NOT TESTED). Everything else on the screen is the Product's.
  *
  * Nothing on the Product route reaches this file: the proof build selects it through one recorded change of the
  * manifest's `main` (`scripts/select-s807cp2a1-proof-entry.mjs`).
@@ -47,10 +49,20 @@ function Readout({ monitor }: { readonly monitor: Cp2a1ProofMonitor }) {
   );
 }
 
+/** The shipped surface, its status line carrying the readout as well (validation only; nothing else changes). */
+export function withReadout(surface: ReplayPlayerSurface, monitor: Cp2a1ProofMonitor): ReplayPlayerSurface {
+  return {
+    useControls: (view, language) => {
+      const controls = surface.useControls(view, language);
+      return controls === null ? null : { ...controls, status: <>{controls.status}<Readout monitor={monitor} /></> };
+    },
+  };
+}
+
 function buildContinuous() {
   const w = world();
   const monitor = createCp2a1ProofMonitor(w.player, w.clock);
-  const surface: ReplayPlayerSurface = createReplayAudioSurface(w.audio, monitor.controller);
+  const surface = withReadout(createReplayAudioSurface(w.audio, monitor.controller), monitor);
   const appearance = createAppearanceAuthority({
     store: createEphemeralAppearancePreferenceStore(),
     system: createSystemAppearanceSource(),
@@ -73,7 +85,6 @@ function Continuous() {
   return (
     <AppearanceProvider authority={built.appearance}>
       <ReplayPlayer controller={built.monitor.controller} language={language} insets={insets} surface={built.surface} />
-      <Readout monitor={built.monitor} />
     </AppearanceProvider>
   );
 }
