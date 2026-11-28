@@ -1,7 +1,7 @@
 # QANDEEL S8B-07 — Original Audio Replay, Media Rendering & Distribution: Implementation Record v1
 
 **Slice (2026-11-27):** S8B-07 CP2-A.1 — continuous in-app Replay (R-1 / O-3, R-2 / O-4, R-3 / O-5, R-5 in-app, and the iOS
-Replay gate) — **DELIVERED / READY FOR PO REVIEW — NOT MERGED** (§21). The CP2-A.1 Copy Gate is CLOSED (§21.5). CP2-A.2
+Replay gate) — **DELIVERED / READY FOR PO REVIEW — NOT MERGED** (§21). The HONOR acceptance session ran on 2026-11-28: H-1 PASS; H-2, H-3, H-4 and H-6 FAIL (§21.10); the correction awaits the Product Owner. The CP2-A.1 Copy Gate is CLOSED (§21.5). CP2-A.2
 and CP2-B are not started. S8B-07 is not closed. *(The lines below are kept as written.)*
 
 **Slice (2026-11-27, the Product Owner's "RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER"):** Replay development **resumes at
@@ -2476,10 +2476,40 @@ The Replay gate's cases on `3e5e2b49`:
 - No product code changed. The World gate's impact plan classifies every file changed in round 3 as unable to reach
   it (`NOT_AFFECTED`). Its PR-wide decision is still `RUN`: no earlier head passed every cell with equivalent inputs.
 
-**Round 3 — the round-2 correction head:** recorded with the run identifiers once its runs complete (one targeted CI
-round, VAL-01 / BG-10).
+**Round 3 — on `5858171f` (the round-2 correction `bf49e7f0` plus the round-2 record), read once on 2026-11-28:**
+- API CI 46059753710 and Mobile CI 46059753690: PASS.
+- iOS Replay gate 46059753878: red in all three cells. No case FAILED.
 
-### 21.10 The consolidated HONOR acceptance session (prepared; to be run with the Product Owner)
+| Case | iPhone 17 en | small iPhone | iPhone 17 ar |
+|---|---|---|---|
+| J-SAVED-LINE, J-OPEN-ACTION, J-OPENS-SAVED | PASS | PASS | NOT TESTED |
+| C-TIMELINE, C-PLAY-THROUGH | PASS | PASS | NOT TESTED |
+| C-SEEK-PLAYING (`at=p…` both touches) | PASS (`lands=5.8,20.4`) | PASS (`lands=5.8,20.4`) | NOT TESTED |
+| C-SEEK-HELD | PASS (`h8.7,h13.6,h11.1`) | PASS (`h5.1,h13.4,h11.2`) | NOT TESTED |
+| C-SEEK-BEFORE-PLAY | PASS (`lands=11.1`) | PASS (`lands=11.2`) | NOT TESTED |
+| IOS-NATIVE-AUDIO | NOT TESTED (by construction) | NOT TESTED (by construction) | NOT TESTED |
+
+  - **en and small iPhone: a harness defect of round 2.** Every testable case passed, and the cell was still red:
+    `validate_results` passed the case set to awk as one `-v` value with line breaks, and the runner's BSD awk refuses a
+    newline in a `-v` value (`awk: newline in string`). GNU awk accepts it, so the round-2 regression proof did not see
+    it. Corrected locally in `556b4110` (harness only, not pushed): the case names, which hold no space, are passed
+    space-separated. The regression proof now runs behind an awk shim that refuses a newline in a `-v` value as BSD awk
+    does; with the old code it fails exactly as the runner did, with the fix it passes (contract 7 / 7).
+  - **ar: infrastructure.** `actions/setup-java` could not download Temurin 17.0.21 (`HTTP 403` from the release host).
+    Nothing ran; every case is NOT TESTED, never PASS.
+- iOS World gate 46059753736: **not** an all-cells PASS. No case FAILED in any cell.
+  - iPhone 17 ar: SUCCESS, 31 / 31 PASS (X-PAN-AFTER-PINCH, which failed in round 2, passed).
+  - iPhone 17 en: 14 PASS and the native XCUITest checks PASS; U-TAP and U-LAND NOT TESTED, as the step that opens the
+    Public field timed out (`maestro u-allow (link.yaml) exit 124`).
+  - Small iPhone: 9 PASS, 7 NOT TESTED (S-FAR-TAP, S-TAP, S-EXPANDED, S-SOURCES, S-CONV-ENTRY, U-EMPTY, P-LAND). The
+    simulator boot exceeded its 300 s bound (`INFRASTRUCTURE: ios-simulator-boot`), six Maestro steps timed out
+    (`exit 124`), and the native-gesture step was cancelled by the job's 120-minute limit.
+  - COSMOS code is unchanged by this PR, and no cell shows a FAIL: no COSMOS regression is shown. No earlier evidence is
+    reused.
+- The local harness fix is not pushed while the HONOR session's product findings (§21.10) await the Product Owner's
+  decision, so that the gates run once on the next head.
+
+### 21.10 The consolidated HONOR acceptance session (RUN with the Product Owner on 2026-11-28: H-1 PASS; H-2, H-3, H-4 and H-6 FAIL; H-5 measured)
 
 One session on HONOR (Android), on a release build of this PR's head, covering the six points of the PO's direction.
 It uses recorded audio and controlled fixtures only: no live call, no paid provider call, no TTS, and no hosted change.
@@ -2498,3 +2528,43 @@ no Back at a root, no system or app settings changed).
 - **iOS native audio stays NOT TESTED** until it is genuinely proven on an iPhone, or separately dispositioned by the
   Product Owner. The iOS Replay gate proves the touch, the timeline and the clock on the simulator, not the sound.
 - The session needs the Product Owner's go-ahead and presence on the device. Nothing in it is run before that.
+
+**Run (2026-11-28, "PO AUTHORIZATION — HONOR ACCEPTANCE & LIMITED iOS EXCEPTION"):**
+- **Setup:** HONOR ALI-NX1, a release build of `5858171f` under the separate package `com.qandeel.mobile.s807cp2a1h`
+  (APK sha256 `99571d82…`), beside the Product app, which was not touched.
+  - Two generated recordings (tones and a one-second tick; no voice) served from the computer over `adb reverse` only.
+  - The synthetic transient server, with its 2 s preparation.
+  - No call, no provider, no TTS, no hosted change, no setting changed. The Product Owner listened and watched.
+  - Evidence and the driver are kept outside the repository (`QANDEEL_REPORTS/S8B-07/CP2-A.1/honor/`).
+
+| # | Result | Evidence |
+|---|---|---|
+| H-1 | **PASS** | First and last message chosen, Save. RS-01 stayed, and RS-02 opened the player (COSMOS stage, timeline, 1 of 6). RS-03 while saving was NOT OBSERVED: the save finished before the ~1 s screen read. |
+| H-2 | **FAIL** | One Play ran every moment in order to the end with no second touch (`visited=1-2-3-5-6 cont=OK seeks=0 end=1`), and the audio was heard. Two product findings: **F-1**, **F-2** below. |
+| H-3 | **FAIL** | The steps landed and held as the readout shows: while playing 5.8 / 20.8 s, held 13.8 / 11.5 / 18.5 s (stays held, then Play goes on to the end), before Play 11.5 s. Product owner: "the line and the pointer move and there is no sound; after a while the sound appears" (**F-3**). A first attempt while playing is NOT TESTED: the driver's touches arrived after the end. |
+| H-4 | **FAIL** | The Product Owner: light pulses on the map, and "the whole screen, even the text, trembles and moves"; seen with and without Lane B (**F-4**). The 300 ms sync was not separately judged. |
+| H-5 | Measured | From the open action to the Replay ready and the timeline drawn: 108 – 128 ms cold, 110 ms warm (synthetic world, loopback, no network). From Play to the first sound: 6.4 s (3.9 s of the first, written message and 2.5 s of preparation). |
+| H-6 | **FAIL** | The COSMOS stage layer (its SurfaceView), three playthroughs each. Lane B: 53.9 / 55.5 / 55.5 fps, p95 33.3 ms, 3 – 7 stalls over 50 ms, **one freeze over 100 ms in every run** (116 – 183 ms, at the end of the part). Without Lane B: 55.2 – 58.1 fps, 2 – 8 stalls, no freeze. Written-only playback: 59.6 fps, p95 16.7 ms, no stall. Against the unchanged budget (no stall over 50 ms, no freeze over 100 ms), Lane B adds one freeze per playthrough, and audio playback adds 2 – 8 stalls of 50 – 83 ms. The first runs read the app's UI layer and used screen dumps while measuring; they are superseded and kept. |
+
+**Findings (product; none corrected yet):**
+- **F-1 — 2.5 s of silence before the first recording.** `replay-audio-clock.ts` `run()` asks for the set only when the
+  clock reaches the first audio moment ("Nothing held yet: the set is asked for"). The line holds at 4.1 s for
+  2.5 – 2.7 s in every run (the server's 2 s preparation and the 1 s status poll), and again on the first Play after a
+  step before Play (2.48 s). The Product Owner: "long and very noticeable".
+- **F-2 — three lines where R-3 asks for one.** The S7-04 moment spine (`qandeel-replay-spine`, with Play), CP2-A.1's
+  timeline (`qandeel-replay-audio-timeline-line`) and a per-moment audio line in the card (`qandeel-replay-audio-line-N`,
+  RA-14) are all shown. The Product Owner: "two players, one for the whole Replay and one for each message — this is
+  an error".
+- **F-3 — after a step, the line moves before the sound.** Each step makes a new player, which reads the recording
+  again (a full GET, then a Range request). The line moves on the clock meanwhile. The audible delay was not measured
+  instrumentally; the Product Owner heard it.
+- **F-4 — the layout moves while the first recording prepares.** Raw frames 1.3 s apart: the top bar never moves; the
+  lines and the card move ±3 px and the map ±2 px in alternate frames; the map frame changes between 1557 and 1560 px;
+  RA-11 ("Preparing the audio…") is inserted and then removed, moving the card by a line. The pulses the Product Owner
+  saw are not attributed yet. A map frame that changes height re-fits the stage, which is the leading hypothesis.
+- **Not a COSMOS regression:** the written-only playback draws at 59.6 fps without a stall, the COSMOS code is
+  unchanged, and the World gate shows no FAIL.
+
+**Not done:** the native audio on iOS stays NOT TESTED (the PO's limited exception). The proof package stays
+installed on the device until the Product Owner decides. Nothing is corrected, pushed or merged before the Product
+Owner's decision on F-1 – F-4 and H-6.

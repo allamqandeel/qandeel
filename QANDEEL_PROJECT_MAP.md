@@ -1,6 +1,6 @@
 # QANDEEL — Project Map
 
-> **S8B-07 CP2-A.1 — CONTINUOUS IN-APP REPLAY — DELIVERED / READY FOR PO REVIEW — NOT MERGED — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> **S8B-07 CP2-A.1 — CONTINUOUS IN-APP REPLAY — DELIVERED / READY FOR PO REVIEW — NOT MERGED — HONOR ACCEPTANCE RUN 2026-11-28: H-2, H-3, H-4, H-6 FAIL; CORRECTION AWAITS PO — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:** the Product Owner's "EXECUTION AUTHORIZATION — S8B-07 CP2-A.1", "CP2-A.1 COPY GATE APPROVED", "CP2-A.1 FINAL VALIDATION AND CORRECTION" and "CP2-A.1 — CI ROUND 2 TARGETED CORRECTION" (2026-11-27). The [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §21 is the primary account.
 > - **Where it lives:**
 >   - **the one timing authority (unchanged owner):** `apps/mobile/src/replay-cosmos/presentation-clock.ts`. It now also holds `replayTimelinePosition` and `replayTimelineTarget`, which draw and seek the timeline.
