@@ -25,5 +25,7 @@ export { MAX_PROOF_PAGES, createReplayEntryController, mintReplayCommandId } fro
 export type { AnchorProof, ProvenRange } from './replay-anchors';
 export type { ReplayCopyStatus, ReplayEntryCopy } from './copy';
 export { REPLAY_ENTRY_COPY_GATE, REPLAY_ENTRY_COPY_ROWS, replayEntryCopy } from './copy';
+export type { ReplaySaveCopy } from './save-copy';
+export { REPLAY_SAVE_COPY_GATE, REPLAY_SAVE_COPY_ROWS, REPLAY_SAVE_REUSED_ROWS, replaySaveCopy } from './save-copy';
 export type { ReplayEntryControlProps, ReplayEntryMenuProps, ReplayNoticeLineProps, ReplaySelectionBarProps } from './ReplayEntry';
 export { ReplayEntryControl, ReplayEntryMenu, ReplayNoticeLine, ReplaySelectionBar, useReplaySelection } from './ReplayEntry';

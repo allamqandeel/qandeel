@@ -21,7 +21,7 @@
  * LIVE_CALL_ACTIVE, BUSY (a full queue, a generation limit, `NONE`, any failure to answer), and REFUSED (400, or an
  * answer this client cannot read exactly: nothing of it is used).
  */
-import { decodePresentationMap, type PresentationBoundary, type PresentationSpan } from './presentation-map';
+import { decodePresentationMap, type PresentationBoundary, type PresentationMap, type PresentationSpan } from './presentation-map';
 
 /** The seam's fetch (the AC-01 authorized fetch in production). */
 export type TransientMediaFetch = (
@@ -88,6 +88,12 @@ export type TransientAvailabilityResult =
   | { readonly kind: 'NOT_FOUND' }
   | { readonly kind: 'UNAVAILABLE' };
 
+/** S8B-07 CP2-A.1: the version's playback map alone (no set), or nothing concluded. */
+export type TransientMapResult =
+  | { readonly kind: 'MAP'; readonly map: PresentationMap }
+  | { readonly kind: 'NOT_FOUND' }
+  | { readonly kind: 'UNAVAILABLE' };
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 const isRecord = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
 const isUuid = (value: unknown): value is string => typeof value === 'string' && UUID.test(value);
@@ -142,6 +148,17 @@ export function decodeReplayAnswer(body: unknown): TransientSetView | null {
     state, reason, readableForMs: body.readableForMs, boundaries: map.boundaries,
     runs: map.runs.map((run) => ({ ...run, artifactId: run.artifactId === null ? null : run.artifactId.toLowerCase() })),
   };
+}
+
+/**
+ * S8B-07 CP2-A.1: a map answer is exactly `{ runs, boundaries }`, at least one run, and no run names a file: it is the map
+ * the playback answer carries, with no set behind it. Anything else is refused whole (null).
+ */
+export function decodeMapAnswer(body: unknown): PresentationMap | null {
+  if (!isRecord(body) || !hasExactly(body, ['runs', 'boundaries'])) return null;
+  if (!Array.isArray(body.runs) || body.runs.some((run) => !isRecord(run) || 'artifactId' in run)) return null;
+  const map = decodePresentationMap(body.runs, body.boundaries);
+  return map === null || map.runs.length === 0 ? null : map;
 }
 
 export class TransientMediaApiClient {
@@ -221,6 +238,19 @@ export class TransientMediaApiClient {
     if (answer.status === 404) return { kind: 'NOT_FOUND' };
     if (answer.status !== 200 || answer.body === undefined) return { kind: 'UNAVAILABLE' };
     return { kind: 'ANSWER', body: answer.body };
+  }
+
+  /**
+   * S8B-07 CP2-A.1: the version's playback map alone, so the whole part's timeline is drawn before the first Play. It asks
+   * for no set. NOT_FOUND: not this person's CURRENT version; UNAVAILABLE: anything else, a malformed map included.
+   */
+  async presentationMap(replayId: string, versionId: string): Promise<TransientMapResult> {
+    const answer = await this.send('GET', `/replay/${encodeURIComponent(replayId)}/versions/${encodeURIComponent(versionId)}/map`);
+    if (answer === null) return { kind: 'UNAVAILABLE' };
+    if (answer.status === 404) return { kind: 'NOT_FOUND' };
+    if (answer.status !== 200) return { kind: 'UNAVAILABLE' };
+    const map = decodeMapAnswer(answer.body);
+    return map === null ? { kind: 'UNAVAILABLE' } : { kind: 'MAP', map };
   }
 
   /** The audio's URL for the platform player; the bearer is a header the caller adds, never a part of it. */

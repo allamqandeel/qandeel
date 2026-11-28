@@ -10,7 +10,10 @@
  *   - The selection mode is the conversation's own messages, through the `ConversationSurface` selection seam. Its bar
  *     stands where the composer is; the composer's words are untouched and return with it.
  *
- * Every word is `copy.ts`'s. Nothing here reads or draws any Analysis, map, graphic or motion state, and nothing here
+ * S8B-07 CP2-A.1 (O-3): a save in flight says RS-03, a save not done says RS-04 with RS-05, and the saved line stays until
+ * the reader opens the entry again or starts another selection, with its way to the saved Replay (RS-02).
+ *
+ * Every word is `copy.ts`'s or `save-copy.ts`'s. Nothing here reads or draws any Analysis, map, graphic or motion state, and nothing here
  * holds selection state: the controller does, by message id.
  */
 import { useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from 'react';
@@ -32,6 +35,7 @@ import {
 import type { ChromeLanguage } from '../orientation-chrome';
 import type { ConversationExchangeView } from '../runtime-entry';
 import { replayEntryCopy } from './copy';
+import { replaySaveCopy } from './save-copy';
 import { displayedMessageIds, selectionMarks } from './replay-anchors';
 import type { ReplayEntryController, ReplaySelectionState } from './replay-entry-controller';
 
@@ -166,9 +170,12 @@ export interface ReplaySelectionBarProps {
 export function ReplaySelectionBar({ controller, selection, language, insets }: ReplaySelectionBarProps) {
   const palette = usePalette();
   const copy = replayEntryCopy(language);
+  const saveCopy = replaySaveCopy(language);
   const writing = readerDirection(language);
   const saving = selection.command?.phase === 'SAVING';
   const unconfirmed = selection.command?.phase === 'UNCONFIRMED';
+  // RS-04: nothing was saved; RS-05 saves the same selection again, under a new command.
+  const saveFailed = selection.command === null && selection.problem === 'SAVE_FAILED';
   const canSave = selection.command === null && selection.range !== null;
 
   useEffect(() => {
@@ -183,9 +190,12 @@ export function ReplaySelectionBar({ controller, selection, language, insets }: 
     : selection.problem === 'NOT_PROVABLE' ? copy.notProvable
     : selection.problem === 'UNCONFIRMED' ? copy.unconfirmed
     : selection.problem === 'FAILED' ? copy.failed
+    : selection.problem === 'SAVE_FAILED' ? saveCopy.saveFailed
     : null;
-  const what = selection.range !== null ? copy.count(selection.range.messageCount) : selection.scope === 'PART' ? copy.pickHint : null;
-  const primaryLabel = unconfirmed ? copy.tryAgain : copy.save;
+  // RS-03 while the save is in flight, in place of what is chosen.
+  const what = saving ? saveCopy.saving
+    : selection.range !== null ? copy.count(selection.range.messageCount) : selection.scope === 'PART' ? copy.pickHint : null;
+  const primaryLabel = unconfirmed || saveFailed ? saveCopy.tryAgain : copy.save;
   const primaryEnabled = unconfirmed || canSave;
 
   return (
@@ -232,7 +242,7 @@ export function ReplaySelectionBar({ controller, selection, language, insets }: 
           accessibilityLabel={primaryLabel}
           accessibilityState={{ busy: saving, disabled: !primaryEnabled }}
           onPress={unconfirmed ? controller.retry : controller.save}
-          testID={unconfirmed ? 'qandeel-replay-try-again' : 'qandeel-replay-save'}
+          testID={unconfirmed || saveFailed ? 'qandeel-replay-try-again' : 'qandeel-replay-save'}
           style={{ paddingHorizontal: 10, opacity: primaryEnabled ? 1 : BUSY_OPACITY }}
         >
           <Text style={{ ...typeStyle('action'), color: palette.primary, writingDirection: writing }}>{primaryLabel}</Text>
@@ -283,9 +293,10 @@ export interface ReplayNoticeLineProps {
 }
 
 /**
- * The one line after a save, or when the gate refused: above the composer, never a dialog. It has no control of its own
- * and so no new word: it goes when the conversation moves on or the entry is opened again. After a save it carries the
- * action the composition hands it (S7-04), and nothing when the gate refused.
+ * The one line after a save, or when the gate refused: above the composer, never a dialog. It has no control of its own.
+ * The unavailable line goes when the conversation moves on; S8B-07 CP2-A.1 (O-3): the saved line (RS-01 after a part)
+ * stays until the entry is opened again or another selection starts, and carries the action the composition hands it —
+ * RS-02, which opens the exact Replay saved — and nothing when the gate refused.
  */
 export function ReplayNoticeLine({ controller, language, insets, action = null }: ReplayNoticeLineProps) {
   const state = useSyncExternalStore(controller.subscribe, controller.getState);

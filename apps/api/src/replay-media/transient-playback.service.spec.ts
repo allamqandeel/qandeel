@@ -360,3 +360,31 @@ describe('INTEL-LIVE-01 CP3: the attention read (GET /replay/:replayId/versions/
       .toEqual([503, { outcome: 'BUSY' }]);
   });
 });
+
+describe('S8B-07 CP2-A.1: the map read (GET /replay/:replayId/versions/:versionId/map)', () => {
+  it('answers the playback map alone, as the playback answer carries it, and asks for no set', async () => {
+    const h = harness();
+    const answer = await h.service.presentationMap(USER, REPLAY, VERSION);
+    expect(answer).toEqual({
+      boundaries: [{ kind: 'CROSS_RECORDING' }],
+      runs: [
+        { durationMs: 3000, spans: [{ kind: 'WINDOW', fromMs: 0, toMs: 3000, track: 'NOTE', momentOrdinal: 1 }] },
+        { durationMs: 2000, spans: [{ kind: 'WINDOW', fromMs: 0, toMs: 2000, track: 'USER', momentOrdinal: 2 }] },
+      ],
+    });
+    expect(h.repository.map).toHaveBeenCalledWith(USER, REPLAY, VERSION);
+    // No command, no set, no job, no file: nothing to erase.
+    expect(h.repository.request).not.toHaveBeenCalled();
+    expect(JSON.stringify(answer)).not.toMatch(/artifactId|readableForMs|state/u);
+    expect(h.telemetry.recordOperationalOutcome).toHaveBeenCalledWith('REPLAY_MEDIA', 'map', 'success');
+  });
+
+  it('refuses whole, never repairs: malformed ids before the database, no plan → NOT_FOUND, a failed read → BUSY', async () => {
+    expect(await failureOf(harness().service.presentationMap(USER, 'not-a-uuid', VERSION))).toEqual([404, { outcome: 'NOT_FOUND', reason: null }]);
+    expect(await failureOf(harness().service.presentationMap(USER, REPLAY, 'not-a-uuid'))).toEqual([404, { outcome: 'NOT_FOUND', reason: null }]);
+    expect(await failureOf(harness({ map: jest.fn().mockResolvedValue([]) }).service.presentationMap(USER, REPLAY, VERSION)))
+      .toEqual([404, { outcome: 'NOT_FOUND', reason: null }]);
+    expect(await failureOf(harness({ map: jest.fn().mockRejectedValue(pgError('57014', 'timeout')) }).service.presentationMap(USER, REPLAY, VERSION)))
+      .toEqual([503, { outcome: 'BUSY' }]);
+  });
+});

@@ -313,6 +313,8 @@ This supersedes COSMOS-FINAL-01's backend trigger scope for the World Gate (COSM
 | `QAN-BL-NAV-04` | No Full Personal Detail Surface Beyond the PEEK (PERSONAL-DETAIL-01) | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-CI-04` | iOS World Gate (BG-10): Maestro Hangs Leave Cases NOT TESTED, Evidence Is Lost When the Job Is Cancelled, and the iPhone SE Cell Exceeds Its Time Budget | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-CI-05` | Test-Fixture Cleanup / CI Hygiene: the S8B-05 CP2 Spoken-Turn Proof Leaves Orphaned Ledger Usage and Rating Rows in the Shared CI Database | `UNASSIGNED` | `LOW` | `OPEN — UNASSIGNED` |
+| `QAN-BL-INTEL-07` | Semantic Understanding & Knowledge Formation Review: Topics Are Lost or Fragmented, and an Earlier Unanswered Turn Is Merged Into the Current Intent (H-3, O-2) — CRITICAL, Mandatory Release Blocker | `INTEL-SEMANTIC-REVIEW-01 — Semantic Understanding & Knowledge Formation Review (PROPOSED)` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-VOICE-10` | Live-Call Spoken Reply Capacity: Vertex TTS Answers 429 Under Load and a Failed Reply Is Silent (F-01 Not Installed) (H-TTS) — Mandatory Release-Readiness Blocker | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 
 ---
 
@@ -3839,6 +3841,8 @@ Admitted as a documentation-only Product Owner-designated cross-task gap (2026-1
 Transferred to `main` and admitted by `INTEL-LIVE-01` CP1 (2026-11-25, CP0 contract v1.1 §8.2 / §8.3). The entry above is Draft PR #410's (head `55d016b6`) verbatim, except four lines set by the contract: **Owner task** (on #410: "`UNASSIGNED`. `INTEL-LIVE-01` is only a *candidate* future task label, not an approved owner."), **Reopen condition** (on #410: "before declaring in-speech living understanding or evolving map behavior complete for users, or before accepting Replay/video as a truthful reconstruction of that in-speech behavior; PO explicitly assigns a future task and approves the product semantics."), the added **Current truth**, and **Status** (on #410: "`OPEN — UNASSIGNED`."). Nothing here authorizes implementation beyond INTEL-LIVE-01's own authorization (BG-07).
 Moved to `VALIDATION — OPEN` by `INTEL-LIVE-01` CP4, the closing change (2026-11-26, Draft PR #415; effective from its merge), under the Product Owner's "INTEL-LIVE-01 — CP3 R1 ACCEPTANCE & CP4 EXECUTION AUTHORIZATION" (D-11, BG-08). Nothing here authorizes implementation (BG-07).
 
+Progress note (2026-11-27, the Product Owner's "RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER"; not a disposition): this item stays `VALIDATION — OPEN`. Its validation findings are carried to two new blockers. H-3 (V-1's durable understanding) and O-2 go to `QAN-BL-INTEL-07` (`INTEL-SEMANTIC-REVIEW-01`, a CRITICAL mandatory release blocker after S8B-07 CP2-A / CP2-B). H-TTS goes to `QAN-BL-VOICE-10`. HONOR-CORR-01 is suspended with nothing implemented. V-5 and V-6's opening speed and Lane B stage-preparation cost stay open, inside the resumed Replay scope (S8B-07 record §20.3). The proven HONOR evidence (C8, V-2, V-3 Android, V-4, V-6 pan, V-7) is kept, and none of it is repeated.
+
 ### `QAN-BL-NAV-03` — Shared / Public World Replay Surface
 
 - **Title / Finding:** Replay exists only for the Personal World. No Shared or Public World Replay surface exists, and none
@@ -4207,6 +4211,103 @@ not survive only in a report). Nothing here authorizes implementation (BG-07).
 
 Admitted by `CALL-ATTR-01` (CI R2, 2026-11-27) under BG-06, at the Product Owner's approval of registration only, in the
 first documentation update after it, as the Product Owner directed. Nothing here authorizes implementation (BG-07).
+
+### `QAN-BL-INTEL-07` — Semantic Understanding & Knowledge Formation Review: Topics Are Lost or Fragmented, and an Earlier Unanswered Turn Is Merged Into the Current Intent (H-3, O-2) — CRITICAL, Mandatory Release Blocker
+
+- **Title / Finding:** what QANDEEL understands from a conversation, and what becomes durable knowledge, is not yet what
+  the product intends.
+  - **H-3:** in the HONOR Live + Replay session, the café the person talked about never became a Thread. The café was
+    introduced elliptically («أفتح…», «المكان ده», «المشروع»). Offline, the production focus model reproducibly proposes a
+    café focus whose grounding anchor it never lists as a reference, so the unchanged grounding rules refuse it
+    (`FOCUS_GROUNDING_REQUIRED`) and the half completes with no focus. `COMPLETE` therefore hid the loss.
+  - **A candidate prompt** established the café but created false topics (a vocative), fragmented one subject into
+    several, and confused identifiers. It is not a solution.
+  - **O-2:** contract §3's empty-reply folding merges a previous call's unanswered turns into the new call's first user
+    message, so historical words are treated as the current intent.
+- **Source:** the [INTEL-LIVE-01 execution record](e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.9
+  (the session), §12.10 (the bounded diagnosis) and §12.11 (the Product Owner's directive "RETURN TO REPLAY / SEMANTIC
+  RELEASE BLOCKER", 2026-11-27, which registers this item).
+- **Why not current work:** the Product Owner will study and define QANDEEL's intended semantic philosophy before any
+  implementation is authorized. The review is scheduled after S8B-07 CP2-A and CP2-B. HONOR-CORR-01's proposals (the focus
+  prompt v2, identifier aliases, refusal-code observability, the O-2 fold) are **not** the approved solution.
+- **Owner task:** `INTEL-SEMANTIC-REVIEW-01 — Semantic Understanding & Knowledge Formation Review` (the Product Owner's
+  proposed canonical identifier; not started, not authorized).
+- **Severity:** `HIGH`. **Product Owner's classification: CRITICAL — MANDATORY RELEASE BLOCKER.** The classification is explicit and binding whatever the §2 severity taxonomy says. `HIGH` is only that taxonomy's highest value, not a downgrade, and no severity rule may weaken, waive or reclassify it. It blocks production
+  deployment and commercial launch. It does **not** block Replay development. It cannot be waived or closed without the
+  Product Owner's explicit approval.
+- **Scope (the Product Owner's list):** contextual understanding; topic proposal and establishment; durable knowledge
+  formation; topic continuity and relationships; main topics versus subtopics; implicit references and introductions;
+  corrections, negation and intent changes; avoiding both knowledge loss and unnecessary fragmentation; current intent
+  versus historical context.
+- **Carried evidence (kept as it is, outside `main`):**
+  - the HONOR session's results (record §12.9);
+  - the offline H-3 experiment: its script, every request and raw response, the refusal codes, USD 0.0459 spent;
+  - the HONOR-CORR-01 contract v1.0, PROPOSED, now suspended;
+  - the suspended O-2 work, as a local commit and a patch, never pushed (record §12.11). It is not production code: it is in no PR, not on `main`, and was never run in CI.
+
+  What was reproduced is kept apart from what is historical inference only (record §12.10).
+- **Reopen condition:** S8B-07 CP2-A and CP2-B are closed, and the Product Owner authorizes `INTEL-SEMANTIC-REVIEW-01` with
+  its defined semantic philosophy. **Production deployment and commercial launch** may not proceed while this item is open. Unrelated preparation work (for example hosted-deployment readiness items, or CI and infrastructure work) is not prohibited by it.
+- **Required future properties:** set by the Product Owner's semantic definition. Already stated:
+  - no fabricated topic or identity (including from vocatives and small talk);
+  - grounding, evidence matching and anti-hallucination rules are not weakened;
+  - a legitimate subtopic is distinguished from unnecessary fragmentation;
+  - durable Thread formation and continuity are proven through the production analysis path, never by `COMPLETE` alone;
+  - corrections and negations are handled;
+  - unanswered historical words stay separate from the current intent, with same-call folding, Safety equivalence and
+    retrieval access preserved.
+- **Anti-duplication:** checked against all 114 earlier IDs and every tombstone. `QAN-BL-INTEL-05` is the handling of a
+  deterministic database refusal, not the quality of understanding. `QAN-BL-INTEL-06` is the in-speech producer and its
+  validation; it stays `VALIDATION — OPEN`, and its H-3 / O-2 findings are carried here.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted at the Product Owner's explicit direction (2026-11-27). Nothing here authorizes implementation (BG-07).
+
+### `QAN-BL-VOICE-10` — Live-Call Spoken Reply Capacity: Vertex TTS Answers 429 Under Load and a Failed Reply Is Silent (F-01 Not Installed) (H-TTS) — Mandatory Release-Readiness Blocker
+
+- **Title / Finding:** in the HONOR session, 12 of 34 call synthesis requests failed. Three are confirmed HTTP 429; seven
+  are fast failures whose class was not recorded; two are probably cancellations by speech over the reply.
+  - **Load:** each reply is split into 4 – 7 requests; in both calls the first 11 requests in a minute succeeded and the
+    12th failed.
+  - **Retries:** the one retry after a 429 never recovered.
+  - **Breaker:** it opened as designed, but its 30 s is shorter than the minute window.
+  - **F-01:** `NOT_INSTALLED` on `main`, so a reply that produced nothing is silent.
+  - **Observability:** the call engine's telemetry domain `VOICE_LIVE_CALL_TURN` is not in the operational-outcome
+    allowlist, so every call-turn signal, failure classes included, is dropped.
+- **Quota reading (2026-11-27, inspection only; the Product Owner enabled Service Usage API and Cloud Quotas API on the
+  Vertex project for this purpose):**
+  - Vertex pay-as-you-go runs on Dynamic Shared Quota, and no explicit per-project request limit is set for
+    `gemini-3.8-flash-tts`. Explicit 5 RPM entries exist only for the `gemini-2.5-*-tts` models.
+  - The project is `NOT_ENOUGH_USAGE_HISTORY` for quota increases.
+  - Google's guidance is that a 429 means shared capacity is momentarily constrained, and bursts are throttled first. It
+    recommends exponential backoff with jitter rather than an immediate retry, and smoothing the traffic.
+  - The earlier "fixed ~10 – 11 RPM" reading is therefore **not established**. A burst threshold on a project with little
+    history fits the evidence equally well.
+  - No quota, billing, IAM or provider setting was changed.
+- **Source:** the [INTEL-LIVE-01 execution record](e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.9,
+  §12.10, §12.11.
+- **Why not current work:** the Product Owner's directive (2026-11-27) keeps it as a separate release-readiness blocker.
+  No quota change and no further paid TTS experiment is authorized. Live TTS capacity must not block Replay development,
+  which uses valid recorded audio or controlled fixtures.
+- **Owner task:** `UNASSIGNED` — the Product Owner named no owner, and none is invented (BG-02).
+- **Severity:** `HIGH` — the spoken reply fails under ordinary conversational load, and a failure is silent. **Product
+  Owner's classification: MANDATORY RELEASE-READINESS BLOCKER**, explicit and binding whatever the §2 taxonomy says. It
+  blocks the production deployment and commercial launch of live calls, not unrelated preparation work or Replay
+  development.
+- **Reopen condition:** the Product Owner authorizes a TTS readiness task, or any task prepares live calls for production.
+- **Required future properties:**
+  - F-01 is installed from pinned prerecorded files, needs no runtime provider request, is interruptible, and is never
+    represented as the failed reply in knowledge or Replay. The Achird takes are ready, with S-01 preferred, subject to the
+    Product Owner's audio acceptance; F-01 is a fallback, not the capacity solution.
+  - Failure classes are visible.
+  - Request bursts and retry amplification are reduced without harming First Audio or barge-in.
+  - Breaker recovery fits the provider's window.
+  - The capacity framework is confirmed before release.
+- **Anti-duplication:** checked against all 115 earlier IDs and every tombstone. `QAN-BL-VOICE-09` is the 60-minute notice.
+  No item held TTS capacity or F-01's installation.
+- **Status:** `OPEN — UNASSIGNED`
+
+Admitted at the Product Owner's explicit direction (2026-11-27). Nothing here authorizes implementation (BG-07).
 
 ## 6. Tombstones
 
@@ -5083,15 +5184,15 @@ Tombstoned by `S8B-07` CP1-B under the Product Owner's order of 2026-11-08 (BG-0
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 54 |
+| `DEFERRED — OWNED` | 55 |
 | `VALIDATION — OPEN` | 5 |
-| `OPEN — UNASSIGNED` | 18 |
+| `OPEN — UNASSIGNED` | 19 |
 | `CLOSED — TOMBSTONE` | 37 |
-| **Total** | **114** |
+| **Total** | **116** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 64 |
+| `HIGH` | 66 |
 | `MEDIUM` | 46 |
 | `LOW` | 4 |
 
@@ -6777,6 +6878,75 @@ merge).**
 - **Read and left unchanged:** `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`. CALL-ATTR-01 corrects H-2, its demonstrated
   defect, before product acceptance.
 - **Index after CALL-ATTR-01 CI R2: 114 items; 54 / 5 / 18 / 37 by status, 64 / 46 / 4 by severity.**
+
+**CALL-ATTR-01 — merged (2026-11-27; PR #416, `main` `b842fd0d`, accepted head `8f52f6df`).**
+
+- **Authority:** the Product Owner's "CALL-ATTR-01 MERGED — RESUME HONOR VALIDATION" (2026-11-27); record §12.8.
+- **Effective:** the CI R2 entry above, so `QAN-BL-CI-05` is now admitted on `main` (`OPEN — UNASSIGNED`, not implemented).
+- **Read and left unchanged:** `QAN-BL-INTEL-06` stays `VALIDATION — OPEN` until the resumed HONOR session's required
+  evidence is accepted. The iOS touch observations UT-1 PASS, UT-2 FAIL, UT-3 NOT TESTED are kept in the record and the
+  locators. They are validation observations of that item, not new items.
+- **Index unchanged: 114 items; 54 / 5 / 18 / 37 by status, 64 / 46 / 4 by severity.**
+
+**HONOR Live + Replay session — consolidated diagnosis (2026-11-27).**
+
+- **Authority:** the Product Owner's "HONOR VALIDATION — PO DIRECTION" (2026-11-27); record §12.9.
+- **Read and left unchanged:** `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`. Its open evidence is H-3 (V-1's durable
+  understanding), V-5, and V-6's opening speed and stage-preparation cost.
+- **Not admitted as backlog items, by the PO's direction:** H-3, H-TTS and O-2 are validation findings of
+  `QAN-BL-INTEL-06`, diagnosed in one record section with one correction proposal. H-3 is explicitly not deferred.
+  O-3 / O-4 / O-5 are inside S8B-07 CP2-A's scope (S8B-07 record §20.2). O-6 is a deferred observation recorded there.
+- **Index unchanged: 114 items; 54 / 5 / 18 / 37 by status, 64 / 46 / 4 by severity.**
+
+**PO directive "RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER" (2026-11-27; documentation only).**
+
+- **Authority:** the Product Owner's directive of 2026-11-27, recorded in the
+  [INTEL-LIVE-01 execution record](e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.11. It supersedes the
+  2026-11-27 entry above, which declined to admit H-3, H-TTS and O-2, and the HONOR-CORR-01 execution order.
+- **Admitted at the Product Owner's direction:**
+  - `QAN-BL-INTEL-07` (`HIGH`, `DEFERRED — OWNED`, owner the proposed task `INTEL-SEMANTIC-REVIEW-01`). It is classified
+    **CRITICAL — MANDATORY RELEASE BLOCKER**, is not a blocker to Replay development, and carries H-3 and O-2 with all
+    their evidence.
+  - `QAN-BL-VOICE-10` (`HIGH`, `OPEN — UNASSIGNED`). This is the separate **mandatory release-readiness blocker** for the
+    live-call TTS capacity (H-TTS) and F-01.
+- **Suspended, not closed:** HONOR-CORR-01. None of its A1 / A2 / A3 / O-2 corrections is implemented, and no new prompt
+  version exists. Its diagnosis, raw evidence, contract v1.0 and preserved work are kept outside `main` (record §12.11).
+- **Read and left unchanged:** `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`. `QAN-BL-VIS-02` stays `OPEN — UNASSIGNED`;
+  it is inside the resumed Replay scope (record §20.3).
+- **Index after this directive: 116 items; 55 / 5 / 19 / 37 by status, 66 / 46 / 4 by severity.**
+
+**S8B-07 CP2-A.1 — continuous in-app Replay, the execution checkpoint (2026-11-27; one Draft PR from `main` at `b842fd0d`,
+not merged; effective from its merge).**
+
+- **Authority:** the Product Owner's "EXECUTION AUTHORIZATION — S8B-07 CP2-A.1", "CP2-A.1 COPY GATE APPROVED" and
+  "CP2-A.1 FINAL VALIDATION AND CORRECTION" (2026-11-27). The
+  [S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §21 is the primary account.
+- **BG-05:** CP2-A.1 owns no item by name. It works `QAN-BL-VOICE-01` for Stage 8B (unchanged: `DEFERRED — OWNED`; its
+  current truth is updated when S8B-07 closes). O-3 / O-4 / O-5 are CP2-A scope, not items.
+- **Read and left unchanged:**
+  - `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`;
+  - `QAN-BL-VIS-02` stays `OPEN — UNASSIGNED`; its close condition is the exported video, which is CP2-A.2 / CP2-B;
+  - the two mandatory release blockers registered by the directive above, `QAN-BL-INTEL-07` and `QAN-BL-VOICE-10`, are
+    not touched here. This PR carries PR #417's commit `bbc0335d` by a merge, so their entries and evidence are
+    identical in both PRs, whichever merges first. PR #417 stays separate and unchanged.
+- **No item admitted (BG-06).** What CP2-A.1 leaves open stays inside S8B-07's own scope, in the record:
+  - the consolidated HONOR acceptance session, prepared (§21.10);
+  - the native audio on iOS, NOT TESTED by construction in the new iOS Replay gate (§21.7);
+  - CP2-A.2 and CP2-B.
+- **BG-09:** S8B-07 is not closed. The record carries CP2-A.1's `DELIVERED / READY FOR PO REVIEW — NOT MERGED`, and the
+  locators are updated in the same change.
+- **The iOS Replay gate's first run (46007215812):** the failures belong to the proof harness and are corrected without
+  weakening any criterion (record §21.9). They are inside CP2-A.1's own scope, not items.
+- **Final closure validation (2026-11-28, record §21.13):** reconciled again, and still no item admitted (BG-06 / BG-08).
+  What stays open is inside S8B-07's own scope, in the record:
+  - the H-6 stalls over 50 ms (NOT MET, cause not established), for the Product Owner's disposition;
+  - the native audio on iOS, NOT TESTED (the limited exception);
+  - the closing-display requirement, carried into CP2-A.2.
+  The items read above are unchanged: `QAN-BL-INTEL-06` `VALIDATION — OPEN`; `QAN-BL-INTEL-07` and `QAN-BL-VOICE-10`
+  mandatory release blockers; HONOR-CORR-01 suspended. BG-09: S8B-07 is not closed, and CP2-A.1 is READY FOR THE PO'S
+  MERGE DECISION, not merged.
+- **Index after S8B-07 CP2-A.1: 116 items, unchanged by CP2-A.1 (it adds and removes none); 55 / 5 / 19 / 37 by status,
+  66 / 46 / 4 by severity.**
 
 ## 8. What is deliberately not in this backlog
 

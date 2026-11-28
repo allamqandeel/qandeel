@@ -64,7 +64,7 @@ describe('the route census covers the real applications exactly', () => {
     expect(new Set(apiRoutes.map((route) => route.key)).size).toBe(apiRoutes.length);
     expect(replayRoutes.map((route) => route.key).sort()).toEqual([
       'DELETE /voice/transient/:artifactId', 'GET /health', 'GET /replay/:replayId/versions/:versionId/attention',
-      'GET /replay/:replayId/versions/:versionId/availability',
+      'GET /replay/:replayId/versions/:versionId/availability', 'GET /replay/:replayId/versions/:versionId/map',
       'GET /voice/transient/:artifactId', 'GET /voice/transient/:artifactId/status',
       'POST /replay/:replayId/versions/:versionId/playback/:commandId', 'POST /voice/listening/:callId/:commandId',
     ]);

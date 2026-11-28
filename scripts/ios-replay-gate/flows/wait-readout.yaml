@@ -1,0 +1,8 @@
+# S8B-07 CP2-A.1 iOS Replay gate: wait until the proof readout's line matches the regular expression RE.
+appId: com.qandeel.mobile
+---
+- extendedWaitUntil:
+    visible:
+      id: "irg-readout"
+      text: "${RE}"
+    timeout: ${MS}

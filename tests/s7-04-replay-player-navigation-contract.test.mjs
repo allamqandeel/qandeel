@@ -14,6 +14,12 @@
 //     motion of its own and no P2 discontinuity (an omission is said in the composite's own words); ReplaySpine is
 //     the ONE player file hosting Animated views, carrying only T-06's styles; play /
 //     pause are P2's own (sig.mjs), through the generated glyphs, never the Call Rail;
+//     S8B-07 CP2-A.1 correction round CONTROLLED RE-ANCHOR ("REPLAY UI FINAL CORRECTION", Product Owner, 2026-11-28):
+//     the Replay has ONE timeline of the whole part (ReplayTimelineBar.tsx) in place of the Temporal Spine, which is
+//     retired with its Aperture (ReplaySpine.tsx is removed); P2's rest notches stay as the moment marks; a seek is ONE
+//     place (a moment and an offset) handed to the player's seekTo; the timeline has no Live, no store, no omission
+//     mark and no motion, clock or drawing of its own, and no player file hosts Animated views; the pace declaration
+//     is the timeline's accessibility hint, no longer a line under it (`controls.note` is gone);
 //   - only the existing preview, finalize and reopen commands, by POST, beside the S7-02 and S7-03 reads; the Replay
 //     API module and migration 0169 are byte-identical to the branch base, and no migration follows 0169 — except the
 //     ONE G-1 correction the Product Owner decided (2026-10-20): the list's summary decoder reads 0169's EXISTS answer
@@ -232,23 +238,23 @@ const DETECTORS = {
     if (/LivingAnalysisTimeline/u.test(view) || /timeline=\{(?!null\})/u.test(view)) out.push('the player puts nothing in the temporal slot');
     if (/LivingAnalysisTimeline/u.test(composite) || /timeline=\{(?!null\})/u.test(composite)) out.push('the composite is CHROME_ONLY in every state');
     if (!/<ReplayMomentComposite [^>]*controls=\{controls\}/u.test(view)) out.push("the moment controls are handed to the composite's band");
-    if (!composite.includes('{controls.instrument}') || !composite.includes('{controls.note}')) out.push('the composite stands the controls in the moment band');
+    if (!composite.includes('{controls.instrument}')) out.push('the composite stands the controls in the moment band');
+    // CP2-A.1 correction round: no pace paragraph in the band (the pace is the timeline's hint).
+    if (composite.includes('controls.note')) out.push('the pace is said on the timeline, never as a paragraph in the band');
     // P2's own play / pause, through the generated glyphs; never the Call Rail.
     if (!view.includes("<Glyph name={view.playing ? 'pause' : 'play'}")) out.push('play / pause are drawn by the canonical glyphs');
     if (/from '\.\.\/iconography'|CallRail|P2_CALL/u.test(view)) out.push("the Call Rail is the call's, not the transport's");
-    // The Replay Temporal Spine: VPORT-02's drawings, T-06's motion, the version's moments, and nothing live.
-    if (!/<ReplaySpine\b(?:(?!\/>)[\s\S])*onCommit=\{\(ordinal\) => controller\.seek\(ordinal\)\}/u.test(view)) out.push('a Spine commit is ONE ordinal, handed to the player');
-    const spine = tsCode(w.player['ReplaySpine.tsx'] ?? '');
-    if (!/import \{ Aperture, P2_SPINE, SpineLayer, spinePresentation \} from '\.\.\/iconography';/u.test(spine)) out.push("the Spine is VPORT-02's own drawing");
-    if (!/import \{ presentationX, useTemporalMotion \} from '\.\.\/temporal-navigation';/u.test(spine)) out.push("the Spine moves by T-06's own motion");
-    if (!/<SpineLayer spine=\{spine\}[^>]*layer="SPINE"/u.test(spine)) out.push("the hairline and notches are VPORT-02's SpineLayer");
-    if (!spine.includes('motion.committedStyle') || !spine.includes('motion.cursorStyle')) out.push("the Spine's markers carry T-06's styles");
-    if (!spine.includes('<Aperture kind="COMMITTED"') || !spine.includes('<Aperture kind="PREVIEW"')) out.push('the committed and preview partings are distinct');
-    if (/LiveTerminal|LiveEdgeTarget|TemporalTargetLayer|useTemporalScrub|commitLiveEdge|returnLive|from '\.\.\/state'|from '\.\.\/timeline\/|CallRail/u.test(spine)) out.push('the Spine has no Live, no T-06 scrub or layer, no store');
-    if (/withTiming|withSpring|withDecay|withRepeat|withSequence|LayoutAnimation|\bCanvas\b|@shopify\/react-native-skia/u.test(spine)) out.push('the Spine adds no motion or drawing of its own');
+    // CP2-A.1 correction round (Product Owner, 2026-11-28): the Replay's ONE timeline, in place of the retired Spine.
+    if (w.player['ReplaySpine.tsx'] !== undefined || /ReplaySpine|Aperture/u.test(view)) out.push('the Replay has ONE timeline: the Spine is retired');
+    if (!/import \{ ReplayTimelineBar \} from '\.\/ReplayTimelineBar';/u.test(view) || (view.match(/<ReplayTimelineBar\b/gu) ?? []).length !== 1) out.push('the Replay is navigated on ONE timeline');
+    if (!/onSeek=\{\(ms\) => \{\s*const target = presentation === null \? null : replayTimelineTarget\(presentation, ms\);\s*if \(target !== null\) controller\.seekTo\(target\.ordinal, target\.offsetMs\);/u.test(view)) out.push('a seek on the timeline is ONE place, handed to the player');
+    const bar = tsCode(w.player['ReplayTimelineBar.tsx'] ?? '');
+    if (!/import \{ Gesture, GestureDetector \} from 'react-native-gesture-handler';/u.test(bar)) out.push('the timeline is touched through the gesture handler');
+    if (/LiveTerminal|LiveEdgeTarget|TemporalTargetLayer|useTemporalScrub|commitLiveEdge|returnLive|from '\.\.\/state'|from '\.\.\/timeline\/|from '\.\.\/iconography'|CallRail/u.test(bar)) out.push('the timeline has no Live, no T-06 scrub or layer, no store');
+    if (/withTiming|withSpring|withDecay|withRepeat|withSequence|LayoutAnimation|\bCanvas\b|@shopify\/react-native-skia|react-native-reanimated|\bAnimated\b|setInterval|setTimeout|requestAnimationFrame/u.test(bar)) out.push('the timeline adds no motion, clock or drawing of its own');
     // Product Owner review (2026-10-20): P2's discontinuity keeps its one meaning; an omission is said in words, by the
-    // composite's own historical disclosure, and never drawn on the Spine.
-    if (/discontinuity|omittedBefore/u.test(spine)) out.push('the Spine draws no omission and reuses no P2 discontinuity');
+    // composite's own historical disclosure, and never drawn on the timeline.
+    if (/discontinuity|omittedBefore|P2_SPINE/u.test(bar)) out.push('the timeline draws no omission and reuses no P2 discontinuity');
     if (!/testID="qandeel-replay-gap"/u.test(composite) || !composite.includes('words.gap(entry.count(moment.omittedBefore))')) out.push("an omission is said in the composite's own approved words");
     // The controls held in place: only the moment's reading scrolls under them, bounded by T-11's own cap, and only
     // when the player hands controls (an S7-03 consumer is composed exactly as before).
@@ -265,8 +271,8 @@ const DETECTORS = {
     if (!/<ReplayMomentComposite /u.test(view)) out.push('the S7-03 composite is what is played');
     for (const [name, text] of Object.entries(w.player)) {
       const code = tsCode(text);
-      // Only the Spine hosts Animated views, and only to carry T-06's own styles (checked above).
-      if (/@shopify\/react-native-skia|LayoutAnimation|\bCanvas\b/u.test(code) || (name !== 'ReplaySpine.tsx' && /react-native-reanimated|\bAnimated\b/u.test(code))) out.push(`${name}: no drawing or motion of its own`);
+      // CP2-A.1 correction round: with the Spine retired, no player file hosts Animated views.
+      if (/@shopify\/react-native-skia|LayoutAnimation|\bCanvas\b|react-native-reanimated|\bAnimated\b/u.test(code)) out.push(`${name}: no drawing or motion of its own`);
       if (/expo-av|expo-audio|expo-video|react-native-video|react-native-sound|\bAudio\b|\bVideo\b|\bSound\b/u.test(code)) out.push(`${name}: no audio or video`);
       if (/from '\.\.\/map'|LivingAnalysisMap|MapSurface|WorldCanvas|world-chroma|world-visual|projection-adapter|mapHistorical/u.test(code)) out.push(`${name}: no graphics or analysis of its own`);
       if (/\bShare\b|Sharing|expo-sharing|expo-file-system|expo-media-library|exportReplay|exportFile|\/(?:share|export|publish|download|library)\b/u.test(code)) out.push(`${name}: no share, export, publish or library`);
@@ -474,13 +480,17 @@ const PLANTED = [
   ['a generic play glyph', 'graphicsViolations', edit('glyphs', '', '"d": "M8.4 6.6v10.8', '"d": "M8 5v14')],
   ['a generic pause glyph', 'graphicsViolations', edit('glyphs', '', '"x": 7,\n          "y": 6,', '"x": 6,\n          "y": 5,')],
   ['text labels again', 'graphicsViolations', edit('player', 'ReplayPlayer.tsx', "<Glyph name={view.playing ? 'pause' : 'play'}", "<Text>{label}</Text><Mark name={view.playing ? 'pause' : 'play'}")],
-  ['a Live terminal on the Spine', 'graphicsViolations', edit('player', 'ReplaySpine.tsx', "import { Aperture, P2_SPINE, SpineLayer, spinePresentation } from '../iconography';", "import { Aperture, LiveTerminal, P2_SPINE, SpineLayer, spinePresentation } from '../iconography';")],
-  ['a motion of the Spine’s own', 'graphicsViolations', edit('player', 'ReplaySpine.tsx', 'motion.committedStyle]', '{ opacity: withTiming(1) }]')],
-  ['the Spine drawn by hand', 'graphicsViolations', edit('player', 'ReplaySpine.tsx', '<SpineLayer spine={spine} ink={ink.tertiary} targetInk={ink.primary} layer="SPINE"', '<Line layer="SPINE"')],
-  ['the live store on the Spine', 'graphicsViolations', edit('player', 'ReplaySpine.tsx', "import { TIMELINE_STEP } from '../timeline';", "import { TIMELINE_STEP } from '../timeline';\nimport { useQandeelStore } from '../state';")],
-  ['a Spine that commits a TC', 'graphicsViolations', edit('player', 'ReplayPlayer.tsx', 'onCommit={(ordinal) => controller.seek(ordinal)}', 'onCommit={(tc) => composite.commit(tc)}')],
-  ['an animation outside the Spine', 'graphicsViolations', edit('player', 'ReplayPlayer.tsx', "import { ReplaySpine } from './ReplaySpine';", "import { ReplaySpine } from './ReplaySpine';\nimport Animated from 'react-native-reanimated';")],
-  ['the three points reused for omissions', 'graphicsViolations', edit('player', 'ReplaySpine.tsx', 'const RECOGNISERS = 2;', 'const RECOGNISERS = 2;\nconst { discontinuity } = P2_SPINE;')],
+  // CP2-A.1 correction round re-anchor: the retired Spine's plants, carried to the one timeline.
+  ['the Spine back on the Replay', 'graphicsViolations', edit('player', 'ReplayPlayer.tsx', "import { ReplayTimelineBar } from './ReplayTimelineBar';", "import { ReplayTimelineBar } from './ReplayTimelineBar';\nimport { ReplaySpine } from './ReplaySpine';")],
+  ['a second timeline', 'graphicsViolations', edit('player', 'ReplayPlayer.tsx', '    <ReplayTimelineBar\n', '    <><ReplayTimelineBar {...props} /><ReplayTimelineBar\n')],
+  ['a timeline seek that commits a TC', 'graphicsViolations', edit('player', 'ReplayPlayer.tsx', 'controller.seekTo(target.ordinal, target.offsetMs)', 'composite.commit(target.ordinal)')],
+  ['a Live terminal on the timeline', 'graphicsViolations', edit('player', 'ReplayTimelineBar.tsx', "import type { ChromeLanguage } from '../orientation-chrome';", "import type { ChromeLanguage } from '../orientation-chrome';\nimport { LiveTerminal } from '../iconography';")],
+  ['a motion of the timeline’s own', 'graphicsViolations', edit('player', 'ReplayTimelineBar.tsx', "import { Gesture, GestureDetector } from 'react-native-gesture-handler';", "import { Gesture, GestureDetector } from 'react-native-gesture-handler';\nimport Animated, { withTiming } from 'react-native-reanimated';")],
+  ['a clock of the timeline’s own', 'graphicsViolations', edit('player', 'ReplayTimelineBar.tsx', 'const shownMs = Math.round(shown * total);', 'const shownMs = Math.round(shown * total);\n  setInterval(() => undefined, 100);')],
+  ['the live store on the timeline', 'graphicsViolations', edit('player', 'ReplayTimelineBar.tsx', "import type { ChromeLanguage } from '../orientation-chrome';", "import type { ChromeLanguage } from '../orientation-chrome';\nimport { useQandeelStore } from '../state';")],
+  ['an animation in the player', 'graphicsViolations', edit('player', 'ReplayPlayer.tsx', "import { ReplayTimelineBar } from './ReplayTimelineBar';", "import { ReplayTimelineBar } from './ReplayTimelineBar';\nimport Animated from 'react-native-reanimated';")],
+  ['the three points reused for omissions', 'graphicsViolations', edit('player', 'ReplayTimelineBar.tsx', 'const RAIL = 3;', 'const RAIL = 3;\nconst { discontinuity } = P2_SPINE;')],
+  ['the pace paragraph back in the band', 'graphicsViolations', edit('composite', '', '{controls.instrument}', '{controls.instrument}\n        {controls.note}')],
   ['the omission no longer said in words', 'graphicsViolations', edit('composite', '', 'testID="qandeel-replay-gap"', 'testID="qandeel-replay-omitted"')],
   ['the controls scrolled away with the message', 'graphicsViolations', edit('composite', '', '<ScrollView ref={reader} testID="qandeel-replay-moment-reading"', '<View testID="qandeel-replay-moment-reading"')],
   ['the reading scrolled to a new moment with motion', 'graphicsViolations', edit('composite', '', 'scrollTo({ y: 0, animated: false })', 'scrollTo({ y: 0, animated: true })')],

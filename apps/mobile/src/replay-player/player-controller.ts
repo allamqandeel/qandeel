@@ -36,6 +36,13 @@
  * pace, unchanged (B2X). Pause holds the clock and the reading timer together; a Spine commit or a step runs the target
  * from its start; a command, closing, another version or retirement lets the clock go. A clock that has ENDED is never
  * replaced by the reading pace: nothing plays. Without a source, or for every V1 version, nothing here changes.
+ *
+ * ## S8B-07 CP2-A.1: one continuous presentation (R-2, R-3)
+ *
+ * `seekTo` is the unified timeline's seek: a moment and an offset inside it. A moment the clock owns is placed by the clock
+ * (playing, it continues from there; paused, it is placed there and stays paused); a paced moment's reading pace runs from
+ * that offset. The reading pace keeps its elapsed part: pausing inside a paced moment and playing again continues it, and
+ * `pacedElapsed` reports it for the timeline and the stage, so neither times the moment again on its own.
  */
 import type { HistoricalSemanticDepth } from '@qandeel/runtime';
 
@@ -150,6 +157,13 @@ export interface ReplayPlayerController {
   previous(): void;
   next(): void;
   /**
+   * S8B-07 CP2-A.1 (R-3): the unified timeline's seek — one moment OF THIS VERSION and an offset inside its presentation
+   * (its audio span and the recorded space after it, or its reading pace). Anything else is refused and changes nothing.
+   */
+  seekTo(ordinal: number, offsetMs: number): void;
+  /** CP2-A.1: the reading pace's elapsed part of the paced moment shown, or null when the moment shown is not paced here. */
+  pacedElapsed(): { readonly ordinal: number; readonly elapsedMs: number } | null;
+  /**
    * The Replay Temporal Spine's commit: go to one moment OF THIS VERSION, by its ordinal. Anything else is refused and
    * changes nothing. Like a step, it only moves the ordinal; the composite commits that moment's TC through T-06.
    */
@@ -168,6 +182,8 @@ export interface ReplayPlayerControllerOptions {
   /** Mints a command id. Injectable so a test can name ids; production uses the S7-02 minting. */
   readonly newCommandId?: () => string;
   readonly scheduler?: ReplayPlayerScheduler;
+  /** CP2-A.1: the time the reading pace's elapsed part is read on. Injectable so a test steps it; production uses Date.now. */
+  readonly now?: () => number;
   /** S8B-07 CP1-B: the clock of the versions it times. Absent: every version is paced as in S7-04. */
   readonly momentClock?: ReplayMomentClockSource;
 }
@@ -185,6 +201,14 @@ export function readingPaceMs(text: string): number {
   return Math.min(maxMs, Math.max(minMs, baseMs + Array.from(text).length * perCharacterMs));
 }
 
+/**
+ * A moment's presentation length at the reading pace: what the player times a paced moment with, and the ONE length the
+ * presentation clock lays a TEXT moment out with (S8B-07 CP2-A.1: the stage and the timeline use this same function).
+ */
+export function replayMomentPaceMs(moment: { readonly text: string | null }): number {
+  return readingPaceMs(moment.text ?? '');
+}
+
 const platformScheduler: ReplayPlayerScheduler = {
   set: (run, ms) => setTimeout(run, ms),
   clear: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
@@ -194,6 +218,7 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
   const { sessionId, reads, commands, history, isCurrent } = options;
   const newId = options.newCommandId ?? mintReplayCommandId;
   const scheduler = options.scheduler ?? platformScheduler;
+  const now = options.now ?? (() => Date.now());
 
   let state: ReplayPlayerState = Object.freeze({ open: null });
   const listeners = new Set<() => void>();
@@ -212,11 +237,20 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
   let asked: number | null = null;
   let awaiting: number | null = null;
   let lastClockState: unknown = null;
+  /**
+   * CP2-A.1: the reading pace's elapsed part of one paced moment — `offsetMs` held, plus the time since `since` while its
+   * timer runs. It belongs to the moment shown, and goes when another moment is shown.
+   */
+  let paced: { readonly ordinal: number; readonly offsetMs: number; readonly since: number | null } | null = null;
+  /** CP2-A.1 (R-3): the moment a step on the timeline placed the reader in; it goes when another moment is shown. */
+  let placedIn: number | null = null;
 
   const live = () => !retired && isCurrent();
   const view = () => state.open;
 
   function publish(open: ReplayPlayerView | null): void {
+    if (paced !== null && (open === null || open.ordinal !== paced.ordinal)) paced = null;
+    if (placedIn !== null && (open === null || open.ordinal !== placedIn)) placedIn = null;
     state = Object.freeze({ open: open === null ? null : Object.freeze(open) });
     for (const listener of Array.from(listeners)) listener();
     rearm();
@@ -283,6 +317,10 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
   function disarm(): void {
     if (timer === null) return;
     scheduler.clear(timer.handle);
+    // The reading pace stops where it is: its elapsed part is kept for the moment it belongs to.
+    if (paced !== null && paced.ordinal === timer.ordinal && paced.since !== null) {
+      paced = { ordinal: paced.ordinal, offsetMs: paced.offsetMs + Math.max(0, now() - paced.since), since: null };
+    }
     timer = null;
   }
 
@@ -311,6 +349,17 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
     if (instance === null) return null;
     clock = { versionId: read.version.versionId, instance, unsubscribe: instance.subscribe(onClock) };
     return instance;
+  }
+
+  /** Paused part-way through this moment: the clock holds a place in it, or its reading pace has a part left. */
+  function heldInside(ordinal: number): boolean {
+    const instance = clock?.instance ?? null;
+    if (instance !== null && instance.owns(ordinal)) {
+      const now = instance.getState();
+      return now.phase === 'HELD' && (now.ordinal ?? asked) === ordinal;
+    }
+    const text = settledText();
+    return paced !== null && paced.ordinal === ordinal && paced.offsetMs > 0 && text !== null && paced.offsetMs < readingPaceMs(text);
   }
 
   function clockEnded(): boolean {
@@ -403,8 +452,10 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
       if (!(resume ? instance.resume() : instance.run(current.ordinal, 'START'))) stopPlaying();
       return;
     }
-    // A paced moment (B2X): the clock stops presenting, and the reading pace times it.
+    // A paced moment (B2X): the clock stops presenting, and the reading pace times it. CP2-A.1 correction (F-1): what the
+    // clock presents after it is made ready meanwhile.
     holdClock();
+    instance?.warm?.(current.ordinal);
     const text = settledText();
     if (text === null) {
       disarm();
@@ -414,12 +465,18 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
     disarm();
     const armedIn = epoch;
     const armedAt = current.ordinal;
+    // The pace runs on from its elapsed part (a pause, or a timeline seek inside the moment), never again from its start.
+    const lengthMs = readingPaceMs(text);
+    const elapsed = paced !== null && paced.ordinal === armedAt ? Math.min(lengthMs, paced.offsetMs) : 0;
+    paced = { ordinal: armedAt, offsetMs: elapsed, since: now() };
     timer = {
       ordinal: armedAt,
       handle: scheduler.set(() => {
         timer = null;
         const now = view();
         if (!live() || armedIn !== epoch || now === null || !now.playing || now.ordinal !== armedAt) return;
+        // Read in full: the moment stays at its end until another is shown.
+        paced = { ordinal: armedAt, offsetMs: lengthMs, since: null };
         const order = ordinals();
         const at = order === null ? -1 : order.indexOf(armedAt);
         if (order === null || at < 0) {
@@ -429,7 +486,7 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
         // Stop at the end: the last moment stays on screen.
         if (at === order.length - 1) patch({ playing: false });
         else advanceTo(order[at + 1]!);
-      }, readingPaceMs(text)),
+      }, Math.max(0, lengthMs - elapsed)),
     };
   }
 
@@ -609,6 +666,7 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
   function opening(origin: ReplayPlayerOrigin, replayId: string | null): void {
     epoch += 1;
     disarm();
+    paced = null;
     attach(null);
     failedRead = null;
     publish({ origin, replayId, reading: false, lifecycle: null, draftRevision: null, version: null, composite: null, ordinal: 1, playing: false,
@@ -684,9 +742,12 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
       if (!live() || current === null || order === null || current.command !== null) return;
       // A clock that has ENDED is never replaced by the reading pace (no fallback): nothing plays.
       if (clockEnded()) return;
-      // At the last moment, Play starts again from the first.
+      // At the last moment, Play starts again from the first — unless there is a place inside it to go on from (CP2-A.1,
+      // R-2 / R-3): a step on the timeline put the reader there, or it was paused part-way through.
       const atLast = order.indexOf(current.ordinal) === order.length - 1;
-      patch({ playing: true, ...(atLast ? { ordinal: order[0] } : {}) });
+      const inside = placedIn === current.ordinal || heldInside(current.ordinal);
+      placedIn = null;
+      patch({ playing: true, ...(atLast && !inside ? { ordinal: order[0] } : {}) });
     },
     pause() {
       if (live() && view()?.playing) patch({ playing: false });
@@ -696,6 +757,35 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
     },
     next() {
       step(1);
+    },
+    seekTo(ordinal, offsetMs) {
+      const current = view();
+      const order = ordinals();
+      if (!live() || current === null || order === null || current.command !== null || !order.includes(ordinal) || !Number.isFinite(offsetMs)) return;
+      const at = Math.max(0, offsetMs);
+      const instance = ensureClock();
+      awaiting = null;
+      disarm();
+      if (instance !== null && instance.owns(ordinal)) {
+        paced = null;
+        // A clock that cannot place inside a moment is sought by moment only, as the Spine does.
+        if (instance.seekTo !== undefined) {
+          asked = ordinal;
+          instance.seekTo(ordinal, at);
+        }
+        placedIn = current.playing ? null : ordinal;
+      } else {
+        // A paced moment: its reading pace runs from that offset.
+        paced = { ordinal, offsetMs: at, since: null };
+        placedIn = current.playing ? null : ordinal;
+      }
+      // Published even inside the moment shown: what reads the timeline redraws at the new place.
+      patch({ ordinal });
+    },
+    pacedElapsed() {
+      const current = view();
+      if (current === null || paced === null || paced.ordinal !== current.ordinal) return null;
+      return { ordinal: paced.ordinal, elapsedMs: paced.offsetMs + (paced.since === null ? 0 : Math.max(0, now() - paced.since)) };
     },
     seek(ordinal) {
       const current = view();

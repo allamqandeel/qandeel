@@ -1,5 +1,103 @@
 # QANDEEL — Current State
 
+> **S8B-07 CP2-A.1 — CONTINUOUS IN-APP REPLAY — DELIVERED / READY FOR PO REVIEW — NOT MERGED — COPY GATE CLOSED — FINAL VALIDATION AND CORRECTION APPLIED — HONOR ACCEPTANCE RUN 2026-11-28: H-2, H-3, H-4, H-6 FAIL — CORRECTION ROUND DELIVERED 2026-11-28 — HONOR RE-ACCEPTANCE 2026-11-28: ACCEPTED BY THE PO (record §21.12) — FINAL CLOSURE VALIDATION 2026-11-28: READY FOR THE PO'S MERGE DECISION, ONE TECHNICAL FINDING (H-6 STALLS) AWAITS THE PO (record §21.13) — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:**
+>   - the Product Owner's "EXECUTION AUTHORIZATION — S8B-07 CP2-A.1" (2026-11-27). Replay resumes at CP2-A, split into three tasks: CP2-A.1, CP2-A.2 and CP2-B;
+>   - "CP2-A.1 COPY GATE APPROVED" (2026-11-27);
+>   - "CP2-A.1 FINAL VALIDATION AND CORRECTION" (2026-11-27);
+>   - "CP2-A.1 — CI ROUND 2 TARGETED CORRECTION" (2026-11-27).
+>   - The [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §21 is the primary account.
+>   - The "RETURN TO REPLAY" directive and its two mandatory release blockers (`QAN-BL-INTEL-07`, `QAN-BL-VOICE-10`) come from the documentation PR #417, which stays separate and unchanged at `bbc0335d`. This PR carries that commit by a merge, so both PRs hold the same 116 items.
+> - **Delivered (one Draft PR, branch `replay/s8b-07-cp2a1-continuous-replay`, from `main` at `b842fd0d`):**
+>   - R-1 / O-3: a "saved" line that stays, with one action that opens the exact saved Replay. A failed save is stated, with Try again.
+>   - R-2 / O-4: one Play through every message boundary to the end.
+>   - R-3 / O-5: one timeline of the whole part, **shown before the first Play** (from the version's map read alone: `GET …/map`, no set, no job, no migration), and seeking to any instant inside long speech: before Play, while playing or while paused.
+>   - R-5 (in-app): a text moment's stage follows the player's own paced time.
+>   - All of it on RB-1's presentation clock. **No second timing authority.**
+>   - A new **iOS Replay gate** (`.github/workflows/ios-replay-gate.yml`), on the iOS simulator by real touch, in BG-10's three cells.
+> - **CI on `eda0482f`:** API CI, Mobile CI and the iOS World gate (all three cells) PASS. The iOS Replay gate FAILED in all three cells (run 46007215812). C-TIMELINE and C-PLAY-THROUGH passed everywhere; every failure was the proof harness (record §21.9).
+>   - The harness is corrected without weakening a criterion.
+>   - Two product defects found on the way are corrected: Play after a held step in the last moment restarted the part, and the line went back while the first Play prepared.
+> - **CI on `3e5e2b49` (round 2):** API CI and Mobile CI PASS. The iOS World gate (46037105052) FAILED and is **not** an all-cells PASS: en cancelled; small iPhone NOT TESTED in five cases (orientation, screens that did not open, no visual match); ar one FAIL, X-PAN-AFTER-PINCH (−88 against −120 pt). No COSMOS regression is established: nothing in this PR reaches those maps, and COSMOS code is unchanged (record §21.9). The iOS Replay gate (46037104976) was red in all three cells, and none of it was a product defect (record §21.9):
+>   - iPhone 17 en: a DNS failure while downloading Maestro; nothing ran;
+>   - the small iPhone: all eight cases PASS, but a three-line detail made the results file malformed;
+>   - iPhone 17 ar: six PASS. The two seek cases' touches arrived late: after the end, and a Pause past moment 5.
+> - **Round 3, under "CP2-A.1 — CI ROUND 2 TARGETED CORRECTION" (2026-11-27):**
+>   - harness only: one row per case, validated against the exact case set, with a regression proof; the player's state at each touch (`at=`); Maestro's timing for each timed flow; C-SEEK-HELD held by a step into moment 5;
+>   - tolerances and criteria unchanged; a touch Maestro delivered too late is NOT TESTED, never PASS;
+>   - **read on 2026-11-28 (`5858171f`):** API CI and Mobile CI PASS. The iOS Replay gate (46059753878) is red, but no case FAILED: en and the small iPhone passed every testable case and were red from a round-2 harness defect (BSD awk refuses a newline in a `-v` value), corrected locally in `556b4110`, not pushed; ar NOT TESTED (the JDK download returned HTTP 403). The iOS World gate (46059753736) is **not** an all-cells PASS: ar 31 / 31 PASS; en 14 PASS, 2 NOT TESTED (a Maestro step timed out); small iPhone 9 PASS, 7 NOT TESTED (simulator boot over its bound, Maestro timeouts, the job's 120-minute limit). No FAIL; no COSMOS regression shown (record §21.9).
+> - **The consolidated HONOR acceptance session, run with the Product Owner on 2026-11-28 (record §21.10):** H-1 PASS; **H-2, H-3, H-4 and H-6 FAIL**; H-5 measured. Product findings F-1 – F-4: 2.5 s of silence before the first recording (the set is asked for only at the first audio moment); three lines shown where R-3 asks for one; after a step the line moves before the sound; the layout and the map move while the first recording prepares. Lane B adds one freeze over 100 ms per playthrough. Nothing corrected yet.
+> - **The correction round (2026-11-28; "PO AUTHORIZATION — CP2-A.1 PRODUCT CORRECTION" and "PO DIRECTION — REPLAY UI FINAL CORRECTION"; record §21.11):**
+>   - F-1: the next recording is prepared while the text before it is read (`warm`); the set is still not asked for at opening;
+>   - F-2: ONE timeline (`replay-player/ReplayTimelineBar.tsx`); the S7-04 Spine (`ReplaySpine.tsx`, deleted), RA-14's per-moment line and the pace paragraph are gone; the Spine decision of 2026-10-20 is superseded, its notches kept;
+>   - F-3: a seek or resume inside the playing recording moves the same player (`inPlace`), and PLAYING follows the player's own status;
+>   - F-4: a fixed reading room and one held status line, so the COSMOS frame no longer resizes; the pulses' cause is not claimed before the device check;
+>   - one top row, no proof readout on the screen, no new copy;
+>   - H-6: diagnosed on the device in the re-run (JS frame-gap logs); no code change, no budget changed.
+> - **Copy:** RS-01 – RS-05 APPROVED. RS-01 and RS-05 are existing approved rows, reused verbatim. RS-02 – RS-04 are new, in `replay-entry/save-copy.ts`.
+> - **Not done:**
+>   - H-6 stalls over 50 ms: 0 – 2 per run (66.6 – 99.9 ms), **NOT MET** against the unchanged budget, cause not established; it awaits the PO's disposition (record §21.13);
+>   - the native audio on iOS: NOT TESTED (synthetic player; the Product Owner's limited exception of 2026-11-27);
+>   - CP2-A.2 (CA-RL-01 A – G, the font route, F2, VG-CP2A) and CP2-B;
+>   - no prompt, provider, TTS, quota or hosted change, and no paid call.
+> - **Kept:**
+>   - `QAN-BL-INTEL-06` `VALIDATION — OPEN`;
+>   - HONOR-CORR-01 suspended;
+>   - COSMOS, CALL-ATTR-01 and the completed Replay checkpoints not reopened.
+>   - No migration; the next one is still `0206`.
+> - **Re-acceptance (2026-11-28, record §21.12):** the PO accepted H-2, H-3, H-4, F-4 and the UI on HONOR. A held-step defect it found was fixed (local `5417d12f`, with the proof readout's step count). The iOS Replay gate on `385c1b36` is red from a harness defect: the readout overlay is hidden by the player's `accessibilityViewIsModal`.
+> - **Final closure validation (2026-11-28, "PO AUTHORIZATION — CP2-A.1 FINAL CLOSURE VALIDATION", record §21.13):**
+>   - one consolidated push: `5417d12f`, `556f26b3`, the iOS gate's readout fix `da2f31d1` (validation only: drawn inside the modal player; no visible diagnostics in production or the HONOR build; no criterion changed) and the documentation;
+>   - the long message is a **PO-verified PASS** (it scrolls inside the fixed card; §21.12's "cut" was wrong); the end-of-part hold is §19.2's intentional 300 ms closing display, not an extra freeze; the closing-display requirement is carried into CP2-A.2;
+>   - H-4's stage-to-heard-sound figure is an **estimate** from RB-1's HONOR calibration, not a new acoustic measurement;
+>   - the iOS World gate on `385c1b36`: en cancelled at the 2 h limit (infra), ar one intermittent Shared-band FAIL (cause not established; no `cosmos/` or `shared-world/` file changed), the small iPhone's pre-existing X-PAN-ZOOMED shortfall; evidence reused from round 3 (`5858171f`).
+> - **Next:** the CI on the consolidated head, read once; the PO's disposition of the H-6 stalls; the PO's merge decision. CP2-A.2 does not start before CP2-A.1 is formally closed. **Merge only on «ادمج».**
+
+> **PO DIRECTIVE — RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER — HONOR-CORR-01 SUSPENDED (NOTHING IMPLEMENTED) — `QAN-BL-INTEL-07` (`INTEL-SEMANTIC-REVIEW-01`, CRITICAL) AND `QAN-BL-VOICE-10` REGISTERED AS MANDATORY RELEASE BLOCKERS — NEXT: S8B-07 CP2-A — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's directive of 2026-11-27. The [INTEL-LIVE-01 record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.11 records it, and the [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §20.3 holds the remaining Replay scope.
+> - **Replay development blockers:** only the Product Owner's open CP2-A decisions: execution authorization, CA-RL-01 A – G, the label-font route, F2 and VG-CP2A. Nothing semantic and nothing about TTS.
+> - **Production release blockers:**
+>   - **new:** `QAN-BL-INTEL-07` (H-3, O-2; owner `INTEL-SEMANTIC-REVIEW-01`, proposed; CRITICAL, scheduled after CP2-A and CP2-B, closable only by the PO) and `QAN-BL-VOICE-10` (H-TTS, F-01);
+>   - **existing, unchanged:** `QAN-BL-INTEL-06` `VALIDATION — OPEN`, `QAN-BL-INTEL-05`, the hosted-deployment items, and every voice gate `DISABLED`.
+>
+>   No production deployment and no commercial launch while either mandatory blocker is open. Unrelated preparation work is not prohibited.
+> - **Deferred improvements (not reopened):** O-6, the COSMOS first-tap limitation, and V-8's 2.36 s frame (kept visible).
+> - **HONOR-CORR-01 suspended:**
+>   - none of A1 / A2 / A3 / O-2 is implemented; no new prompt version; no further paid DeepSeek or TTS experiment; no quota change;
+>   - the diagnosis, raw evidence, contract v1.0, F-01 takes and the suspended O-2 work are preserved outside `main`. The O-2 work is a local, never-pushed commit (`c9eb1a29`) plus a patch. It is **not production code**: it is in no PR, not on `main`, never run in CI, and not deployed.
+>   - **Quota read (inspection only):** Vertex runs on Dynamic Shared Quota, and `gemini-3.8-flash-tts` has no explicit per-project limit. The "fixed ~10 – 11 RPM" reading is therefore not established.
+> - **Backlog:** 116 items (55 / 5 / 19 / 37; 66 / 46 / 4).
+> - **Next:** S8B-07 CP2-A.1, in-app Replay correctness (O-3 / O-4 / O-5, unified timeline, precise seeking), on the Product Owner's execution authorization. Then CP2-A.2 (video), then CP2-B.
+
+
+> **HONOR-CORR-01 — BOUNDED DIAGNOSIS DONE, EXECUTION CONTRACT v1.0 PROPOSED, NOTHING IMPLEMENTED — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's "HONOR CONSOLIDATED CORRECTION — PO DIRECTION" (2026-11-27). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.10 is the primary account.
+> - **H-3 reproduced offline** (USD 0.0459 of 0.05): the production focus model proposes a café focus whose grounding it never lists as a reference, so it is refused `FOCUS_GROUNDING_REQUIRED` and falls back to no focus. The grounding rules are correct. A candidate prompt established the café, but it created false and fragmented focuses, so it was not accepted.
+> - **H-TTS:** the evidence fits a fixed limit of about 10 – 11 synthesis requests per minute for the project; the quota is still unread (D-TTS-1). F-01 takes are ready for the PO's choice. *(Superseded 2026-11-27, kept as historical evidence: this was a hypothesis, not an established fact. The quota reading shows Dynamic Shared Quota, with no explicit per-project limit for `gemini-3.8-flash-tts`; INTEL-LIVE-01 record §12.11.)*
+> - **O-2:** a §3 amendment is proposed.
+> - **Open:** the PO's acceptance of the contract, the H-3 gate budget (at most USD 0.40), F-01's take, and D-TTS-1. Then S8B-07 CP2-A.
+
+
+> **HONOR LIVE + REPLAY SESSION COMPLETED ON MERGED `main` `b842fd0d` — CALL-ATTR-01 ACCEPTED ON THE DEVICE — C8, V-2, V-3 (ANDROID), V-4, V-6 PAN, V-7 PASS — H-3 (CAFÉ TOPIC NOT ESTABLISHED), H-TTS AND O-2 DIAGNOSED, CORRECTION PROPOSED, NOT IMPLEMENTED — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's "HONOR VALIDATION — PO DIRECTION" (2026-11-27). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.9 is the primary account.
+> - **Proven on HONOR (two real calls, about USD 0.154 of USD 1.50 spent):** attribution on every ledger row; V-1 live marks; V-2 / CP3-F10; V-3 / UT-3 Android (physical End button); V-4 with C8 on a real call; V-6 pan (60 fps, p95 16.7 ms, 0 stalls); V-7. V-8: T4 P50 18 ms (P95 1 823 ms). First Audio 1.63 – 2.05 s, a separate measurement.
+> - **Not passed or not measured:**
+>   - **H-3:** V-1's durable understanding. The café topic never became a Thread. Every café reference was `UNRESOLVED` or absent, so the unchanged grounding rules could never start a focus. Classified as model output in reference-state discipline, not ASR, evidence matching or continuity.
+>   - **H-TTS:** 12 of 34 synthesis requests failed (429 `OVERLOADED`) *(corrected 2026-11-27: of the 12, 3 are confirmed HTTP 429, 7 are unclassified fast failures and 2 are probable cancellations; record §12.9 – §12.10)*; the breaker opened; F-01 is `NOT_INSTALLED` on `main`, so a failed reply is silent. The real Vertex quota is not yet readable.
+>   - **O-2:** unanswered café turns were folded into Call B's first user message (contract §3).
+>   - V-5 (iOS Replay Lane B, UT-1 / UT-3) open; V-6 opening speed and Lane B stage preparation cost not measured.
+> - **Proposed, not implemented (record §12.9 F):** one task in three parts (the focus prompt's reference-state discipline with refusal-code observability; F-01 and the quota review; a §3 amendment for O-2), and an optional paid focus diagnosis of at most USD 0.05. Both await the PO.
+> - **CP2-A scope:** O-3 / O-4 / O-5 added (S8B-07 record §20.2). O-6 is a deferred COSMOS observation.
+> - **Cleanup done:** the audio and temporary media deleted, pool access revoked, ADB reverse ports removed, no further live call.
+
+
+> **CALL-ATTR-01 MERGED (PR #416, `main` `b842fd0d`, accepted head `8f52f6df`) — HONOR LIVE + REPLAY VALIDATION RESUMED FROM MERGED `main` (FREE READINESS PASS; PAID SESSION PENDING) — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> - **Authority:** the Product Owner's "CALL-ATTR-01 MERGED — RESUME HONOR VALIDATION" (2026-11-27). The [execution record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.8 is the primary account.
+> - **Implemented on `main`:** CALL-ATTR-01. The provisional attention lane and the call analysis worker reach DeepSeek attributed. All mandatory CI passed: T-2 **18 / 18** on all four PostgREST lines; the iOS Targeted Gate **9 / 9**.
+> - **Outstanding validation observations (kept, not resolved by the merge):** iOS touch **UT-1 PASS, UT-2 FAIL, UT-3 NOT TESTED**. UT-3 on Android (HONOR's physical End button) stays mandatory.
+> - **Resumption:** the same HONOR session, from merged `main`; the installed test APK is compatible and reused; the free readiness checks pass (record §12.8). V-1 – V-8 are unchanged. Of the authorized USD 1.50, about USD 0.012 is spent (ceiling USD 1.488). No hosted deployment.
+> - **Open:** the paid session's evidence and the PO's acceptance of `QAN-BL-INTEL-06`. S8B-07 CP2-A follows that acceptance.
+
 > **INTEL-LIVE-01 MERGED (PRs #414 / #415, `main` `11e0702d`) — HONOR LIVE + REPLAY VALIDATION SUSPENDED — CALL-ATTR-01 DELIVERED / READY FOR PO REVIEW — NOT MERGED — `QAN-BL-INTEL-06` VALIDATION — OPEN — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:**
 >   - the Product Owner's "HONOR VALIDATION — BILLING RECOVERY & USAGE ATTRIBUTION CORRECTION" (2026-11-27);

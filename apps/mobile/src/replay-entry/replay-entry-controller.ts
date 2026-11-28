@@ -82,10 +82,12 @@ export type ReplayTarget =
 /**
  * NOT_PROVABLE — the two ends chosen do not make one provable range;
  * CHANGED      — the server answered CHANGED / SOURCE_CHANGED: choose again;
- * FAILED       — the proof could not be read, or the command was refused for another reason;
+ * FAILED       — the proof could not be read;
+ * SAVE_FAILED  — S8B-07 CP2-A.1 (RS-04): the save was not admitted, or refused for another reason: nothing was saved, and
+ *                Try again (RS-05) saves the same selection under a new command;
  * UNCONFIRMED  — the command's answer could not be read: Try again re-issues the same command.
  */
-export type ReplaySelectionProblem = 'NOT_PROVABLE' | 'CHANGED' | 'FAILED' | 'UNCONFIRMED';
+export type ReplaySelectionProblem = 'NOT_PROVABLE' | 'CHANGED' | 'FAILED' | 'SAVE_FAILED' | 'UNCONFIRMED';
 
 export interface ReplayCommandAttempt {
   readonly id: string;
@@ -262,8 +264,10 @@ export function createReplayEntryController(options: ReplayEntryControllerOption
     const grew = replies !== seenReplies;
     seenReplies = replies;
     if (grew && hintOpen && state.status !== 'AVAILABLE') void readHead();
-    // A saved / unavailable line belongs to the moment it answered; the conversation moving on takes it away.
-    if (grew && state.notice !== null) update({ notice: null });
+    // The unavailable line belongs to the moment it answered; the conversation moving on takes it away. S8B-07 CP2-A.1
+    // (O-3): a SAVED line stays, with its way to the Replay, until the reader opens the entry again or starts another
+    // selection; a reply arriving after the save never takes it away.
+    if (grew && state.notice === 'NOT_AVAILABLE') update({ notice: null });
     const selection = state.selection;
     if (selection === null) return;
     // A new committed reply extends the proof; an older page only re-draws. Neither moves an end of the selection.
@@ -385,7 +389,7 @@ export function createReplayEntryController(options: ReplayEntryControllerOption
         return;
       case 'NOT_ADMITTED':
         unresolved = null;
-        if (mine) setSelection(resolved({ ...selection!, command: null, problem: 'FAILED' }));
+        if (mine) setSelection(resolved({ ...selection!, command: null, problem: 'SAVE_FAILED' }));
         return;
       case 'OUTCOME_UNKNOWN': {
         const unconfirmed = Object.freeze({ ...attempt, phase: 'UNCONFIRMED' as const });
@@ -429,8 +433,8 @@ export function createReplayEntryController(options: ReplayEntryControllerOption
       return;
     }
     // NOT_WHOLE_MESSAGES, UNAVAILABLE, SELECTION_NOT_SUPPORTED, LIFECYCLE_NOT_ELIGIBLE, COMMAND_CONFLICT: nothing was
-    // saved; the reader may choose again, under a new command.
-    setSelection(resolved({ ...selection, command: null, problem: 'FAILED' }));
+    // saved; the reader may try again or choose again, under a new command.
+    setSelection(resolved({ ...selection, command: null, problem: 'SAVE_FAILED' }));
   }
 
   // -------------------------------------------------------------------------------------------- the menu

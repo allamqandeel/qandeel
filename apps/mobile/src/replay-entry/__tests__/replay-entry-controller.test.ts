@@ -307,7 +307,8 @@ describe('S7-02 — one command per attempt: no second draft for an unresolved a
     r.controller.save();
     r.transport.commands[0].answer({ kind: 'REFUSED_BY_SERVER', refusal: 'NOT_WHOLE_MESSAGES' });
     await flush();
-    expect(r.controller.getState().selection).toMatchObject({ problem: 'FAILED', command: null });
+    // S8B-07 CP2-A.1 (RS-04): said as a save not done.
+    expect(r.controller.getState().selection).toMatchObject({ problem: 'SAVE_FAILED', command: null });
     expect(r.controller.getState().saved).toBeNull();
     r.controller.save();
     expect(r.transport.commands.map((c) => c.commandId)).toEqual(['cmd-1', 'cmd-2']);
@@ -319,7 +320,17 @@ describe('S7-02 — one command per attempt: no second draft for an unresolved a
     r.controller.save();
     r.transport.commands[0].answer({ kind: 'NOT_ADMITTED' });
     await flush();
-    expect(r.controller.getState().selection).toMatchObject({ problem: 'FAILED', command: null });
+    expect(r.controller.getState().selection).toMatchObject({ problem: 'SAVE_FAILED', command: null });
+    expect(r.controller.getState().saved).toBeNull();
+    expect(r.controller.getState().notice).toBeNull();
+    // RS-05: Try again saves the same selection under a NEW command; only the server's answer shows RS-01.
+    r.controller.save();
+    expect(r.transport.commands.map((c) => c.commandId)).toEqual(['cmd-1', 'cmd-2']);
+    expect(r.controller.getState().selection?.command?.phase).toBe('SAVING');
+    r.transport.commands[1].answer(ANSWER('SELECTED_EXCERPT'));
+    await flush();
+    expect(r.controller.getState().notice).toBe('SAVED_PART');
+    expect(r.controller.getState().selection).toBeNull();
   });
 
   it('the default command id is a UUID v4', () => {
@@ -430,7 +441,7 @@ describe('S7-02 — the conversation is read, never written; a retired owner doe
     expect(r.controller.getState().menu).toBeNull();
   });
 
-  it('a new committed reply takes a saved line away', async () => {
+  it('S8B-07 CP2-A.1 (O-3): a new committed reply keeps a saved line; opening the entry again takes it away', async () => {
     const r = await rig();
     await select(r, 'WHOLE');
     r.controller.save();
@@ -439,7 +450,22 @@ describe('S7-02 — the conversation is read, never written; a retired owner doe
     expect(r.controller.getState().notice).toBe('SAVED_WHOLE');
     r.conversation.set([...r.history, exchange('next')]);
     await flush();
+    expect(r.controller.getState().notice).toBe('SAVED_WHOLE');
+    expect(r.controller.getState().saved).not.toBeNull();
+    r.controller.openMenu();
     expect(r.controller.getState().notice).toBeNull();
     expect(r.controller.getState().saved).not.toBeNull();
+  });
+
+  it('the unavailable line still goes when the conversation moves on', async () => {
+    const r = await rig();
+    await select(r, 'WHOLE');
+    r.controller.save();
+    r.transport.commands[0].answer({ kind: 'REFUSED_BY_SERVER', refusal: 'NOT_AVAILABLE_NOW' });
+    await flush();
+    expect(r.controller.getState().notice).toBe('NOT_AVAILABLE');
+    r.conversation.set([...r.history, exchange('next')]);
+    await flush();
+    expect(r.controller.getState().notice).toBeNull();
   });
 });

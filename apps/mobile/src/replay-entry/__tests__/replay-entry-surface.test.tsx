@@ -9,7 +9,7 @@ import { AccessibilityInfo, StyleSheet } from 'react-native';
 import { ConversationSurface, createConversationController, type ConversationController } from '../../conversation';
 import { exchange, page, scriptedTransport } from '../../conversation/__fixtures__/conversation';
 import type { ChromeLanguage } from '../../orientation-chrome';
-import { REPLAY_ENTRY_COPY_GATE, REPLAY_ENTRY_COPY_ROWS, ReplayEntryControl, ReplayEntryMenu, ReplayNoticeLine, createReplayEntryController, replayEntryCopy, useReplaySelection, type ReplayEntryController } from '..';
+import { REPLAY_ENTRY_COPY_GATE, REPLAY_ENTRY_COPY_ROWS, REPLAY_SAVE_COPY_GATE, REPLAY_SAVE_COPY_ROWS, REPLAY_SAVE_REUSED_ROWS, ReplayEntryControl, ReplayEntryMenu, ReplayNoticeLine, createReplayEntryController, replayEntryCopy, replaySaveCopy, useReplaySelection, type ReplayEntryController } from '..';
 import { REPLAY_ID, SESSION, fakeReplayTransport, flush, timeline, type FakeReplayTransport } from '../__fixtures__/replay';
 
 // The test renderer has no native node handles; the precedent (introductions.test.tsx) stands one in.
@@ -183,6 +183,52 @@ describe('S7-02 — the selection mode over the conversation’s own messages', 
     expect(view.getByText(copy.unconfirmed)).toBeTruthy();
     await press(view, 'qandeel-replay-try-again');
     expect(replayTransport.commands.map((c) => c.commandId)).toEqual(['cmd-1', 'cmd-1']);
+  });
+});
+
+describe('S8B-07 CP2-A.1 — saving is said, and a save not done offers Try again (O-3, RS-01 … RS-05)', () => {
+  it('the Copy Gate rows, word for word; RS-01 and RS-05 are the existing approved rows, not copies', () => {
+    expect(REPLAY_SAVE_COPY_GATE.status).toMatch(/CLOSED — 2026-11-27/u);
+    expect(Object.values(REPLAY_SAVE_COPY_ROWS).map((r) => [r.id, r.ar, r.en, r.status, r.enStatus])).toEqual([
+      ['RS-02', 'فتح إعادة العرض', 'Open Replay', 'APPROVED', 'APPROVED'],
+      ['RS-03', 'جارٍ حفظ إعادة العرض…', 'Saving Replay…', 'APPROVED', 'APPROVED'],
+      ['RS-04', 'تعذّر حفظ إعادة العرض', "Replay couldn't be saved", 'APPROVED', 'APPROVED'],
+    ]);
+    expect(REPLAY_SAVE_REUSED_ROWS).toEqual({ 'RS-01': 'savedPart', 'RS-05': 'tryAgain' });
+    for (const language of ['ar', 'en'] as const) {
+      expect(replaySaveCopy(language).savedPart).toBe(REPLAY_ENTRY_COPY_ROWS.savedPart[language]);
+      expect(replaySaveCopy(language).tryAgain).toBe(REPLAY_ENTRY_COPY_ROWS.tryAgain[language]);
+    }
+    // The S7-02 registry keeps its 16 rows, none duplicated.
+    expect(Object.keys(REPLAY_ENTRY_COPY_ROWS)).toHaveLength(16);
+    const shipped = Object.values(REPLAY_ENTRY_COPY_ROWS).flatMap((r) => [r.ar, r.en]);
+    for (const row of Object.values(REPLAY_SAVE_COPY_ROWS)) expect(shipped).not.toContain(row.ar);
+  });
+
+  it('Arabic: RS-03 while saving; a save not admitted says RS-04 with RS-05, which saves again under a new command', async () => {
+    const { view, replayTransport } = await mounted('ar');
+    const words = replaySaveCopy('ar');
+    await press(view, 'qandeel-replay-entry');
+    await press(view, 'qandeel-replay-choose-whole');
+    await press(view, 'qandeel-replay-save');
+    expect(view.getByTestId('qandeel-replay-selection-what').props.children).toBe(words.saving);
+    await act(async () => {
+      replayTransport.commands[0].answer({ kind: 'NOT_ADMITTED' });
+      await flush();
+    });
+    expect(view.getByTestId('qandeel-replay-problem').props.children).toBe(words.saveFailed);
+    expect(view.queryByText(words.saving)).toBeNull();
+    expect(view.getByTestId('qandeel-replay-try-again').props.accessibilityLabel).toBe(words.tryAgain);
+    expect(view.queryByTestId('qandeel-replay-notice')).toBeNull();
+    await press(view, 'qandeel-replay-try-again');
+    expect(replayTransport.commands).toHaveLength(2);
+    expect(view.getByText(words.saving)).toBeTruthy();
+    await act(async () => {
+      replayTransport.commands[1].answer({ kind: 'ANSWERED', answer: { outcome: 'CREATED', replayId: REPLAY_ID, lifecycle: 'DRAFT', draftRevision: 1, coverage: 'FULL_SOURCE', selectedMomentCount: 8 } });
+      await flush();
+    });
+    expect(view.getByText(replayEntryCopy('ar').savedWhole)).toBeTruthy();
+    expect(view.queryByText(words.saveFailed)).toBeNull();
   });
 });
 

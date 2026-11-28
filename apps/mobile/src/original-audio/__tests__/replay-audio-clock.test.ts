@@ -27,17 +27,17 @@ describe('a mixed V2 Replay played through (V-23, V-29, C-B1, §5.4)', () => {
     expect(w.clock()).not.toBeNull();
     w.player.play();
     expect(w.ordinal()).toBe(1);
-    // Moment 1 is text: its V1 pace, and no request for audio is made for it.
+    // Moment 1 is text: its V1 pace, and nothing is heard. CP2-A.1 correction round (F-1): meanwhile the set is asked for
+    // (one command, polled while it is prepared) and moment 2's file is made ready, paused — never heard while it is read.
     await run(pace('first') - 10);
-    expect(w.server.calls).toEqual([]);
-    await run(10);
-    // Moment 2's set is asked for; the moment shown stays 1 until moment 2's window starts (C-B2).
-    expect(w.server.calls.filter((c) => c.startsWith('POST'))).toHaveLength(1);
-    await run(1_100);
+    expect(new Set(w.server.calls.filter((c) => c.startsWith('POST')))).toHaveProperty('size', 1);
+    expect(w.heard()).toHaveLength(0);
     expect(w.ordinal()).toBe(1);
-    expect(w.clock()!.detail().engine.waiting).toBe(true); // RA-11 after 1 s without audio
-    await run(1_200);
-    expect(w.ordinal()).toBe(2);
+    expect(w.clock()!.detail().engine.waiting).toBe(false);
+    await run(10);
+    // Moment 2 speaks when its moment comes (C-B2): no preparation is waited for, and RA-11 is never shown.
+    expect(await until(() => w.ordinal() === 2)).toBeLessThanOrEqual(260);
+    expect(w.clock()!.detail().engine.waiting).toBe(false);
     // The latest-started window is current: at 4 s into the file, moment 3, never back to 2 when its window ends.
     await run(4_000);
     expect(w.ordinal()).toBe(3);
@@ -55,8 +55,9 @@ describe('a mixed V2 Replay played through (V-23, V-29, C-B1, §5.4)', () => {
     await run(1_400);
     expect(w.ordinal()).toBe(5);
     expect(w.clock()!.detail().between).toEqual(CROSS);
-    // 1.5 s, then the file's first byte (the fake network's 200 ms): moment 6.
-    expect(await until(() => w.ordinal() === 6)).toBeLessThanOrEqual(310);
+    // 1.5 s, then moment 6 — its file made ready while moment 5 was read (F-1), and presented once the player SAYS it
+    // plays (F-3): within one status report (the fake's 250 ms) of the pause's end.
+    expect(await until(() => w.ordinal() === 6)).toBeLessThanOrEqual(100 + 250 + 10);
     await run(5_500);
     expect(w.playing()).toBe(false);
     expect(w.ordinal()).toBe(6);
@@ -167,6 +168,8 @@ describe('a mixed V2 Replay played through (V-23, V-29, C-B1, §5.4)', () => {
     w.clock()!.seekWithin(2, 50_000);
     await run(0);
     expect(w.clock()!.detail().positionMs).toBeLessThan(6_000);
+    // CP2-A.1 correction (F-3): placed in place, it presents the moment there once it plays there again.
+    await run(300);
     // The line moved into the overlap: the latest-started window (moment 3) is current there (D-05.5).
     expect(w.ordinal()).toBe(3);
     w.player.seek(2);

@@ -1,5 +1,14 @@
 # QANDEEL S8B-07 — Original Audio Replay, Media Rendering & Distribution: Implementation Record v1
 
+**Slice (2026-11-27):** S8B-07 CP2-A.1 — continuous in-app Replay (R-1 / O-3, R-2 / O-4, R-3 / O-5, R-5 in-app, and the iOS
+Replay gate) — **DELIVERED — FINAL VALIDATION DONE — READY FOR THE PO'S MERGE DECISION — NOT MERGED** (§21; §21.13, 2026-11-28: the long message a PO-verified PASS, the end hold §19.2's intentional closing display, H-6 stalls over 50 ms NOT MET and awaiting the PO's disposition, H-4's stage-to-sound figure an estimate from RB-1's calibration, the iOS gate's readout fixed, validation only). The HONOR acceptance session ran on 2026-11-28: H-1 PASS; H-2, H-3, H-4 and H-6 FAIL (§21.10). The Product Owner's correction round (F-1 – F-4, the Replay UI final correction, the H-6 diagnosis) is delivered in this PR (§21.11). The consolidated HONOR re-acceptance ran on 2026-11-28 and the Product Owner ACCEPTED it, after a held-step defect it found was fixed (`5417d12f`); the end-of-part stage hold (H-6, ≈ 0.3 s) is recorded for the PO (§21.12). The CP2-A.1 Copy Gate is CLOSED (§21.5). CP2-A.2
+and CP2-B are not started. S8B-07 is not closed. *(The lines below are kept as written.)*
+
+**Slice (2026-11-27, the Product Owner's "RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER"):** Replay development **resumes at
+CP2-A** (§20.3: the remaining scope R-1 – R-8 and the next step, CP2-A.1). The unresolved semantic quality
+(`QAN-BL-INTEL-07`, CRITICAL) and live TTS capacity (`QAN-BL-VOICE-10`) are production release blockers, not Replay
+development blockers. INTEL-LIVE-01 is merged (`11e0702d`). S8B-07 is not closed. *(The lines below are kept as written.)*
+
 **Slice (2026-11-26, INTEL-LIVE-01 CP4):** Lane B's producer (§20) is **ACCEPTED by the Product Owner** (CP3 + R1, head
 `755192c5`) and INTEL-LIVE-01's closure (CP4) is delivered — **NOT MERGED** (PR #415); `0205` not hosted. Replay Lane B on a
 device stays mandatory in the HONOR Live + Replay proof (§20.1). *(The lines below are kept as written.)*
@@ -2021,3 +2030,884 @@ is drawn in the next, and no provisional mark survives the closing display. The 
 - **Unchanged:** Lane A, `presentation-clock.ts`, the camera plan, the COSMOS renderer, §19's policy, `QAN-BL-VIS-02`
   (`OPEN — UNASSIGNED`).
 - **Sequence:** INTEL-LIVE-01's merge decision → HONOR Live + Replay proof → CP2-A → CP2-B. S8B-07 is not closed.
+
+### 20.2 After the HONOR Live + Replay proof (2026-11-27)
+
+**Authority:** the Product Owner's "HONOR VALIDATION — PO DIRECTION" (2026-11-27). The evidence is in the
+[INTEL-LIVE-01 record](QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.9.
+
+- **Proven on HONOR (V-4 / C8, a real call):**
+  - the original audio streamed `COMPLETE`;
+  - `0205` returned 24 events, each from a `DEVELOPMENTS` evaluation or its settlement;
+  - nothing for `MISSED_HANDOVER`, `REFUSED` or `DEFERRED_PERMIT`;
+  - no floor before its anchor; no other call's marks inside the call;
+  - play, pause and seek consistent.
+
+  C8 is no longer PARTIAL. V-6 pan passed against the COSMOS-V5 baseline.
+- **Still open from §20.1:**
+  - V-5 (the iOS simulator Replay Lane B pass);
+  - V-6's COSMOS opening speed;
+  - Lane B's stage-preparation cost (CP3-F6), each to be measured separately.
+- **Added to CP2-A's scope (Product Owner's observations O-3, O-4, O-5).** CP2-A must deliver, and prove on device:
+  1. **A clear save confirmation and access to the saved Replay.** After saving a part, the person sees that it was saved and has a direct way to open it (O-3: the PO saw neither).
+  2. **Continuous in-app playback across message boundaries.** The conversation plays as one continuous piece, not message by message (O-4).
+  3. **One unified timeline** for the whole selected part.
+  4. **Accurate seeking inside long speech**, not only at message boundaries (O-5: a seek inside a long message landed at its start).
+  5. **The original audio with a synchronized map** throughout.
+  6. **Continuous video generation** from the same timeline (the CP3-F8 facts, `attentionOnFrame`, are ready).
+- **Deferred observation O-6:** the first pinch-zoom is not centred on the conversation's content; a further zoom corrects it. COSMOS is not reopened and its renderer is unchanged; escalation only on evidence of a regression.
+- **Sequence:** the PO's review of the INTEL-LIVE-01 consolidated diagnosis → CP2-A → CP2-B. S8B-07 is not closed.
+
+### 20.3 Return to Replay: the remaining CP2-A scope (2026-11-27)
+
+**Authority:** the Product Owner's "RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER" (2026-11-27). The [INTEL-LIVE-01
+record](QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.11 records it.
+
+- **Replay development resumes** at CP2-A. The unresolved semantic quality (H-3, O-2 → `QAN-BL-INTEL-07`) and live TTS
+  capacity (H-TTS → `QAN-BL-VOICE-10`) do **not** block it. They are production release blockers.
+- **What Replay must do:** reproduce faithfully the authorized knowledge and audio that exist. Its correctness is judged
+  independently of the upstream understanding's quality.
+- **Test inputs:**
+  - valid semantic fixtures and previously accepted knowledge evidence (the C8 corpus call; the REPLAY-LOCAL fixtures);
+  - recorded audio or controlled fixtures, never a live TTS dependency.
+- **H-3 is not concealed:** a topic the analysis never established is shown absent, never fabricated.
+
+**The remaining CP2-A scope.** Only what affects Replay's correctness and usability is listed, each item against what is
+already on `main`:
+
+| # | Item | On `main` already | Remaining |
+|---|---|---|---|
+| R-1 | O-3: a clear save confirmation and direct access to the saved Replay | saving a part (CP1-B) | the confirmation and the access path, with a Copy Gate for new wording |
+| R-2 | O-4: continuous in-app playback across message boundaries | the presentation clock (RB-1, `presentation-clock.ts`); original audio playback (CP1-B) | one continuous player over the whole selected part |
+| R-3 | O-5: one unified timeline and precise seeking inside long speech | message-level seeking; Lane A placement (RB-2 S1 – S4) | seeking to any instant inside a message, map state recomputed at that instant |
+| R-4 | Original user and QANDEEL audio | in-app original audio (CP1-B); a two-voice phone mix proven on synthetic data only (REPLAY-LOCAL-02) | both voices in the production video path |
+| R-5 | Accurate synchronization of audio and map developments | Lane A (certified or source-order placement, §19); Lane B (§20); C8 proven in-app on HONOR | the same facts on video frames (`attentionOnFrame`, CP3-F8); RB-1's audible A/V on a real device (§7 C, NOT proven) |
+| R-6 | Continuous video generation | a synthetic on-device export proof (H.264 Main@4.0, AAC; REPLAY-LOCAL-01 / 02) | the production export engine on the CA-RL-01 route; the label-font route; F2 (causal frame rule); VG-CP2A |
+| R-7 | Replay-specific iOS and performance validation | — | V-5 (iOS simulator Replay Lane B pass); V-6 opening speed and Lane B stage preparation (CP3-F6); the CP1-B synthetic MP4 device proof (transferred to CP2-A V-I) |
+| R-8 | COSMOS visual fidelity and performance preservation | the COSMOS Replay map (REPLAY-COSMOS-01); V-6 pan PASS on HONOR | `QAN-BL-VIS-02`'s close condition: in-app Replay verified against the exported video on a real device (CA-RL-01 row N) |
+
+CP2-B (export and sharing) follows CP2-A unchanged.
+
+**Classified as the Product Owner directed:**
+- **Replay development blockers:** only the Product Owner's open CP2-A decisions:
+  - CP2-A execution authorization;
+  - CA-RL-01's decisions A – G (the on-device export route);
+  - the label-font route;
+  - F2;
+  - VG-CP2A.
+
+  Nothing semantic and nothing about TTS blocks it.
+- **Production release blockers:**
+  - the two new ones, `QAN-BL-INTEL-07` (CRITICAL) and `QAN-BL-VOICE-10`;
+  - existing ones, unchanged: `QAN-BL-INTEL-06` `VALIDATION — OPEN`; `QAN-BL-INTEL-05` (handled before the live analysis
+    launches); the hosted-deployment items (`QAN-BL-PROD-11`, `QAN-BL-PROD-12`; `0201` – `0205` not hosted); every voice gate
+    `DISABLED`.
+
+  No production deployment while either mandatory blocker is open.
+- **Deferred improvements, not reopened:**
+  - O-6 (the first pinch-zoom);
+  - the COSMOS first-tap limitation (SE-FU-1 class);
+  - V-8's unexplained 2.36 s frame, kept visible.
+
+**Preserved, not repeated:** HONOR's C8, historical binding, original audio and reconnection evidence (§20.2).
+
+**Not reopened:** COSMOS, CALL-ATTR-01, and the completed Replay checkpoints (CP1-A, CP1-B, RB-1, RB-2 S1 – S4).
+
+**Next execution step:** **CP2-A.1, in-app Replay correctness (R-1 – R-3, with R-5's in-app part):**
+- one continuous player and one unified timeline over the selected part;
+- precise seeking inside long speech, on the existing presentation clock;
+- the save confirmation and access.
+
+It is tested on fixtures and the C8 evidence, with real iOS simulator interaction (BG-10) and one HONOR pass. It needs the
+Product Owner's execution authorization and a Copy Gate for R-1's wording. Then **CP2-A.2, video (R-4 – R-6, R-8)**, after
+the CA-RL-01 decisions; R-7's measurements join the checkpoint each one belongs to. S8B-07 is not closed.
+
+## 21. S8B-07 CP2-A.1 — Continuous In-App Replay (DELIVERED / READY FOR PO REVIEW, 2026-11-27; final validation 2026-11-28, §21.13; NOT MERGED)
+
+**Authority:**
+- the Product Owner's "EXECUTION AUTHORIZATION — S8B-07 CP2-A.1" (2026-11-27). CP2-A is split into three tasks:
+  - CP2-A.1: continuous in-app Replay;
+  - CP2-A.2: continuous video;
+  - CP2-B: export, download, sharing and Public World publishing.
+
+  CP2-A.1 covers R-1 / O-3, R-2 / O-4, R-3 / O-5, the in-app part of R-5, and the applicable Replay iOS and performance
+  validation. It is one implementation PR with one execution checkpoint.
+- the Product Owner's "CP2-A.1 COPY GATE APPROVED" (2026-11-27), §21.5.
+- the Product Owner's "CP2-A.1 FINAL VALIDATION AND CORRECTION" (2026-11-27), within the same PR and checkpoint:
+  1. diagnose the iOS Replay gate's failures from their own evidence and correct the actual cause, without weakening
+     the acceptance criteria (§21.9);
+  2. the unified timeline visible and usable before the first Play, on the existing preparation and presentation clock,
+     with no second timing authority and no slower opening (§21.3);
+  3. one consolidated HONOR acceptance session prepared (§21.10);
+  4. PR #417 kept separate at `bbc0335d`, both PRs reconciled to the 116 registered items, and the actual results here.
+
+The remaining-scope table (R-1 – R-8) and the observations O-3 – O-5 are §20.2 – §20.3 above. They come from the
+documentation PR #417, which stays separate, Draft and unchanged at `bbc0335d`. This PR carries that commit by a merge
+(`ff4de20b`), so either merge order keeps `QAN-BL-INTEL-07`, `QAN-BL-VOICE-10` and their evidence. The PR branch is
+`replay/s8b-07-cp2a1-continuous-replay`, from `main` at `b842fd0d`.
+
+**One timing authority; nothing new keeps time:**
+- RB-1's presentation clock (`replay-cosmos/presentation-clock.ts`: TEXT / PAUSE / RUN blocks over the audio map) stays the
+  only map from a place to an instant.
+- The original-audio clock (`replay-audio-clock.ts`) stays the only place of the audio.
+- The player's paced moments keep their reading pace.
+
+CP2-A.1 adds pure functions of that clock and one step through the existing owners. Unchanged: historical binding, Lane A,
+Lane B, C8, the COSMOS renderer, the camera plan and the original audio.
+
+### 21.1 R-1 / O-3 — saving is confirmed, and the saved Replay opens directly
+
+- **The likely cause of O-3:** the saved line was removed whenever the conversation's completed replies grew. That happens
+  often around a call, so the line could vanish before it was read.
+  - Now the "saved" line stays until the reader opens the entry again, takes its action or dismisses it.
+  - Only the "not available" line still goes when the conversation moves on.
+- **While saving:** the selection bar shows RS-03 instead of the count.
+- **When a save fails** (not admitted, or refused for another reason): RS-04 with RS-05, and RS-05 saves again. Nothing is
+  shown as saved.
+- **After a successful save:** RS-01, with one action, RS-02, which opens the exact Replay just saved (`openSaved`).
+- A part that reaches the open head keeps S7-02's own line and has no action, as before.
+- The line is compact and works right to left and left to right. No new screen and no blocking dialog.
+
+### 21.2 R-2 / O-4 — one continuous presentation
+
+- From one Play, the player passes every moment of the part in order, to the end, with no second touch:
+  - text at its reading pace;
+  - the audio of each recording;
+  - the pause between recordings.
+- A text moment keeps its elapsed time across a pause. Play resumes it where it stopped, not from its start.
+- One function, `replayMomentPaceMs`, times the text moments. The player, the timeline and the stage all use it.
+- **In the last moment** (final validation): Play continues from a place the reader stepped to while held, or from a
+  pause part-way through. Before this, it started again from the first moment. Only a part played to its end starts
+  again from the first moment, as S7-04 does.
+
+### 21.3 R-3 / O-5 — one timeline of the whole part, and seeking anywhere on it
+
+- One line under the moment spans the whole part on the presentation clock. It is labelled with the Replay's own name
+  (`replayName`, S7-02, APPROVED).
+- Two pure functions of that clock draw and seek the line:
+  - `replayTimelinePosition` gives the place shown:
+    - inside a text moment, the reading position;
+    - inside a run, the audio place (no stage lag);
+    - after a text moment is read, it follows the clock to the next window;
+    - at DONE, the end.
+  - `replayTimelineTarget` gives the moment and offset of an instant:
+    - inside a text moment, that moment and the offset;
+    - in the pause before a recording, that recording's first window;
+    - inside a run, the latest window started at or before that instant.
+- **Seeking inside long speech lands at that instant, not at the message's start (O-5):**
+  1. The player's new `seekTo(ordinal, offsetMs)` passes the target to the clock source.
+  2. The audio clock places the engine at the window's start plus the offset, whether playing or paused.
+  3. While paused, the engine is still placed, so the stage draws that instant and Play continues from it.
+  4. If the map is not known yet, the offset is kept and applied when the map arrives.
+- **The line is there before the first Play** (final validation, item 2). The delivered head drew it only after the first
+  Play, because the map that gives the part's length came with the playback set. The smallest solution on the existing
+  clock:
+  - **Server:** one owner-scoped read of the version's map, `GET /replay/:replayId/versions/:versionId/map`. It is
+    0196's existing read and `buildPresentationMap`, the same map the set answers with. It asks for no set, starts no
+    job, holds no lease and reads no audio. No migration.
+  - **Mobile:** the Replay audio source reads it once per opening, without awaiting it. The opening is not delayed: the
+    player opens and shows its first moment exactly as before. The clock keeps the answer as a preview (`prime`) that
+    only the timeline reads (`timelinePlan`).
+    - The audio, the stage and both lanes still read the set's own map, which replaces the preview the moment it is held.
+    - A preview that does not describe these moments is ignored.
+    - Without an answer, the line appears at the first Play, as before. Nothing is invented.
+  - **The timing authority is unchanged:** the same `replayPresentationClock` over the same map lays the line out.
+  - **A step before the first Play** shows that place on the line (the clock's `pending`), asks for nothing, and is
+    where the first Play starts the audio.
+  - **While that first Play prepares** (about 2 s on the synthetic world), the clock's `place()` reports the chosen
+    place. Before, it reported the start of the recording, so the line and the stage went back and then forward again.
+    Found by the gate's mirror test; corrected in the clock itself, so the stage follows the same place.
+- The client's Replay routes become four. S7-01's media-client pin is re-anchored, declared in its own header: four
+  routes pinned verbatim, plus two plants (a token in the map URL; the map read as a write).
+
+### 21.4 R-5 (in-app) — the map follows the same time
+
+- An audio moment's stage already follows the audio clock's place (RB-1, with its 300 ms audio allowance).
+- **A text moment's stage now follows the player's own paced time** (`pacedElapsed`), the same time the timeline shows.
+  - This replaces a separate timer in the COSMOS world.
+  - When a text moment is paused, resumed or seeked, the stage draws the instant the player is at.
+- What is drawn is unchanged: certified or source-order placement (§19) and Lane B (§20). Nothing is fabricated.
+
+### 21.5 Copy Gate — S8B-07 CP2-A.1 COPY GATE — CLOSED — 2026-11-27
+
+Reconciled with the existing registries; nothing is duplicated and no approved row changed.
+
+| ID | Arabic | English | Where |
+|---|---|---|---|
+| RS-01 | حُفظ الجزء المختار لإعادة العرض | The selected part has been saved for Replay | **The existing S7-02 row `savedPart`, reused verbatim:** «حُفظ الجزء المختار لإعادة العرض.» / "The selected part was saved for a Replay." Its full stop and its approved English are kept. |
+| RS-02 | فتح إعادة العرض | Open Replay | New, in `replay-entry/save-copy.ts`. The action on the saved line; it replaces S7-04's «معاينة» there. The player's own «معاينة» is unchanged. |
+| RS-03 | جارٍ حفظ إعادة العرض… | Saving Replay… | New, in `save-copy.ts`. |
+| RS-04 | تعذّر حفظ إعادة العرض | Replay couldn't be saved | New, in `save-copy.ts`. |
+| RS-05 | إعادة المحاولة | Try again | **The existing row `tryAgain`, reused verbatim.** |
+
+The Product Owner approved all five in Arabic and English (2026-11-27). The S7-02 registry keeps its 16 rows. The S7-02
+and S7-04 Copy Gates stay CLOSED.
+
+### 21.6 Tests
+
+- **Final validation and correction (2026-11-27), on the correction tree:**
+  - Mobile Jest 327 / 327 suites, 4 086 / 4 086 tests. `tsc` is clean in both apps. ESLint reports nothing new.
+  - API Jest 353 / 353 suites, 7 938 passed (1 skipped, as before). The route census classifies the map read as
+    `AUTHENTICATED`, like the availability read; the first full run had caught it unclassified, and it is now listed.
+  - New:
+    - `cp2a1-continuous-replay.test.ts`, now 16 tests:
+      - the line before Play from the map read alone;
+      - a step before Play, forward and backward, then Play from there;
+      - the chosen place held while the first Play prepares;
+      - no map answer means no line;
+      - a stray map is ignored, and the set's map wins;
+      - Play in the last moment continues from a held step or a pause part-way.
+    - `replay-audio-views.test.tsx`: the line before Play, and none without a map, in Arabic and English.
+    - `cp2a1-proof-monitor.test.ts`, now 6 tests: the gate's sequences mirrored exactly, with the landing places.
+    - The service spec's map read: the answer, no set asked, and the refusals.
+  - **Negative proofs**, each reverted in place and then restored:
+    - the timeline reading `plan` instead of `timelinePlan`: 4 tests fail;
+    - the position ignoring `pending`: 2 fail;
+    - Play in the last moment always restarting: 2 fail;
+    - `place()` ignoring the chosen place while preparing: 2 fail.
+  - Root contracts: the full suite 1 904 / 1 904. The CP2-A.1 contract has 6 tests, pinning the map route, the preview's reach, the one-flow
+    sequences and the tolerances. A planted looser tolerance fails it. S7-01 has 30 / 30 after its declared
+    re-anchor. The governance contract has 25 / 25.
+- **Mobile (Jest), on the delivered tree (`eda0482f`):** every suite passed. New and changed suites:
+  - `original-audio/__tests__/cp2a1-continuous-replay.test.ts` (9 tests):
+    - the layout;
+    - the targets and their round trip;
+    - the position rules;
+    - continuity over the whole part: monotonic, no step over 400 ms, from 0 to the end;
+    - seeking while playing;
+    - seeking while paused: the stage time at that instant, and Play continuing from it;
+    - a text moment paused and resumed;
+    - seeking inside a text moment;
+    - the refusals.
+  - `replay-audio-views.test.tsx`: the one timeline under the moment, in Arabic and English, and seeking on it.
+  - `replay-entry-controller.test.ts` and `replay-entry-surface.test.tsx`: the saved line kept, RS-03, RS-04 with RS-05,
+    and a second save after a refusal.
+  - `s7-04-replay-player.test.tsx`: RS-01 and RS-02 on the production composition.
+  - `integration/__tests__/cp2a1-proof-monitor.test.ts` (4 tests): the iOS gate's readout, over the same fixture world.
+- **Negative proof:** with `seekTo`'s step to the clock source and the paced elapsed time reverted in place, 4 of the new
+  tests failed. Restored, they pass.
+- **Root contracts:**
+  - `tests/s8b-07-cp2a1-continuous-replay-contract.test.mjs` is new and wired in Mobile CI. It pins the RS rows in the code
+    and here, the kept saved line, the one timing authority and the iOS gate.
+  - Every existing Replay contract (`s7-0*`, `s8b-07-*`, `rb*`, `replay*`) passes unchanged.
+
+### 21.7 iOS — the iOS Replay gate (BG-10; the PO's iOS validation policy of 2026-11-18)
+
+No iOS gate exercised the Replay (V-5 was open), so CP2-A.1 adds one: `.github/workflows/ios-replay-gate.yml` and
+`scripts/ios-replay-gate/`.
+- It builds a proof Release app, `S807Cp2a1ProofRoot.tsx`, through one recorded change of the manifest's `main`, behind
+  `S807_CP2A1_PROOF=1`.
+- It drives that app on the iOS 26.5 simulator by real touch, in BG-10's three cells: iPhone 17 English, iPhone 17
+  Arabic, and the small iPhone in English.
+
+| Case | What is asserted |
+|---|---|
+| J-SAVED-LINE | After a part is chosen and saved on the production composition (the S7-04 proof world), the saved line shows RS-01. |
+| J-OPEN-ACTION | Its one action shows RS-02. |
+| J-OPENS-SAVED | That action opens the Replay player. |
+| C-TIMELINE | **Before the first Play:** one line of the whole part (the Replay's name, 22.5 s), at 0.0 s, nothing played. |
+| C-PLAY-THROUGH | One Play passes moments 1-2-3-5-6 (text, audio, audio, text, another recording) to the end. The place never goes back or jumps. |
+| C-SEEK-PLAYING | While playing (in the long turn, moment 3), a step **back** at 25 % of the line lands inside moment 2, then a step **forward** at 90 % lands inside the second recording (moment 6). Each lands within −0.25 / +1.0 s of the instant the tapped point really is. The part continues to its end without a break. **Precondition**, read from the player's state at each touch (`at=`): the step back was taken while playing in moment 3 (7.5 – 12.5 s), and the step forward while playing before 90 %. If Maestro delivered a touch too late for that, the case is NOT TESTED, with its timing. A touch that finds the part held part-way, with nothing pausing it, is FAIL. |
+| C-SEEK-HELD | Paused part-way (wherever the Pause falls), a step into the text moment 5 at 60 % is drawn there. Then a step **back** at 50 % lands inside the long turn (moment 3), and a step **forward** at 80 % lands inside moment 6. Every touch is taken held. Each landing is within ±0.3 s, the visited order ends 5-3-6, and the place stays put for 2 s. Play continues from the last step to the end without a break. |
+| C-SEEK-BEFORE-PLAY | Before any Play, a step at 50 % is shown inside moment 3 (±0.3 s) with nothing playing. Play continues from there, 3-5-6, to the end without a break. |
+| IOS-NATIVE-AUDIO | **NOT TESTED by construction:** the continuous scene uses the labelled synthetic player, which makes no sound. |
+
+- The continuous scene runs in real time: the shipped player and the shipped original-audio surface, over the player
+  tests' synthetic Replay Media Service.
+- A one-line validation readout reads the place with the timeline's own functions. It records where each step landed
+  (`lands=`: the place shown 300 ms after the step), and the player's state when each step was taken (`at=`: `p` playing
+  or `h` held, and the place).
+- Each timed flow keeps Maestro's own timing of every command (`<flow>.timing.txt`: kind, status, start, duration; no
+  screen content).
+- `results.tsv` holds one row per case, its detail on one line, and the runner validates it against the exact case set
+  before it is judged.
+- **Accuracy is judged from the point actually tapped.** Maestro takes whole-percent screen points only. The runner
+  computes the instant that point really is, exactly as the line computes it from a touch (the 17 pt aperture at each
+  end; right to left in Arabic), and judges each landing against that instant. On the run's own hierarchy those
+  instants are 5.6 / 11.2 – 11.3 / 18.0 – 18.1 / 20.1 – 20.3 s in every cell, each inside the intended moment.
+- **Each timed sequence is one Maestro flow:** Play, a moment reached, a step. A Maestro start takes 10 – 30 s on the
+  runner, longer than the part itself (§21.9).
+- Every case is PASS, FAIL or NOT TESTED, and nothing is retried.
+- The results of the PR's runs are recorded in §21.9.
+
+### 21.8 Not done, and kept
+
+- **The device pass** (HONOR, and the real audio on a device) is left for the Product Owner's return, as directed. No
+  device result is claimed.
+- **Not in CP2-A.1:**
+  - CA-RL-01's decisions A – G, the label-font route, F2 and VG-CP2A (all CP2-A.2);
+  - export and sharing (CP2-B);
+  - prompt, O-2, provider, TTS or quota changes;
+  - paid calls;
+  - hosted deployment.
+- **Kept:**
+  - HONOR-CORR-01 suspended;
+  - `QAN-BL-INTEL-06` `VALIDATION — OPEN`;
+  - the production release blockers (§20.3 on PR #417);
+  - COSMOS, CALL-ATTR-01 and the completed Replay checkpoints, not reopened.
+- **Performance:**
+  - CP2-A.1 adds a 100 ms redraw of one line while playing, and replaces the COSMOS world's text-moment timer with the
+    player's paced time.
+  - COSMOS opening, rendering, panning and gestures are unchanged and stay under the World gate.
+  - The map read before Play is one small GET per opening, not awaited. It starts no job and reads no audio, so it does
+    not delay the opening and costs no media work.
+  - V-6 (opening speed and Lane B stage preparation) is not measured here. It is part of the HONOR session (§21.10).
+
+### 21.9 CI on the Draft PR
+
+**Round 1 — head `eda0482f` (the delivered implementation):**
+
+| Run | Workflow | Result |
+|---|---|---|
+| 46007215782 | API CI | PASS |
+| 46007215803 | Mobile CI (the contract gate, both Release builds, both simulator boot smokes) | PASS |
+| 46007215785 | iOS World gate | PASS in all three cells (iPhone 17 ar, iPhone 17 en, the small iPhone en) |
+| 46007215812 | iOS Replay gate | FAIL in all three cells |
+
+The Replay gate's cases on `eda0482f`:
+
+| Case | iPhone 17 en | iPhone 17 ar | small iPhone en |
+|---|---|---|---|
+| J-SAVED-LINE, J-OPEN-ACTION, J-OPENS-SAVED | NOT TESTED | NOT TESTED | NOT TESTED |
+| C-TIMELINE | PASS | PASS | PASS |
+| C-PLAY-THROUGH | PASS (`visited=1-2-3-5-6 cont=OK max=0.1 end=1`) | PASS (same) | PASS (same) |
+| C-SEEK-PLAYING | FAIL (`seeks=0`) | FAIL (`seeks=0`) | FAIL (`seeks=0`) |
+| C-SEEK-HELD | FAIL (`seeks=0`) | NOT TESTED | FAIL (`seeks=0`) |
+| IOS-NATIVE-AUDIO | NOT TESTED (by construction) | NOT TESTED (by construction) | NOT TESTED (by construction) |
+
+**Diagnosis, from the run's own logs, hierarchy dumps and readouts (no rerun was needed to establish it).** Every
+failure belongs to the proof harness, not the product:
+- **J cases.** Maestro refused the reveal flow before any touch: `Incorrect Format: direction at reveal-tap.yaml:8:16`.
+  Maestro takes no variable in `direction:`. The hierarchy dump of the same instant shows all six selectable messages
+  on screen, enabled, in both screen sizes. Corrected: one flow per direction.
+- **No step was ever delivered** (`seeks=0`). Maestro rejects a decimal screen point:
+  `NumberFormatException: For input string: "65.9"` (and "45.3", "24.6", "65.3", "44.9"). Corrected: whole-percent
+  points, with accuracy judged from the instant the tapped point really is (§21.7).
+- **The part had ended before the step.** Each Maestro start took about 25 – 30 s on the runner, against a 22.5 s part.
+  So C-SEEK-PLAYING's step came after the end (`end=1`).
+- **The "pause" restarted the part.** C-SEEK-HELD's pause tap came after the end, so it was a Play that restarted the part
+  (`visited=1-2-3-5-6-1-2-3-5-6 cont=BROKEN`). In Arabic it left the part playing (`play=1`), so the case was NOT TESTED.
+  Corrected: each timed sequence is one flow (§21.7).
+- **What the product did is correct where it was reached.** C-TIMELINE and C-PLAY-THROUGH passed in every cell with real
+  data: one continuous piece, a largest step of 0.1 s, and no break. That evidence is kept.
+
+**Two product defects the corrected harness would have met,** found first by mirroring its sequences in the readout's
+own test (`cp2a1-proof-monitor.test.ts`), and corrected (§21.2, §21.3):
+- Play after a held step into the last moment started again from the first moment.
+- While the first Play prepared after a step before Play, the line and the stage went back to the recording's start.
+
+The acceptance criteria are not weakened. The same cases remain, and C-TIMELINE is now asserted before the first Play.
+C-SEEK-PLAYING and C-SEEK-HELD now each assert a step backward and a step forward, with a landing tolerance. C-SEEK-BEFORE-PLAY
+is added. The tolerances and the one-flow sequences are pinned by the CP2-A.1 contract.
+
+**Round 2 — head `3e5e2b49` (the final-validation correction):**
+
+| Run | Workflow | Result |
+|---|---|---|
+| 46037104980 | API CI | PASS |
+| 46037105014 | Mobile CI | PASS |
+| 46037105052 | iOS World gate | FAIL: **not** an all-cells PASS (below) |
+| 46037104976 | iOS Replay gate | FAIL in all three cells (below) |
+
+The World gate on `3e5e2b49` (46037105052):
+- **iPhone 17 en: CANCELLED**, with no results file.
+- **The small iPhone: FAIL.**
+  - Every case reached passed, except these, which were NOT TESTED:
+    - U-LAND: Maestro could not turn the simulator (`setOrientation`);
+    - S-EMPTY, U-EMPTY and P-LAND, whose screens did not open after it;
+    - X-PAN-ZOOMED: no unambiguous visual match of node cores.
+  - NOT TESTED is not PASS.
+- **iPhone 17 ar: FAIL**, in one case.
+  - X-PAN-AFTER-PINCH: the shift measured from the screenshots was −88 pt against an expected −120; the worst pair was off
+    by 32 pt.
+  - Every other case passed, including S-LAND, the twelve native XCUITest cases and X-ANCHOR.
+- **No COSMOS regression is established, and no COSMOS code is changed.**
+  - Nothing in this PR can reach the world maps those cases exercise: only Replay code imports `replay-cosmos/`.
+  - Between `eda0482f`, where every World gate cell passed, and `3e5e2b49`, only Replay files changed.
+  - X-PAN-AFTER-PINCH is the screenshot analyser's measurement. Its native counterpart,
+    `testPersonalPinchStepsInAndThePanStillMovesTheWorld`, passed in the same cell.
+  - The failure stands as recorded. It is not counted as a PASS.
+- **No earlier World gate evidence is reused for this PR's later heads.** `eda0482f` was every-cell PASS, but the Replay
+  files changed since then are a protected surface (`world-gate-impact.mjs`: `RUN`), so the gate runs every cell again.
+  The evidence of 46037105052 is kept as recorded.
+
+The Replay gate's cases on `3e5e2b49`:
+
+| Case | iPhone 17 en | iPhone 17 ar | small iPhone en |
+|---|---|---|---|
+| J-SAVED-LINE, J-OPEN-ACTION, J-OPENS-SAVED | NOT TESTED | PASS | PASS |
+| C-TIMELINE | NOT TESTED | PASS | PASS |
+| C-PLAY-THROUGH | NOT TESTED | PASS (`visited=1-2-3-5-6 cont=OK max=0.1 end=1`) | PASS (same) |
+| C-SEEK-PLAYING | NOT TESTED | FAIL (`lands=5.6,20.2 visited=1-2-3-5-6-2-6 play=0 end=0`) | PASS (`lands=5.8,20.3 visited=1-2-3-2-6 end=1`) |
+| C-SEEK-HELD | NOT TESTED | FAIL (`lands=11.4,18.0 visited=1-2-3-5-6-3-6`) | PASS (`lands=11.2,18.1 visited=1-2-3-5-3-6`) |
+| C-SEEK-BEFORE-PLAY | NOT TESTED | PASS (`lands=11.4 visited=3-5-6 end=1`) | PASS (`lands=11.2 visited=3-5-6 end=1`) |
+| IOS-NATIVE-AUDIO | NOT TESTED (by construction) | NOT TESTED (by construction) | NOT TESTED (by construction) |
+
+**Diagnosis, from the run's own results, logs and readouts:**
+- **iPhone 17 en: environmental.** The Maestro download failed (`curl: (6) Could not resolve host: github.com`) before
+  any case ran. Corrected: the download (never a case) is attempted up to four times, and the archive is still verified
+  against its pinned SHA-256.
+- **Small iPhone: every case passed, and the file was malformed.** The label query behind J-SAVED-LINE returned three
+  matching lines. `result()` wrote them raw, so two lines became rows with no result, and the judging step counted them
+  as not PASS. Corrected: the detail is written on one line, and `results.tsv` is validated against the exact case set
+  (header, nine cases in order, three fields each, a known result). A regression proof in the CP2-A.1 contract runs the
+  same `results.sh` on a three-line detail and on the malformed file itself. With the fix reverted in place, the proof
+  fails.
+- **iPhone 17 ar, C-SEEK-PLAYING: the touches came after the end.** Both landings were inside their tolerances, and the
+  place never broke (`cont=OK`). But the part was held at 20.2 s with `end=0`, and it never reached its end.
+  - In the readout's own test, two steps taken while playing, from moment 6 back to 2 and forward to 6, play on to the
+    end (`end=1`).
+  - The run's exact reading, `ord=6 t=20.x play=0 seeks=2 lands=5.x,20.x visited=1-2-3-5-6-2-6 cont=OK end=0`, is
+    reproduced only by two steps taken after the part had ended (`cp2a1-proof-monitor.test.ts`, "late touches").
+  - In Arabic every Maestro command took about twice as long (the steps flow took 61 s against 27 s on the small
+    iPhone), so the first touch arrived after 22.5 s.
+  - Not a product defect. The product is unchanged.
+- **iPhone 17 ar, C-SEEK-HELD: the Pause came late.** It was meant for moment 5 and fell in moment 6
+  (`visited=1-2-3-5-6-3-6`), so `-5-3-6` was not met. Both held steps landed inside ±0.3 s and stayed. Not a product
+  defect.
+
+**Corrected for round 3 (harness only; the tolerances, the visited orders and every acceptance criterion unchanged):**
+- The readout records the player's state at each touch (`at=`).
+- C-SEEK-PLAYING judges its precondition from `at=`. A touch delivered too late is NOT TESTED, never PASS (§21.7).
+- C-SEEK-HELD no longer depends on when the Pause falls. It is held part-way, then a step is made into moment 5, then the
+  same step back and forward, each touch asserted held (§21.7).
+- Maestro's command timing is kept for each timed flow.
+- C-SEEK-BEFORE-PLAY, C-TIMELINE, C-PLAY-THROUGH and the J cases are unchanged.
+- No product code changed. The World gate's impact plan classifies every file changed in round 3 as unable to reach
+  it (`NOT_AFFECTED`). Its PR-wide decision is still `RUN`: no earlier head passed every cell with equivalent inputs.
+
+**Round 3 — on `5858171f` (the round-2 correction `bf49e7f0` plus the round-2 record), read once on 2026-11-28:**
+- API CI 46059753710 and Mobile CI 46059753690: PASS.
+- iOS Replay gate 46059753878: red in all three cells. No case FAILED.
+
+| Case | iPhone 17 en | small iPhone | iPhone 17 ar |
+|---|---|---|---|
+| J-SAVED-LINE, J-OPEN-ACTION, J-OPENS-SAVED | PASS | PASS | NOT TESTED |
+| C-TIMELINE, C-PLAY-THROUGH | PASS | PASS | NOT TESTED |
+| C-SEEK-PLAYING (`at=p…` both touches) | PASS (`lands=5.8,20.4`) | PASS (`lands=5.8,20.4`) | NOT TESTED |
+| C-SEEK-HELD | PASS (`h8.7,h13.6,h11.1`) | PASS (`h5.1,h13.4,h11.2`) | NOT TESTED |
+| C-SEEK-BEFORE-PLAY | PASS (`lands=11.1`) | PASS (`lands=11.2`) | NOT TESTED |
+| IOS-NATIVE-AUDIO | NOT TESTED (by construction) | NOT TESTED (by construction) | NOT TESTED |
+
+  - **en and small iPhone: a harness defect of round 2.** Every testable case passed, and the cell was still red:
+    `validate_results` passed the case set to awk as one `-v` value with line breaks, and the runner's BSD awk refuses a
+    newline in a `-v` value (`awk: newline in string`). GNU awk accepts it, so the round-2 regression proof did not see
+    it. Corrected locally in `556b4110` (harness only, not pushed): the case names, which hold no space, are passed
+    space-separated. The regression proof now runs behind an awk shim that refuses a newline in a `-v` value as BSD awk
+    does; with the old code it fails exactly as the runner did, with the fix it passes (contract 7 / 7).
+  - **ar: infrastructure.** `actions/setup-java` could not download Temurin 17.0.21 (`HTTP 403` from the release host).
+    Nothing ran; every case is NOT TESTED, never PASS.
+- iOS World gate 46059753736: **not** an all-cells PASS. No case FAILED in any cell.
+  - iPhone 17 ar: SUCCESS, 31 / 31 PASS (X-PAN-AFTER-PINCH, which failed in round 2, passed).
+  - iPhone 17 en: 14 PASS and the native XCUITest checks PASS; U-TAP and U-LAND NOT TESTED, as the step that opens the
+    Public field timed out (`maestro u-allow (link.yaml) exit 124`).
+  - Small iPhone: 9 PASS, 7 NOT TESTED (S-FAR-TAP, S-TAP, S-EXPANDED, S-SOURCES, S-CONV-ENTRY, U-EMPTY, P-LAND). The
+    simulator boot exceeded its 300 s bound (`INFRASTRUCTURE: ios-simulator-boot`), six Maestro steps timed out
+    (`exit 124`), and the native-gesture step was cancelled by the job's 120-minute limit.
+  - COSMOS code is unchanged by this PR, and no cell shows a FAIL: no COSMOS regression is shown. No earlier evidence is
+    reused.
+- The local harness fix is not pushed while the HONOR session's product findings (§21.10) await the Product Owner's
+  decision, so that the gates run once on the next head.
+
+### 21.10 The consolidated HONOR acceptance session (RUN with the Product Owner on 2026-11-28: H-1 PASS; H-2, H-3, H-4 and H-6 FAIL; H-5 measured)
+
+One session on HONOR (Android), on a release build of this PR's head, covering the six points of the PO's direction.
+It uses recorded audio and controlled fixtures only: no live call, no paid provider call, no TTS, and no hosted change.
+Each check is PASS, FAIL or NOT TESTED, with its evidence. The safety rules of the HONOR proofs apply (every tap guarded,
+no Back at a root, no system or app settings changed).
+
+| # | Check | Fixture / method | PASS when |
+|---|---|---|---|
+| H-1 | Save confirmation, and opening the exact saved Replay | From the S7-04 proof world's conversation: choose a part (first and last message), Save | RS-03 while saving; RS-01 stays when the conversation moves on; RS-02 opens the player on that Replay, the same moments as chosen |
+| H-2 | Continuous original audio across message boundaries | A recorded two-recording fixture (text · audio · a two-unit turn · text · another recording), from one Play | Every moment in order to the end with no second touch; the audio heard without a gap at a message boundary, and the cross-recording pause as declared |
+| H-3 | Accurate seeking: forward and backward, while playing and while paused, and before the first Play | Steps on the one timeline at stated fractions, including inside long speech | The audio heard, and the line, at the instant stepped to (within the gate's tolerances); a held step stays held; Play continues from it |
+| H-4 | Audio / map sync | The same fixture, the COSMOS stage beside the player | The stage draws the instant heard, within RB-1's 300 ms audio allowance; text moments follow the player's paced time |
+| H-5 | Replay opening speed | Cold and warm opening of the saved Replay, measured from the action to the first moment shown and to the timeline drawn | Measured and recorded (V-6). No threshold is invented; the PO reads the numbers |
+| H-6 | Lane B preparation cost | The stage's preparation with Lane B's fixture attention (no provider call), measured on the device | Measured and recorded (V-6), against the World gate's unchanged COSMOS budgets |
+
+- **iOS native audio stays NOT TESTED** until it is genuinely proven on an iPhone, or separately dispositioned by the
+  Product Owner. The iOS Replay gate proves the touch, the timeline and the clock on the simulator, not the sound.
+- The session needs the Product Owner's go-ahead and presence on the device. Nothing in it is run before that.
+
+**Run (2026-11-28, "PO AUTHORIZATION — HONOR ACCEPTANCE & LIMITED iOS EXCEPTION"):**
+- **Setup:** HONOR ALI-NX1, a release build of `5858171f` under the separate package `com.qandeel.mobile.s807cp2a1h`
+  (APK sha256 `99571d82…`), beside the Product app, which was not touched.
+  - Two generated recordings (tones and a one-second tick; no voice) served from the computer over `adb reverse` only.
+  - The synthetic transient server, with its 2 s preparation.
+  - No call, no provider, no TTS, no hosted change, no setting changed. The Product Owner listened and watched.
+  - Evidence and the driver are kept outside the repository (`QANDEEL_REPORTS/S8B-07/CP2-A.1/honor/`).
+
+| # | Result | Evidence |
+|---|---|---|
+| H-1 | **PASS** | First and last message chosen, Save. RS-01 stayed, and RS-02 opened the player (COSMOS stage, timeline, 1 of 6). RS-03 while saving was NOT OBSERVED: the save finished before the ~1 s screen read. |
+| H-2 | **FAIL** | One Play ran every moment in order to the end with no second touch (`visited=1-2-3-5-6 cont=OK seeks=0 end=1`), and the audio was heard. Two product findings: **F-1**, **F-2** below. |
+| H-3 | **FAIL** | The steps landed and held as the readout shows: while playing 5.8 / 20.8 s, held 13.8 / 11.5 / 18.5 s (stays held, then Play goes on to the end), before Play 11.5 s. Product owner: "the line and the pointer move and there is no sound; after a while the sound appears" (**F-3**). A first attempt while playing is NOT TESTED: the driver's touches arrived after the end. |
+| H-4 | **FAIL** | The Product Owner: light pulses on the map, and "the whole screen, even the text, trembles and moves"; seen with and without Lane B (**F-4**). The 300 ms sync was not separately judged. |
+| H-5 | Measured | From the open action to the Replay ready and the timeline drawn: 108 – 128 ms cold, 110 ms warm (synthetic world, loopback, no network). From Play to the first sound: 6.4 s (3.9 s of the first, written message and 2.5 s of preparation). |
+| H-6 | **FAIL** | The COSMOS stage layer (its SurfaceView), three playthroughs each. Lane B: 53.9 / 55.5 / 55.5 fps, p95 33.3 ms, 3 – 7 stalls over 50 ms, **one freeze over 100 ms in every run** (116 – 183 ms, at the end of the part). Without Lane B: 55.2 – 58.1 fps, 2 – 8 stalls, no freeze. Written-only playback: 59.6 fps, p95 16.7 ms, no stall. Against the unchanged budget (no stall over 50 ms, no freeze over 100 ms), Lane B adds one freeze per playthrough, and audio playback adds 2 – 8 stalls of 50 – 83 ms. The first runs read the app's UI layer and used screen dumps while measuring; they are superseded and kept. |
+
+**Findings (product; none corrected yet):**
+- **F-1 — 2.5 s of silence before the first recording.** `replay-audio-clock.ts` `run()` asks for the set only when the
+  clock reaches the first audio moment ("Nothing held yet: the set is asked for"). The line holds at 4.1 s for
+  2.5 – 2.7 s in every run (the server's 2 s preparation and the 1 s status poll), and again on the first Play after a
+  step before Play (2.48 s). The Product Owner: "long and very noticeable".
+- **F-2 — three lines where R-3 asks for one.** The S7-04 moment spine (`qandeel-replay-spine`, with Play), CP2-A.1's
+  timeline (`qandeel-replay-audio-timeline-line`) and a per-moment audio line in the card (`qandeel-replay-audio-line-N`,
+  RA-14) are all shown. The Product Owner: "two players, one for the whole Replay and one for each message — this is
+  an error".
+- **F-3 — after a step, the line moves before the sound.** Each step makes a new player, which reads the recording
+  again (a full GET, then a Range request). The line moves on the clock meanwhile. The audible delay was not measured
+  instrumentally; the Product Owner heard it.
+- **F-4 — the layout moves while the first recording prepares.** Raw frames 1.3 s apart: the top bar never moves; the
+  lines and the card move ±3 px and the map ±2 px in alternate frames; the map frame changes between 1557 and 1560 px;
+  RA-11 ("Preparing the audio…") is inserted and then removed, moving the card by a line. The pulses the Product Owner
+  saw are not attributed yet. A map frame that changes height re-fits the stage, which is the leading hypothesis.
+- **Not a COSMOS regression:** the written-only playback draws at 59.6 fps without a stall, the COSMOS code is
+  unchanged, and the World gate shows no FAIL.
+
+**Not done:** the native audio on iOS stays NOT TESTED (the PO's limited exception). The proof package stays
+installed on the device until the Product Owner decides. Nothing is corrected, pushed or merged before the Product
+Owner's decision on F-1 – F-4 and H-6.
+
+### 21.11 The correction round (DELIVERED for the consolidated HONOR re-acceptance, 2026-11-28; NOT MERGED)
+
+**Authority:** the Product Owner's "PO AUTHORIZATION — CP2-A.1 PRODUCT CORRECTION" and "PO DIRECTION — REPLAY UI FINAL
+CORRECTION" (2026-11-28). One round, in this PR, with one push. No new task, PR, semantic or TTS work, paid call, hosted
+change or merge, and CP2-A.2 is not started.
+
+**F-1 — the audio is prepared while the text before it is read.**
+- **Cause (§21.10):** the clock held the engine paused while a text moment was paced, so `prepare()` (which needs the
+  engine's PLAY intent) did nothing at a text → audio boundary, and the set was asked for only on reaching the first
+  audio moment.
+- **Correction:**
+  - the player's paced branch now calls the clock's `warm(ordinal)`;
+  - with no set held, the clock asks for one ahead (`preload`);
+  - with a set held, it prepares the next audio moment's run at its start (`prepareAt`).
+- **Limits:**
+  - a warm-up never plays and is silent on failure;
+  - it uses the same bounded request, the same set and the same one player (CA-07B-2);
+  - no audio is made for a written moment, and no designed pause is shortened.
+- **Kept:** the set is still not asked for when the Replay opens (privacy, resources and fast opening, as before). A first
+  Play directly on an audio moment, for example after a step before Play, still waits for the set's preparation, and
+  RA-11 is shown after its first second.
+
+**F-2 — one timeline.**
+- **Removed from the Replay:**
+  - the S7-04 Temporal Spine: `ReplaySpine.tsx` is deleted, with its Aperture "Parting" (the oversized eye-shaped
+    indicator);
+  - the per-moment audio line (RA-14);
+  - the old part line in `ReplayAudioViews.tsx`.
+- **Added:** the player draws ONE timeline, `replay-player/ReplayTimelineBar.tsx`:
+  - P2's own Play / Pause at the reader's start;
+  - a track with a clear beginning and end, 8 pt in from each edge;
+  - the elapsed part in the primary ink, and the rest in the tertiary ink at P2's spine opacity;
+  - a compact 12 pt thumb on the track's axis (16 pt while dragged);
+  - P2's rest notches at each later moment's start;
+  - "elapsed / total" in a fixed-width box of tabular digits;
+  - right to left in Arabic, left to right in English.
+- **Interaction:**
+  - a tap or a drag seeks, before the first Play, while playing and while paused;
+  - assistive technology gets an adjustable control with increment / decrement steps.
+- **Timing:** its length and place are the presentation clock's (`replayPresentationClock`, `replayTimelinePosition`,
+  `replayTimelineTarget`), and its seek is the player's `seekTo`: the same one timing authority.
+
+**F-3 — no player rebuilt, and nothing ahead of the sound.**
+- **Seek and resume in place:** a seek or a resume inside the recording already playing now moves that same player.
+  There is no new player and no new download. The engine option is `inPlace`, for the Replay only.
+- **When the old path is kept:** only while no hand-over can follow, that is, while the held set stays readable past
+  the run's end plus the 10 s margin. Otherwise the old path stays: a new player at the place, under CA-07B-2 and
+  HC-1(b′).
+- **PLAYING only from the player:** the engine reports PLAYING only once the player itself says it plays. Until then
+  the line and the stage wait at the place chosen.
+- **What the device must measure:** a resume in place can sound up to about 43 ms off the reported place (HC-1(b′)'s
+  measured offset), well inside the 300 ms allowance. The device session measures it.
+
+**F-4 — a stable layout.**
+- **Fixes:**
+  - the moment's reading has a FIXED room: one message card of three body lines at the reader's text size, never more
+    than the band's T-11 cap, scrolling inside it when longer;
+  - RA-11, RA-12 with «Try again», and the ended row stand in the timeline's ONE status line, whose height is always
+    held;
+  - the time box has a fixed width.
+- **Result:** no message, preparation, status or seek changes the chrome band, so none changes the COSMOS frame or
+  re-fits its camera.
+- **Root cause of the pulses:** **not claimed**. The device session compares the stage's frame height and the pulses
+  with the resize removed. The frozen COSMOS engine is not changed.
+
+**UI final correction.**
+- **§2, less text on the playing Replay:**
+  - removed: the pace paragraph (S7-04 `pacing`, RA-01 / RA-02), the position line, and the temporal and spatial
+    orientation sentences;
+  - no replacement paragraph and no new copy;
+  - kept: the S7-03 composite without player controls is unchanged.
+- **§3, no proof readout on the screen:**
+  - the iOS gate's proof root draws its readout as an absolute overlay, so the layout under it is the production one;
+  - the HONOR build draws none; its readout is logged.
+- **§4, one top row:**
+  - the way back;
+  - then, at the far side, the private lifecycle's sentence and its acts in the quieter metadata type, each keeping its
+    44 pt target;
+  - the title when there are none, and otherwise a 1-point header for assistive technology (S7-05 D2).
+- **§5 – §6:** as in F-4; the COSMOS engine, its budgets and the opening path are unchanged.
+
+**Previously approved decisions, reconciled (nothing silently dropped):**
+- **The S7-04 Temporal Spine** (P2 + Aperture C, Product Owner, 2026-10-20) is **superseded** by the Product Owner's
+  direction of 2026-11-28. Its P2 notches are kept as the moment marks, and the moment order stays on the one line.
+- **RA-14** (the per-moment line) is retired from the Replay.
+- **RA-01 / RA-02 and S7-04 `pacing`** stay APPROVED and verbatim, and are now the timeline's accessibility hint.
+  **For the PO:** sighted readers no longer see a declaration of the reading pace. RA-04 / RA-05 are still shown where a
+  pause is shortened or a recording is crossed.
+- **S7-03's position sentence** moves into the timeline's accessibility value.
+- **S7-05 D2** (one name): the title is kept as the passage's header.
+- **No Copy Gate is needed:** no new word (one list separator, punctuation, in `replay-player/copy.ts`).
+
+**H-6 — the device diagnosis, not a code change.**
+- **What was tried:** the leading hypothesis, Lane B's variants prepared on the frame they are first drawn, was tested
+  against the synthetic answer. The state at the part's end is empty, so the end frame draws Lane A's stage, already
+  prepared, and prepares nothing.
+- **Outcome:** a pre-preparation of the closing display was written, found not to address the freeze, and **reverted**.
+- **For the session:** the HONOR proof root logs every JS frame gap over 50 ms, with its time and the readout (`G`
+  lines), beside SurfaceFlinger's frames.
+- **Second candidate:** the end of the part changed the status line before F-4, which resized the map. The re-run
+  separates the two.
+- **Kept:** no budget, threshold or quality is changed.
+
+**Tests (local):**
+- Mobile Jest: 4085 of 4085 tests in 327 suites. One earlier full run failed 8 tests in `replay-player.test.tsx` under
+  load, which pass alone. That file's timeout was raised from 30 s to 60 s.
+- `tsc` is clean. ESLint shows two pre-existing warnings.
+- **New tests:**
+  - **F-1:** the next recording is prepared while text is read, with no wait at the boundary, the designed pause kept,
+    and no audio for the text;
+  - **F-3:**
+    - seek forward and back while playing, and seek then Play while paused, on the same player with no new set;
+    - the line stays at the place while the player prepares;
+    - shown to fail with `inPlace` and `warm` reverted in place;
+  - **F-4:** the same reading room and status line for every moment;
+  - **the timeline bar:**
+    - one line, a compact centred thumb, notches, no Live;
+    - tap forward and back before Play in Arabic and English;
+    - drag, cancelled and completed;
+    - a fixed time box;
+    - no omission dots.
+- **Contracts re-anchored, each citing the Product Owner's direction:**
+  - `tests/s7-04-replay-player-navigation-contract.test.mjs`: the Spine's detectors are carried to the one timeline,
+    with new plants;
+  - `tests/s8b-07-cp2a1-continuous-replay-contract.test.mjs`: the timeline is drawn by the player, plus the F-1 / F-3
+    pins;
+  - `tests/s8b-07-cp1b-mobile-playback-contract.test.mjs` passes unchanged: the player names no audio, and the plan type
+    is `ReplayPresentationPlan`.
+- **The iOS Replay gate's harness:** the new line id, and the 8 pt inset.
+
+**Next:**
+- one push (with `556b4110` and `107ed65e`) and impact-based CI;
+- then the consolidated HONOR session on the corrected build, in one sitting:
+  - H-2, H-3, H-4 and H-6 again;
+  - A/V sync measured against 300 ms;
+  - the pulse / resize check;
+  - the Arabic and English screenshots;
+  - the before / after comparison with `run/h2-hold.png`;
+- H-1 and H-5 are kept;
+- iOS native audio stays NOT TESTED;
+- merge only on «ادمج».
+
+### 21.12 The consolidated HONOR re-acceptance (RUN with the Product Owner on 2026-11-28: ACCEPTED; H-6 end hold recorded; NOT MERGED)
+
+Under "PO DIRECTION — CP2-A.1 CONSOLIDATED RE-ACCEPTANCE" (2026-11-28): the automated measurements first, then one
+listening and visual pass with the Product Owner. The evidence (APK, logcat, platform audio-player events, frame
+intervals, screenshots, sheets) is kept outside the repository in `QANDEEL_REPORTS/S8B-07/CP2-A.1/honor/`
+(`run/results-reacceptance.tsv`, `run/measure-*.txt`, `sheets/`). Nothing was written to the device beyond the proof
+package, and no paid call was made.
+
+**A product defect found by the re-acceptance, fixed before the PO's pass (`5417d12f`):**
+- Held while moment 5 was read, after F-1 had made run 1 ready, a step into moment 3 drew run 1's start (18.1 s instead of
+  11.3 s), and Play would have started there.
+  - Cause: the clock's `warmFrom` survived the step, so the next engine change prepared run 1 at 0 over the place.
+  - Fix: `seekTo` clears it.
+  - Proof: a Jest test reproduces it (17 500 against 10 500) and fails without the fix; on the device the step now lands
+    at 11.5 s, and Play plays from there.
+- **Validation only:** the iOS gate's and the HONOR build's `ReplayPlayer` were given the player's own controller, so the
+  proof readout no longer counted the timeline's steps. They are given the monitor's controller.
+- The device build: `com.qandeel.mobile.s807cp2a1h` from `5417d12f`, sha256 `d8133d78…`.
+
+**Measured on HONOR (the speaker), the corrected build:**
+
+| Check | Result |
+|---|---|
+| H-2 one Play | continuous to the end, no second touch (3 runs + the long scene) |
+| Text → audio boundary | the clock waits until the player plays. The AudioTrack starts 0.05–0.2 s after the text's end, and the clock's line reaches the file's start 0.18–0.26 s after it. Round 1 held 2.5 s here |
+| Step while playing, same recording | the same player (ExoPlayer's own Range GET, its AudioTrack re-made 45–54 ms after the flush). Sound returns ≈ 0.05 s after the touch, and the line waits at the landing |
+| Step while playing, across recordings | a new player; its AudioTrack starts 0.13–0.16 s after the touch |
+| Steps while held | land where touched (13.9 / 11.5 / 18.5 s). Play continues from there; the AudioTrack starts ≤ 0.15 s after Play |
+| Step before the first Play | the set is asked for at Play, by design. The first AudioTrack starts 2.26 s after Play, the line moves 2.45–2.72 s after it, and RA-11 is shown. The fixture's 2 s preparation stands for the server's |
+| Audio / clock / stage | the clock runs at the player's rate (slope 0.99–1.01) and is never ahead of the AudioTrack. The stage is 300 ms behind the clock (FC-0). Against the heard sound it trails ≈ 0.21 s steady and ≈ 0.1 s just after a start, never early. The acoustic side is RB-1's HONOR calibration, not re-measured here |
+| F-4 viewport | the COSMOS frame is `[0,0][1200,1937]` in every dump: short and long, Arabic and English, before Play, playing, paused, held, preparing and ended. The reading band and the transport are constant. The top row is 286 px in Arabic and 332 px in English ("Private copy saved" takes its own line), constant within a language. Round 1 moved 1557 ↔ 1560 px |
+| Long message | the fixed reading room shows the long fifth message's first three lines; the rest is cut, with a fourth line partly visible. The PO found it clear and readable; recorded for the PO |
+| H-6 stage frames | 58 fps and p95 16.7 ms in all 4 runs (round 1: p95 33.3). Stalls over 50 ms: 1–3 (round 1: 2–8). **One hold per run at the part's end, in both lanes: 266–300 ms.** Raw frame times show 120 Hz frames up to the end, then none for 308 ms, then one last frame. The stage holds at `end − 300 ms` (the AUDIO lag) and moves to END at once (`replayStageTime`). This is RB-1's open end-of-Replay policy (E-0 – E-2s), which awaits the PO. Not changed |
+| H-5 opening | open → ready, timeline drawn: cold 87–105 ms, warm 47 ms |
+
+**The Product Owner's listening and visual pass (L-1 – L-5, Arabic):**
+- The PO judged every item acceptable: no trembling at all, continuity right, one line, the sound returns at once, 2.3 s
+  before the first audio after a step is acceptable, and the long message is clear and readable.
+- The PO's words: "كل حاجة دلوقتي مظبوطة".
+- In L-2 the driver's first attempt mirrored its touches on the Arabic line (it was given the English direction). Every
+  touch landed where it was made; L-2 was re-run with the Arabic direction.
+- The Arabic and English screenshots, and the before / after sheet against round 1's `h2-hold.png`, are in `sheets/`.
+
+**CI on `385c1b36`, read once:**
+
+| Run | Result |
+|---|---|
+| API 46125435805 | SUCCESS |
+| Mobile 46125435776 | SUCCESS |
+| iOS Replay gate 46125435882 | red. In all three cells J-SAVED-LINE, J-OPEN-ACTION and J-OPENS-SAVED PASS; every continuous case is NOT TESTED, IOS-NATIVE-AUDIO NOT TESTED by construction |
+| iOS World gate 46125435768 | still running when read |
+
+- The Replay gate's cause is a **harness defect** of `385c1b36`:
+  - the proof readout was moved to an overlay beside the player;
+  - the player's root is `accessibilityViewIsModal`, so iOS hides the overlay from the accessibility tree that Maestro
+    reads;
+  - `wait-readout.yaml` timed out at the precondition.
+- No product defect. Not changed: the PO has not decided it.
+
+**Next:**
+- the PO's decision on:
+  - pushing `5417d12f` and this record;
+  - the gate harness fix (the readout back inside the player's modal tree);
+  - the end-of-Replay hold;
+- CP2-A.1 stays open;
+- merge only on «ادمج».
+
+### 21.13 Final closure validation (2026-11-28: the evidence complete; READY FOR THE PO'S MERGE DECISION; one technical finding awaits the PO; NOT MERGED)
+
+**Authority:** the Product Owner's "PO AUTHORIZATION — CP2-A.1 FINAL CLOSURE VALIDATION" (2026-11-28). It asks for the
+final evidence from the measurements already taken (§21.12), the iOS Replay gate's readout fix, one consolidated push and
+the CI on its head. It allows no UI change, no new device session, no paid call, no deployment and no migration.
+
+**What this change carries (one consolidated push, the history kept):**
+- `5417d12f`: the held-step fix, with its regression test and negative proof (§21.12);
+- `556f26b3`: the re-acceptance record (§21.12);
+- `da2f31d1`: the iOS Replay gate's readout fix, **validation only** (below);
+- this documentation commit.
+- No product file changes after `5417d12f`. No genuine defect was shown that would justify one.
+
+**The accepted experience, preserved.** The Product Owner accepted it on HONOR on 2026-11-28, and nothing in this change
+touches it:
+- the one timeline;
+- the redundant controls and paragraphs removed;
+- the compact controls;
+- the stable COSMOS viewport;
+- continuity and seeking;
+- no trembling and no pulses;
+- the ≈ 2.3 s preparation before the first audio after a step made before Play.
+
+**Two corrections to §21.12 (§21.12 is kept as written):**
+- **The long message is a PO-verified PASS.**
+  - §21.12 says the long fifth message's "rest is cut". That was wrong: the fixed reading room scrolls inside itself.
+  - The Product Owner scrolled inside the fixed card on HONOR and confirmed that the entire long message is readable.
+  - Kept: the card's fixed dimensions, its internal scrolling, and the stable COSMOS viewport.
+- **The end-of-part hold is §19.2's closing display, accepted as intentional.**
+  - §21.12 calls the ≈ 0.3 s hold at the part's end "RB-1's open end-of-Replay policy". It is the closing-display policy of
+    §19.2. The stage reaches END only after a wall-clock delay of 300 ms (`REPLAY_STAGE_AUDIO_LAG_MS`, FC-0) from the
+    audio clock's end report, and that delay never advances the stage.
+  - The raw stage frames match it, and nothing else. Frames run at 60 – 120 Hz to the part's end, then there is one interval
+    of 266.4 – 299.7 ms (one per run, at the last frame), then the END frame. It is not an additional rendering freeze.
+  - The Product Owner accepted it as intentional. RB-1's end design is not reopened.
+  - §21.12's H-6 stall counts (1 – 3) include this one interval. Without it they are 0 – 2 (below).
+
+**Carried into CP2-A.2 (the Product Owner's requirement, not implemented here):** the closing display. Final knowledge is
+never displayed before its legitimate presentation instant.
+
+**The final technical evidence** (HONOR, the speaker, build `5417d12f`, sha256 `d8133d78…`; the measurements of §21.12; the
+budgets unchanged):
+
+| Check | Result | What it rests on |
+|---|---|---|
+| H-2 one Play | **PASS** | measured: one Play, every moment in order, no second touch. The AudioTrack starts 0.05 – 0.2 s after the text's end; the clock's line reaches the file's start 0.18 – 0.26 s after the AudioTrack starts. The PO's listening pass |
+| H-3 seeking | **PASS** | measured. Playing, same recording: the same player, sound ≈ 0.05 s after the touch. Playing, across recordings: the AudioTrack 0.13 – 0.16 s after the touch. Held: lands where touched (13.9 / 11.5 / 18.5 s), Play to the AudioTrack ≤ 0.15 s. Before the first Play: the AudioTrack 2.26 s after Play, the clock moving 2.45 – 2.72 s after it (the fixture's 2 s preparation stands for the server's; RA-11 shown). The PO's listening pass |
+| H-4 audio / clock | **PASS, measured on the player** | the clock runs at the player's rate (slope 0.99 – 1.01 in every stretch) and is never ahead of the AudioTrack |
+| H-4 stage / heard sound | **ESTIMATE, not a direct measurement** | the stage trails the clock by 300 ms (FC-0). Against the heard sound that is ≈ 0.21 s steady and ≈ 0.1 s just after a start, never early, computed from RB-1's earlier HONOR microphone calibration (the reported place leads the heard sound by ≈ 90 ms steady, ≤ 200 ms after a restart). **No new acoustic measurement was made in CP2-A.1.** The PO saw no trembling and judged the sync right; that is the user-experience acceptance, not an acoustic proof |
+| F-4 viewport | **PASS** | the COSMOS frame is `[0,0][1200,1937]` in every dump: short and long, Arabic and English, every state. The reading band `[52,2009][1148,2620]` and the transport `[52,2009][1148,2210]` are constant. The top row is 286 px Arabic / 332 px English, constant within a language |
+| Long message | **PASS (PO-verified)** | internal scroll inside the fixed card (above) |
+| H-5 opening | measured | open → ready with the timeline drawn: cold 87 – 105 ms, warm 47 ms |
+| H-6 rate | measured | the stage layer (its SurfaceView): 58.0 – 58.4 fps, p95 16.7 ms in all four runs (round 1: p95 33.3 ms) |
+| H-6 freezes over 100 ms | **MET** outside the closing allowance | 0 in every run. The only interval over 100 ms is §19.2's closing display, one per run, 266.4 – 299.7 ms |
+| H-6 stalls over 50 ms | **NOT MET** | see the finding below |
+
+**The remaining technical finding — H-6 stalls over 50 ms (NOT MET; it awaits the Product Owner's disposition):**
+- The budget is "no stall over 50 ms, no freeze over 100 ms" (§21.10). It is unchanged.
+- Stalls over 50 ms on the stage layer, outside the closing allowance (times from the first sampled frame):
+
+  | Run | Stalls |
+  |---|---|
+  | without Lane B, 1 | 99.9 ms at 2.03 s; 66.6 ms at 3.83 s |
+  | without Lane B, 2 | 66.6 ms at 2.10 s; 66.6 ms at 12.06 s |
+  | Lane B, 1 | 66.6 ms at 16.52 s |
+  | Lane B, 2 | none |
+
+- It predates the correction round. Round 1 had 2 – 8 stalls during audio playback (50 – 83 ms), and written-only playback
+  had none (§21.10). The correction round reduced them, but did not remove them.
+- The cause is **not established**. The stalls near 2.0 – 2.1 s and 3.8 s fall close to the audio player's creation and
+  start. That is a coincidence in time, not a proof.
+- The Product Owner saw no trembling. That acceptance is recorded as the user-experience result, and it is **not** a PASS
+  of this budget.
+- What would settle it: the Product Owner's disposition. Either accept it as a known finding of CP2-A.1, or carry it, by
+  name, into a later S8B-07 checkpoint with its cause to be found. Nothing is changed here, and no budget is changed.
+- The app's UI layer is not the stage. It redraws only when something changes (the timeline's 100 ms line), so its counts
+  (24 – 25 fps) are not frame drops. It is not a finding.
+
+**The before / after visuals:** `QANDEEL_REPORTS/S8B-07/CP2-A.1/honor/sheets/`:
+- `1-before-after.png`: round 1 against the corrected build, in Arabic and English;
+- `2-states-ar.png` and `2-states-en.png`: before Play, text, audio, paused, moment 5, preparing, ended;
+- `3-short-long.png`: the short and long message, in Arabic and English;
+- `v-*.png`: every original.
+
+**The iOS Replay gate's readout (`da2f31d1`, validation only, under the PO's §5):**
+- On `385c1b36` the proof readout was drawn beside `ReplayPlayer`. The player's root is `accessibilityViewIsModal`, so iOS
+  hid the readout from the tree that Maestro reads. Every continuous case was NOT TESTED.
+- The proof root (`integration/__validation__/S807Cp2a1ProofRoot.tsx`) now lays the same readout over the timeline's held
+  status line, inside the player. It is absolutely placed and touch-transparent, so it takes no room and moves nothing.
+- Scope:
+  - the Product route does not reach the proof root;
+  - the HONOR build has its own root, which logs the readout and draws nothing;
+  - no visible diagnostics in production or in the HONOR build.
+- No case, tolerance, acceptance condition or negative proof of the gate changes.
+- Proof: `s807cp2a1-proof-readout.test.tsx`. It asserts the readout sits under the player and under the timeline's status
+  line, absolutely placed, with `pointerEvents` none. It FAILS with `385c1b36`'s root restored in place.
+- Local checks:
+  - tsc clean; ESLint 0 issues;
+  - Jest over `integration`, `replay-player`, `original-audio` and `replay-cosmos`: 77 suites, 763 / 763;
+  - the root contracts: CP2-A.1 8 / 8, S7-04 66 / 66, CP1-B (mobile) 11 / 11.
+
+**The limited iOS exception (2026-11-27), unchanged:**
+- The native audio on iOS is **NOT TESTED**. The gate's player is synthetic.
+- Infra and harness limits may be dispositioned. NOT TESTED is never PASS.
+- There is no exception for a product defect.
+
+**The iOS World gate on `385c1b36` (46125435768), read once and classified.** The impact plan is RUN FULL, because the
+Replay player is a protected surface.
+
+| Cell | Result | Classification |
+|---|---|---|
+| iPhone 17 en | cancelled: the job reached its 2 h limit (annotation: macOS arm64 capacity); no case log | infra; NOT TESTED |
+| iPhone 17 ar | one FAIL, `X:testLayoutAtTheReadersTextSize`: "qandeel-shared-band did not appear within 60 s", with the Shared World's title and Overview on screen; every other row PASS (30) | **cause not established; intermittent, not shown to be a product defect.** No file under `cosmos/` or `shared-world/` changed against `main`. The changed Replay files are in the app's module graph through the `integration` barrel, but none is mounted on the Shared World screen: `ReplayPlayer` is mounted only in the Personal world (`DepthComposition.tsx`) and draws nothing without an open Replay. The same test PASSED on the same head on the small iPhone (its Shared band measured), and in Arabic on `5858171f` (31 / 31); this failure text appears in no earlier World gate run of this PR or of INTEL-LIVE-01 / `main` read here |
+| small iPhone | X-PAN-ZOOMED FAIL (expected 0, −60; median 0, −34; worst pair 26 pt) | **pre-existing, not caused by this PR; equivalence of other evidence NOT established.** The same assertion failed the same way (0, −35) on `8b2e171d`, `ecf5ea08` and `78be6ebe`, before RB-2 (CI-SPEED-01), and passed at 0, −44 on `eda0482f` of this PR: a borderline measurement. No COSMOS file changed. The native `testPersonalPinchStepsInAndThePanStillMovesTheWorld` and X-PAN-AFTER-PINCH passed in the same cell; they show the pan works, not the exact 60 pt displacement. COSMOS is not reopened |
+
+- Evidence reused under the impact rule: round 3 on `5858171f`. Arabic 31 / 31; English 2 NOT TESTED; the small iPhone 7
+  NOT TESTED; 0 FAIL.
+- The gate is rerun on the consolidated head as part of its CI, not for these infra results alone. Its result is read
+  once and reported to the Product Owner.
+
+**Kept:**
+- `QAN-BL-INTEL-07` (INTEL-SEMANTIC-REVIEW-01) and `QAN-BL-VOICE-10` stay mandatory release blockers. Neither blocks Replay.
+- HONOR-CORR-01 stays suspended.
+- `QAN-BL-INTEL-06` stays `VALIDATION — OPEN`.
+- The HONOR proof app stays installed until CP2-A.1 is formally closed.
+- No migration; the next one is still `0206`.
+
+**State:**
+- CP2-A.1 is **DELIVERED, its final validation done, and READY FOR THE PO'S MERGE DECISION**. It is not merged.
+- It is not called CLOSED here. The H-6 stall finding awaits the Product Owner's disposition, and the CI on the
+  consolidated head is read after the push.
+- CP2-A.2 does not start before CP2-A.1 is formally closed.
+- Merge only on «ادمج».

@@ -16,7 +16,7 @@ import { exchange, historyBody } from '../../conversation/__fixtures__/conversat
 import { MAP_SURFACE_TEST_ID } from '../../map';
 import { REPLAY_COSMOS_TEST_ID } from '../../replay-cosmos';
 import { conversationCopy } from '../../conversation';
-import { replayEntryCopy } from '../../replay-entry';
+import { replayEntryCopy, replaySaveCopy } from '../../replay-entry';
 import { replayCompositeCopy } from '../../replay-composite';
 import { REPLAY_PLAYER_TEST_ID, replayPlayerCopy } from '../../replay-player';
 import { PLAYER_IDS, PLAYER_WIRE, playerServer, type PlayerServer } from '../../replay-player/__fixtures__/player-wire';
@@ -130,6 +130,10 @@ describe('S7-04 — Select → Saved Draft → Real Preview → Player → Priva
     await savePart(view);
     expect(JSON.parse(h.http.matching('/replay/drafts')[0].body!)).toMatchObject({ firstTc: 1, lastTc: 6 });
     expect(view.getByTestId('qandeel-replay-notice')).toBeTruthy();
+    // S8B-07 CP2-A.1 (O-3): RS-01 once the server saved it, and RS-02, the way to that exact Replay.
+    expect(view.getByText(replaySaveCopy(LANGUAGE).savedPart)).toBeTruthy();
+    expect(view.getByTestId('qandeel-replay-preview').props.accessibilityLabel).toBe(replaySaveCopy(LANGUAGE).openReplay);
+    expect(view.getByText(replaySaveCopy(LANGUAGE).openReplay)).toBeTruthy();
 
     const conversationBefore = runtime.conversation.getState();
     const storeBefore = runtime.store.getState();
@@ -153,10 +157,13 @@ describe('S7-04 — Select → Saved Draft → Real Preview → Player → Priva
     expect(view.getByTestId('qandeel-conversation-input', HIDDEN).props.value).toBe('fixture: words not sent yet');
     expect(view.queryByTestId('qandeel-global-switcher')).toBeNull();
 
-    await fireEvent(view.getByTestId('qandeel-replay-spine'), 'accessibilityAction', { nativeEvent: { actionName: 'increment' } });
-    await act(async () => {
-      await settle();
-    });
+    // S8B-07 CP2-A.1 correction round: the Replay's ONE timeline (the Spine is retired); stepped until the next moment.
+    for (let i = 0; i < 60 && text(view, 'qandeel-replay-text') === MOMENTS[0].text; i += 1) {
+      await fireEvent(view.getByTestId('qandeel-replay-timeline-line'), 'accessibilityAction', { nativeEvent: { actionName: 'increment' } });
+      await act(async () => {
+        await settle();
+      });
+    }
     expect(text(view, 'qandeel-replay-text')).toBe(MOMENTS[1].text);
     await press(view, 'qandeel-replay-player-finalize');
     expect(text(view, 'qandeel-replay-player-sentence')).toBe(PLAYER_WORDS.finalizedNotice);
@@ -422,8 +429,8 @@ describe('S7-05 D5 — NOT_VIEWABLE through the real path, in the production com
     for (const moment of SOURCE_MOMENTS) expect(view.queryAllByText(moment.text, { ...HIDDEN, exact: false })).toHaveLength(0);
     expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
     expect(view.queryByTestId(REPLAY_COSMOS_TEST_ID)).toBeNull();
-    // Nothing is playable — no Spine is offered over a version that is not viewable — and no moment analysis is read.
-    expect(view.queryByTestId('qandeel-replay-spine', HIDDEN)).toBeNull();
+    // Nothing is playable — no timeline is offered over a version that is not viewable — and no moment analysis is read.
+    expect(view.queryByTestId('qandeel-replay-timeline-line', HIDDEN)).toBeNull();
     expect(h.ready().replayPlayer.transport().available).toBe(false);
     await act(async () => {
       await settle();

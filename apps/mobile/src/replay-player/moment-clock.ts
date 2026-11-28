@@ -10,6 +10,7 @@
  *   the moment shown             the clock's own report while it runs (the latest-started span, never inside one)
  *   a paced moment               the declared reading pace, unchanged
  *   pause                        freezes the clock and the reading timer together
+ *   a timeline seek (CP2-A.1)    a moment and an offset inside it: the clock's place, or the reading pace's elapsed part
  */
 import type { ReplayHistoryMoment, ReplayHistoryVersion } from '../runtime-entry';
 
@@ -50,6 +51,19 @@ export interface ReplayMomentClock {
   hold(): void;
   /** Continue from where it was held. False when refused. */
   resume(): boolean;
+  /**
+   * S8B-07 CP2-A.1 (R-3): the unified timeline's seek — this moment, `offsetMs` after the start of its span (inside it, or
+   * in the recorded space after it). Playing, it continues from there; held, it is placed there and stays held, so the
+   * moment it presents and its place are the instant chosen; with nothing to place yet, its next start begins there.
+   * Optional: a clock without it is sought by moment only.
+   */
+  seekTo?(ordinal: number, offsetMs: number): void;
+  /**
+   * S8B-07 CP2-A.1 correction round (F-1): the player paces this moment while playing; whatever the clock presents after
+   * it may be made ready now (asked for, prepared paused), so it starts when its moment comes. It presents nothing and
+   * changes no phase. Optional.
+   */
+  warm?(ordinal: number): void;
   /** Let go of everything it holds for this version (closing, another version, a command). */
   release(): void;
   retire(): void;

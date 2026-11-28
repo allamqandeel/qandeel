@@ -53,6 +53,13 @@ export class TransientMediaController {
     return this.playback.requestReplay(request.authenticatedUser.userId, replayId, versionId, commandId);
   }
 
+  /** S8B-07 CP2-A.1: the version's playback map alone (no set is asked for), so the timeline is drawn before the first Play. */
+  @Get('replay/:replayId/versions/:versionId/map')
+  @Header('Cache-Control', PRIVATE_NO_STORE)
+  presentationMap(@Req() request: AuthenticatedRequest, @Param('replayId') replayId: string, @Param('versionId') versionId: string) {
+    return this.playback.presentationMap(request.authenticatedUser.userId, replayId, versionId);
+  }
+
   /** RB-2 / S3: when each moment's analysis may appear, bound to the version and its playback map. */
   @Get('replay/:replayId/versions/:versionId/availability')
   @Header('Cache-Control', PRIVATE_NO_STORE)
