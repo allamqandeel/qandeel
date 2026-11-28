@@ -72,7 +72,7 @@ function Continuous() {
   }, [built]);
   return (
     <AppearanceProvider authority={built.appearance}>
-      <ReplayPlayer controller={built.w.player} language={language} insets={insets} surface={built.surface} />
+      <ReplayPlayer controller={built.monitor.controller} language={language} insets={insets} surface={built.surface} />
       <Readout monitor={built.monitor} />
     </AppearanceProvider>
   );

@@ -456,6 +456,9 @@ export function createReplayAudioClock(options: ReplayAudioClockOptions): Replay
     },
     seekTo(ordinal, offsetMs) {
       if (retired || refused || !audio.has(ordinal) || state.phase === 'ENDED') return;
+      // The place is this one: the text the step left no longer makes its next recording ready (F-1), which would
+      // otherwise move the held engine to that recording's start (HONOR re-acceptance 2026-11-28).
+      warmFrom = null;
       const located = plan?.windowOf.get(ordinal);
       const e = engine.getState();
       const placed = e.phase === 'PLAYING' || e.phase === 'PAUSED' || e.phase === 'PREPARING' || e.phase === 'BETWEEN';

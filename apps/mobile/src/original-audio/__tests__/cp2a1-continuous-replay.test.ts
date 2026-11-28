@@ -439,4 +439,31 @@ describe('CP2-A.1 correction round — audio prepared ahead, and a seek that reb
     await until(() => w.clock()!.getState().phase === 'RUNNING');
     expect(position(w) - RUN0_AT).toBeLessThanOrEqual(300);
   });
+
+  it('F-1 / F-3: held in a text moment after the next recording was made ready, a step into an earlier recording is that place, and Play plays it', async () => {
+    // HONOR re-acceptance 2026-11-28: paused while moment 5 was read (run 1 made ready), a step into moment 3 drew run 1's start.
+    const w = world();
+    await w.open();
+    w.player.play();
+    await until(() => w.ordinal() === 5);
+    await run(1_500);
+    w.player.pause();
+    await run(0);
+    expect(playersOf(w, 1)).toBe(1);
+    const text = replayTimelineTarget(P, TEXT5_AT + 400)!;
+    w.player.seekTo(text.ordinal, text.offsetMs);
+    await run(1_200);
+    const at = replayTimelineTarget(P, RUN0_AT + 7_000)!;
+    w.player.seekTo(at.ordinal, at.offsetMs);
+    await run(1_200);
+    expect(w.ordinal()).toBe(3);
+    expect(position(w)).toBe(RUN0_AT + 7_000);
+    const before = w.heard().length;
+    w.player.play();
+    await until(() => w.heard().length > before);
+    await run(500);
+    expect(w.heard()[before]!.run).toBe(0);
+    expect(w.heard()[before]!.from).toBeGreaterThanOrEqual(7_000);
+    expect(w.heard()[before]!.from).toBeLessThanOrEqual(7_100);
+  });
 });
