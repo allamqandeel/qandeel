@@ -1,6 +1,6 @@
 # QANDEEL — Current State
 
-> **S8B-07 CP2-A.1 — CONTINUOUS IN-APP REPLAY — DELIVERED / READY FOR PO REVIEW — NOT MERGED — COPY GATE CLOSED — FINAL VALIDATION AND CORRECTION APPLIED — HONOR ACCEPTANCE RUN 2026-11-28: H-2, H-3, H-4, H-6 FAIL — CORRECTION ROUND DELIVERED 2026-11-28, AWAITS HONOR RE-ACCEPTANCE — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> **S8B-07 CP2-A.1 — CONTINUOUS IN-APP REPLAY — DELIVERED / READY FOR PO REVIEW — NOT MERGED — COPY GATE CLOSED — FINAL VALIDATION AND CORRECTION APPLIED — HONOR ACCEPTANCE RUN 2026-11-28: H-2, H-3, H-4, H-6 FAIL — CORRECTION ROUND DELIVERED 2026-11-28 — HONOR RE-ACCEPTANCE 2026-11-28: ACCEPTED BY THE PO (record §21.12) — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:**
 >   - the Product Owner's "EXECUTION AUTHORIZATION — S8B-07 CP2-A.1" (2026-11-27). Replay resumes at CP2-A, split into three tasks: CP2-A.1, CP2-A.2 and CP2-B;
 >   - "CP2-A.1 COPY GATE APPROVED" (2026-11-27);
@@ -36,7 +36,7 @@
 >   - H-6: diagnosed on the device in the re-run (JS frame-gap logs); no code change, no budget changed.
 > - **Copy:** RS-01 – RS-05 APPROVED. RS-01 and RS-05 are existing approved rows, reused verbatim. RS-02 – RS-04 are new, in `replay-entry/save-copy.ts`.
 > - **Not done:**
->   - the consolidated HONOR re-acceptance of the correction round (H-2, H-3, H-4, H-6, A/V sync against 300 ms, the screenshots); H-6's cause;
+>   - the end-of-part stage hold (H-6, ≈ 0.3 s, RB-1's end-of-Replay policy) and the long message's cut reading room (record §21.12), for the PO;
 >   - the native audio on iOS: NOT TESTED (synthetic player; the Product Owner's limited exception of 2026-11-27);
 >   - CP2-A.2 (CA-RL-01 A – G, the font route, F2, VG-CP2A) and CP2-B;
 >   - no prompt, provider, TTS, quota or hosted change, and no paid call.
@@ -45,7 +45,8 @@
 >   - HONOR-CORR-01 suspended;
 >   - COSMOS, CALL-ATTR-01 and the completed Replay checkpoints not reopened.
 >   - No migration; the next one is still `0206`.
-> - **Next:** one push of the correction round (with `556b4110` and `107ed65e`), impact-based CI read once, then the consolidated HONOR session on the corrected build (record §21.11). **Merge only on «ادمج».**
+> - **Re-acceptance (2026-11-28, record §21.12):** the PO accepted H-2, H-3, H-4, F-4 and the UI on HONOR. A held-step defect it found was fixed (local `5417d12f`, with the proof readout's step count). The iOS Replay gate on `385c1b36` is red from a harness defect: the readout overlay is hidden by the player's `accessibilityViewIsModal`.
+> - **Next:** the PO's decision on pushing `5417d12f` and the record, the gate harness fix, and the end hold. CP2-A.1 stays open. **Merge only on «ادمج».**
 
 > **PO DIRECTIVE — RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER — HONOR-CORR-01 SUSPENDED (NOTHING IMPLEMENTED) — `QAN-BL-INTEL-07` (`INTEL-SEMANTIC-REVIEW-01`, CRITICAL) AND `QAN-BL-VOICE-10` REGISTERED AS MANDATORY RELEASE BLOCKERS — NEXT: S8B-07 CP2-A — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:** the Product Owner's directive of 2026-11-27. The [INTEL-LIVE-01 record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.11 records it, and the [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §20.3 holds the remaining Replay scope.

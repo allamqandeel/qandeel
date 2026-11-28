@@ -1,7 +1,7 @@
 # QANDEEL S8B-07 — Original Audio Replay, Media Rendering & Distribution: Implementation Record v1
 
 **Slice (2026-11-27):** S8B-07 CP2-A.1 — continuous in-app Replay (R-1 / O-3, R-2 / O-4, R-3 / O-5, R-5 in-app, and the iOS
-Replay gate) — **DELIVERED / READY FOR PO REVIEW — NOT MERGED** (§21). The HONOR acceptance session ran on 2026-11-28: H-1 PASS; H-2, H-3, H-4 and H-6 FAIL (§21.10). The Product Owner's correction round (F-1 – F-4, the Replay UI final correction, the H-6 diagnosis) is delivered in this PR (§21.11) and awaits the consolidated HONOR re-acceptance. The CP2-A.1 Copy Gate is CLOSED (§21.5). CP2-A.2
+Replay gate) — **DELIVERED / READY FOR PO REVIEW — NOT MERGED** (§21). The HONOR acceptance session ran on 2026-11-28: H-1 PASS; H-2, H-3, H-4 and H-6 FAIL (§21.10). The Product Owner's correction round (F-1 – F-4, the Replay UI final correction, the H-6 diagnosis) is delivered in this PR (§21.11). The consolidated HONOR re-acceptance ran on 2026-11-28 and the Product Owner ACCEPTED it, after a held-step defect it found was fixed (`5417d12f`); the end-of-part stage hold (H-6, ≈ 0.3 s) is recorded for the PO (§21.12). The CP2-A.1 Copy Gate is CLOSED (§21.5). CP2-A.2
 and CP2-B are not started. S8B-07 is not closed. *(The lines below are kept as written.)*
 
 **Slice (2026-11-27, the Product Owner's "RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER"):** Replay development **resumes at
@@ -2709,4 +2709,71 @@ change or merge, and CP2-A.2 is not started.
   - the before / after comparison with `run/h2-hold.png`;
 - H-1 and H-5 are kept;
 - iOS native audio stays NOT TESTED;
+- merge only on «ادمج».
+
+### 21.12 The consolidated HONOR re-acceptance (RUN with the Product Owner on 2026-11-28: ACCEPTED; H-6 end hold recorded; NOT MERGED)
+
+Under "PO DIRECTION — CP2-A.1 CONSOLIDATED RE-ACCEPTANCE" (2026-11-28): the automated measurements first, then one
+listening and visual pass with the Product Owner. The evidence (APK, logcat, platform audio-player events, frame
+intervals, screenshots, sheets) is kept outside the repository in `QANDEEL_REPORTS/S8B-07/CP2-A.1/honor/`
+(`run/results-reacceptance.tsv`, `run/measure-*.txt`, `sheets/`). Nothing was written to the device beyond the proof
+package, and no paid call was made.
+
+**A product defect found by the re-acceptance, fixed before the PO's pass (`5417d12f`):**
+- Held while moment 5 was read, after F-1 had made run 1 ready, a step into moment 3 drew run 1's start (18.1 s instead of
+  11.3 s), and Play would have started there.
+  - Cause: the clock's `warmFrom` survived the step, so the next engine change prepared run 1 at 0 over the place.
+  - Fix: `seekTo` clears it.
+  - Proof: a Jest test reproduces it (17 500 against 10 500) and fails without the fix; on the device the step now lands
+    at 11.5 s, and Play plays from there.
+- **Validation only:** the iOS gate's and the HONOR build's `ReplayPlayer` were given the player's own controller, so the
+  proof readout no longer counted the timeline's steps. They are given the monitor's controller.
+- The device build: `com.qandeel.mobile.s807cp2a1h` from `5417d12f`, sha256 `d8133d78…`.
+
+**Measured on HONOR (the speaker), the corrected build:**
+
+| Check | Result |
+|---|---|
+| H-2 one Play | continuous to the end, no second touch (3 runs + the long scene) |
+| Text → audio boundary | the clock waits until the player plays. The AudioTrack starts 0.05–0.2 s after the text's end, and the clock's line reaches the file's start 0.18–0.26 s after it. Round 1 held 2.5 s here |
+| Step while playing, same recording | the same player (ExoPlayer's own Range GET, its AudioTrack re-made 45–54 ms after the flush). Sound returns ≈ 0.05 s after the touch, and the line waits at the landing |
+| Step while playing, across recordings | a new player; its AudioTrack starts 0.13–0.16 s after the touch |
+| Steps while held | land where touched (13.9 / 11.5 / 18.5 s). Play continues from there; the AudioTrack starts ≤ 0.15 s after Play |
+| Step before the first Play | the set is asked for at Play, by design. The first AudioTrack starts 2.26 s after Play, the line moves 2.45–2.72 s after it, and RA-11 is shown. The fixture's 2 s preparation stands for the server's |
+| Audio / clock / stage | the clock runs at the player's rate (slope 0.99–1.01) and is never ahead of the AudioTrack. The stage is 300 ms behind the clock (FC-0). Against the heard sound it trails ≈ 0.21 s steady and ≈ 0.1 s just after a start, never early. The acoustic side is RB-1's HONOR calibration, not re-measured here |
+| F-4 viewport | the COSMOS frame is `[0,0][1200,1937]` in every dump: short and long, Arabic and English, before Play, playing, paused, held, preparing and ended. The reading band and the transport are constant. The top row is 286 px in Arabic and 332 px in English ("Private copy saved" takes its own line), constant within a language. Round 1 moved 1557 ↔ 1560 px |
+| Long message | the fixed reading room shows the long fifth message's first three lines; the rest is cut, with a fourth line partly visible. The PO found it clear and readable; recorded for the PO |
+| H-6 stage frames | 58 fps and p95 16.7 ms in all 4 runs (round 1: p95 33.3). Stalls over 50 ms: 1–3 (round 1: 2–8). **One hold per run at the part's end, in both lanes: 266–300 ms.** Raw frame times show 120 Hz frames up to the end, then none for 308 ms, then one last frame. The stage holds at `end − 300 ms` (the AUDIO lag) and moves to END at once (`replayStageTime`). This is RB-1's open end-of-Replay policy (E-0 – E-2s), which awaits the PO. Not changed |
+| H-5 opening | open → ready, timeline drawn: cold 87–105 ms, warm 47 ms |
+
+**The Product Owner's listening and visual pass (L-1 – L-5, Arabic):**
+- The PO judged every item acceptable: no trembling at all, continuity right, one line, the sound returns at once, 2.3 s
+  before the first audio after a step is acceptable, and the long message is clear and readable.
+- The PO's words: "كل حاجة دلوقتي مظبوطة".
+- In L-2 the driver's first attempt mirrored its touches on the Arabic line (it was given the English direction). Every
+  touch landed where it was made; L-2 was re-run with the Arabic direction.
+- The Arabic and English screenshots, and the before / after sheet against round 1's `h2-hold.png`, are in `sheets/`.
+
+**CI on `385c1b36`, read once:**
+
+| Run | Result |
+|---|---|
+| API 46125435805 | SUCCESS |
+| Mobile 46125435776 | SUCCESS |
+| iOS Replay gate 46125435882 | red. In all three cells J-SAVED-LINE, J-OPEN-ACTION and J-OPENS-SAVED PASS; every continuous case is NOT TESTED, IOS-NATIVE-AUDIO NOT TESTED by construction |
+| iOS World gate 46125435768 | still running when read |
+
+- The Replay gate's cause is a **harness defect** of `385c1b36`:
+  - the proof readout was moved to an overlay beside the player;
+  - the player's root is `accessibilityViewIsModal`, so iOS hides the overlay from the accessibility tree that Maestro
+    reads;
+  - `wait-readout.yaml` timed out at the precondition.
+- No product defect. Not changed: the PO has not decided it.
+
+**Next:**
+- the PO's decision on:
+  - pushing `5417d12f` and this record;
+  - the gate harness fix (the readout back inside the player's modal tree);
+  - the end-of-Replay hold;
+- CP2-A.1 stays open;
 - merge only on «ادمج».
