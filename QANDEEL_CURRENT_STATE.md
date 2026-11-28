@@ -1,6 +1,6 @@
 # QANDEEL — Current State
 
-> **S8B-07 CP2-A.1 — CONTINUOUS IN-APP REPLAY — DELIVERED / READY FOR PO REVIEW — NOT MERGED — COPY GATE CLOSED — FINAL VALIDATION AND CORRECTION APPLIED — HONOR ACCEPTANCE RUN 2026-11-28: H-2, H-3, H-4, H-6 FAIL — CORRECTION ROUND DELIVERED 2026-11-28 — HONOR RE-ACCEPTANCE 2026-11-28: ACCEPTED BY THE PO (record §21.12) — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> **S8B-07 CP2-A.1 — CONTINUOUS IN-APP REPLAY — DELIVERED / READY FOR PO REVIEW — NOT MERGED — COPY GATE CLOSED — FINAL VALIDATION AND CORRECTION APPLIED — HONOR ACCEPTANCE RUN 2026-11-28: H-2, H-3, H-4, H-6 FAIL — CORRECTION ROUND DELIVERED 2026-11-28 — HONOR RE-ACCEPTANCE 2026-11-28: ACCEPTED BY THE PO (record §21.12) — FINAL CLOSURE VALIDATION 2026-11-28: READY FOR THE PO'S MERGE DECISION, ONE TECHNICAL FINDING (H-6 STALLS) AWAITS THE PO (record §21.13) — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:**
 >   - the Product Owner's "EXECUTION AUTHORIZATION — S8B-07 CP2-A.1" (2026-11-27). Replay resumes at CP2-A, split into three tasks: CP2-A.1, CP2-A.2 and CP2-B;
 >   - "CP2-A.1 COPY GATE APPROVED" (2026-11-27);
@@ -36,7 +36,7 @@
 >   - H-6: diagnosed on the device in the re-run (JS frame-gap logs); no code change, no budget changed.
 > - **Copy:** RS-01 – RS-05 APPROVED. RS-01 and RS-05 are existing approved rows, reused verbatim. RS-02 – RS-04 are new, in `replay-entry/save-copy.ts`.
 > - **Not done:**
->   - the end-of-part stage hold (H-6, ≈ 0.3 s, RB-1's end-of-Replay policy) and the long message's cut reading room (record §21.12), for the PO;
+>   - H-6 stalls over 50 ms: 0 – 2 per run (66.6 – 99.9 ms), **NOT MET** against the unchanged budget, cause not established; it awaits the PO's disposition (record §21.13);
 >   - the native audio on iOS: NOT TESTED (synthetic player; the Product Owner's limited exception of 2026-11-27);
 >   - CP2-A.2 (CA-RL-01 A – G, the font route, F2, VG-CP2A) and CP2-B;
 >   - no prompt, provider, TTS, quota or hosted change, and no paid call.
@@ -46,7 +46,12 @@
 >   - COSMOS, CALL-ATTR-01 and the completed Replay checkpoints not reopened.
 >   - No migration; the next one is still `0206`.
 > - **Re-acceptance (2026-11-28, record §21.12):** the PO accepted H-2, H-3, H-4, F-4 and the UI on HONOR. A held-step defect it found was fixed (local `5417d12f`, with the proof readout's step count). The iOS Replay gate on `385c1b36` is red from a harness defect: the readout overlay is hidden by the player's `accessibilityViewIsModal`.
-> - **Next:** the PO's decision on pushing `5417d12f` and the record, the gate harness fix, and the end hold. CP2-A.1 stays open. **Merge only on «ادمج».**
+> - **Final closure validation (2026-11-28, "PO AUTHORIZATION — CP2-A.1 FINAL CLOSURE VALIDATION", record §21.13):**
+>   - one consolidated push: `5417d12f`, `556f26b3`, the iOS gate's readout fix `da2f31d1` (validation only: drawn inside the modal player; no visible diagnostics in production or the HONOR build; no criterion changed) and the documentation;
+>   - the long message is a **PO-verified PASS** (it scrolls inside the fixed card; §21.12's "cut" was wrong); the end-of-part hold is §19.2's intentional 300 ms closing display, not an extra freeze; the closing-display requirement is carried into CP2-A.2;
+>   - H-4's stage-to-heard-sound figure is an **estimate** from RB-1's HONOR calibration, not a new acoustic measurement;
+>   - the iOS World gate on `385c1b36`: en cancelled at the 2 h limit (infra), ar one intermittent Shared-band FAIL (cause not established; no `cosmos/` or `shared-world/` file changed), the small iPhone's pre-existing X-PAN-ZOOMED shortfall; evidence reused from round 3 (`5858171f`).
+> - **Next:** the CI on the consolidated head, read once; the PO's disposition of the H-6 stalls; the PO's merge decision. CP2-A.2 does not start before CP2-A.1 is formally closed. **Merge only on «ادمج».**
 
 > **PO DIRECTIVE — RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER — HONOR-CORR-01 SUSPENDED (NOTHING IMPLEMENTED) — `QAN-BL-INTEL-07` (`INTEL-SEMANTIC-REVIEW-01`, CRITICAL) AND `QAN-BL-VOICE-10` REGISTERED AS MANDATORY RELEASE BLOCKERS — NEXT: S8B-07 CP2-A — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:** the Product Owner's directive of 2026-11-27. The [INTEL-LIVE-01 record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.11 records it, and the [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §20.3 holds the remaining Replay scope.

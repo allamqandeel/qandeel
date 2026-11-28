@@ -6937,6 +6937,14 @@ not merged; effective from its merge).**
   locators are updated in the same change.
 - **The iOS Replay gate's first run (46007215812):** the failures belong to the proof harness and are corrected without
   weakening any criterion (record §21.9). They are inside CP2-A.1's own scope, not items.
+- **Final closure validation (2026-11-28, record §21.13):** reconciled again, and still no item admitted (BG-06 / BG-08).
+  What stays open is inside S8B-07's own scope, in the record:
+  - the H-6 stalls over 50 ms (NOT MET, cause not established), for the Product Owner's disposition;
+  - the native audio on iOS, NOT TESTED (the limited exception);
+  - the closing-display requirement, carried into CP2-A.2.
+  The items read above are unchanged: `QAN-BL-INTEL-06` `VALIDATION — OPEN`; `QAN-BL-INTEL-07` and `QAN-BL-VOICE-10`
+  mandatory release blockers; HONOR-CORR-01 suspended. BG-09: S8B-07 is not closed, and CP2-A.1 is READY FOR THE PO'S
+  MERGE DECISION, not merged.
 - **Index after S8B-07 CP2-A.1: 116 items, unchanged by CP2-A.1 (it adds and removes none); 55 / 5 / 19 / 37 by status,
   66 / 46 / 4 by severity.**
 
