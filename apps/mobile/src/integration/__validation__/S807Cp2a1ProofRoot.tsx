@@ -11,8 +11,9 @@
  *               timeline included) over the labelled SYNTHETIC Replay Media Service and streaming player of the player
  *               tests (`original-audio/__fixtures__`), in real time: 1 text · 2 and 3 audio · 5 text · 6 audio, two
  *               recordings. The synthetic player plays nothing audible: what the native audio does on iOS is NOT TESTED
- *               here (the device pass's). A one-line readout (`cp2a1-proof-monitor.ts`) is added under the moment, where
- *               the gate reads it; everything else on the screen is the Product's.
+ *               here (the device pass's). A one-line readout (`cp2a1-proof-monitor.ts`) is laid OVER the screen, where
+ *               the gate reads it — absolutely placed at the top edge, so it takes no room and moves nothing (CP2-A.1
+ *               correction round, "REPLAY UI FINAL CORRECTION" §3); everything else on the screen is the Product's.
  *
  * Nothing on the Product route reaches this file: the proof build selects it through one recorded change of the
  * manifest's `main` (`scripts/select-s807cp2a1-proof-entry.mjs`).
@@ -40,7 +41,7 @@ function Readout({ monitor }: { readonly monitor: Cp2a1ProofMonitor }) {
   const reading = useSyncExternalStore(monitor.subscribe, monitor.reading);
   const line = formatCp2a1Reading(reading);
   return (
-    <View pointerEvents="none">
+    <View pointerEvents="none" style={styles.overlay}>
       <Text testID={CP2A1_PROOF_READOUT_TEST_ID} accessibilityLabel={line} style={styles.readout}>{line}</Text>
     </View>
   );
@@ -49,13 +50,7 @@ function Readout({ monitor }: { readonly monitor: Cp2a1ProofMonitor }) {
 function buildContinuous() {
   const w = world();
   const monitor = createCp2a1ProofMonitor(w.player, w.clock);
-  const inner = createReplayAudioSurface(w.audio, monitor.controller);
-  const surface: ReplayPlayerSurface = {
-    useControls: (view, language) => {
-      const controls = inner.useControls(view, language);
-      return controls === null ? null : { ...controls, note: <>{controls.note}<Readout monitor={monitor} /></> };
-    },
-  };
+  const surface: ReplayPlayerSurface = createReplayAudioSurface(w.audio, monitor.controller);
   const appearance = createAppearanceAuthority({
     store: createEphemeralAppearancePreferenceStore(),
     system: createSystemAppearanceSource(),
@@ -78,6 +73,7 @@ function Continuous() {
   return (
     <AppearanceProvider authority={built.appearance}>
       <ReplayPlayer controller={built.w.player} language={language} insets={insets} surface={built.surface} />
+      <Readout monitor={built.monitor} />
     </AppearanceProvider>
   );
 }
@@ -116,5 +112,6 @@ const styles = StyleSheet.create({
   chooser: { flex: 1, alignItems: 'center', justifyContent: 'center', rowGap: 24 },
   choice: { minWidth: 200, minHeight: 56, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#888' },
   choiceText: { fontSize: 18, color: '#888' },
+  overlay: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 2 },
   readout: { fontSize: 10, color: '#888', writingDirection: 'ltr', textAlign: 'left' },
 });

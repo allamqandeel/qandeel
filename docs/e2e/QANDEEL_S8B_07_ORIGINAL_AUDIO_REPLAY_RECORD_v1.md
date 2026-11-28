@@ -1,7 +1,7 @@
 # QANDEEL S8B-07 — Original Audio Replay, Media Rendering & Distribution: Implementation Record v1
 
 **Slice (2026-11-27):** S8B-07 CP2-A.1 — continuous in-app Replay (R-1 / O-3, R-2 / O-4, R-3 / O-5, R-5 in-app, and the iOS
-Replay gate) — **DELIVERED / READY FOR PO REVIEW — NOT MERGED** (§21). The HONOR acceptance session ran on 2026-11-28: H-1 PASS; H-2, H-3, H-4 and H-6 FAIL (§21.10); the correction awaits the Product Owner. The CP2-A.1 Copy Gate is CLOSED (§21.5). CP2-A.2
+Replay gate) — **DELIVERED / READY FOR PO REVIEW — NOT MERGED** (§21). The HONOR acceptance session ran on 2026-11-28: H-1 PASS; H-2, H-3, H-4 and H-6 FAIL (§21.10). The Product Owner's correction round (F-1 – F-4, the Replay UI final correction, the H-6 diagnosis) is delivered in this PR (§21.11) and awaits the consolidated HONOR re-acceptance. The CP2-A.1 Copy Gate is CLOSED (§21.5). CP2-A.2
 and CP2-B are not started. S8B-07 is not closed. *(The lines below are kept as written.)*
 
 **Slice (2026-11-27, the Product Owner's "RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER"):** Replay development **resumes at
@@ -2568,3 +2568,145 @@ no Back at a root, no system or app settings changed).
 **Not done:** the native audio on iOS stays NOT TESTED (the PO's limited exception). The proof package stays
 installed on the device until the Product Owner decides. Nothing is corrected, pushed or merged before the Product
 Owner's decision on F-1 – F-4 and H-6.
+
+### 21.11 The correction round (DELIVERED for the consolidated HONOR re-acceptance, 2026-11-28; NOT MERGED)
+
+**Authority:** the Product Owner's "PO AUTHORIZATION — CP2-A.1 PRODUCT CORRECTION" and "PO DIRECTION — REPLAY UI FINAL
+CORRECTION" (2026-11-28). One round, in this PR, with one push. No new task, PR, semantic or TTS work, paid call, hosted
+change or merge, and CP2-A.2 is not started.
+
+**F-1 — the audio is prepared while the text before it is read.**
+- **Cause (§21.10):** the clock held the engine paused while a text moment was paced, so `prepare()` (which needs the
+  engine's PLAY intent) did nothing at a text → audio boundary, and the set was asked for only on reaching the first
+  audio moment.
+- **Correction:**
+  - the player's paced branch now calls the clock's `warm(ordinal)`;
+  - with no set held, the clock asks for one ahead (`preload`);
+  - with a set held, it prepares the next audio moment's run at its start (`prepareAt`).
+- **Limits:**
+  - a warm-up never plays and is silent on failure;
+  - it uses the same bounded request, the same set and the same one player (CA-07B-2);
+  - no audio is made for a written moment, and no designed pause is shortened.
+- **Kept:** the set is still not asked for when the Replay opens (privacy, resources and fast opening, as before). A first
+  Play directly on an audio moment, for example after a step before Play, still waits for the set's preparation, and
+  RA-11 is shown after its first second.
+
+**F-2 — one timeline.**
+- **Removed from the Replay:**
+  - the S7-04 Temporal Spine: `ReplaySpine.tsx` is deleted, with its Aperture "Parting" (the oversized eye-shaped
+    indicator);
+  - the per-moment audio line (RA-14);
+  - the old part line in `ReplayAudioViews.tsx`.
+- **Added:** the player draws ONE timeline, `replay-player/ReplayTimelineBar.tsx`:
+  - P2's own Play / Pause at the reader's start;
+  - a track with a clear beginning and end, 8 pt in from each edge;
+  - the elapsed part in the primary ink, and the rest in the tertiary ink at P2's spine opacity;
+  - a compact 12 pt thumb on the track's axis (16 pt while dragged);
+  - P2's rest notches at each later moment's start;
+  - "elapsed / total" in a fixed-width box of tabular digits;
+  - right to left in Arabic, left to right in English.
+- **Interaction:**
+  - a tap or a drag seeks, before the first Play, while playing and while paused;
+  - assistive technology gets an adjustable control with increment / decrement steps.
+- **Timing:** its length and place are the presentation clock's (`replayPresentationClock`, `replayTimelinePosition`,
+  `replayTimelineTarget`), and its seek is the player's `seekTo`: the same one timing authority.
+
+**F-3 — no player rebuilt, and nothing ahead of the sound.**
+- **Seek and resume in place:** a seek or a resume inside the recording already playing now moves that same player.
+  There is no new player and no new download. The engine option is `inPlace`, for the Replay only.
+- **When the old path is kept:** only while no hand-over can follow, that is, while the held set stays readable past
+  the run's end plus the 10 s margin. Otherwise the old path stays: a new player at the place, under CA-07B-2 and
+  HC-1(b′).
+- **PLAYING only from the player:** the engine reports PLAYING only once the player itself says it plays. Until then
+  the line and the stage wait at the place chosen.
+- **What the device must measure:** a resume in place can sound up to about 43 ms off the reported place (HC-1(b′)'s
+  measured offset), well inside the 300 ms allowance. The device session measures it.
+
+**F-4 — a stable layout.**
+- **Fixes:**
+  - the moment's reading has a FIXED room: one message card of three body lines at the reader's text size, never more
+    than the band's T-11 cap, scrolling inside it when longer;
+  - RA-11, RA-12 with «Try again», and the ended row stand in the timeline's ONE status line, whose height is always
+    held;
+  - the time box has a fixed width.
+- **Result:** no message, preparation, status or seek changes the chrome band, so none changes the COSMOS frame or
+  re-fits its camera.
+- **Root cause of the pulses:** **not claimed**. The device session compares the stage's frame height and the pulses
+  with the resize removed. The frozen COSMOS engine is not changed.
+
+**UI final correction.**
+- **§2, less text on the playing Replay:**
+  - removed: the pace paragraph (S7-04 `pacing`, RA-01 / RA-02), the position line, and the temporal and spatial
+    orientation sentences;
+  - no replacement paragraph and no new copy;
+  - kept: the S7-03 composite without player controls is unchanged.
+- **§3, no proof readout on the screen:**
+  - the iOS gate's proof root draws its readout as an absolute overlay, so the layout under it is the production one;
+  - the HONOR build draws none; its readout is logged.
+- **§4, one top row:**
+  - the way back;
+  - then, at the far side, the private lifecycle's sentence and its acts in the quieter metadata type, each keeping its
+    44 pt target;
+  - the title when there are none, and otherwise a 1-point header for assistive technology (S7-05 D2).
+- **§5 – §6:** as in F-4; the COSMOS engine, its budgets and the opening path are unchanged.
+
+**Previously approved decisions, reconciled (nothing silently dropped):**
+- **The S7-04 Temporal Spine** (P2 + Aperture C, Product Owner, 2026-10-20) is **superseded** by the Product Owner's
+  direction of 2026-11-28. Its P2 notches are kept as the moment marks, and the moment order stays on the one line.
+- **RA-14** (the per-moment line) is retired from the Replay.
+- **RA-01 / RA-02 and S7-04 `pacing`** stay APPROVED and verbatim, and are now the timeline's accessibility hint.
+  **For the PO:** sighted readers no longer see a declaration of the reading pace. RA-04 / RA-05 are still shown where a
+  pause is shortened or a recording is crossed.
+- **S7-03's position sentence** moves into the timeline's accessibility value.
+- **S7-05 D2** (one name): the title is kept as the passage's header.
+- **No Copy Gate is needed:** no new word (one list separator, punctuation, in `replay-player/copy.ts`).
+
+**H-6 — the device diagnosis, not a code change.**
+- **What was tried:** the leading hypothesis, Lane B's variants prepared on the frame they are first drawn, was tested
+  against the synthetic answer. The state at the part's end is empty, so the end frame draws Lane A's stage, already
+  prepared, and prepares nothing.
+- **Outcome:** a pre-preparation of the closing display was written, found not to address the freeze, and **reverted**.
+- **For the session:** the HONOR proof root logs every JS frame gap over 50 ms, with its time and the readout (`G`
+  lines), beside SurfaceFlinger's frames.
+- **Second candidate:** the end of the part changed the status line before F-4, which resized the map. The re-run
+  separates the two.
+- **Kept:** no budget, threshold or quality is changed.
+
+**Tests (local):**
+- Mobile Jest: 4085 of 4085 tests in 327 suites. One earlier full run failed 8 tests in `replay-player.test.tsx` under
+  load, which pass alone. That file's timeout was raised from 30 s to 60 s.
+- `tsc` is clean. ESLint shows two pre-existing warnings.
+- **New tests:**
+  - **F-1:** the next recording is prepared while text is read, with no wait at the boundary, the designed pause kept,
+    and no audio for the text;
+  - **F-3:**
+    - seek forward and back while playing, and seek then Play while paused, on the same player with no new set;
+    - the line stays at the place while the player prepares;
+    - shown to fail with `inPlace` and `warm` reverted in place;
+  - **F-4:** the same reading room and status line for every moment;
+  - **the timeline bar:**
+    - one line, a compact centred thumb, notches, no Live;
+    - tap forward and back before Play in Arabic and English;
+    - drag, cancelled and completed;
+    - a fixed time box;
+    - no omission dots.
+- **Contracts re-anchored, each citing the Product Owner's direction:**
+  - `tests/s7-04-replay-player-navigation-contract.test.mjs`: the Spine's detectors are carried to the one timeline,
+    with new plants;
+  - `tests/s8b-07-cp2a1-continuous-replay-contract.test.mjs`: the timeline is drawn by the player, plus the F-1 / F-3
+    pins;
+  - `tests/s8b-07-cp1b-mobile-playback-contract.test.mjs` passes unchanged: the player names no audio, and the plan type
+    is `ReplayPresentationPlan`.
+- **The iOS Replay gate's harness:** the new line id, and the 8 pt inset.
+
+**Next:**
+- one push (with `556b4110` and `107ed65e`) and impact-based CI;
+- then the consolidated HONOR session on the corrected build, in one sitting:
+  - H-2, H-3, H-4 and H-6 again;
+  - A/V sync measured against 300 ms;
+  - the pulse / resize check;
+  - the Arabic and English screenshots;
+  - the before / after comparison with `run/h2-hold.png`;
+- H-1 and H-5 are kept;
+- iOS native audio stays NOT TESTED;
+- merge only on «ادمج».

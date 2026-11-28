@@ -1,6 +1,10 @@
 /**
  * S7-04 — the player's passage over the REAL-PATH wire, through the production clients, the S7-03 composite and the
  * production Living Analysis surface: what the reader sees, hears and can press.
+ *
+ * S8B-07 CP2-A.1 correction round ("REPLAY UI FINAL CORRECTION", Product Owner, 2026-11-28): the Replay has ONE timeline
+ * (the Temporal Spine, the pace paragraph and the position line are no longer drawn; the pace is the timeline's hint and
+ * the position its value), and the top band is one row. RE-ANCHORED here, with the same approved words.
  */
 import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-library/react-native';
 import { BackHandler } from 'react-native';
@@ -17,7 +21,7 @@ import { PLAYER_IDS, PLAYER_WIRE, capturedHandoff, capturedIds, playerClients, p
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 
 // The player renders the whole S7-03 composite and the Living Analysis surface; a full parallel run is slower than 5 s.
-jest.setTimeout(30000);
+jest.setTimeout(60000);
 
 const INSETS = { top: 24, right: 0, bottom: 16, left: 0 };
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/iu;
@@ -64,18 +68,20 @@ async function mount(language: 'ar' | 'en', ids: string[] = [], options: PlayerS
 }
 
 const text = (view: RenderResult, id: string) => {
-  const node = view.getByTestId(id);
+  const node = view.getByTestId(id, { includeHiddenElements: true });
   return (Array.isArray(node.props.children) ? node.props.children.join('') : node.props.children) as string;
 };
 const press = async (view: RenderResult, id: string) => {
   await fireEvent.press(view.getByTestId(id));
   await flush();
 };
-/** The Replay Temporal Spine's accessible route: increment is the next moment, decrement the previous. */
-const step = async (view: RenderResult, action: 'increment' | 'decrement') => {
-  await fireEvent(view.getByTestId('qandeel-replay-spine'), 'accessibilityAction', { nativeEvent: { actionName: action } });
+/** To a moment (the timeline's seek lands on a moment through the same controller). */
+const go = async (player: ReplayPlayerController, ordinal: number) => {
+  await act(async () => { player.seek(ordinal); });
   await flush();
 };
+const TIMELINE = 'qandeel-replay-timeline-line';
+const flat = (style: unknown) => [style].flat(Infinity).reduce((all: Record<string, unknown>, s: unknown) => ({ ...all, ...(s as object) }), {});
 
 afterEach(async () => {
   await cleanup();
@@ -92,31 +98,54 @@ describe('S7-04 — the passage', () => {
     // REPLAY-COSMOS-01 RE-ANCHOR: the moment's world is the Replay's COSMOS stage (it was T-04's MapSurface).
     expect(view.queryByTestId(REPLAY_COSMOS_TEST_ID)).not.toBeNull();
     expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
-    // The top band: the way back (frozen W1A-01 label), the approved title, and the private lifecycle.
+    // The top band, one row: the way back (frozen W1A-01 label), the approved title (said as the header), and the private lifecycle.
     expect(view.getByTestId('qandeel-replay-player-back').props.accessibilityLabel).toBe('المحادثة');
     expect(text(view, 'qandeel-replay-player-title')).toBe('إعادة عرض المحادثة');
     expect(view.getByTestId('qandeel-replay-player-title').props.accessibilityRole).toBe('header');
     expect(view.getByTestId('qandeel-replay-player-finalize').props.accessibilityLabel).toBe('حفظ نسخة خاصة');
     expect(view.getByTestId('qandeel-replay-player-reopen').props.accessibilityLabel).toBe('تعديل إعادة العرض');
-    // P2's play, the Replay's Temporal Spine (named, its value the approved position), and the declared pace under them.
+    // P2's play and the ONE timeline: named by the approved Replay name, its value the time and the approved position,
+    // its hint the declared pace. No Spine, no pace paragraph, no position line (CP2-A.1 correction round).
     expect(view.getByTestId('qandeel-replay-play').props.accessibilityLabel).toBe('تشغيل');
-    const spine = view.getByTestId('qandeel-replay-spine');
-    expect(spine.props.accessibilityRole).toBe('adjustable');
-    expect(spine.props.accessibilityLabel).toBe('لحظات إعادة العرض');
-    expect(spine.props.accessibilityValue).toEqual({ min: 1, max: 6, now: 1, text: 'في إعادة العرض: 1 من 6.' });
-    expect(text(view, 'qandeel-replay-pacing')).toBe('تُعرض الرسائل نصًّا بإيقاع مناسب للقراءة، لا بتوقيتها الأصلي.');
+    const line = view.getByTestId(TIMELINE);
+    expect(line.props.accessibilityRole).toBe('adjustable');
+    expect(line.props.accessibilityLabel).toBe('إعادة عرض المحادثة');
+    expect(line.props.accessibilityHint).toBe('تُعرض الرسائل نصًّا بإيقاع مناسب للقراءة، لا بتوقيتها الأصلي.');
+    expect(line.props.accessibilityValue).toMatchObject({ min: 0, now: 0 });
+    expect(line.props.accessibilityValue.text).toMatch(/^0:00 \/ \d+:\d\d، في إعادة العرض: 1 من 6\.$/u);
+    expect(view.queryByTestId('qandeel-replay-spine')).toBeNull();
+    expect(view.queryByTestId('qandeel-replay-pacing')).toBeNull();
+    expect(view.queryByTestId('qandeel-replay-position')).toBeNull();
+    expect(view.queryAllByTestId(TIMELINE)).toHaveLength(1);
+    // The moment starts are the line's notches: one for each later moment.
+    expect(view.queryAllByTestId(/^qandeel-replay-timeline-mark-/u, { includeHiddenElements: true })).toHaveLength(5);
   });
 
-  it('the Spine moves the composite to that moment, and stops at both ends; its value is said, not drawn alone', async () => {
-    const { view } = await mount('ar');
-    await step(view, 'decrement');
+  it('the timeline moves the composite to the moment at that time, forward and back, and stops at both ends; its place is said', async () => {
+    const { view, player } = await mount('ar');
+    const line = () => view.getByTestId(TIMELINE);
+    const max = line().props.accessibilityValue.max as number;
+    await act(async () => { fireEvent(line(), 'accessibilityAction', { nativeEvent: { actionName: 'decrement' } }); });
+    await flush();
     expect(text(view, 'qandeel-replay-text')).toBe(MOMENTS[0].text);
-    await step(view, 'increment');
+    expect(line().props.accessibilityValue.now).toBe(0);
+    // Step forward until the second moment is reached: the reading follows the line's time, and the value says where.
+    for (let i = 0; i < 60 && player.getState().open?.ordinal === 1; i += 1) {
+      await act(async () => { fireEvent(line(), 'accessibilityAction', { nativeEvent: { actionName: 'increment' } }); });
+      await flush();
+    }
     expect(text(view, 'qandeel-replay-text')).toBe(MOMENTS[1].text);
-    expect(text(view, 'qandeel-replay-position')).toContain('في إعادة العرض: 2 من 6.');
-    expect(view.getByTestId('qandeel-replay-spine').props.accessibilityValue).toMatchObject({ now: 2, text: 'في إعادة العرض: 2 من 6.' });
-    for (let i = 0; i < 6; i += 1) await step(view, 'increment');
+    expect(line().props.accessibilityValue.text).toContain('في إعادة العرض: 2 من 6.');
+    // And back.
+    await act(async () => { fireEvent(line(), 'accessibilityAction', { nativeEvent: { actionName: 'decrement' } }); });
+    await flush();
+    expect(text(view, 'qandeel-replay-text')).toBe(MOMENTS[0].text);
+    for (let i = 0; i < 80 && line().props.accessibilityValue.now < max; i += 1) {
+      await act(async () => { fireEvent(line(), 'accessibilityAction', { nativeEvent: { actionName: 'increment' } }); });
+      await flush();
+    }
     expect(text(view, 'qandeel-replay-text')).toBe(MOMENTS[5].text);
+    expect(line().props.accessibilityValue.now).toBe(max);
     expect(view.getByTestId('qandeel-replay-play').props.accessibilityLabel).toBe('التشغيل من البداية');
   });
 
@@ -169,18 +198,22 @@ describe('S7-04 — the passage', () => {
 
 describe('S7-04 — Arabic RTL, English, accessibility and Reduced Motion', () => {
   it('the reading direction lays out the transport and the band; the reader side is set physically for Android', async () => {
+    // The transport's row and the band's status are physical rows (Android does not mirror inside an LTR root): play at
+    // the reader's start, the time at the far end; the elapsed part grows from the reader's start.
+    const row = (view: RenderResult) => flat((view.getByTestId('qandeel-replay-transport').children[0] as unknown as { props: { style: unknown } }).props.style);
     const ar = await mount('ar');
-    expect(ar.view.getByTestId('qandeel-replay-transport').props.style.direction).toBe('rtl');
-    expect(ar.view.getByTestId('qandeel-replay-spine').props.style.direction).toBe('rtl');
-    expect(ar.view.getByTestId('qandeel-replay-pacing').props.style.textAlign).toBe('right');
-    expect(ar.view.getByTestId('qandeel-replay-player-status').props.style.direction).toBe('rtl');
+    expect(row(ar.view).flexDirection).toBe('row-reverse');
+    expect(flat(ar.view.getByTestId('qandeel-replay-timeline-elapsed', { includeHiddenElements: true }).props.style).right).toBe(8);
+    expect(flat(ar.view.getByTestId('qandeel-replay-player-status').props.style)).toMatchObject({ direction: 'ltr', flexDirection: 'row-reverse', justifyContent: 'flex-end' });
     await cleanup();
     const en = await mount('en');
-    expect(en.view.getByTestId('qandeel-replay-transport').props.style.direction).toBe('ltr');
-    expect(en.view.getByTestId('qandeel-replay-pacing').props.style.textAlign).toBe('left');
+    expect(row(en.view).flexDirection).toBe('row');
+    expect(flat(en.view.getByTestId('qandeel-replay-timeline-elapsed', { includeHiddenElements: true }).props.style).left).toBe(8);
+    expect(flat(en.view.getByTestId('qandeel-replay-player-status').props.style)).toMatchObject({ direction: 'ltr', flexDirection: 'row', justifyContent: 'flex-end' });
     expect(en.view.getByTestId('qandeel-replay-player-back').props.accessibilityLabel).toBe('Conversation');
     expect(en.view.getByTestId('qandeel-replay-play').props.accessibilityLabel).toBe('Play');
-    expect(en.view.getByTestId('qandeel-replay-spine').props.accessibilityLabel).toBe('Replay moments');
+    expect(en.view.getByTestId(TIMELINE).props.accessibilityLabel).toBe('Conversation replay');
+    expect(en.view.getByTestId(TIMELINE).props.accessibilityHint).toBe('Messages are shown as text at a reading pace, not at their original timing.');
     // The historical Arabic message keeps its own start in an English reader.
     expect(en.view.getByTestId('qandeel-replay-text').props.style.textAlign).toBe('right');
   });
@@ -225,14 +258,14 @@ describe('S7-04 — F-2: no Session context, id or Reading scope reaches the rea
     expect(answers).not.toContain(PLAYER_IDS.session);
     expect(answers).not.toContain('CONVERSATION_SESSION:');
     expect(new Set(answers.match(/"scope":"[^"]*"/gu))).toEqual(new Set(['"scope":"CONVERSATION_SESSION"']));
-    const { view } = await mount('ar', ['finalize']);
+    const { view, player } = await mount('ar', ['finalize']);
     for (let i = 0; i < 6; i += 1) {
       for (const words of readerFacing(view.toJSON())) {
         expect(words).not.toMatch(UUID);
         expect(words).not.toContain('CONVERSATION_SESSION');
         expect(words).not.toContain(PLAYER_IDS.session);
       }
-      if (i < 5) await step(view, 'increment');
+      if (i < 5) await go(player, i + 2);
     }
     await press(view, 'qandeel-replay-player-finalize');
     for (const words of readerFacing(view.toJSON())) expect(words).not.toMatch(UUID);

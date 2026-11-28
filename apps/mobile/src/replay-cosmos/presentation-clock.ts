@@ -29,6 +29,9 @@ import type { ReplayMomentClockPhase } from '../replay-player';
 import type { ReplayHistoryMoment } from '../runtime-entry';
 import { UNRECORDED_AVAILABILITY, type ReplayCosmosAvailability, type ReplayCosmosMomentInput } from './timeline';
 
+/** The map a presentation is laid out on (the audio clock's plan), named here for the player, which names no audio. */
+export type ReplayPresentationPlan = ReplayAudioPlan;
+
 export type ReplayPresentationBlock =
   | { readonly kind: 'TEXT'; readonly ordinal: number; readonly startMs: number; readonly endMs: number }
   | { readonly kind: 'PAUSE'; readonly runIndex: number; readonly startMs: number; readonly endMs: number; readonly boundary: PresentationBoundary }

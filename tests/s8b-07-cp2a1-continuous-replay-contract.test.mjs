@@ -16,6 +16,11 @@
 //               the results file is one row per case, exactly the case set, a multi-line detail kept on its row, and a
 //               touch Maestro delivered too late is NOT TESTED, never PASS (run 46037104976)
 //   CI          wired
+//
+// CP2-A.1 correction round RE-ANCHOR ("REPLAY UI FINAL CORRECTION", Product Owner, 2026-11-28): the one timeline is drawn
+// by the player (`ReplayTimelineBar` in ReplayPlayer.tsx's transport) from what the audio surface hands it (the map, the
+// place, the pending place) — the same presentation clock functions, the same seek; F-1 prepares the next recording
+// while text is read (`warm`), and F-3 places a started player in place (`inPlace`) when no hand-over can follow.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
@@ -92,9 +97,13 @@ test('one clock: the timeline is drawn and stepped by the presentation clock alo
     const defined = shipped.filter((path) => new RegExp(`export function ${name}\\b`, 'u').test(read(path)));
     assert.deepEqual(defined, [`${SRC}/replay-cosmos/presentation-clock.ts`], `${name} is defined once, in the presentation clock`);
   }
-  assert.match(audioViews, /replayPresentationClock\(plan, clock\.moments, replayMomentPaceMs\)/u);
-  assert.match(audioViews, /replayTimelinePosition\(presentation, open\.ordinal,/u);
-  assert.match(audioViews, /const target = replayTimelineTarget\(presentation, ms\);\s*if \(target !== null\) controller\.seekTo\(target\.ordinal, target\.offsetMs\);/u);
+  assert.match(player, /const momentPaceMs = \(moment: ReplayHistoryMoment\): number => replayMomentPaceMs\(moment\);/u);
+  assert.match(player, /replayPresentationClock\(plan, moments, momentPaceMs\)/u);
+  assert.match(player, /replayTimelinePosition\(presentation, view\.ordinal, source\.audio\(\), pacedElapsedOf\(controller, view\.ordinal\), source\.pending\(\)\)/u);
+  assert.match(player, /const target = presentation === null \? null : replayTimelineTarget\(presentation, ms\);\s*if \(target !== null\) controller\.seekTo\(target\.ordinal, target\.offsetMs\);/u);
+  // ONE timeline: the player draws one, and no surface draws one of its own.
+  assert.equal((player.match(/<ReplayTimelineBar\b/gu) ?? []).length, 1);
+  assert.doesNotMatch(audioViews, /replayTimelinePosition|replayTimelineTarget|AudioLine/u);
   // The presentation clock is pure: it keeps no time of its own.
   assert.doesNotMatch(presentation, /Date\.now|performance\.now|setInterval|setTimeout|requestAnimationFrame/u);
   assert.match(playerController, /seekTo\(ordinal, offsetMs\) \{/u);
@@ -117,13 +126,29 @@ test('before Play: the line is drawn from the map read alone, which no set, job 
   // Only the timeline reads it: `preview` is declared, checked, set in `prime` and offered as `timelinePlan` — nothing else.
   assert.equal((audioClock.match(/\bpreview\b/gu) ?? []).length, 4);
   assert.match(audioClock, /timelinePlan: refused \? null : plan \?\? preview,/u);
-  assert.match(audioViews, /const plan = clock\.detail\(\)\.timelinePlan;/u);
-  assert.match(audioViews, /paced\.elapsedMs : null, clock\.detail\(\)\.pending\);/u);
+  assert.match(audioViews, /plan: \(\) => clock\.detail\(\)\.timelinePlan,/u);
+  assert.match(audioViews, /pending: \(\) => clock\.detail\(\)\.pending,/u);
   // A step before Play is where the first Play starts, and it is shown there while that Play prepares.
   assert.match(audioClock, /startOf\(asked, located, read\)/u);
   assert.match(audioClock, /const chosen = e\.phase === 'PREPARING' && pendingOffset !== null \? plan\.windowOf\.get\(pendingOffset\.ordinal\) : undefined;/u);
   // In the last moment, Play goes on from a held step or a pause part-way; only after the end does it start again.
   assert.match(playerController, /patch\(\{ playing: true, \.\.\.\(atLast && !inside \? \{ ordinal: order\[0\] \} : \{\}\) \}\);/u);
+});
+
+test('correction round: F-1 prepares while text is read, F-3 seeks in place — only for the Replay, never for a written moment', () => {
+  const engine = tsCode(read(`${SRC}/original-audio/transient-playback.ts`));
+  // F-1: a paced (text) moment holds the clock and warms the next recording; the warm-up asks for the set or prepares a run.
+  assert.match(playerController, /holdClock\(\);\s*instance\?\.warm\?\.\(current\.ordinal\);/u);
+  assert.match(audioClock, /engine\.preload\?\.\(\)/u);
+  assert.match(audioClock, /engine\.prepareAt\?\.\(located\.runIndex, 0\)/u);
+  // A warm-up never plays: an acquisition made ahead is silent on failure and starts nothing.
+  assert.match(engine, /const quiet = \(\) => warm && intent !== 'PLAY';/u);
+  // F-3: in place only where the engine is asked to (the Replay), and only while no hand-over can follow (CA-07B-2).
+  assert.match(replayAudio, /inPlace: true,/u);
+  assert.match(engine, /if \(options\.inPlace !== true \|\| held === null \|\| next !== null \|\| renewal !== null \|\| live\.player === null \|\| !live\.loaded\) return false;/u);
+  assert.match(engine, /return held\.covers \|\| leftOf\(held\) > Math\.max\(0, length - positionMs\) \+ TRANSIENT_HANDOVER\.marginMs;/u);
+  // PLAYING only once the player says it plays: nothing runs ahead of the sound.
+  assert.match(engine, /status\.loaded && status\.playing && intent === 'PLAY' && live\.seeking === 0/u);
 });
 
 test('iOS gate: the proof build only behind its flag; three BG-10 cells; pinned Maestro; every testable case PASS', () => {

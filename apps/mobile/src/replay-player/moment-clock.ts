@@ -58,6 +58,12 @@ export interface ReplayMomentClock {
    * Optional: a clock without it is sought by moment only.
    */
   seekTo?(ordinal: number, offsetMs: number): void;
+  /**
+   * S8B-07 CP2-A.1 correction round (F-1): the player paces this moment while playing; whatever the clock presents after
+   * it may be made ready now (asked for, prepared paused), so it starts when its moment comes. It presents nothing and
+   * changes no phase. Optional.
+   */
+  warm?(ordinal: number): void;
   /** Let go of everything it holds for this version (closing, another version, a command). */
   release(): void;
   retire(): void;

@@ -12,6 +12,8 @@
  *   the next run   after a run's file ends, the next audio moment in order starts its run from the file's start, after the
  *                  boundary pause the phone times (§5.4: SAME_RECORDING real up to 3 s, else 1.5 s; CROSS_RECORDING 1.5 s,
  *                  no length), with the next run's player created paused at the pause's start
+ *   ahead          S8B-07 CP2-A.1 correction round (F-1): while the player paces a text moment, the set is asked for and the
+ *                  next audio moment's player is made ready, paused (`warm`), so its sound starts when its moment comes
  *   fail closed    a map that does not describe exactly this version's audio moments (a TEXT moment named, a moment named
  *                  twice, an audio moment no window covers, windows out of order) is refused whole: RA-12, nothing plays
  *
@@ -175,10 +177,15 @@ export function createReplayAudioClock(options: ReplayAudioClockOptions): Replay
   let pendingOffset: { readonly ordinal: number; readonly offsetMs: number; readonly beyond?: boolean } | null = null;
   /** The spans already announced at this file place, so each is said once as it starts. */
   let announced = new Set<PresentationSpan>();
+  /** CP2-A.1 correction (F-1): the moment from which the next audio is made ready while the player paces text; null: none. */
+  let warmFrom: number | null = null;
   const listeners = new Set<() => void>();
 
   const engine = options.engine(onRunEnd);
-  const unsubscribeEngine = engine.subscribe(derive);
+  const unsubscribeEngine = engine.subscribe(() => {
+    derive();
+    warmUp();
+  });
 
   function changed(next: ReplayMomentClockState | null): void {
     revision += 1;
@@ -219,6 +226,29 @@ export function createReplayAudioClock(options: ReplayAudioClockOptions): Replay
       return changed({ phase: 'RUNNING', ordinal: ordinal ?? state.ordinal, through: null });
     }
     changed(null);
+  }
+
+  /**
+   * F-1: ahead of the next audio moment (from `warmFrom`), with nothing of this set sounding: the set is asked for (no
+   * phase, nothing said), then that moment's run is made ready, paused, at the place its start will play from — the start
+   * of its run's file, as `run(…, 'ADVANCE')` starts it. Asked again on every change until it is ready; bounded: one set,
+   * one paused player.
+   */
+  function warmUp(): void {
+    if (warmFrom === null || retired || refused || boundary !== null || !options.allowed()) return;
+    const e = engine.getState();
+    if (e.phase !== 'IDLE' && e.phase !== 'PAUSED' && e.phase !== 'BETWEEN') return;
+    const known = ensurePlan();
+    if (refused) return;
+    if (known === null) {
+      engine.preload?.();
+      return;
+    }
+    const from = warmFrom;
+    const ahead = moments.map((moment) => moment.ordinal).filter((ordinal) => ordinal >= from && audio.has(ordinal)).sort((a, b) => a - b)[0];
+    const located = ahead === undefined ? undefined : known.windowOf.get(ahead);
+    if (located === undefined) return;
+    engine.prepareAt?.(located.runIndex, 0);
   }
 
   function announce(run: PresentationRun, positionMs: number): void {
@@ -289,6 +319,7 @@ export function createReplayAudioClock(options: ReplayAudioClockOptions): Replay
       cancelBoundary();
       finished = null;
       announced = new Set();
+      warmFrom = null;
       const known = ensurePlan();
       if (refused) {
         derive();
@@ -358,6 +389,7 @@ export function createReplayAudioClock(options: ReplayAudioClockOptions): Replay
       cancelBoundary();
       finished = null;
       pendingOffset = null;
+      warmFrom = null;
       engine.leave();
       changed({ phase: 'IDLE', ordinal: null, through: null });
     },
@@ -409,6 +441,11 @@ export function createReplayAudioClock(options: ReplayAudioClockOptions): Replay
       const { window } = located;
       engine.seek(located.runIndex, Math.min(window.toMs - 1, window.fromMs + Math.max(0, offsetMs)));
       derive();
+    },
+    warm(ordinal) {
+      if (retired || refused || state.phase === 'ENDED') return;
+      warmFrom = ordinal;
+      warmUp();
     },
     prime(map) {
       if (retired || refused || plan !== null || preview !== null) return;

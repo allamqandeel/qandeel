@@ -309,11 +309,13 @@ describe('the reading pace is one continuous span too (R-2, R-3)', () => {
     w.player.play();
     await run(0);
     await run(TEXT1 - 2_000 - 10);
-    expect(w.server.calls.filter((c) => c.startsWith('POST'))).toHaveLength(0);
+    expect(w.player.pacedElapsed()?.ordinal).toBe(1);
     await run(20);
-    // Read in full: moment 2's audio is asked for, and the text stays at its end until moment 2 speaks.
-    expect(w.server.calls.filter((c) => c.startsWith('POST'))).toHaveLength(1);
+    // Read in full: the text stays at its end until moment 2 speaks — at once, its audio made ready while the text was read
+    // (CP2-A.1 correction round, F-1): one command, polled while the set was prepared.
     expect(w.player.pacedElapsed()).toEqual({ ordinal: 1, elapsedMs: TEXT1 });
+    expect(new Set(w.server.calls.filter((c) => c.startsWith('POST')))).toHaveProperty('size', 1);
+    expect(await until(() => w.ordinal() === 2)).toBeLessThanOrEqual(260);
   });
 
   it('a seek inside a text moment runs its pace from there, then the pause and the next recording, without stopping', async () => {
@@ -346,5 +348,95 @@ describe('the reading pace is one continuous span too (R-2, R-3)', () => {
     w.player.seekTo(2, Number.NaN);
     expect(w.ordinal()).toBe(1);
     expect(w.player.pacedElapsed()).toBeNull();
+  });
+});
+
+describe('CP2-A.1 correction round — audio prepared ahead, and a seek that rebuilds nothing (F-1, F-3)', () => {
+  /** The playback sets asked for: one POST command (its polls repeat the same command). */
+  const POSTS = (w: W) => new Set(w.server.calls.filter((call) => call.startsWith('POST'))).size;
+  const playersOf = (w: W, runIndex: number) => w.players.made.filter((made) => made.artifactId === w.server.sets[0]!.ids[runIndex]).length;
+
+  it('F-1: while the text before a recording is read, that recording is prepared — no wait at the boundary, no audio for the text', async () => {
+    const w = world();
+    await w.open();
+    w.player.seek(5);
+    await run(0);
+    w.player.play();
+    // Moment 5 is text: nothing is heard while it is read, and run 1 is made ready meanwhile.
+    await run(pace('fifth') - 100);
+    expect(w.ordinal()).toBe(5);
+    expect(w.heard()).toHaveLength(0);
+    expect(POSTS(w)).toBe(1);
+    expect(w.players.made.some((made) => made.artifactId === w.server.sets[0]!.ids[1])).toBe(true);
+    // The designed pause stays (B2X: never shortened by preparation), and run 1 is heard right after it.
+    const boundary = Date.now() + 100;
+    await until(() => w.heard().length > 0);
+    expect(w.ordinal()).toBe(6);
+    expect(lastHeard(w).run).toBe(1);
+    expect(lastHeard(w).at - boundary).toBeGreaterThanOrEqual(1_500 - 10);
+    expect(lastHeard(w).at - boundary).toBeLessThanOrEqual(1_500 + 260);
+    expect(w.clock()!.detail().engine.waiting).toBe(false);
+  });
+
+  it('F-3: playing, a seek forward and back inside the held recording moves the same player — no new player, no new set', async () => {
+    const w = world();
+    await w.open();
+    w.player.seek(2);
+    await run(0);
+    w.player.play();
+    await until(() => w.clock()!.getState().phase === 'RUNNING');
+    await run(1_000);
+    const made = w.players.made.length;
+    const posts = POSTS(w);
+    for (const at of [RUN0_AT + 6_500, RUN0_AT + 1_000, RUN0_AT + 8_000]) {
+      const target = replayTimelineTarget(P, at)!;
+      w.player.seekTo(target.ordinal, target.offsetMs);
+      await until(() => w.clock()!.getState().phase === 'RUNNING');
+      await run(300);
+      expect(Math.abs(position(w) - (at + 300))).toBeLessThanOrEqual(300);
+    }
+    expect(w.players.made.length).toBe(made);
+    expect(POSTS(w)).toBe(posts);
+    expect(w.players.alive.max).toBe(1);
+  });
+
+  it('F-3: paused, a seek and the next Play continue on the same player, from the place chosen', async () => {
+    const w = world();
+    await w.open();
+    w.player.seek(2);
+    await run(0);
+    w.player.play();
+    await until(() => w.clock()!.getState().phase === 'RUNNING');
+    await run(1_000);
+    w.player.pause();
+    await run(0);
+    expect(playersOf(w, 0)).toBe(1);
+    const at = replayTimelineTarget(P, RUN0_AT + 500)!;
+    w.player.seekTo(at.ordinal, at.offsetMs);
+    await run(0);
+    expect(position(w)).toBe(RUN0_AT + 500);
+    const before = w.heard().length;
+    w.player.play();
+    await until(() => w.heard().length > before);
+    expect(lastHeard(w).from).toBeGreaterThanOrEqual(500);
+    expect(lastHeard(w).from).toBeLessThanOrEqual(600);
+    // Run 0 was heard on its one player to its end (the next recording's player is F-1's, made while moment 5 is read).
+    expect(playersOf(w, 0)).toBe(1);
+    expect(lastHeard(w).to).toBe(9_000);
+  });
+
+  it('F-3: the line never runs ahead of what is heard — while the player prepares, the place stays where it was asked', async () => {
+    const w = world();
+    await w.open();
+    w.player.seek(2);
+    await run(0);
+    w.players.setLoadDelay(2_000);
+    w.player.play();
+    await run(1_500);
+    expect(w.heard()).toHaveLength(0);
+    expect(position(w)).toBe(RUN0_AT);
+    // It runs once the player says it plays — from the place, never 2 s ahead of the sound.
+    await until(() => w.clock()!.getState().phase === 'RUNNING');
+    expect(position(w) - RUN0_AT).toBeLessThanOrEqual(300);
   });
 });

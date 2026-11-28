@@ -3,33 +3,33 @@
  * through the player's surface slot. Every word is an approved row; nothing here draws a map, an analysis or a graphic,
  * and nothing here plays: the clock does.
  *
- *   the pace line     RA-01 (audio only) / RA-02 (text and audio), in place of the V1 line, for a V2 version only (B11)
- *   the source        an audio moment's surface holds its speaker and its own line (RA-14, the window's «m:ss / m:ss»);
- *                     its transcript stands under the DERIVED caption RA-03 (B12); a TEXT moment has no line (B2X)
+ *   the pace          RA-01 (audio only) / RA-02 (text and audio), in place of the V1 declaration, for a V2 version only
+ *                     (B11) — CP2-A.1 correction round: said to assistive technology on the one timeline, not as a paragraph
+ *   the source        an audio moment's surface holds its speaker (CP2-A.1 correction round: no line of its own — RA-14's
+ *                     per-moment line is retired from the Replay, which has ONE timeline); its transcript stands under the
+ *                     DERIVED caption RA-03 (B12)
  *   the frames        above a moment: the record of the pause before it — RA-04 (shortened, with its true length) or
  *                     RA-05 (another recording, never a length); under the moment, the same frame while that pause is
  *                     held (B7 – B9). A pause kept at its real length has no frame (B6)
  *   the gaps          under a window, one line per recorded gap by kind: RA-06 / RA-07 / RA-08; NOT_SPEAKING has no text,
  *                     and neither has a writer loss under one second (RA-08's floor, PO 2026-11-08)
- *   the notices       RA-11 after 1 s without audio; RA-12 (error ink) with the existing Stage 7 «Try again» (B14)
+ *   the notices       RA-11 after 1 s without audio; RA-12 (error ink) with the existing Stage 7 «Try again» (B14) — in
+ *                     the timeline's ONE status line, which is always held, so a notice never moves anything (F-4)
  *   no longer         RA-09 / RA-10 only for the cause the server PROVES, otherwise RA-17; the reading is withheld (B13)
  *   assistive tech    RA-15 when two voices start together, a gap's line as it starts, RA-04 / RA-05 as the pause starts
- *   the timeline      S8B-07 CP2-A.1 (R-2, R-3): the whole part's ONE line, on the presentation clock laid out from the map
- *                     the clock holds — its length, where the presentation is now, and a tap or drag that places it at any
- *                     instant (inside long speech too). Named by the approved «إعادة عرض المحادثة»; no new word
+ *   the timeline      S8B-07 CP2-A.1 (R-2, R-3): the whole part's ONE line is the player's (`ReplayTimelineBar`, correction
+ *                     round); this surface hands it what it reads of the clock (`timeline`): the map, the place, the pending
  *
  * No sound is added (D-05.7 (b)). Nothing is logged.
  */
-import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { AccessibilityInfo, Text, View } from 'react-native';
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { AccessibilityInfo, Pressable, Text, View } from 'react-native';
 
-import { Control, readerDirection, readerSide, typeStyle, usePalette } from '../conversation';
+import { readerDirection, readerSide, typeStyle, usePalette } from '../conversation';
 import type { ChromeLanguage } from '../orientation-chrome/types';
 import { replayEntryCopy } from '../replay-entry';
-import { replayPresentationClock, replayTimelinePosition, replayTimelineTarget } from '../replay-cosmos/presentation-clock';
-import { replayMomentPaceMs, type ReplayPlayerController, type ReplayPlayerSurface, type ReplayPlayerSurfaceControls, type ReplayPlayerView } from '../replay-player';
+import type { ReplayPlayerController, ReplayPlayerSurface, ReplayPlayerSurfaceControls, ReplayPlayerView, ReplayTimelineSource } from '../replay-player';
 import type { ReplayHistoryMoment } from '../runtime-entry';
-import { AudioLine } from './AudioLine';
 import { originalAudioLengthText, originalAudioText, type OriginalAudioCopyId } from './original-audio-copy';
 import { spanAt, type PresentationBoundary, type PresentationGapKind, type PresentationSpan } from './presentation-map';
 import type { ReplayAudio } from './replay-audio';
@@ -132,34 +132,6 @@ function Before({ clock, ordinal, language }: { readonly clock: ReplayAudioClock
   return text === null ? null : <Frame text={text} language={language} testID={`${REPLAY_AUDIO_TEST_ID}-before-${ordinal}`} />;
 }
 
-/** Inside the source surface: the moment's own line, over its window only (RA-14). Nothing before the map is known. */
-function MomentLine({ clock, ordinal, language }: { readonly clock: ReplayAudioClock; readonly ordinal: number; readonly language: ChromeLanguage }) {
-  useSyncExternalStore(clock.subscribe, clock.revision);
-  const place = located(clock, ordinal);
-  if (place === null) return null;
-  const { window } = place;
-  const detail = clock.detail();
-  const totalMs = window.toMs - window.fromMs;
-  const here = presentedWindow(clock) === window && detail.runIndex === place.runIndex;
-  const positionMs = here ? Math.min(totalMs, Math.max(0, detail.positionMs - window.fromMs)) : null;
-  return (
-    <AudioLine
-      language={language}
-      testID={`${REPLAY_AUDIO_TEST_ID}-line-${ordinal}`}
-      totalMs={totalMs}
-      positionMs={positionMs}
-      active={false}
-      disabled={false}
-      control={false}
-      playLabel=""
-      pauseLabel=""
-      lineLabel={originalAudioText('RA-14', language)}
-      onToggle={() => undefined}
-      onSeek={(ms) => clock.seekWithin(ordinal, ms)}
-    />
-  );
-}
-
 /** Under the moment: its recorded gaps, the pause being held after it, and what the clock says now. */
 function Beneath({ clock, ordinal, language }: { readonly clock: ReplayAudioClock; readonly ordinal: number; readonly language: ChromeLanguage }) {
   useSyncExternalStore(clock.subscribe, clock.revision);
@@ -192,82 +164,56 @@ function Beneath({ clock, ordinal, language }: { readonly clock: ReplayAudioCloc
 }
 
 /**
- * The declaration of the version's pace, and under it what the clock says now, whichever moment is shown: RA-11 after
- * 1 s without audio, RA-12 with the existing «Try again»; once it can no longer play, only the proven or generic row.
+ * CP2-A.1 correction round: what the clock says now, in the timeline's ONE status line — RA-11 after 1 s without audio,
+ * RA-12 with the existing «Try again», and once it can no longer play, only the proven or generic row. One line, never
+ * wrapped; nothing otherwise (the line stays held by the timeline either way).
  */
-function Note({ clock, controller, language }: { readonly clock: ReplayAudioClock; readonly controller: ReplayPlayerController; readonly language: ChromeLanguage }) {
+function Status({ clock, controller, language }: { readonly clock: ReplayAudioClock; readonly controller: ReplayPlayerController; readonly language: ChromeLanguage }) {
   useSyncExternalStore(clock.subscribe, clock.revision);
   const palette = usePalette();
   const state = clock.getState();
   const { engine } = clock.detail();
-  if (state.phase === 'ENDED') {
-    return <Line text={originalAudioText(replayEndedRow(engine.endedReason), language)} language={language} tone="secondary" live testID={`${REPLAY_AUDIO_TEST_ID}-ended`} />;
-  }
-  const mixed = clock.moments.some((moment) => moment.originalMedium === 'ORIGINAL_TEXT');
-  const retry = replayEntryCopy(language).tryAgain;
-  return (
-    <View style={{ rowGap: 4 }}>
-      <Line text={originalAudioText(mixed ? 'RA-02' : 'RA-01', language)} language={language} testID="qandeel-replay-pacing" />
-      {engine.phase === 'PREPARING' && engine.waiting ? <Line text={originalAudioText('RA-11', language)} language={language} testID={`${REPLAY_AUDIO_TEST_ID}-waiting`} live /> : null}
-      {state.phase === 'FAILED' ? (
-        <View testID={`${REPLAY_AUDIO_TEST_ID}-failed`} style={{ rowGap: 6, alignItems: readerSide(language) === 'right' ? 'flex-end' : 'flex-start' }}>
-          <Line text={originalAudioText('RA-12', language)} language={language} tone="error" live testID={`${REPLAY_AUDIO_TEST_ID}-failed-text`} />
-          <Control palette={palette} language={language} accessibilityLabel={retry} onPress={() => controller.play()} testID={`${REPLAY_AUDIO_TEST_ID}-retry`}>
-            <Text style={{ ...typeStyle('action'), color: palette.primary }}>{retry}</Text>
-          </Control>
-        </View>
-      ) : null}
-    </View>
+  const line = (text: string, testID: string, color: string) => (
+    <Text testID={testID} numberOfLines={1} accessibilityLanguage={language} accessibilityLiveRegion="polite"
+      style={{ ...typeStyle('metadata'), color, flexShrink: 1, writingDirection: readerDirection(language), textAlign: readerSide(language) }}>
+      {text}
+    </Text>
   );
+  if (state.phase === 'ENDED') return line(originalAudioText(replayEndedRow(engine.endedReason), language), `${REPLAY_AUDIO_TEST_ID}-ended`, palette.secondary);
+  if (state.phase === 'FAILED') {
+    const retry = replayEntryCopy(language).tryAgain;
+    return (
+      <View testID={`${REPLAY_AUDIO_TEST_ID}-failed`} style={{ flexDirection: readerSide(language) === 'right' ? 'row-reverse' : 'row', alignItems: 'center', columnGap: 12 }}>
+        {line(originalAudioText('RA-12', language), `${REPLAY_AUDIO_TEST_ID}-failed-text`, palette.error)}
+        {/* The existing «Try again», in the line's own type; its touch target is the full 44 pt (B14). */}
+        <Pressable accessibilityRole="button" accessibilityLabel={retry} accessibilityLanguage={language} onPress={() => controller.play()}
+          hitSlop={{ top: 13, bottom: 13, left: 8, right: 8 }} testID={`${REPLAY_AUDIO_TEST_ID}-retry`}>
+          <Text style={{ ...typeStyle('metadata'), color: palette.primary }}>{retry}</Text>
+        </Pressable>
+      </View>
+    );
+  }
+  if (engine.phase === 'PREPARING' && engine.waiting) return line(originalAudioText('RA-11', language), `${REPLAY_AUDIO_TEST_ID}-waiting`, palette.tertiary);
+  return null;
 }
 
-/** How often the timeline's line is redrawn while the Replay plays (its position is read from the clock each time). */
-export const REPLAY_TIMELINE_REDRAW_MS = 100;
+/** RA-01 (audio only) / RA-02 (text and audio): the declaration of the version's pace (B11), for the timeline's hint. */
+export function replayPaceDeclaration(moments: readonly ReplayHistoryMoment[], language: ChromeLanguage): string {
+  return originalAudioText(moments.some((moment) => moment.originalMedium === 'ORIGINAL_TEXT') ? 'RA-02' : 'RA-01', language);
+}
 
-const noToggle = () => undefined;
-
-/**
- * CP2-A.1 (R-2, R-3): the whole selected part's ONE timeline. Its length and position are the presentation clock's — the
- * same `replayPresentationClock` the stage and the video read, from the map this clock holds and the player's own reading
- * pace — and its seek is the player's `seekTo` (the clock's place, or the reading pace's). PO direction (CP2-A.1 final
- * validation): drawn before the first Play from the version's map read alone (`timelinePlan`), the set's own once held.
- */
-function TimelineLine({ clock, controller, language }: { readonly clock: ReplayAudioClock; readonly controller: ReplayPlayerController; readonly language: ChromeLanguage }) {
-  useSyncExternalStore(clock.subscribe, clock.revision);
-  const open = useSyncExternalStore(controller.subscribe, () => controller.getState().open);
-  const plan = clock.detail().timelinePlan;
-  const presentation = useMemo(() => (plan === null ? null : replayPresentationClock(plan, clock.moments, replayMomentPaceMs)), [plan, clock.moments]);
-  const playing = open?.playing === true;
-  const [, redraw] = useState(0);
-  useEffect(() => {
-    if (!playing) return undefined;
-    const handle = setInterval(() => redraw((n) => n + 1), REPLAY_TIMELINE_REDRAW_MS);
-    return () => clearInterval(handle);
-  }, [playing]);
-  if (presentation === null || open === null) return null;
-  const state = clock.getState();
-  const paced = controller.pacedElapsed();
-  const positionMs = replayTimelinePosition(presentation, open.ordinal, { phase: state.phase, ordinal: state.ordinal, place: clock.place() },
-    paced !== null && paced.ordinal === open.ordinal ? paced.elapsedMs : null, clock.detail().pending);
-  return (
-    <AudioLine
-      language={language}
-      testID={`${REPLAY_AUDIO_TEST_ID}-timeline`}
-      totalMs={presentation.durationMs}
-      positionMs={positionMs}
-      active={playing}
-      disabled={open.command !== null || state.phase === 'ENDED'}
-      control={false}
-      playLabel=""
-      pauseLabel=""
-      lineLabel={replayEntryCopy(language).replayName}
-      onToggle={noToggle}
-      onSeek={(ms) => {
-        const target = replayTimelineTarget(presentation, ms);
-        if (target !== null) controller.seekTo(target.ordinal, target.offsetMs);
-      }}
-    />
-  );
+/** CP2-A.1: the clock, as the player's one timeline reads it (the map it is laid out on, the place, the pending place). */
+function timelineSource(clock: ReplayAudioClock): ReplayTimelineSource {
+  return {
+    subscribe: clock.subscribe,
+    revision: clock.revision,
+    plan: () => clock.detail().timelinePlan,
+    audio: () => {
+      const state = clock.getState();
+      return { phase: state.phase, ordinal: state.ordinal, place: clock.place() };
+    },
+    pending: () => clock.detail().pending,
+  };
 }
 
 /** The screen reader is told each span as it starts, once, in the reader's language. */
@@ -283,19 +229,19 @@ function useReplayAudioControls(audio: ReplayAudio, controller: ReplayPlayerCont
   useAnnouncements(audio, language);
   const versionId = view.version?.versionId ?? null;
   const clock = versionId === null ? null : audio.clockOf(versionId);
-  if (clock === null) return null;
-  const note: ReactNode = <Note clock={clock} controller={controller} language={language} />;
+  const timeline = useMemo(() => (clock === null ? null : timelineSource(clock)), [clock]);
+  if (clock === null || timeline === null) return null;
   return {
-    note,
+    status: <Status clock={clock} controller={controller} language={language} />,
+    hint: replayPaceDeclaration(clock.moments, language),
     withheld: clock.getState().phase === 'ENDED',
     // PR #404 RB-1: the Replay's stage follows this clock's place (it reads; it never drives the clock). RB-2 / S4: with
     // the historical availability bound to the map it holds; a clock alone carries none, and its stage stays neutral.
     stageClock: audio.stageClockOf(clock.versionId) ?? clock,
-    timeline: <TimelineLine clock={clock} controller={controller} language={language} />,
+    timeline,
     moment: (moment: ReplayHistoryMoment) => (moment.originalMedium !== 'ORIGINAL_AUDIO' ? null : {
       caption: originalAudioText('RA-03', language),
       before: <Before clock={clock} ordinal={moment.ordinal} language={language} />,
-      source: <MomentLine clock={clock} ordinal={moment.ordinal} language={language} />,
       beneath: <Beneath clock={clock} ordinal={moment.ordinal} language={language} />,
     }),
   };

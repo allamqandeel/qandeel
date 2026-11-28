@@ -126,6 +126,12 @@ export interface TransientPlaybackOptions {
   readonly onRunEnd?: (runIndex: number) => void;
   readonly onEvent?: (event: TransientPlaybackEvent) => void;
   readonly renewalLeadMs?: number;
+  /**
+   * S8B-07 CP2-A.1 correction round (F-3, Product Owner 2026-11-28): a played player may be sought or resumed IN PLACE —
+   * no new player, no new download — when its file stays readable past its run's end, so no hand-over can ever follow it
+   * (`inPlaceAllowed`). The Replay's engine only; a call's listening keeps CA-07B-2 exactly (absent: false).
+   */
+  readonly inPlace?: boolean;
   readonly now?: () => number;
   readonly setTimer?: (callback: () => void, ms: number) => unknown;
   readonly clearTimer?: (handle: unknown) => void;
@@ -149,6 +155,17 @@ export interface TransientPlayback {
   seek(runIndex: number, positionMs: number): void;
   /** A Replay boundary: the next run's player is created paused, so it starts on time. */
   prepare(runIndex: number): void;
+  /**
+   * S8B-07 CP2-A.1 correction round (F-1): the set is asked for now, without playing — the Replay plays a text moment
+   * while it is prepared. Nothing changes phase, nothing is said, and a refusal here is silent (the play that needs the
+   * audio asks again and says it). Once held, `prepareAt` makes the first needed player ready, paused.
+   */
+  preload?(): void;
+  /**
+   * S8B-07 CP2-A.1 correction round (F-1): a player for (runIndex, positionMs) on the held set, created paused and never
+   * started, when no played player is held (one player is heard, never two). A later `play` there starts it in place.
+   */
+  prepareAt?(runIndex: number, positionMs: number): void;
   /**
    * PR #404 RB-1: the played position read NOW from the playing player (never below its floor, CA-07B-2), between two
    * status reports; otherwise the state's. A read only, in memory: it changes nothing and is never stored or logged.
@@ -182,6 +199,8 @@ interface Live {
    * its reported place runs two AAC frames (≈ 43 ms) ahead of what is heard, and the next switch loses that much).
    */
   started: boolean;
+  /** CP2-A.1 correction (F-1): asked to play while it was still being created (a prepared player): it starts once made. */
+  wanted?: boolean;
   /**
    * The reader's place never goes below this for this player: a player that continues the content starts
    * `TRANSIENT_HANDOVER.resumeBehindMs` BEHIND the saved place, and those first milliseconds are heard twice, but the
@@ -218,6 +237,9 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
   let resumeAt: { runIndex: number; positionMs: number } | null = null;
   /** A first play's start, placed by the map when the set arrives (one use). */
   let placeOnArrival: TransientPlace | null = null;
+  /** CP2-A.1 correction (F-1): the set being asked for (one asking at a time; a play joins it). 0: none. */
+  let acquiring = 0;
+  let acquireSerial = 0;
   let resumes: number[] = [];
   let tickTimer: unknown = null;
   let ticks = 0;
@@ -286,6 +308,17 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
     }, TRANSIENT_WAITING_NOTICE_MS);
   }
 
+  /** F-1 / F-3: the held player placed at `positionMs` (its place read as that until the seek is done; never below it). */
+  function placeLive(live: Live, positionMs: number, always = false): void {
+    if (!always && Math.abs(readPosition(live) - positionMs) <= 1) return;
+    live.lastPositionMs = positionMs;
+    live.floorMs = positionMs;
+    live.seeking += 1;
+    void live.player!.seekTo(positionMs).catch(() => undefined).finally(() => {
+      live.seeking -= 1;
+    });
+  }
+
   function releaseCurrent(): void {
     if (current === null) return;
     const live = current;
@@ -321,6 +354,7 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
     renewalFailed = false;
     resumeAt = null;
     placeOnArrival = null;
+    acquiring = 0;
     intent = 'PAUSE';
   }
 
@@ -454,7 +488,7 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
       live.seeking -= 1;
     }
     if (my !== epoch || current !== live) return;
-    if (autoplay && intent === 'PLAY') {
+    if ((autoplay || live.wanted === true) && intent === 'PLAY') {
       live.started = true;
       created.play();
     }
@@ -486,7 +520,9 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
       live.lastPositionMs = Math.max(live.floorMs, Math.round(status.positionMs));
       if (state.positionMs !== live.lastPositionMs) set({ positionMs: live.lastPositionMs });
     }
-    if (status.loaded && status.playing && intent === 'PLAY') {
+    // CP2-A.1 correction (F-3): PLAYING — and with it the clock's place, the line and the stage — only once the player
+    // reports that it plays, never while it is still being placed (a seek in progress).
+    if (status.loaded && status.playing && intent === 'PLAY' && live.seeking === 0) {
       if (waitingTimer !== null || state.waiting) clearWaiting();
       if (state.phase !== 'PLAYING') set({ phase: 'PLAYING' });
       maybeHandover();
@@ -575,26 +611,40 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
   }
 
   /** Start (or sort the cause): the set under a new command, asked again with the same one while it is prepared. */
-  async function acquire(continuation: boolean): Promise<void> {
+  async function acquire(continuation: boolean, warm = false): Promise<void> {
+    if (acquiring !== 0) return;
+    acquireSerial += 1;
+    const mine = acquireSerial;
+    acquiring = mine;
+    try {
+      await acquireLoop(continuation, warm);
+    } finally {
+      if (acquiring === mine) acquiring = 0;
+    }
+  }
+
+  /** `warm` (F-1): asked ahead of a play; while nothing plays, a refusal is silent and changes nothing. */
+  async function acquireLoop(continuation: boolean, warm: boolean): Promise<void> {
     const my = epoch;
     let command = options.newCommandId();
     let renewed = false;
     let unknowns = 0;
+    const quiet = () => warm && intent !== 'PLAY';
     for (;;) {
-      if (my !== epoch || intent !== 'PLAY') return;
+      if (my !== epoch || (intent !== 'PLAY' && !warm)) return;
       const result = await options.request(command);
       if (my !== epoch) return;
       if (result.kind === 'UNKNOWN') {
         unknowns += 1;
         if (unknowns > UNKNOWN_RETRIES) {
-          fail();
+          if (!quiet()) fail();
           return;
         }
         await after(TRANSIENT_POLL_MS * 2 ** (unknowns - 1));
         continue;
       }
       if (result.kind === 'NOT_FOUND') {
-        end(result.reason);
+        if (!quiet()) end(result.reason);
         return;
       }
       if (result.kind === 'SET' && result.set.state === 'READY') {
@@ -609,7 +659,7 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
         if (place !== null && state.runs !== null) {
           const placed = place(state.runs);
           if (placed === null || held.runs[placed.runIndex] === undefined) {
-            fail();
+            if (!quiet()) fail();
             return;
           }
           at = placed;
@@ -629,7 +679,7 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
         command = options.newCommandId();
         continue;
       }
-      fail();
+      if (!quiet()) fail();
       return;
     }
   }
@@ -722,6 +772,18 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
     if (intent === 'PLAY') await openRun(at.runIndex, at.positionMs, true, TRANSIENT_HANDOVER.resumeBehindMs);
   }
 
+  /**
+   * CP2-A.1 correction round (F-3): a played player may be sought or resumed in place only where CA-07B-2's reason cannot
+   * apply — no hand-over can follow it: the held set covers the source, or its file stays readable past the run's end from
+   * that place (with the hand-over's own margin), and no next generation is held or asked for. Its reported place may then
+   * run about 43 ms ahead of what is heard (step 6): inside the stage's 300 ms allowance, and no switch ever reads it.
+   */
+  function inPlaceAllowed(live: Live, positionMs: number): boolean {
+    if (options.inPlace !== true || held === null || next !== null || renewal !== null || live.player === null || !live.loaded) return false;
+    const length = held.runs[live.runIndex]?.durationMs ?? 0;
+    return held.covers || leftOf(held) > Math.max(0, length - positionMs) + TRANSIENT_HANDOVER.marginMs;
+  }
+
   /** The hand-over is needed only when the file stops being readable before its run ends (§20 rule 1, last bullet). */
   function maybeHandover(): void {
     if (next === null || held === null || current === null || current.player === null || !current.loaded) return;
@@ -777,13 +839,15 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
       if (!options.owner.transientAllowed() || !ensureClaim()) return false;
       intent = 'PLAY';
       ensureTick();
-      placeOnArrival = held === null ? place ?? null : null;
       if (held === null) {
+        // A set already asked for ahead of this play (F-1) is joined, never asked twice.
+        placeOnArrival = place ?? null;
         resumeAt = place === undefined ? { runIndex, positionMs } : null;
         expectAudio(runIndex, positionMs);
         void acquire(false);
         return true;
       }
+      placeOnArrival = null;
       if (next !== null) {
         // A pause during a hand-over: the new file starts directly at the saved place (§20 rule 2.4).
         resumeAt = { runIndex, positionMs };
@@ -806,11 +870,28 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
         return true;
       }
       if (current !== null && current.player !== null && current.runIndex === runIndex && !current.started) {
-        // A player prepared at a Replay boundary that has not played yet starts in place; any other start is a new player.
-        if (Math.abs(readPosition(current) - positionMs) > 1) void current.player.seekTo(positionMs).catch(() => undefined);
-        current.started = true;
-        current.player.play();
-        set({ phase: 'PLAYING', runIndex, positionMs });
+        // A player prepared ahead (a Replay boundary, F-1) that has not played yet starts in place. It is PLAYING once it
+        // says it plays (F-3), so nothing runs ahead of the sound while it starts.
+        const live = current;
+        placeLive(live, positionMs);
+        live.started = true;
+        live.player!.play();
+        expectAudio(runIndex, positionMs);
+        armDeadline();
+        return true;
+      }
+      if (current !== null && current.player === null && current.runIndex === runIndex && !current.started && Math.abs(current.lastPositionMs - positionMs) <= 1) {
+        // Still being made (F-1): it starts once it is.
+        current.wanted = true;
+        expectAudio(runIndex, positionMs);
+        return true;
+      }
+      if (current !== null && current.player !== null && current.started && current.runIndex === runIndex && inPlaceAllowed(current, positionMs)) {
+        // F-3: the paused player continues in place (no new player, no new download).
+        const live = current;
+        placeLive(live, positionMs);
+        live.player!.play();
+        expectAudio(runIndex, positionMs);
         armDeadline();
         return true;
       }
@@ -851,6 +932,17 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
         set({ runIndex, positionMs: to });
         return;
       }
+      if (current !== null && current.player !== null && current.started && current.runIndex === runIndex && inPlaceAllowed(current, to)) {
+        // F-3: the same player is placed there (no new player, no new download). Playing, it is PREPARING until it says it
+        // plays again, so the line and the stage wait at the place chosen.
+        const live = current;
+        placeLive(live, to, true);
+        if (intent === 'PLAY') {
+          if (state.phase === 'BETWEEN') live.player!.play();
+          expectAudio(runIndex, to);
+        } else set({ runIndex, positionMs: to, ...(state.phase === 'BETWEEN' ? { phase: 'PAUSED' as const } : {}) });
+        return;
+      }
       releaseCurrent();
       set({ runIndex, positionMs: to, ...(state.phase === 'BETWEEN' ? { phase: intent === 'PLAY' ? 'PREPARING' : 'PAUSED' } : {}) });
       if (intent === 'PLAY') api.play(runIndex, to);
@@ -861,6 +953,17 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
       void openRun(runIndex, 0, false).then(() => {
         if (current !== null && current.runIndex === runIndex && state.phase !== 'ENDED') set({ phase: 'BETWEEN' });
       });
+    },
+    preload() {
+      if (retired || held !== null || acquiring !== 0 || state.phase === 'ENDED' || options.foreground.current() !== 'ACTIVE') return;
+      if (!options.owner.transientAllowed() || !ensureClaim()) return;
+      void acquire(false, true);
+    },
+    prepareAt(runIndex, positionMs) {
+      if (retired || held === null || leftOf(held) <= 0 || state.phase === 'ENDED' || state.phase === 'FAILED') return;
+      if ((held.runs[runIndex]?.artifactId ?? null) === null) return;
+      if (current !== null && (current.started || current.runIndex === runIndex)) return;
+      void openRun(runIndex, Math.max(0, Math.round(positionMs)), false);
     },
     positionNow() {
       if (state.phase !== 'PLAYING' || current === null || current.runIndex !== state.runIndex || current.seeking > 0) return state.positionMs;

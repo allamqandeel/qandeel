@@ -73,3 +73,8 @@ const EN = build('en');
 export function replayPlayerCopy(language: ChromeLanguage): ReplayPlayerCopy {
   return language === 'ar' ? AR : EN;
 }
+
+/** S8B-07 CP2-A.1 correction round: the list separator the one timeline's accessible value joins its parts with (punctuation, not a row). */
+export function replayListSeparator(language: ChromeLanguage): string {
+  return language === 'ar' ? '، ' : ', ';
+}

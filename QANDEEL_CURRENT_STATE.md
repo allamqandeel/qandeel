@@ -1,6 +1,6 @@
 # QANDEEL — Current State
 
-> **S8B-07 CP2-A.1 — CONTINUOUS IN-APP REPLAY — DELIVERED / READY FOR PO REVIEW — NOT MERGED — COPY GATE CLOSED — FINAL VALIDATION AND CORRECTION APPLIED — HONOR ACCEPTANCE RUN 2026-11-28: H-2, H-3, H-4, H-6 FAIL; CORRECTION AWAITS PO — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
+> **S8B-07 CP2-A.1 — CONTINUOUS IN-APP REPLAY — DELIVERED / READY FOR PO REVIEW — NOT MERGED — COPY GATE CLOSED — FINAL VALIDATION AND CORRECTION APPLIED — HONOR ACCEPTANCE RUN 2026-11-28: H-2, H-3, H-4, H-6 FAIL — CORRECTION ROUND DELIVERED 2026-11-28, AWAITS HONOR RE-ACCEPTANCE — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:**
 >   - the Product Owner's "EXECUTION AUTHORIZATION — S8B-07 CP2-A.1" (2026-11-27). Replay resumes at CP2-A, split into three tasks: CP2-A.1, CP2-A.2 and CP2-B;
 >   - "CP2-A.1 COPY GATE APPROVED" (2026-11-27);
@@ -27,9 +27,16 @@
 >   - tolerances and criteria unchanged; a touch Maestro delivered too late is NOT TESTED, never PASS;
 >   - **read on 2026-11-28 (`5858171f`):** API CI and Mobile CI PASS. The iOS Replay gate (46059753878) is red, but no case FAILED: en and the small iPhone passed every testable case and were red from a round-2 harness defect (BSD awk refuses a newline in a `-v` value), corrected locally in `556b4110`, not pushed; ar NOT TESTED (the JDK download returned HTTP 403). The iOS World gate (46059753736) is **not** an all-cells PASS: ar 31 / 31 PASS; en 14 PASS, 2 NOT TESTED (a Maestro step timed out); small iPhone 9 PASS, 7 NOT TESTED (simulator boot over its bound, Maestro timeouts, the job's 120-minute limit). No FAIL; no COSMOS regression shown (record §21.9).
 > - **The consolidated HONOR acceptance session, run with the Product Owner on 2026-11-28 (record §21.10):** H-1 PASS; **H-2, H-3, H-4 and H-6 FAIL**; H-5 measured. Product findings F-1 – F-4: 2.5 s of silence before the first recording (the set is asked for only at the first audio moment); three lines shown where R-3 asks for one; after a step the line moves before the sound; the layout and the map move while the first recording prepares. Lane B adds one freeze over 100 ms per playthrough. Nothing corrected yet.
+> - **The correction round (2026-11-28; "PO AUTHORIZATION — CP2-A.1 PRODUCT CORRECTION" and "PO DIRECTION — REPLAY UI FINAL CORRECTION"; record §21.11):**
+>   - F-1: the next recording is prepared while the text before it is read (`warm`); the set is still not asked for at opening;
+>   - F-2: ONE timeline (`replay-player/ReplayTimelineBar.tsx`); the S7-04 Spine (`ReplaySpine.tsx`, deleted), RA-14's per-moment line and the pace paragraph are gone; the Spine decision of 2026-10-20 is superseded, its notches kept;
+>   - F-3: a seek or resume inside the playing recording moves the same player (`inPlace`), and PLAYING follows the player's own status;
+>   - F-4: a fixed reading room and one held status line, so the COSMOS frame no longer resizes; the pulses' cause is not claimed before the device check;
+>   - one top row, no proof readout on the screen, no new copy;
+>   - H-6: diagnosed on the device in the re-run (JS frame-gap logs); no code change, no budget changed.
 > - **Copy:** RS-01 – RS-05 APPROVED. RS-01 and RS-05 are existing approved rows, reused verbatim. RS-02 – RS-04 are new, in `replay-entry/save-copy.ts`.
 > - **Not done:**
->   - the corrections for F-1 – F-4 and H-6: not started; they await the Product Owner's decision;
+>   - the consolidated HONOR re-acceptance of the correction round (H-2, H-3, H-4, H-6, A/V sync against 300 ms, the screenshots); H-6's cause;
 >   - the native audio on iOS: NOT TESTED (synthetic player; the Product Owner's limited exception of 2026-11-27);
 >   - CP2-A.2 (CA-RL-01 A – G, the font route, F2, VG-CP2A) and CP2-B;
 >   - no prompt, provider, TTS, quota or hosted change, and no paid call.
@@ -38,7 +45,7 @@
 >   - HONOR-CORR-01 suspended;
 >   - COSMOS, CALL-ATTR-01 and the completed Replay checkpoints not reopened.
 >   - No migration; the next one is still `0206`.
-> - **Next:** the Product Owner's decision on the HONOR findings F-1 – F-4 and H-6 (record §21.10). The local harness fix `556b4110` is pushed with the next head, so the gates run once. **Merge only on «ادمج».**
+> - **Next:** one push of the correction round (with `556b4110` and `107ed65e`), impact-based CI read once, then the consolidated HONOR session on the corrected build (record §21.11). **Merge only on «ادمج».**
 
 > **PO DIRECTIVE — RETURN TO REPLAY / SEMANTIC RELEASE BLOCKER — HONOR-CORR-01 SUSPENDED (NOTHING IMPLEMENTED) — `QAN-BL-INTEL-07` (`INTEL-SEMANTIC-REVIEW-01`, CRITICAL) AND `QAN-BL-VOICE-10` REGISTERED AS MANDATORY RELEASE BLOCKERS — NEXT: S8B-07 CP2-A — 2026-11-27 (status only; a dated addendum; the entries below are kept as written):**
 > - **Authority:** the Product Owner's directive of 2026-11-27. The [INTEL-LIVE-01 record](docs/e2e/QANDEEL_INTEL_LIVE_01_IN_SPEECH_UNDERSTANDING_RECORD_v1.md) §12.11 records it, and the [S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §20.3 holds the remaining Replay scope.

@@ -452,8 +452,10 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
       if (!(resume ? instance.resume() : instance.run(current.ordinal, 'START'))) stopPlaying();
       return;
     }
-    // A paced moment (B2X): the clock stops presenting, and the reading pace times it.
+    // A paced moment (B2X): the clock stops presenting, and the reading pace times it. CP2-A.1 correction (F-1): what the
+    // clock presents after it is made ready meanwhile.
     holdClock();
+    instance?.warm?.(current.ordinal);
     const text = settledText();
     if (text === null) {
       disarm();

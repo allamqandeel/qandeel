@@ -79,12 +79,12 @@ taken_playing() { node -e 'const [at, fe] = process.argv.slice(1); const a = at.
 all_held() { node -e 'const [at, n] = process.argv.slice(1); const a = at.split(","); process.stdout.write(a.length === Number(n) && a.every((s) => /^h[0-9.]+$/u.test(s)) ? "yes" : "no")' "$1" "$2"; }
 # line_point <name> <logical fraction>: "x%,y% ms" — the whole-percent screen point (Maestro takes no decimals there) of
 # that fraction of the timeline, and the part's instant that point really is, as the line computes it from the touch
-# (AudioLine: the aperture's half width, 17, at each end; from the reader's start, right to left in Arabic).
+# (ReplayTimelineBar: REPLAY_TIMELINE_INSET, 8, at each end — CP2-A.1 correction round; from the reader's start, right to left in Arabic).
 line_point() { local f="$2" fr root; dump "$1"
-  fr="$(q "$1" id qandeel-replay-audio-timeline-line | head -n 1 | sed -n 's/.*frame=\([0-9,.-]*\).*/\1/p')"; root="$(q "$1" root)"
+  fr="$(q "$1" id qandeel-replay-timeline-line | head -n 1 | sed -n 's/.*frame=\([0-9,.-]*\).*/\1/p')"; root="$(q "$1" root)"
   [ -n "$fr" ] && [ "$root" != none ] || { echo none; return 1; }
   node -e 'const [f, fr, root, lang] = process.argv.slice(1); const [x, y, w, h] = fr.split(",").map(Number); const [rx, ry, rw, rh] = root.split(",").map(Number);
-    const A = 17, width = Math.floor(w), run = width - 2 * A, ar = lang === "ar";
+    const A = 8, width = Math.floor(w), run = width - 2 * A, ar = lang === "ar";
     const logical = A + Number(f) * run, sx = ar ? x + width - logical : x + logical;
     const px = Math.round((sx - rx) / rw * 100), py = Math.round(((y + h / 2) - ry) / rh * 100);
     const tx = rx + px / 100 * rw - x, back = ar ? width - tx : tx, at = Math.min(1, Math.max(0, (back - A) / run));
@@ -135,7 +135,7 @@ NOPEN='precondition: the continuous player did not open with its timeline'
 
 if open_player c1; then
   shot c1-before-play; dump c1-timeline
-  tl="$(q c1-timeline id-label qandeel-replay-audio-timeline-line)"; r="$(readout c1-ready)"
+  tl="$(q c1-timeline id-label qandeel-replay-timeline-line)"; r="$(readout c1-ready)"
   if [ "$tl" = "$NAME" ] && [ "$(field "$r" dur)" = 22.5 ] && [ "$(field "$r" t)" = 0.0 ] && [ "$(field "$r" play)" = 0 ]; then
     result C-TIMELINE PASS "before the first Play: one line of the whole part, \"$tl\", $(field "$r" dur) s, at 0.0"
   else result C-TIMELINE FAIL "before the first Play: timeline label \"$tl\" (expected \"$NAME\"); read: $r"; fi

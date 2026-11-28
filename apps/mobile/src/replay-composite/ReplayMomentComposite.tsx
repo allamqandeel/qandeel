@@ -18,6 +18,13 @@
  * that same (viewpoint, TC, depth). A moment change is T-06's own `commitMoment`; the Map's context goes stale at once,
  * so nothing of the earlier moment survives on the later one (and nothing of a later one on an earlier one).
  *
+ * S8B-07 CP2-A.1 correction round — "REPLAY UI FINAL CORRECTION" (Product Owner, 2026-11-28), with the player's controls
+ * only: the band holds the player's instrument (its one timeline) and, under it, the moment's reading in a room of FIXED
+ * height (a message card of three body lines at the reader's text size, never more than the band's cap), so no message,
+ * preparation, status or seek ever changes the band — and with it the COSMOS frame (F-4). A longer reading scrolls inside
+ * its room. The position sentence, the temporal and spatial sentences and the pace paragraph are not drawn on the playing
+ * Replay (the moment's place is said to assistive technology on the timeline); without controls, exactly as before.
+ *
  * Nothing here animates. The world's motion is the Replay camera plan's alone (REPLAY-COSMOS-01 re-anchor of the S7-03
  * motion law): explanatory motion only, every segment justified by a disclosure already visible, driven by presentation
  * time and never by a gesture. This file adds no transition, no entrance and no emphasis of its own.
@@ -78,10 +85,9 @@ export interface ReplayMomentCompositeProps {
 const STILL_WINDOW_MS = (): number => 6000;
 const FULL_SCOPE = { kind: 'FULL' } as const;
 
-/** The player's moment controls: its instrument (play / pause and the Replay's Temporal Spine), and the line that declares its pace. */
+/** The player's moment controls: its instrument (play / pause and the Replay's one timeline, with its status line). */
 export interface ReplayMomentControls {
   readonly instrument: ReactNode;
-  readonly note: ReactNode;
   /**
    * S8B-07 CP1-B (B12): for a moment the player's clock presents, what stands for its source. Its text is then a DERIVED
    * transcript, said under its own caption and never as the source; the source surface holds the clock's own line. Null
@@ -98,8 +104,8 @@ export interface ReplayMomentPresentation {
   readonly caption: string;
   /** Above the moment: the record of a pause shortened or crossed before it. */
   readonly before: ReactNode;
-  /** Inside the source surface, under the speaker: the moment's own line. */
-  readonly source: ReactNode;
+  /** Inside the source surface, under the speaker (CP2-A.1 correction round: none — the Replay has one timeline). */
+  readonly source?: ReactNode;
   /** Under the moment: its recorded gaps, and what the clock says now. */
   readonly beneath: ReactNode;
 }
@@ -234,9 +240,11 @@ function MomentPanel({ controller, store, version, moment, count, language, cont
   const position = <Position text={`${scope(version, entry)} · ${words.position(moment.ordinal, count)}`} style={derived('metadata')} />;
   const presented = controls?.moment?.(moment) ?? null;
   const reading = controls?.withheld === true ? null : (
-    <MomentReading controller={controller} store={store} version={version} moment={moment} language={language} analysis={analysis} drawn={drawn} refusedByAdapter={refusedByAdapter} presented={presented} />
+    <MomentReading controller={controller} store={store} version={version} moment={moment} language={language} analysis={analysis} drawn={drawn} refusedByAdapter={refusedByAdapter} presented={presented}
+      orientation={controls === null} />
   );
   const [held, setHeld] = useState<number | null>(null);
+  const { fontScale } = useWindowDimensions();
   // A different moment is read from its start: the reading returns to its top at once (no motion), never left where the
   // previous moment was scrolled to.
   const reader = useRef<ScrollView>(null);
@@ -253,21 +261,21 @@ function MomentPanel({ controller, store, version, moment, count, language, cont
       </View>
     );
   }
-  // The reading's room is what the band can hold under the controls. Until both are measured, or where the controls
-  // alone fill the band, nothing is bounded and the band's own scroller reaches everything, exactly as before.
+  // The reading's room is what the band can hold under the controls (T-11's cap), and never more than its fixed room
+  // (CP2-A.1 correction round, F-4): the band — and the world's frame above it — keeps one height while the Replay plays.
   const bound = room === null || held === null ? null : Math.floor(room - held - CONTROLS_GAP) - 1;
+  const fixed = readingRoom(fontScale);
+  const readingHeight = bound !== null && bound >= MIN_READING ? Math.min(fixed, bound) : fixed;
   return (
     <View testID="qandeel-replay-moment" accessibilityLanguage={language} style={{ rowGap: CONTROLS_GAP }}>
-      {/* Held in place: the player's instrument, then where the reader is (said once). Under them, and only there,
-          the reading scrolls: the declaration of the pace first, then the moment itself. */}
-      <View testID="qandeel-replay-moment-controls" style={{ rowGap: CONTROLS_GAP }}
+      {/* Held in place: the player's instrument (its one timeline and status line). Under it, and only there, the
+          moment's reading, in its fixed room, scrolling inside it when longer. */}
+      <View testID="qandeel-replay-moment-controls"
         onLayout={(event: LayoutChangeEvent) => { const height = Math.ceil(event.nativeEvent.layout.height); setHeld((current) => (current === height ? current : height)); }}>
         {controls.instrument}
-        {position}
       </View>
-      <ScrollView ref={reader} testID="qandeel-replay-moment-reading" style={{ flexGrow: 0, maxHeight: bound !== null && bound >= MIN_READING ? bound : undefined }}
+      <ScrollView ref={reader} testID="qandeel-replay-moment-reading" style={{ flexGrow: 0, height: readingHeight }}
         contentContainerStyle={{ rowGap: MOMENT_GAP }} nestedScrollEnabled alwaysBounceVertical={false} accessibilityRole="none">
-        {controls.note}
         {reading}
       </ScrollView>
     </View>
@@ -277,11 +285,13 @@ function MomentPanel({ controller, store, version, moment, count, language, cont
 const scope = (version: ReplayHistoryVersion, entry: ReturnType<typeof replayEntryCopy>) => (version.coverage === 'FULL_SOURCE' ? entry.whole : entry.part);
 
 /** The moment itself, under its position: what was left out before it, its message, and where the reader is. */
-function MomentReading({ controller, store, version, moment, language, analysis, drawn, refusedByAdapter, presented }: {
+function MomentReading({ controller, store, version, moment, language, analysis, drawn, refusedByAdapter, presented, orientation }: {
   readonly controller: ReplayCompositeController; readonly store: CanonicalStore; readonly version: ReplayHistoryVersion;
   readonly moment: ReplayHistoryMoment; readonly language: ChromeLanguage;
   readonly analysis: ReplayAnalysisState | null; readonly drawn: boolean; readonly refusedByAdapter: boolean;
   readonly presented: ReplayMomentPresentation | null;
+  /** The temporal and spatial sentences (S7-03): not on the playing Replay (CP2-A.1 correction round). */
+  readonly orientation: boolean;
 }) {
   const palette = usePalette();
   const words = replayCompositeCopy(language);
@@ -311,7 +321,8 @@ function MomentReading({ controller, store, version, moment, language, analysis,
         <SourceMessage moment={moment} text={moment.text} language={language} palette={palette} />
       ) : null}
 
-      {readable ? (
+      {readable && !orientation ? <AnalysisState analysis={analysis} refusedByAdapter={refusedByAdapter} language={language} onRetry={() => controller.retry()} /> : null}
+      {readable && orientation ? (
         <View style={{ rowGap: 4 }}>
           <Text testID="qandeel-replay-temporal" style={derived('supporting')}>{temporalSentence(language, temporalLineModel(store).temporal)}</Text>
           {drawn ? (
@@ -365,7 +376,7 @@ function PresentedSource({ moment, text, presented, language, palette }: {
     <View style={{ rowGap: 6 }}>
       <View testID="qandeel-replay-source" style={{ backgroundColor: palette.field, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 12, rowGap: 4 }}>
         <Text testID="qandeel-replay-speaker" style={{ ...typeStyle('metadata'), color: palette.secondary, writingDirection: readerDirection(language), textAlign: readerSide(language) }}>{speaker}</Text>
-        {presented.source}
+        {presented.source ?? null}
       </View>
       {/* The DERIVED transcript only when the server gives one: none does today (F-2), and nothing stands in for it. */}
       {text === null ? null : (
@@ -441,6 +452,15 @@ const MOMENT_GAP = 10;
 const CONTROLS_GAP = 2;
 /** Under one touch target, a bounded reading could not be scrolled by a finger: the band's own scroller reaches it. */
 const MIN_READING = 44;
+/** CP2-A.1 correction round (F-4): the reading's fixed room holds a message card of this many body lines. */
+const READING_BODY_LINES = 3;
+const CARD_PADDING = 12;
+
+/** The fixed room of the moment's reading: one message card (its speaker line and three body lines) at this text size. */
+export function readingRoom(fontScale: number): number {
+  const scale = Number.isFinite(fontScale) && fontScale > 0 ? fontScale : 1;
+  return Math.ceil(2 * CARD_PADDING + 4 + (typeStyle('metadata').lineHeight + READING_BODY_LINES * typeStyle('body').lineHeight) * scale);
+}
 
 function Band({ bottomInset, children }: { readonly bottomInset: number; readonly children: ReactNode }) {
   return <View style={{ paddingHorizontal: 16, paddingTop: BAND_PADDING, paddingBottom: bottomInset + BAND_PADDING }}>{children}</View>;

@@ -24,5 +24,7 @@ export { REPLAY_READING_PACE, createReplayPlayerController, readingPaceMs, repla
 export type { ReplayMomentClock, ReplayMomentClockPhase, ReplayMomentClockSource, ReplayMomentClockState } from './moment-clock';
 export type { ReplayPlayerCopy, ReplayPlayerCopyStatus } from './copy';
 export { REPLAY_PLAYER_COPY_GATE, REPLAY_PLAYER_COPY_ROWS, replayPlayerCopy } from './copy';
-export type { ReplayAnalysisEntryProps, ReplayPlayerProps, ReplayPlayerSurface, ReplayPlayerSurfaceControls, ReplayPreviewActionProps } from './ReplayPlayer';
-export { REPLAY_PLAYER_TEST_ID, ReplayAnalysisEntry, ReplayPlayer, ReplayPreviewAction } from './ReplayPlayer';
+export type { ReplayAnalysisEntryProps, ReplayPlayerProps, ReplayPlayerSurface, ReplayPlayerSurfaceControls, ReplayPreviewActionProps, ReplayTimelineSource } from './ReplayPlayer';
+export { REPLAY_PLAYER_TEST_ID, REPLAY_TIMELINE_REDRAW_MS, ReplayAnalysisEntry, ReplayPlayer, ReplayPreviewAction } from './ReplayPlayer';
+export type { ReplayTimelineBarProps } from './ReplayTimelineBar';
+export { REPLAY_TIMELINE_INSET, REPLAY_TIMELINE_TEST_ID, ReplayTimelineBar, timelineClock, timelineStepMs } from './ReplayTimelineBar';

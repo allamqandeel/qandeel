@@ -101,6 +101,8 @@ export function createReplayAudio(options: ReplayAudioOptions): ReplayAudio {
         foreground: options.foreground,
         newCommandId: options.newCommandId,
         onRunEnd,
+        // CP2-A.1 correction (F-3): a seek or a resume where no hand-over can follow is made in place.
+        inPlace: true,
         ...(options.onEvent === undefined ? {} : { onEvent: options.onEvent }),
       }),
     });
